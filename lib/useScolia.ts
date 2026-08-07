@@ -79,13 +79,24 @@ export function useScolia(enabled: boolean, callbacks: ScoliaCallbacks) {
       const eventsChannel = client
         .channel(`scolia-events-stream-${Date.now()}`)
         .on("postgres_changes", { event: "INSERT", schema: "public", table: "scolia_events" }, (payload) => {
-          const row = payload.new as { type: string; payload: unknown };
-          lastSeenAtRef.current = Date.now();
-          if (row.type === "THROW_DETECTED") callbacksRef.current.onThrow?.(row.payload as ThrowDetectedPayload);
-          else if (row.type === "TAKEOUT_STARTED") callbacksRef.current.onTakeoutStarted?.();
-          else if (row.type === "TAKEOUT_FINISHED") callbacksRef.current.onTakeoutFinished?.(row.payload as TakeoutFinishedPayload);
+          const dbg = (window as unknown as { __scoliaDebug?: unknown[] });
+          dbg.__scoliaDebug ??= [];
+          dbg.__scoliaDebug.push({ at: "eventsChannel.on", payload });
+          try {
+            const row = payload.new as { type: string; payload: unknown };
+            lastSeenAtRef.current = Date.now();
+            if (row.type === "THROW_DETECTED") callbacksRef.current.onThrow?.(row.payload as ThrowDetectedPayload);
+            else if (row.type === "TAKEOUT_STARTED") callbacksRef.current.onTakeoutStarted?.();
+            else if (row.type === "TAKEOUT_FINISHED") callbacksRef.current.onTakeoutFinished?.(row.payload as TakeoutFinishedPayload);
+          } catch (err) {
+            dbg.__scoliaDebug!.push({ at: "eventsChannel.on:error", err: String(err) });
+          }
         })
-        .subscribe();
+        .subscribe((status, err) => {
+          const dbg = (window as unknown as { __scoliaDebug?: unknown[] });
+          dbg.__scoliaDebug ??= [];
+          dbg.__scoliaDebug.push({ at: "eventsChannel.subscribe", status, err: err ? String(err) : null });
+        });
 
       channels = { status: statusChannel, events: eventsChannel };
     }
