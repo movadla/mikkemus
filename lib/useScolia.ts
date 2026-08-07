@@ -78,8 +78,6 @@ export function useScolia(enabled: boolean, callbacks: ScoliaCallbacks) {
     let cancelled = false;
     const lastSeenAtRef = { current: 0 };
     let channels: { status: ReturnType<SupabaseClient["channel"]>; events: ReturnType<SupabaseClient["channel"]> } | null = null;
-    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-    let reconnectDelay = 1000;
 
     function applyStatusRow(row: StatusRow | null) {
       if (!row) return;
@@ -92,37 +90,27 @@ export function useScolia(enabled: boolean, callbacks: ScoliaCallbacks) {
       });
     }
 
-    function scheduleReconnect(client: SupabaseClient) {
-      if (reconnectTimer || cancelled) return;
-      reconnectTimer = setTimeout(() => {
-        reconnectTimer = null;
-        reconnectDelay = Math.min(reconnectDelay * 2, 10_000);
-        subscribe(client);
-      }, reconnectDelay);
-    }
-
-    function handleChannelStatus(client: SupabaseClient, status: string, err: unknown) {
-      if (cancelled) return;
-      if (status === "SUBSCRIBED") reconnectDelay = 1000;
-      else if (status === "CHANNEL_ERROR" || status === "CLOSED" || status === "TIMED_OUT") scheduleReconnect(client);
-      if (err) void err;
-    }
-
+    /**
+     * Subscribes once and then leaves reconnection entirely to realtime-js's own
+     * socket/channel rejoin (Phoenix channels rejoin automatically once the socket
+     * is back up — that's built in, not something the app needs to drive). An
+     * earlier version tore down and recreated both channels on every CHANNEL_ERROR/
+     * CLOSED with its own backoff timer; on flakier connections (seen in production,
+     * rare on local dev) that fired at nearly the same cadence as the library's own
+     * reconnect and kept yanking the join out from under it right as it was about to
+     * succeed, so the app could spin on CHANNEL_ERROR indefinitely even though a
+     * plain subscribe-and-wait recovers within a few seconds every time.
+     */
     function subscribe(client: SupabaseClient) {
-      if (channels) {
-        client.removeChannel(channels.status);
-        client.removeChannel(channels.events);
-      }
-
       const statusChannel = client
-        .channel(`scolia-status-changes-${Date.now()}`)
+        .channel("scolia-status-changes")
         .on("postgres_changes", { event: "*", schema: "public", table: "scolia_status" }, (payload) => {
           applyStatusRow(payload.new as StatusRow);
         })
-        .subscribe((status, err) => handleChannelStatus(client, status, err));
+        .subscribe();
 
       const eventsChannel = client
-        .channel(`scolia-events-stream-${Date.now()}`)
+        .channel("scolia-events-stream")
         .on("postgres_changes", { event: "INSERT", schema: "public", table: "scolia_events" }, (payload) => {
           const row = payload.new as { type: string; payload: unknown };
           lastSeenAtRef.current = Date.now();
@@ -130,7 +118,7 @@ export function useScolia(enabled: boolean, callbacks: ScoliaCallbacks) {
           else if (row.type === "TAKEOUT_STARTED") callbacksRef.current.onTakeoutStarted?.();
           else if (row.type === "TAKEOUT_FINISHED") callbacksRef.current.onTakeoutFinished?.(row.payload as TakeoutFinishedPayload);
         })
-        .subscribe((status, err) => handleChannelStatus(client, status, err));
+        .subscribe();
 
       channels = { status: statusChannel, events: eventsChannel };
     }
@@ -149,17 +137,8 @@ export function useScolia(enabled: boolean, callbacks: ScoliaCallbacks) {
       subscribe(client);
     });
 
-    // The events channel only fires when a dart is actually thrown, so silence
-    // there doesn't mean it's dead — unlike the status channel, it has no
-    // heartbeat to go quiet on. Recreate both channels on a fixed cadence
-    // regardless of apparent health, so a silently-dropped events channel can
-    // never stay dead longer than this interval.
-    const periodicReconnect = setInterval(() => {
-      getRealtimeClient().then((client) => {
-        if (!cancelled && client) subscribe(client);
-      });
-    }, 60_000);
-
+    // Purely a UI signal (drives the ScoliaStatusBadge) — takes no corrective
+    // action itself, since reconnection is the realtime client's job.
     const staleCheck = setInterval(() => {
       if (!lastSeenAtRef.current || Date.now() - lastSeenAtRef.current <= STALE_AFTER_MS) return;
       setState((s) => (s.relay === "stale" ? s : { ...s, relay: "stale" }));
@@ -174,9 +153,7 @@ export function useScolia(enabled: boolean, callbacks: ScoliaCallbacks) {
           client.removeChannel(channels.events);
         });
       }
-      if (reconnectTimer) clearTimeout(reconnectTimer);
       clearInterval(staleCheck);
-      clearInterval(periodicReconnect);
     };
   }, [enabled]);
 
