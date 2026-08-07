@@ -73,20 +73,22 @@ export function useScolia(enabled: boolean, callbacks: ScoliaCallbacks) {
     const statusChannel = client
       .channel("scolia-status-changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "scolia_status" }, (payload) => {
+        console.log("[scolia] status event", payload);
         applyStatusRow(payload.new as StatusRow);
       })
-      .subscribe();
+      .subscribe((status, err) => console.log("[scolia] status channel:", status, err));
 
     const eventsChannel = client
       .channel("scolia-events-stream")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "scolia_events" }, (payload) => {
+        console.log("[scolia] events event", payload);
         const row = payload.new as { type: string; payload: unknown };
         lastSeenAtRef.current = Date.now();
         if (row.type === "THROW_DETECTED") callbacksRef.current.onThrow?.(row.payload as ThrowDetectedPayload);
         else if (row.type === "TAKEOUT_STARTED") callbacksRef.current.onTakeoutStarted?.();
         else if (row.type === "TAKEOUT_FINISHED") callbacksRef.current.onTakeoutFinished?.(row.payload as TakeoutFinishedPayload);
       })
-      .subscribe();
+      .subscribe((status, err) => console.log("[scolia] events channel:", status, err));
 
     const staleCheck = setInterval(() => {
       if (lastSeenAtRef.current && Date.now() - lastSeenAtRef.current > STALE_AFTER_MS) {

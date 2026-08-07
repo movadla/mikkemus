@@ -63,9 +63,11 @@ export function MikkeMusApp() {
   const scoliaEnabled = screen === "game";
   const scolia = useScolia(scoliaEnabled, {
     onThrow: (payload) => {
+      console.log("[scolia] onThrow", payload, "activePlayer:", activePlayer);
       if (!activePlayer) return;
       scoliaDartsRef.current += 1;
       const { step, crosses } = stepForSector(parseSector(payload.sector, payload.bounceout));
+      console.log("[scolia] mapped step:", step, "crosses:", crosses);
       if (step) registerHit(step, crosses);
       if (scoliaDartsRef.current >= DARTS_PER_TURN) {
         scoliaDartsRef.current = 0;
@@ -111,7 +113,10 @@ export function MikkeMusApp() {
     if (!activePlayer) return;
     const playerProgress = progress[activePlayer];
     const activeStep = currentStepFor(playerProgress);
-    if (!isRegistrable(step, activeStep, playerProgress)) return;
+    if (!isRegistrable(step, activeStep, playerProgress)) {
+      console.log("[scolia] registerHit rejected — step:", step, "activeStep:", activeStep, "progress[step]:", playerProgress[step]);
+      return;
+    }
 
     const turnIndex = rewound ? rewoundTurnIndex ?? 0 : turnCounters[activePlayer] ?? 0;
     const newPendingHits: HitRecord[] = [];
