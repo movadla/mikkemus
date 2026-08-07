@@ -106,7 +106,17 @@ export function useScolia(enabled: boolean, callbacks: ScoliaCallbacks) {
         client.removeChannel(channels.status);
         client.removeChannel(channels.events);
       }
+      // A dead socket rarely fires a close event, so the channels above can come
+      // back "subscribed" while still riding the same broken connection — force
+      // the underlying websocket itself to reconnect, not just the channels.
+      client.realtime.disconnect();
       subscribe();
+      client
+        .from("scolia_status")
+        .select("*")
+        .eq("id", "current")
+        .maybeSingle()
+        .then(({ data }) => applyStatusRow(data as StatusRow | null));
     }, 15_000);
 
     return () => {
