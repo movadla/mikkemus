@@ -25,9 +25,6 @@ import { GameScreen } from "./GameScreen";
 import { WinnerScreen } from "./WinnerScreen";
 import { ScoliaStatusBadge } from "./ScoliaStatusBadge";
 
-const SCOLIA_SERIAL_NUMBER = process.env.NEXT_PUBLIC_SCOLIA_SERIAL_NUMBER;
-const SCOLIA_ACCESS_TOKEN = process.env.NEXT_PUBLIC_SCOLIA_ACCESS_TOKEN;
-
 type Screen = "setup" | "game" | "winner";
 
 function setTurnAt(turns: TurnResult[], index: number, turn: TurnResult): TurnResult[] {
@@ -63,8 +60,8 @@ export function MikkeMusApp() {
   // Counts physical darts Scolia has detected this turn (registrable or not) —
   // distinct from pendingHits, which only holds darts that actually scored a cross.
   const scoliaDartsRef = useRef(0);
-  const scoliaEnabled = screen === "game" && Boolean(SCOLIA_SERIAL_NUMBER && SCOLIA_ACCESS_TOKEN);
-  const scolia = useScolia(SCOLIA_SERIAL_NUMBER, SCOLIA_ACCESS_TOKEN, scoliaEnabled, {
+  const scoliaEnabled = screen === "game";
+  const scolia = useScolia(scoliaEnabled, {
     onThrow: (payload) => {
       if (!activePlayer) return;
       scoliaDartsRef.current += 1;
@@ -241,7 +238,7 @@ export function MikkeMusApp() {
 
   return (
     <>
-      {scoliaEnabled && <ScoliaStatusBadge state={scolia.state} onReconnect={scolia.reconnectWithForce} />}
+      {scoliaEnabled && <ScoliaStatusBadge state={scolia.state} />}
       <GameScreen
         players={players}
         progress={progress}

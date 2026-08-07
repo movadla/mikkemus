@@ -2,44 +2,31 @@
 
 import type { ScoliaState } from "@/lib/useScolia";
 
-const FOCUS_RING =
-  "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
-
-function summarize(state: ScoliaState): { label: string; color: string; showReconnect: boolean } {
-  if (state.connection.kind === "connecting") {
-    return { label: "Scolia: kobler til…", color: "var(--color-muted)", showReconnect: false };
+function summarize(state: ScoliaState): { label: string; color: string } {
+  if (state.relay === "connecting") {
+    return { label: "Scolia: kobler til…", color: "var(--color-muted)" };
   }
-  if (state.connection.kind === "closed") {
-    const label =
-      state.connection.code === 4101
-        ? "Scolia: allerede tilkoblet et annet sted"
-        : `Scolia: frakoblet (${state.connection.code})`;
-    return { label, color: "var(--color-red)", showReconnect: !state.connection.terminal };
+  if (state.relay === "stale") {
+    return { label: "Scolia: relay ikke tilgjengelig", color: "var(--color-red)" };
   }
   switch (state.boardStatus) {
     case "Ready":
-      return { label: "Scolia: klar", color: "var(--color-green)", showReconnect: false };
+      return { label: "Scolia: klar", color: "var(--color-green)" };
     case "Calibrating":
-      return { label: "Scolia: kalibrerer…", color: "var(--color-gold)", showReconnect: false };
+      return { label: "Scolia: kalibrerer…", color: "var(--color-gold)" };
     case "Error":
-      return { label: `Scolia: feil${state.errorType ? ` (${state.errorType})` : ""}`, color: "var(--color-red)", showReconnect: false };
+      return { label: `Scolia: feil${state.errorType ? ` (${state.errorType})` : ""}`, color: "var(--color-red)" };
     case "Initializing":
-      return { label: "Scolia: starter…", color: "var(--color-muted)", showReconnect: false };
+      return { label: "Scolia: starter…", color: "var(--color-muted)" };
     case "Offline":
-      return { label: "Scolia: offline", color: "var(--color-muted)", showReconnect: false };
+      return { label: "Scolia: brett offline", color: "var(--color-muted)" };
     default:
-      return { label: "Scolia: tilkoblet", color: "var(--color-muted)", showReconnect: false };
+      return { label: "Scolia: venter på status…", color: "var(--color-muted)" };
   }
 }
 
-export function ScoliaStatusBadge({
-  state,
-  onReconnect,
-}: {
-  state: ScoliaState;
-  onReconnect: () => void;
-}) {
-  const { label, color, showReconnect } = summarize(state);
+export function ScoliaStatusBadge({ state }: { state: ScoliaState }) {
+  const { label, color } = summarize(state);
 
   return (
     <div
@@ -48,16 +35,6 @@ export function ScoliaStatusBadge({
     >
       <span className="w-2 h-2 rounded-full shrink-0" style={{ background: color }} aria-hidden />
       <span style={{ color: "var(--color-cream)", fontSize: "0.7rem" }}>{label}</span>
-      {showReconnect && (
-        <button
-          type="button"
-          onClick={onReconnect}
-          className={`tactile px-2 py-0.5 rounded-md text-xs ${FOCUS_RING}`}
-          style={{ background: "var(--color-cell)", color: "var(--color-teal)" }}
-        >
-          Koble til
-        </button>
-      )}
     </div>
   );
 }
