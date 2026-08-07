@@ -63,10 +63,6 @@ export function MikkeMusApp() {
   const scoliaEnabled = screen === "game";
   const scolia = useScolia(scoliaEnabled, {
     onThrow: (payload) => {
-      if (typeof window !== "undefined") {
-        (window as unknown as { __scoliaDebug: unknown[] }).__scoliaDebug ??= [];
-        (window as unknown as { __scoliaDebug: unknown[] }).__scoliaDebug.push({ at: "onThrow", payload, activePlayer });
-      }
       if (!activePlayer) return;
       scoliaDartsRef.current += 1;
       const { step, crosses } = stepForSector(parseSector(payload.sector, payload.bounceout));
@@ -115,19 +111,7 @@ export function MikkeMusApp() {
     if (!activePlayer) return;
     const playerProgress = progress[activePlayer];
     const activeStep = currentStepFor(playerProgress);
-    const registrable = isRegistrable(step, activeStep, playerProgress);
-    if (typeof window !== "undefined") {
-      (window as unknown as { __scoliaDebug: unknown[] }).__scoliaDebug ??= [];
-      (window as unknown as { __scoliaDebug: unknown[] }).__scoliaDebug.push({
-        at: "registerHit",
-        step,
-        crosses,
-        activeStep,
-        registrable,
-        progressAtStep: playerProgress[step],
-      });
-    }
-    if (!registrable) return;
+    if (!isRegistrable(step, activeStep, playerProgress)) return;
 
     const turnIndex = rewound ? rewoundTurnIndex ?? 0 : turnCounters[activePlayer] ?? 0;
     const newPendingHits: HitRecord[] = [];
