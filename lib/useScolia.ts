@@ -74,6 +74,22 @@ export function useScolia(enabled: boolean, callbacks: ScoliaCallbacks) {
       dbg.__scoliaDebug.push(entry);
     }
 
+    function describeErr(err: unknown) {
+      if (!err) return null;
+      const cause = (err as { cause?: unknown }).cause as
+        | { code?: unknown; reason?: unknown; type?: unknown; message?: unknown; target?: { readyState?: unknown; url?: unknown } }
+        | undefined;
+      return {
+        message: String(err),
+        causeCode: cause?.code,
+        causeReason: cause?.reason,
+        causeType: cause?.type,
+        causeMessage: cause?.message,
+        causeTargetReadyState: cause?.target?.readyState,
+        causeTargetUrl: cause?.target?.url,
+      };
+    }
+
     function subscribe() {
       dbgPush({ at: "subscribe:enter" });
       let statusChannel;
@@ -83,7 +99,7 @@ export function useScolia(enabled: boolean, callbacks: ScoliaCallbacks) {
           .on("postgres_changes", { event: "*", schema: "public", table: "scolia_status" }, (payload) => {
             applyStatusRow(payload.new as StatusRow);
           })
-          .subscribe((status, err) => dbgPush({ at: "statusChannel.subscribe", status, err: err ? String(err) : null }));
+          .subscribe((status, err) => dbgPush({ at: "statusChannel.subscribe", status, err: describeErr(err) }));
         dbgPush({ at: "subscribe:statusChannelCreated" });
       } catch (err) {
         dbgPush({ at: "subscribe:statusChannel:error", err: String(err) });
@@ -106,7 +122,7 @@ export function useScolia(enabled: boolean, callbacks: ScoliaCallbacks) {
               dbgPush({ at: "eventsChannel.on:error", err: String(err) });
             }
           })
-          .subscribe((status, err) => dbgPush({ at: "eventsChannel.subscribe", status, err: err ? String(err) : null }));
+          .subscribe((status, err) => dbgPush({ at: "eventsChannel.subscribe", status, err: describeErr(err) }));
         dbgPush({ at: "subscribe:eventsChannelCreated" });
       } catch (err) {
         dbgPush({ at: "subscribe:eventsChannel:error", err: String(err) });
