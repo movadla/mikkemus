@@ -1,0 +1,292 @@
+@import "tailwindcss";
+
+:root {
+  /* Layered surfaces — each step a deliberate jump, not eyeballed drift,
+     so panels and buttons visibly float above what's behind them. */
+  --color-bg: #11160f;
+  --color-panel: #12211a;
+  --color-surface: #17281f;
+  --color-cell: #1d3527;
+  --color-cell-done: #2f5741;
+  --color-border: #24402f;
+
+  /* Two accents, two jobs. Gold is earned: it only ever marks a completed
+     step or the winner screen. Teal is the everyday interactive accent —
+     buttons, the active player, focus rings, stats. Red stays reserved for
+     undo/delete/errors so it never gets diluted into a "just another accent". */
+  --color-gold: #c9a24b;
+  --color-gold-strong: #e0c471;
+  --color-teal: #2fb4c2;
+  --color-teal-strong: #5fd0dc;
+  --color-red: #c4432e;
+  --color-green: #4a8b5c;
+
+  --color-cream: #f4f0e8;
+  --color-muted: #729080;
+
+  --font-display: var(--font-fraunces), Georgia, serif;
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+
+  /* Shared motion vocabulary — every UI-driven animation (not the confetti's
+     gravity-fall) pulls its easing from one of these two curves, so a press,
+     a screen change, and a turn-swap all decelerate the same way and read as
+     one coherent system instead of accidentally-different feels. */
+  --ease-standard: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.22, 1.4, 0.36, 1);
+  --duration-instant: 120ms;
+  --duration-fast: 220ms;
+  --duration-base: 260ms;
+  --duration-slow: 480ms;
+}
+
+@theme inline {
+  --color-background: var(--color-bg);
+  --color-foreground: var(--color-cream);
+  --font-sans: var(--font-sans);
+  --font-display: var(--font-display);
+}
+
+html,
+body {
+  background: var(--color-bg);
+  color: var(--color-cream);
+  font-family: var(--font-sans);
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Film-grain overlay so flat dark surfaces read as a chalkboard/felt
+   texture rather than a plain digital fill. Decorative only. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0.12;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Soft vignette — the center of the screen reads a shade lighter than the
+   corners, so large flat stretches of background feel lit rather than like
+   a solid digital fill. */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 50% 35%, transparent 0%, rgba(0, 0, 0, 0.35) 100%);
+}
+
+button {
+  font-family: inherit;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Plays once when a player's turn starts — strong first pulse, a smaller
+   echo, then settles and stays quiet for the rest of the turn. The active
+   player is still marked the whole time via the steady border/text color;
+   this is just the "your turn just started" beat, not an ongoing animation. */
+@keyframes column-glow {
+  0% {
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+  }
+  12% {
+    box-shadow: 0 0 26px var(--glow-color, rgba(47, 180, 194, 0.65));
+  }
+  32% {
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+  }
+  48% {
+    box-shadow: 0 0 14px var(--glow-color, rgba(47, 180, 194, 0.35));
+  }
+  70%,
+  100% {
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+  }
+}
+
+@keyframes rewind-flash {
+  0% {
+    background: rgba(196, 67, 46, 0.45);
+  }
+  100% {
+    background: transparent;
+  }
+}
+
+.animate-column-glow {
+  animation: column-glow 1.4s var(--ease-standard) both;
+}
+
+/* Calm ambient halo behind the active player's name, running the whole
+   turn — a separate layer/property (opacity, not box-shadow) from
+   column-glow's one-shot beat above, so the two never fight over control
+   of the same box-shadow value. Low amplitude on purpose: this replaces an
+   earlier always-on pulse that felt stressful at higher intensity. */
+@keyframes idle-glow {
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.75;
+  }
+}
+
+.animate-idle-glow {
+  animation: idle-glow 2.6s var(--ease-standard) infinite;
+}
+
+/* A hand-drawn chalk swoosh under the active player's name — reuses the
+   same "draw the stroke in" technique as Mark.tsx's crosses (pathLength=1,
+   dashoffset 1 -> 0), just as a one-shot CSS animation instead of a
+   transition, since this element has no later state to transition into. */
+@keyframes chalk-draw {
+  from {
+    stroke-dashoffset: 1;
+    opacity: 0;
+  }
+  to {
+    stroke-dashoffset: 0;
+    opacity: 0.8;
+  }
+}
+
+.animate-chalk-draw {
+  animation: chalk-draw 420ms var(--ease-standard) both;
+}
+
+.animate-rewind-flash {
+  animation: rewind-flash 700ms var(--ease-standard);
+}
+
+/* -- tactile depth: raised buttons that press down on tap --
+   Only `transform` transitions — a game turn can have dozens of these
+   buttons in the grid at once, and animating box-shadow's blur/spread
+   forces a repaint of each one every frame. The shadow still swaps on
+   :active, just as a discrete (non-interpolated) change, which costs
+   nothing extra. */
+.tactile {
+  box-shadow:
+    0 3px 0 rgba(0, 0, 0, 0.4),
+    0 5px 12px rgba(0, 0, 0, 0.35),
+    0 1px 0 rgba(255, 255, 255, 0.15) inset;
+  transition: transform var(--duration-instant) var(--ease-standard);
+}
+
+.tactile:active {
+  transform: translateY(2px) scale(0.97);
+  box-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.4),
+    0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+.tactile:disabled {
+  box-shadow: none;
+}
+
+.shadow-panel {
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.4),
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 -14px 22px rgba(0, 0, 0, 0.22) inset;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tactile,
+  .tactile:active {
+    transform: none;
+  }
+}
+
+/* -- winner screen flourish -- */
+@keyframes winner-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.86);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.animate-winner-pop {
+  animation: winner-pop var(--duration-slow) var(--ease-spring) both;
+}
+
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(-16px) rotate(var(--r, 0deg));
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(220px) rotate(calc(var(--r, 0deg) + 200deg));
+    opacity: 0;
+  }
+}
+
+.confetti-piece {
+  position: absolute;
+  top: 0;
+  width: 8px;
+  height: 14px;
+  border-radius: 2px;
+  animation: confetti-fall 1500ms ease-in both;
+}
+
+/* -- screen + turn transitions --
+   The "to" state must land on transform: none, not translateY(0) — any
+   non-"none" transform (even a zero one) makes this element a containing
+   block for its position:fixed descendants, so a modal deeper in the tree
+   would center against this scrollable page instead of the real viewport. */
+@keyframes screen-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.animate-screen-enter {
+  animation: screen-enter var(--duration-base) var(--ease-standard) both;
+}
+
+@keyframes name-swap {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.animate-name-swap {
+  animation: name-swap var(--duration-fast) var(--ease-standard) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
