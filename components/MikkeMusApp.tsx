@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   aggregateTurns,
   applyHit,
@@ -18,9 +18,15 @@ import {
 } from "@/lib/game";
 import { playPlayerSound, recordMatchResult } from "@/lib/storage";
 import { haptics } from "@/lib/haptics";
+import { parseSector, stepForSector } from "@/lib/scoliaMapping";
+import { useScolia } from "@/lib/useScolia";
 import { SetupScreen } from "./SetupScreen";
 import { GameScreen } from "./GameScreen";
 import { WinnerScreen } from "./WinnerScreen";
+import { ScoliaStatusBadge } from "./ScoliaStatusBadge";
+
+const SCOLIA_SERIAL_NUMBER = process.env.NEXT_PUBLIC_SCOLIA_SERIAL_NUMBER;
+const SCOLIA_ACCESS_TOKEN = process.env.NEXT_PUBLIC_SCOLIA_ACCESS_TOKEN;
 
 type Screen = "setup" | "game" | "winner";
 
@@ -54,6 +60,30 @@ export function MikkeMusApp() {
 
   const activePlayer = rewound ?? players[currentIdx] ?? null;
 
+  // Counts physical darts Scolia has detected this turn (registrable or not) —
+  // distinct from pendingHits, which only holds darts that actually scored a cross.
+  const scoliaDartsRef = useRef(0);
+  const scoliaEnabled = screen === "game" && Boolean(SCOLIA_SERIAL_NUMBER && SCOLIA_ACCESS_TOKEN);
+  const scolia = useScolia(SCOLIA_SERIAL_NUMBER, SCOLIA_ACCESS_TOKEN, scoliaEnabled, {
+    onThrow: (payload) => {
+      if (!activePlayer) return;
+      scoliaDartsRef.current += 1;
+      const { step, crosses } = stepForSector(parseSector(payload.sector, payload.bounceout));
+      if (step) registerHit(step, crosses);
+      if (scoliaDartsRef.current >= DARTS_PER_TURN) {
+        scoliaDartsRef.current = 0;
+        confirm();
+      }
+    },
+    onTakeoutStarted: () => {
+      // Player started collecting darts before the 3rd was thrown (e.g. they checked out early).
+      if (scoliaDartsRef.current > 0) {
+        scoliaDartsRef.current = 0;
+        confirm();
+      }
+    },
+  });
+
   function startGame(startPlayers: string[]) {
     const prog: PlayerProgress = {};
     startPlayers.forEach((p) => (prog[p] = emptyProgress()));
@@ -68,28 +98,41 @@ export function MikkeMusApp() {
     setTurnLog({});
     setTurnCounters({});
     setTurnToken(0);
+    scoliaDartsRef.current = 0;
     setScreen("game");
     playPlayerSound(startPlayers[0] ?? null);
   }
 
-  function registerHit(step: Step) {
+  /**
+   * Registers `crosses` marks on `step` (crosses > 1 for a Scolia-detected inner bull).
+   * Chains the prevCount->newCount sequence up front so multiple crosses from a single
+   * dart stack correctly — calling registerHit(step) twice in a row would instead apply
+   * the same prevCount->newCount delta twice, since `progress` in this closure doesn't
+   * reflect the first call's setProgress until the next render.
+   */
+  function registerHit(step: Step, crosses: number = 1) {
     if (!activePlayer) return;
     const playerProgress = progress[activePlayer];
     const activeStep = currentStepFor(playerProgress);
     if (!isRegistrable(step, activeStep, playerProgress)) return;
 
-    const prevCount = playerProgress[step];
-    const newCount = applyHit(prevCount);
-    if (newCount === prevCount) return;
+    const turnIndex = rewound ? rewoundTurnIndex ?? 0 : turnCounters[activePlayer] ?? 0;
+    const newPendingHits: HitRecord[] = [];
+    let count = playerProgress[step];
+    for (let i = 0; i < crosses; i++) {
+      const nextCount = applyHit(count);
+      if (nextCount === count) break;
+      newPendingHits.push({ player: activePlayer, step, prevCount: count, newCount: nextCount, turnIndex });
+      count = nextCount;
+    }
+    if (newPendingHits.length === 0) return;
 
     haptics.hit();
-    const turnIndex = rewound ? rewoundTurnIndex ?? 0 : turnCounters[activePlayer] ?? 0;
-
     setProgress((prev) => ({
       ...prev,
-      [activePlayer]: { ...prev[activePlayer], [step]: newCount },
+      [activePlayer]: { ...prev[activePlayer], [step]: count },
     }));
-    setPendingHits((prev) => [...prev, { player: activePlayer, step, prevCount, newCount, turnIndex }]);
+    setPendingHits((prev) => [...prev, ...newPendingHits]);
   }
 
   function undo() {
@@ -127,6 +170,7 @@ export function MikkeMusApp() {
 
   function confirm() {
     if (!activePlayer) return;
+    scoliaDartsRef.current = 0;
     const activeStepNow = currentStepFor(progress[activePlayer]);
     const turn = summarizeTurn(pendingHits, activeStepNow);
     const turnIndex = rewound ? rewoundTurnIndex ?? 0 : turnCounters[activePlayer] ?? 0;
@@ -196,20 +240,23 @@ export function MikkeMusApp() {
   });
 
   return (
-    <GameScreen
-      players={players}
-      progress={progress}
-      activePlayer={activePlayer}
-      turnToken={turnToken}
-      dartsThrown={dartsThrown}
-      pendingByStep={pendingByStep}
-      rewound={rewound !== null}
-      pendingCount={pendingHits.length}
-      canUndo={pendingHits.length > 0 || history.length > 0}
-      onRegisterHit={registerHit}
-      onUndo={undo}
-      onConfirm={confirm}
-      onAbort={abortGame}
-    />
+    <>
+      {scoliaEnabled && <ScoliaStatusBadge state={scolia.state} onReconnect={scolia.reconnectWithForce} />}
+      <GameScreen
+        players={players}
+        progress={progress}
+        activePlayer={activePlayer}
+        turnToken={turnToken}
+        dartsThrown={dartsThrown}
+        pendingByStep={pendingByStep}
+        rewound={rewound !== null}
+        pendingCount={pendingHits.length}
+        canUndo={pendingHits.length > 0 || history.length > 0}
+        onRegisterHit={registerHit}
+        onUndo={undo}
+        onConfirm={confirm}
+        onAbort={abortGame}
+      />
+    </>
   );
 }
