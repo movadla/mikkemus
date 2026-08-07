@@ -97,11 +97,7 @@ export function useScolia(enabled: boolean, callbacks: ScoliaCallbacks) {
       .maybeSingle()
       .then(({ data }) => applyStatusRow(data as StatusRow | null));
 
-    subscribe();
-
-    const staleCheck = setInterval(() => {
-      if (!lastSeenAtRef.current || Date.now() - lastSeenAtRef.current <= STALE_AFTER_MS) return;
-      setState((s) => (s.relay === "stale" ? s : { ...s, relay: "stale" }));
+    function reconnect() {
       if (channels) {
         client.removeChannel(channels.status);
         client.removeChannel(channels.events);
@@ -117,7 +113,19 @@ export function useScolia(enabled: boolean, callbacks: ScoliaCallbacks) {
         .eq("id", "current")
         .maybeSingle()
         .then(({ data }) => applyStatusRow(data as StatusRow | null));
+    }
+
+    const staleCheck = setInterval(() => {
+      if (!lastSeenAtRef.current || Date.now() - lastSeenAtRef.current <= STALE_AFTER_MS) return;
+      setState((s) => (s.relay === "stale" ? s : { ...s, relay: "stale" }));
     }, 15_000);
+
+    // The events channel only fires when a dart is actually thrown, so silence
+    // there doesn't mean it's dead — unlike the status channel, it has no
+    // heartbeat to go quiet on. Recreate both channels on a fixed cadence
+    // regardless of apparent health, so a silently-dropped events channel can
+    // never stay dead longer than this interval.
+    const periodicReconnect = setInterval(reconnect, 60_000);
 
     return () => {
       if (channels) {
@@ -125,6 +133,7 @@ export function useScolia(enabled: boolean, callbacks: ScoliaCallbacks) {
         client.removeChannel(channels.events);
       }
       clearInterval(staleCheck);
+      clearInterval(periodicReconnect);
     };
   }, [enabled]);
 
