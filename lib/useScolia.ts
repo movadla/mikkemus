@@ -68,35 +68,50 @@ export function useScolia(enabled: boolean, callbacks: ScoliaCallbacks) {
     // without ever firing a close event, so its own reconnect logic never kicks
     // in — subscribe() picks a unique channel name each call so a stale pair can
     // be torn down and replaced without "already subscribed" errors.
-    function subscribe() {
-      const statusChannel = client
-        .channel(`scolia-status-changes-${Date.now()}`)
-        .on("postgres_changes", { event: "*", schema: "public", table: "scolia_status" }, (payload) => {
-          applyStatusRow(payload.new as StatusRow);
-        })
-        .subscribe();
+    function dbgPush(entry: unknown) {
+      const dbg = window as unknown as { __scoliaDebug?: unknown[] };
+      dbg.__scoliaDebug ??= [];
+      dbg.__scoliaDebug.push(entry);
+    }
 
-      const eventsChannel = client
-        .channel(`scolia-events-stream-${Date.now()}`)
-        .on("postgres_changes", { event: "INSERT", schema: "public", table: "scolia_events" }, (payload) => {
-          const dbg = (window as unknown as { __scoliaDebug?: unknown[] });
-          dbg.__scoliaDebug ??= [];
-          dbg.__scoliaDebug.push({ at: "eventsChannel.on", payload });
-          try {
-            const row = payload.new as { type: string; payload: unknown };
-            lastSeenAtRef.current = Date.now();
-            if (row.type === "THROW_DETECTED") callbacksRef.current.onThrow?.(row.payload as ThrowDetectedPayload);
-            else if (row.type === "TAKEOUT_STARTED") callbacksRef.current.onTakeoutStarted?.();
-            else if (row.type === "TAKEOUT_FINISHED") callbacksRef.current.onTakeoutFinished?.(row.payload as TakeoutFinishedPayload);
-          } catch (err) {
-            dbg.__scoliaDebug!.push({ at: "eventsChannel.on:error", err: String(err) });
-          }
-        })
-        .subscribe((status, err) => {
-          const dbg = (window as unknown as { __scoliaDebug?: unknown[] });
-          dbg.__scoliaDebug ??= [];
-          dbg.__scoliaDebug.push({ at: "eventsChannel.subscribe", status, err: err ? String(err) : null });
-        });
+    function subscribe() {
+      dbgPush({ at: "subscribe:enter" });
+      let statusChannel;
+      try {
+        statusChannel = client
+          .channel(`scolia-status-changes-${Date.now()}`)
+          .on("postgres_changes", { event: "*", schema: "public", table: "scolia_status" }, (payload) => {
+            applyStatusRow(payload.new as StatusRow);
+          })
+          .subscribe((status, err) => dbgPush({ at: "statusChannel.subscribe", status, err: err ? String(err) : null }));
+        dbgPush({ at: "subscribe:statusChannelCreated" });
+      } catch (err) {
+        dbgPush({ at: "subscribe:statusChannel:error", err: String(err) });
+        throw err;
+      }
+
+      let eventsChannel;
+      try {
+        eventsChannel = client
+          .channel(`scolia-events-stream-${Date.now()}`)
+          .on("postgres_changes", { event: "INSERT", schema: "public", table: "scolia_events" }, (payload) => {
+            dbgPush({ at: "eventsChannel.on", payload });
+            try {
+              const row = payload.new as { type: string; payload: unknown };
+              lastSeenAtRef.current = Date.now();
+              if (row.type === "THROW_DETECTED") callbacksRef.current.onThrow?.(row.payload as ThrowDetectedPayload);
+              else if (row.type === "TAKEOUT_STARTED") callbacksRef.current.onTakeoutStarted?.();
+              else if (row.type === "TAKEOUT_FINISHED") callbacksRef.current.onTakeoutFinished?.(row.payload as TakeoutFinishedPayload);
+            } catch (err) {
+              dbgPush({ at: "eventsChannel.on:error", err: String(err) });
+            }
+          })
+          .subscribe((status, err) => dbgPush({ at: "eventsChannel.subscribe", status, err: err ? String(err) : null }));
+        dbgPush({ at: "subscribe:eventsChannelCreated" });
+      } catch (err) {
+        dbgPush({ at: "subscribe:eventsChannel:error", err: String(err) });
+        throw err;
+      }
 
       channels = { status: statusChannel, events: eventsChannel };
     }
@@ -108,7 +123,11 @@ export function useScolia(enabled: boolean, callbacks: ScoliaCallbacks) {
       .maybeSingle()
       .then(({ data }) => applyStatusRow(data as StatusRow | null));
 
-    subscribe();
+    try {
+      subscribe();
+    } catch (err) {
+      dbgPush({ at: "mount:subscribe:error", err: String(err) });
+    }
 
     function reconnect() {
       if (channels) {
