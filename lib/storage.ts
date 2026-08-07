@@ -1,18 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { STEPS, type Step, type TurnAggregate } from "./game";
-
-const noopSubscribe = () => () => {};
-const EMPTY_ARRAY: never[] = [];
-const emptyArraySnapshot = () => EMPTY_ARRAY;
-
-const STORAGE_KEY = "mikke-mus:roster";
-
-// useSyncExternalStore requires getSnapshot to return a stable reference when
-// nothing changed, so cache the derived arrays alongside the raw string they
-// were built from and only recompute when the underlying storage differs.
-let cachedRaw: string | null | undefined;
-let cachedNames: string[] = EMPTY_ARRAY;
-let cachedRecords: PlayerRecord[] = EMPTY_ARRAY;
+import { supabase } from "./supabaseClient";
 
 export type HitStat = { hits: number; misses: number };
 
@@ -33,6 +21,19 @@ export type PlayerRecord = {
 
 type Roster = Record<string, PlayerRecord>;
 
+type PlayerRow = {
+  id: string;
+  name: string;
+  photo: string | null;
+  sound: string | null;
+  matches_played: number;
+  matches_won: number;
+  darts_in_wins: number;
+  overall_hits: number;
+  overall_misses: number;
+  steps: Record<Step, HitStat>;
+};
+
 function emptyStepStats(): Record<Step, HitStat> {
   const s = {} as Record<Step, HitStat>;
   STEPS.forEach((step) => (s[step] = { hits: 0, misses: 0 }));
@@ -43,75 +44,146 @@ function key(name: string) {
   return name.trim().toLowerCase();
 }
 
-function readRoster(): Roster {
-  if (typeof window === "undefined") return {};
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as Roster) : {};
-  } catch {
-    return {};
-  }
+function rowToRecord(row: PlayerRow): PlayerRecord {
+  return {
+    name: row.name,
+    photo: row.photo ?? undefined,
+    sound: row.sound ?? undefined,
+    matchesPlayed: row.matches_played,
+    matchesWon: row.matches_won,
+    dartsInWins: row.darts_in_wins,
+    overall: { hits: row.overall_hits, misses: row.overall_misses },
+    steps: row.steps,
+  };
 }
 
-function writeRoster(roster: Roster) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(roster));
+function recordToRow(k: string, record: PlayerRecord): PlayerRow {
+  return {
+    id: k,
+    name: record.name,
+    photo: record.photo ?? null,
+    sound: record.sound ?? null,
+    matches_played: record.matchesPlayed,
+    matches_won: record.matchesWon,
+    darts_in_wins: record.dartsInWins,
+    overall_hits: record.overall.hits,
+    overall_misses: record.overall.misses,
+    steps: record.steps,
+  };
 }
 
-export function loadRosterNames(): string[] {
-  return Object.values(readRoster())
-    .map((p) => p.name)
-    .sort((a, b) => a.localeCompare(b, "no"));
-}
+// In-memory cache, kept in sync with the Supabase "players" table so every
+// device sees the same roster. useSyncExternalStore needs a stable snapshot
+// reference, so cache the derived arrays and only recompute on real changes.
+let roster: Roster = {};
+const listeners = new Set<() => void>();
+const EMPTY_ARRAY: never[] = [];
+let cachedNames: string[] = EMPTY_ARRAY;
+let cachedRecords: PlayerRecord[] = EMPTY_ARRAY;
 
-export function loadRoster(): PlayerRecord[] {
-  return Object.values(readRoster()).sort((a, b) => a.name.localeCompare(b.name, "no"));
-}
-
-function refreshCache() {
-  if (typeof window === "undefined") return;
-  let raw: string | null;
-  try {
-    raw = window.localStorage.getItem(STORAGE_KEY);
-  } catch {
-    raw = null;
-  }
-  if (raw === cachedRaw) return;
-  cachedRaw = raw;
-  const roster: Roster = raw ? JSON.parse(raw) : {};
+function recomputeSnapshots() {
   cachedRecords = Object.values(roster).sort((a, b) => a.name.localeCompare(b.name, "no"));
   cachedNames = cachedRecords.map((p) => p.name);
 }
 
+function notify() {
+  recomputeSnapshots();
+  listeners.forEach((l) => l());
+}
+
+function subscribe(listener: () => void) {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
+async function upsertRow(k: string, record: PlayerRecord) {
+  if (!supabase) return;
+  const { error } = await supabase.from("players").upsert(recordToRow(k, record));
+  if (error) console.error("Kunne ikke lagre spiller i Supabase:", error.message);
+}
+
+async function deleteRow(k: string) {
+  if (!supabase) return;
+  const { error } = await supabase.from("players").delete().eq("id", k);
+  if (error) console.error("Kunne ikke slette spiller i Supabase:", error.message);
+}
+
+let initialized = false;
+
+/** Fetches the roster once and subscribes to realtime changes from other devices. Safe to call repeatedly. */
+function ensureInitialized() {
+  if (initialized || typeof window === "undefined" || !supabase) return;
+  initialized = true;
+
+  supabase
+    .from("players")
+    .select("*")
+    .then(({ data, error }) => {
+      if (error) {
+        console.error("Kunne ikke hente spillere fra Supabase:", error.message);
+        return;
+      }
+      const next: Roster = {};
+      (data as PlayerRow[]).forEach((row) => {
+        next[row.id] = rowToRecord(row);
+      });
+      roster = next;
+      notify();
+    });
+
+  // Dev Fast Refresh can re-run this while a previous channel with the same
+  // topic is still subscribed — drop it first so `.on()` never targets an
+  // already-subscribed channel.
+  const stale = supabase.getChannels().find((c) => c.topic === "realtime:players-changes");
+  if (stale) supabase.removeChannel(stale);
+
+  supabase
+    .channel("players-changes")
+    .on("postgres_changes", { event: "*", schema: "public", table: "players" }, (payload) => {
+      if (payload.eventType === "DELETE") {
+        const oldId = (payload.old as { id: string }).id;
+        const next = { ...roster };
+        delete next[oldId];
+        roster = next;
+      } else {
+        const row = payload.new as PlayerRow;
+        roster = { ...roster, [row.id]: rowToRecord(row) };
+      }
+      notify();
+    })
+    .subscribe();
+}
+
 function cachedNamesSnapshot(): string[] {
-  refreshCache();
+  ensureInitialized();
   return cachedNames;
 }
 
 function cachedRecordsSnapshot(): PlayerRecord[] {
-  refreshCache();
+  ensureInitialized();
   return cachedRecords;
 }
 
 /** Client-only read of the roster names, safe to call during render (no effect/setState needed). */
 export function useRosterNames(): string[] {
-  return useSyncExternalStore(noopSubscribe, cachedNamesSnapshot, emptyArraySnapshot);
+  return useSyncExternalStore(subscribe, cachedNamesSnapshot, () => EMPTY_ARRAY);
 }
 
 /** Client-only read of the full roster, safe to call during render (no effect/setState needed). */
 export function useRoster(): PlayerRecord[] {
-  return useSyncExternalStore(noopSubscribe, cachedRecordsSnapshot, emptyArraySnapshot);
+  return useSyncExternalStore(subscribe, cachedRecordsSnapshot, () => EMPTY_ARRAY);
 }
 
 export function getPlayerRecord(name: string): PlayerRecord | undefined {
-  return readRoster()[key(name)];
+  ensureInitialized();
+  return roster[key(name)];
 }
 
 export function ensurePlayer(name: string): PlayerRecord {
-  const roster = readRoster();
+  ensureInitialized();
   const k = key(name);
   if (!roster[k]) {
-    roster[k] = {
+    const record: PlayerRecord = {
       name: name.trim(),
       matchesPlayed: 0,
       matchesWon: 0,
@@ -119,25 +191,29 @@ export function ensurePlayer(name: string): PlayerRecord {
       overall: { hits: 0, misses: 0 },
       steps: emptyStepStats(),
     };
-    writeRoster(roster);
+    roster = { ...roster, [k]: record };
+    notify();
+    upsertRow(k, record);
   }
   return roster[k];
 }
 
 export function setPlayerPhoto(name: string, photo: string) {
-  const roster = readRoster();
   const k = key(name);
   if (!roster[k]) return;
-  roster[k].photo = photo;
-  writeRoster(roster);
+  const record = { ...roster[k], photo };
+  roster = { ...roster, [k]: record };
+  notify();
+  upsertRow(k, record);
 }
 
 export function setPlayerSound(name: string, sound: string) {
-  const roster = readRoster();
   const k = key(name);
   if (!roster[k]) return;
-  roster[k].sound = sound;
-  writeRoster(roster);
+  const record = { ...roster[k], sound };
+  roster = { ...roster, [k]: record };
+  notify();
+  upsertRow(k, record);
 }
 
 /** Plays a player's recorded turn-start clip, if they have one. Never throws. */
@@ -154,39 +230,51 @@ export function playPlayerSound(name: string | null) {
 
 /** Permanently removes a player and all their stats/photo from the roster. */
 export function deletePlayer(name: string) {
-  const roster = readRoster();
-  delete roster[key(name)];
-  writeRoster(roster);
+  const k = key(name);
+  const next = { ...roster };
+  delete next[k];
+  roster = next;
+  notify();
+  deleteRow(k);
 }
 
 /** Rolls one player's final turn-by-turn match aggregate into their persisted stats. */
 export function recordMatchResult(name: string, aggregate: TurnAggregate, won: boolean) {
-  const roster = readRoster();
   const k = key(name);
-  if (!roster[k]) {
-    roster[k] = {
+  const existing =
+    roster[k] ??
+    ({
       name,
       matchesPlayed: 0,
       matchesWon: 0,
       dartsInWins: 0,
       overall: { hits: 0, misses: 0 },
       steps: emptyStepStats(),
-    };
-  }
-  const record = roster[k];
-  record.matchesPlayed += 1;
-  if (won) {
-    // Defensive fallback in case this record predates these two fields.
-    record.matchesWon = (record.matchesWon ?? 0) + 1;
-    record.dartsInWins = (record.dartsInWins ?? 0) + aggregate.hits + aggregate.misses;
-  }
-  record.overall.hits += aggregate.hits;
-  record.overall.misses += aggregate.misses;
+    } satisfies PlayerRecord);
+
+  const steps = { ...existing.steps };
   STEPS.forEach((step) => {
-    record.steps[step].hits += aggregate.hitsByStep[step] ?? 0;
-    record.steps[step].misses += aggregate.missesByStep[step] ?? 0;
+    steps[step] = {
+      hits: steps[step].hits + (aggregate.hitsByStep[step] ?? 0),
+      misses: steps[step].misses + (aggregate.missesByStep[step] ?? 0),
+    };
   });
-  writeRoster(roster);
+
+  const record: PlayerRecord = {
+    ...existing,
+    matchesPlayed: existing.matchesPlayed + 1,
+    matchesWon: won ? existing.matchesWon + 1 : existing.matchesWon,
+    dartsInWins: won ? existing.dartsInWins + aggregate.hits + aggregate.misses : existing.dartsInWins,
+    overall: {
+      hits: existing.overall.hits + aggregate.hits,
+      misses: existing.overall.misses + aggregate.misses,
+    },
+    steps,
+  };
+
+  roster = { ...roster, [k]: record };
+  notify();
+  upsertRow(k, record);
 }
 
 export function averagePct(stat: HitStat): number {
