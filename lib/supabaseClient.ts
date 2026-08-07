@@ -14,3 +14,7 @@ export const supabase =
         realtime: { transport: typeof WebSocket !== "undefined" ? WebSocket : undefined },
       })
     : null;
+
+if (typeof window !== "undefined") {
+  (window as unknown as { __appSupabase: unknown }).__appSupabase = supabase;
+}
