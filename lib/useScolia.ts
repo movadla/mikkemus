@@ -90,6 +90,31 @@ export function useScolia(enabled: boolean, callbacks: ScoliaCallbacks) {
       };
     }
 
+    // The very first connection attempt for a fresh channel pair sometimes fails
+    // immediately (CHANNEL_ERROR/CLOSED) for reasons that haven't been pinned down —
+    // an independent client created the same moment often succeeds fine, so this
+    // reads like a one-off race rather than a real config problem. Retrying fast
+    // (instead of waiting for the 60s safety-net reconnect) makes that invisible.
+    let quickRetryTimer: ReturnType<typeof setTimeout> | null = null;
+    let quickRetryDelay = 1000;
+    function scheduleQuickRetry() {
+      if (quickRetryTimer) return;
+      quickRetryTimer = setTimeout(() => {
+        quickRetryTimer = null;
+        quickRetryDelay = Math.min(quickRetryDelay * 2, 10_000);
+        reconnect();
+      }, quickRetryDelay);
+    }
+
+    function handleChannelStatus(name: string, status: string, err: unknown) {
+      dbgPush({ at: `${name}.subscribe`, status, err: describeErr(err) });
+      if (status === "SUBSCRIBED") {
+        quickRetryDelay = 1000;
+      } else if (status === "CHANNEL_ERROR" || status === "CLOSED" || status === "TIMED_OUT") {
+        scheduleQuickRetry();
+      }
+    }
+
     function subscribe() {
       dbgPush({ at: "subscribe:enter" });
       let statusChannel;
@@ -99,7 +124,7 @@ export function useScolia(enabled: boolean, callbacks: ScoliaCallbacks) {
           .on("postgres_changes", { event: "*", schema: "public", table: "scolia_status" }, (payload) => {
             applyStatusRow(payload.new as StatusRow);
           })
-          .subscribe((status, err) => dbgPush({ at: "statusChannel.subscribe", status, err: describeErr(err) }));
+          .subscribe((status, err) => handleChannelStatus("statusChannel", status, err));
         dbgPush({ at: "subscribe:statusChannelCreated" });
       } catch (err) {
         dbgPush({ at: "subscribe:statusChannel:error", err: String(err) });
@@ -122,7 +147,7 @@ export function useScolia(enabled: boolean, callbacks: ScoliaCallbacks) {
               dbgPush({ at: "eventsChannel.on:error", err: String(err) });
             }
           })
-          .subscribe((status, err) => dbgPush({ at: "eventsChannel.subscribe", status, err: describeErr(err) }));
+          .subscribe((status, err) => handleChannelStatus("eventsChannel", status, err));
         dbgPush({ at: "subscribe:eventsChannelCreated" });
       } catch (err) {
         dbgPush({ at: "subscribe:eventsChannel:error", err: String(err) });
@@ -180,6 +205,7 @@ export function useScolia(enabled: boolean, callbacks: ScoliaCallbacks) {
         client.removeChannel(channels.status);
         client.removeChannel(channels.events);
       }
+      if (quickRetryTimer) clearTimeout(quickRetryTimer);
       clearInterval(staleCheck);
       clearInterval(periodicReconnect);
     };
