@@ -24,9 +24,13 @@ type StatusRow = {
   updated_at: string;
 };
 
+type EventRow = { id: number; type: string; payload: unknown };
+
 // The relay heartbeats every 30s (see scripts/scolia-relay.ts) — anything much older
 // than that means the relay process probably isn't running right now.
 const STALE_AFTER_MS = 90_000;
+const EVENTS_POLL_MS = 1_000;
+const STATUS_POLL_MS = 5_000;
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -39,8 +43,8 @@ const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
  * Turbopack packages @supabase/realtime-js (or its @supabase/phoenix dependency)
  * breaks the websocket handshake. Until that's understood, Realtime specifically
  * uses a dynamically imported, unbundled client to sidestep it; regular
- * REST calls (lib/storage.ts, the initial status fetch below) are unaffected
- * and keep using the normal bundled client from ./supabaseClient.
+ * REST calls (lib/storage.ts, the polling below) are unaffected and keep using
+ * the normal bundled client from ./supabaseClient.
  */
 const SUPABASE_JS_CDN_URL = "https://esm.sh/@supabase/supabase-js@2.112.2";
 
@@ -58,7 +62,7 @@ function getRealtimeClient(): Promise<SupabaseClient | null> {
  * Scolia directly from the browser — a direct browser connection from the deployed
  * production origin gets closed by Scolia with an undocumented code, so a small
  * always-on relay script (scripts/scolia-relay.ts) holds that connection instead
- * and forwards everything into Supabase, which the browser just subscribes to.
+ * and forwards everything into Supabase, which the browser just reads.
  */
 export function useScolia(enabled: boolean, callbacks: ScoliaCallbacks) {
   const [state, setState] = useState<ScoliaState>({
@@ -74,14 +78,20 @@ export function useScolia(enabled: boolean, callbacks: ScoliaCallbacks) {
 
   useEffect(() => {
     if (!enabled || !supabase) return;
+    const client = supabase;
 
     let cancelled = false;
     const lastSeenAtRef = { current: 0 };
+    const lastEventIdRef = { current: 0 };
     let channels: { status: ReturnType<SupabaseClient["channel"]>; events: ReturnType<SupabaseClient["channel"]> } | null = null;
+
+    function noteAlive() {
+      lastSeenAtRef.current = Date.now();
+    }
 
     function applyStatusRow(row: StatusRow | null) {
       if (!row) return;
-      lastSeenAtRef.current = Date.now();
+      noteAlive();
       setState({
         relay: "live",
         boardStatus: row.board_status as BoardStatus | null,
@@ -90,55 +100,102 @@ export function useScolia(enabled: boolean, callbacks: ScoliaCallbacks) {
       });
     }
 
+    // Shared by the realtime channel and the poll below, so whichever notices a
+    // given row first "wins" and the other silently no-ops on it.
+    function processEventRow(row: EventRow) {
+      if (row.id <= lastEventIdRef.current) return;
+      lastEventIdRef.current = row.id;
+      noteAlive();
+      if (row.type === "THROW_DETECTED") callbacksRef.current.onThrow?.(row.payload as ThrowDetectedPayload);
+      else if (row.type === "TAKEOUT_STARTED") callbacksRef.current.onTakeoutStarted?.();
+      else if (row.type === "TAKEOUT_FINISHED") callbacksRef.current.onTakeoutFinished?.(row.payload as TakeoutFinishedPayload);
+    }
+
     /**
      * Subscribes once and then leaves reconnection entirely to realtime-js's own
      * socket/channel rejoin (Phoenix channels rejoin automatically once the socket
-     * is back up — that's built in, not something the app needs to drive). An
-     * earlier version tore down and recreated both channels on every CHANNEL_ERROR/
-     * CLOSED with its own backoff timer; on flakier connections (seen in production,
-     * rare on local dev) that fired at nearly the same cadence as the library's own
-     * reconnect and kept yanking the join out from under it right as it was about to
-     * succeed, so the app could spin on CHANNEL_ERROR indefinitely even though a
-     * plain subscribe-and-wait recovers within a few seconds every time.
+     * is back up — that's built in, not something the app needs to drive).
      */
-    function subscribe(client: SupabaseClient) {
-      const statusChannel = client
+    function subscribeRealtime(realtimeClient: SupabaseClient) {
+      const statusChannel = realtimeClient
         .channel("scolia-status-changes")
         .on("postgres_changes", { event: "*", schema: "public", table: "scolia_status" }, (payload) => {
           applyStatusRow(payload.new as StatusRow);
         })
         .subscribe();
 
-      const eventsChannel = client
+      const eventsChannel = realtimeClient
         .channel("scolia-events-stream")
         .on("postgres_changes", { event: "INSERT", schema: "public", table: "scolia_events" }, (payload) => {
-          const row = payload.new as { type: string; payload: unknown };
-          lastSeenAtRef.current = Date.now();
-          if (row.type === "THROW_DETECTED") callbacksRef.current.onThrow?.(row.payload as ThrowDetectedPayload);
-          else if (row.type === "TAKEOUT_STARTED") callbacksRef.current.onTakeoutStarted?.();
-          else if (row.type === "TAKEOUT_FINISHED") callbacksRef.current.onTakeoutFinished?.(row.payload as TakeoutFinishedPayload);
+          processEventRow(payload.new as EventRow);
         })
         .subscribe();
 
       channels = { status: statusChannel, events: eventsChannel };
     }
 
-    // The initial read-once status fetch is plain REST, unaffected by the
-    // Realtime bundling issue, so it stays on the normal bundled client.
-    supabase
+    // Start listening for events from "now" — not from the beginning of the table.
+    client
+      .from("scolia_events")
+      .select("id")
+      .order("id", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => {
+        lastEventIdRef.current = (data as { id: number } | null)?.id ?? 0;
+      });
+
+    client
       .from("scolia_status")
       .select("*")
       .eq("id", "current")
       .maybeSingle()
       .then(({ data }) => applyStatusRow(data as StatusRow | null));
 
-    getRealtimeClient().then((client) => {
-      if (cancelled || !client) return;
-      subscribe(client);
+    getRealtimeClient().then((realtimeClient) => {
+      if (cancelled || !realtimeClient) return;
+      subscribeRealtime(realtimeClient);
     });
 
+    /**
+     * The Realtime WebSocket handshake to Supabase is unreliable for reasons not
+     * fully pinned down — intermittent 1006 closes, seen far more from the
+     * deployed Vercel origin than from local dev, sometimes never once
+     * succeeding for an entire game. Rather than keep chasing that, polling runs
+     * unconditionally alongside the realtime subscription as the reliability
+     * backbone; realtime becomes purely a latency optimization for whenever it
+     * does happen to connect. processEventRow/applyStatusRow dedupe between them.
+     */
+    const eventsPoll = setInterval(() => {
+      client
+        .from("scolia_events")
+        .select("id, type, payload")
+        .gt("id", lastEventIdRef.current)
+        .order("id", { ascending: true })
+        .then(({ data }) => {
+          if (cancelled) return;
+          if (data) {
+            noteAlive();
+            (data as EventRow[]).forEach(processEventRow);
+          }
+        });
+    }, EVENTS_POLL_MS);
+
+    const statusPoll = setInterval(() => {
+      client
+        .from("scolia_status")
+        .select("*")
+        .eq("id", "current")
+        .maybeSingle()
+        .then(({ data }) => {
+          if (cancelled) return;
+          if (data) applyStatusRow(data as StatusRow);
+          else noteAlive();
+        });
+    }, STATUS_POLL_MS);
+
     // Purely a UI signal (drives the ScoliaStatusBadge) — takes no corrective
-    // action itself, since reconnection is the realtime client's job.
+    // action itself, since both realtime and polling already run unconditionally.
     const staleCheck = setInterval(() => {
       if (!lastSeenAtRef.current || Date.now() - lastSeenAtRef.current <= STALE_AFTER_MS) return;
       setState((s) => (s.relay === "stale" ? s : { ...s, relay: "stale" }));
@@ -147,12 +204,14 @@ export function useScolia(enabled: boolean, callbacks: ScoliaCallbacks) {
     return () => {
       cancelled = true;
       if (channels) {
-        getRealtimeClient().then((client) => {
-          if (!client || !channels) return;
-          client.removeChannel(channels.status);
-          client.removeChannel(channels.events);
+        getRealtimeClient().then((realtimeClient) => {
+          if (!realtimeClient || !channels) return;
+          realtimeClient.removeChannel(channels.status);
+          realtimeClient.removeChannel(channels.events);
         });
       }
+      clearInterval(eventsPoll);
+      clearInterval(statusPoll);
       clearInterval(staleCheck);
     };
   }, [enabled]);
