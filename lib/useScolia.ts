@@ -51,6 +51,7 @@ export function useScolia(enabled: boolean, callbacks: ScoliaCallbacks) {
     const client = supabase;
 
     const lastSeenAtRef = { current: 0 };
+    let channels: { status: ReturnType<typeof client.channel>; events: ReturnType<typeof client.channel> } | null = null;
 
     function applyStatusRow(row: StatusRow | null) {
       if (!row) return;
@@ -63,6 +64,32 @@ export function useScolia(enabled: boolean, callbacks: ScoliaCallbacks) {
       });
     }
 
+    // Supabase's realtime socket can go quiet (e.g. a dropped mobile connection)
+    // without ever firing a close event, so its own reconnect logic never kicks
+    // in — subscribe() picks a unique channel name each call so a stale pair can
+    // be torn down and replaced without "already subscribed" errors.
+    function subscribe() {
+      const statusChannel = client
+        .channel(`scolia-status-changes-${Date.now()}`)
+        .on("postgres_changes", { event: "*", schema: "public", table: "scolia_status" }, (payload) => {
+          applyStatusRow(payload.new as StatusRow);
+        })
+        .subscribe();
+
+      const eventsChannel = client
+        .channel(`scolia-events-stream-${Date.now()}`)
+        .on("postgres_changes", { event: "INSERT", schema: "public", table: "scolia_events" }, (payload) => {
+          const row = payload.new as { type: string; payload: unknown };
+          lastSeenAtRef.current = Date.now();
+          if (row.type === "THROW_DETECTED") callbacksRef.current.onThrow?.(row.payload as ThrowDetectedPayload);
+          else if (row.type === "TAKEOUT_STARTED") callbacksRef.current.onTakeoutStarted?.();
+          else if (row.type === "TAKEOUT_FINISHED") callbacksRef.current.onTakeoutFinished?.(row.payload as TakeoutFinishedPayload);
+        })
+        .subscribe();
+
+      channels = { status: statusChannel, events: eventsChannel };
+    }
+
     client
       .from("scolia_status")
       .select("*")
@@ -70,35 +97,23 @@ export function useScolia(enabled: boolean, callbacks: ScoliaCallbacks) {
       .maybeSingle()
       .then(({ data }) => applyStatusRow(data as StatusRow | null));
 
-    const statusChannel = client
-      .channel("scolia-status-changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "scolia_status" }, (payload) => {
-        console.log("[scolia] status event", payload);
-        applyStatusRow(payload.new as StatusRow);
-      })
-      .subscribe((status, err) => console.log("[scolia] status channel:", status, err));
-
-    const eventsChannel = client
-      .channel("scolia-events-stream")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "scolia_events" }, (payload) => {
-        console.log("[scolia] events event", payload);
-        const row = payload.new as { type: string; payload: unknown };
-        lastSeenAtRef.current = Date.now();
-        if (row.type === "THROW_DETECTED") callbacksRef.current.onThrow?.(row.payload as ThrowDetectedPayload);
-        else if (row.type === "TAKEOUT_STARTED") callbacksRef.current.onTakeoutStarted?.();
-        else if (row.type === "TAKEOUT_FINISHED") callbacksRef.current.onTakeoutFinished?.(row.payload as TakeoutFinishedPayload);
-      })
-      .subscribe((status, err) => console.log("[scolia] events channel:", status, err));
+    subscribe();
 
     const staleCheck = setInterval(() => {
-      if (lastSeenAtRef.current && Date.now() - lastSeenAtRef.current > STALE_AFTER_MS) {
-        setState((s) => (s.relay === "stale" ? s : { ...s, relay: "stale" }));
+      if (!lastSeenAtRef.current || Date.now() - lastSeenAtRef.current <= STALE_AFTER_MS) return;
+      setState((s) => (s.relay === "stale" ? s : { ...s, relay: "stale" }));
+      if (channels) {
+        client.removeChannel(channels.status);
+        client.removeChannel(channels.events);
       }
+      subscribe();
     }, 15_000);
 
     return () => {
-      client.removeChannel(statusChannel);
-      client.removeChannel(eventsChannel);
+      if (channels) {
+        client.removeChannel(channels.status);
+        client.removeChannel(channels.events);
+      }
       clearInterval(staleCheck);
     };
   }, [enabled]);
