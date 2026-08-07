@@ -97,6 +97,8 @@ export function useScolia(enabled: boolean, callbacks: ScoliaCallbacks) {
       .maybeSingle()
       .then(({ data }) => applyStatusRow(data as StatusRow | null));
 
+    subscribe();
+
     function reconnect() {
       if (channels) {
         client.removeChannel(channels.status);
