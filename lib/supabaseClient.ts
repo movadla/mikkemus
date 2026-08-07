@@ -17,4 +17,7 @@ export const supabase =
 
 if (typeof window !== "undefined") {
   (window as unknown as { __appSupabase: unknown }).__appSupabase = supabase;
+  (window as unknown as { __appCreateClient: unknown; __appUrl: unknown; __appKey: unknown }).__appCreateClient = createClient;
+  (window as unknown as { __appUrl: unknown }).__appUrl = url;
+  (window as unknown as { __appKey: unknown }).__appKey = anonKey;
 }
