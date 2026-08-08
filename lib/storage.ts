@@ -11,6 +11,21 @@ function emptyAccuracyStat(): AccuracyStat {
   return { sumDistance: 0, sumHorizontal: 0, sumVertical: 0, throws: 0 };
 }
 
+/** Keyed by the number (1–20) as a string — how many times a Triple or Double of that number has landed, regardless of how the game ended up scoring it. */
+export type RingHits = Record<string, number>;
+
+/** One completed match's own numbers, for the "over time" trend on a player's stats page — separate from the cumulative career totals above. */
+export type MatchHistoryEntry = {
+  date: string;
+  won: boolean;
+  dartsUsed: number;
+  hitPct: number;
+  /** This match's own MED/MHD/MVD — null if Scolia didn't detect any throws this match (manual-only play). */
+  med: number | null;
+  mhd: number | null;
+  mvd: number | null;
+};
+
 export type PlayerRecord = {
   name: string;
   photo?: string;
@@ -22,9 +37,14 @@ export type PlayerRecord = {
   matchesWon: number;
   /** Sum of hits+misses across every match this player has won. */
   dartsInWins: number;
+  /** Fewest darts used in any single won match. Null until the first win. */
+  bestDartsToFinish: number | null;
   overall: HitStat;
   steps: Record<Step, HitStat>;
   accuracy: AccuracyStat;
+  tripleHits: RingHits;
+  doubleHits: RingHits;
+  matchHistory: MatchHistoryEntry[];
 };
 
 type Roster = Record<string, PlayerRecord>;
@@ -44,6 +64,10 @@ type PlayerRow = {
   accuracy_sum_horizontal: number | null;
   accuracy_sum_vertical: number | null;
   accuracy_throws: number | null;
+  best_darts_to_finish: number | null;
+  triple_hits: RingHits | null;
+  double_hits: RingHits | null;
+  match_history: MatchHistoryEntry[] | null;
 };
 
 function emptyStepStats(): Record<Step, HitStat> {
@@ -73,6 +97,10 @@ function rowToRecord(row: PlayerRow): PlayerRecord {
       sumVertical: row.accuracy_sum_vertical ?? 0,
       throws: row.accuracy_throws ?? 0,
     },
+    bestDartsToFinish: row.best_darts_to_finish ?? null,
+    tripleHits: row.triple_hits ?? {},
+    doubleHits: row.double_hits ?? {},
+    matchHistory: row.match_history ?? [],
   };
 }
 
@@ -92,6 +120,10 @@ function recordToRow(k: string, record: PlayerRecord): PlayerRow {
     accuracy_sum_horizontal: record.accuracy.sumHorizontal,
     accuracy_sum_vertical: record.accuracy.sumVertical,
     accuracy_throws: record.accuracy.throws,
+    best_darts_to_finish: record.bestDartsToFinish,
+    triple_hits: record.tripleHits,
+    double_hits: record.doubleHits,
+    match_history: record.matchHistory,
   };
 }
 
@@ -211,9 +243,13 @@ export function ensurePlayer(name: string): PlayerRecord {
       matchesPlayed: 0,
       matchesWon: 0,
       dartsInWins: 0,
+      bestDartsToFinish: null,
       overall: { hits: 0, misses: 0 },
       steps: emptyStepStats(),
       accuracy: emptyAccuracyStat(),
+      tripleHits: {},
+      doubleHits: {},
+      matchHistory: [],
     };
     roster = { ...roster, [k]: record };
     notify();
@@ -272,9 +308,13 @@ export function recordMatchResult(name: string, aggregate: TurnAggregate, won: b
       matchesPlayed: 0,
       matchesWon: 0,
       dartsInWins: 0,
+      bestDartsToFinish: null,
       overall: { hits: 0, misses: 0 },
       steps: emptyStepStats(),
       accuracy: emptyAccuracyStat(),
+      tripleHits: {},
+      doubleHits: {},
+      matchHistory: [],
     } satisfies PlayerRecord);
 
   const steps = { ...existing.steps };
@@ -285,11 +325,16 @@ export function recordMatchResult(name: string, aggregate: TurnAggregate, won: b
     };
   });
 
+  const dartsUsed = aggregate.hits + aggregate.misses;
   const record: PlayerRecord = {
     ...existing,
     matchesPlayed: existing.matchesPlayed + 1,
     matchesWon: won ? existing.matchesWon + 1 : existing.matchesWon,
-    dartsInWins: won ? existing.dartsInWins + aggregate.hits + aggregate.misses : existing.dartsInWins,
+    dartsInWins: won ? existing.dartsInWins + dartsUsed : existing.dartsInWins,
+    bestDartsToFinish:
+      won && (existing.bestDartsToFinish === null || dartsUsed < existing.bestDartsToFinish)
+        ? dartsUsed
+        : existing.bestDartsToFinish,
     overall: {
       hits: existing.overall.hits + aggregate.hits,
       misses: existing.overall.misses + aggregate.misses,
@@ -317,6 +362,69 @@ export function recordAccuracyTotals(name: string, totals: { distance: number; h
   roster = { ...roster, [k]: record };
   notify();
   upsertRow(k, record);
+}
+
+/** Appends one finished match's own numbers to the player's history — the "over time" trend on their stats page. */
+export function recordMatchHistory(name: string, entry: MatchHistoryEntry) {
+  const k = key(name);
+  const existing = roster[k] ?? ensurePlayer(name);
+  const record: PlayerRecord = { ...existing, matchHistory: [...existing.matchHistory, entry] };
+  roster = { ...roster, [k]: record };
+  notify();
+  upsertRow(k, record);
+}
+
+/** Rolls one match's Triple/Double-by-number hit counts into the player's career totals (favorite triple/double). */
+export function recordRingHits(name: string, triple: RingHits, double: RingHits) {
+  if (Object.keys(triple).length === 0 && Object.keys(double).length === 0) return;
+  const k = key(name);
+  const existing = roster[k] ?? ensurePlayer(name);
+  const merge = (a: RingHits, b: RingHits): RingHits => {
+    const out = { ...a };
+    for (const [num, count] of Object.entries(b)) out[num] = (out[num] ?? 0) + count;
+    return out;
+  };
+  const record: PlayerRecord = {
+    ...existing,
+    tripleHits: merge(existing.tripleHits, triple),
+    doubleHits: merge(existing.doubleHits, double),
+  };
+  roster = { ...roster, [k]: record };
+  notify();
+  upsertRow(k, record);
+}
+
+/** The number (as a step) this player hits most reliably, among the tracked numbers 20–14. Null with no throws yet at any of them. */
+export function favoriteNumber(record: PlayerRecord): Step | null {
+  const numberSteps = STEPS.filter((s) => !Number.isNaN(Number(s)));
+  let best: Step | null = null;
+  let bestPct = -1;
+  let bestAttempts = 0;
+  for (const step of numberSteps) {
+    const stat = record.steps[step];
+    const attempts = stat.hits + stat.misses;
+    if (attempts === 0) continue;
+    const pct = stat.hits / attempts;
+    if (pct > bestPct) {
+      best = step;
+      bestPct = pct;
+      bestAttempts = attempts;
+    }
+  }
+  return bestAttempts > 0 ? best : null;
+}
+
+/** The specific number whose Triple/Double this player has physically landed most often — a raw frequency count, not a percentage (there's no fixed "attempts" denominator per number). Null with no ring hits recorded yet. */
+export function favoriteRingNumber(hits: RingHits): number | null {
+  let best: number | null = null;
+  let bestCount = 0;
+  for (const [num, count] of Object.entries(hits)) {
+    if (count > bestCount) {
+      best = Number(num);
+      bestCount = count;
+    }
+  }
+  return best;
 }
 
 /** Mean Euclidean Distance — average straight-line miss distance from target, in mm. Null with no data yet. */

@@ -18,7 +18,7 @@ import {
   type TurnShot,
   type PendingAmbiguous,
 } from "@/lib/game";
-import { playPlayerSound, recordAccuracyTotals, recordMatchResult } from "@/lib/storage";
+import { playPlayerSound, recordAccuracyTotals, recordMatchHistory, recordMatchResult, recordRingHits, type RingHits } from "@/lib/storage";
 import { clearActiveMatch, loadActiveMatch, saveActiveMatch } from "@/lib/activeMatch";
 import { throwAccuracy } from "@/lib/dartboard";
 import { haptics } from "@/lib/haptics";
@@ -82,6 +82,10 @@ export function MikkeMusApp() {
   // Running MED/MHD/MVD sums this match, per player — a ref (not state) since it's
   // only ever read once, at match end, and shouldn't trigger a re-render per dart.
   const accuracyTotalsRef = useRef<Record<string, { distance: number; horizontal: number; vertical: number; throws: number }>>({});
+  // Which specific number's Triple/Double physically landed this match, per player —
+  // for the career "favorite triple/double" stat. Counts every ring hit as thrown,
+  // regardless of how the triple/double-redirect ambiguity later got resolved.
+  const ringHitsRef = useRef<Record<string, { triple: RingHits; double: RingHits }>>({});
   // Flips true after the one-time localStorage restore below has had its chance to
   // run — the save effect must not fire before that, or it would see the plain
   // "setup" initial state and wipe a saved match before it's even restored.
@@ -209,6 +213,21 @@ export function MikkeMusApp() {
       const parsed = parseSector(payload.sector, payload.bounceout);
       const { step, crosses } = stepForSector(parsed);
 
+      // Physical placement, tracked independent of how the ambiguity below (if any)
+      // ends up scoring it — "favorite triple/double" is about where darts land.
+      if (parsed.kind === "number" && (parsed.ring === "D" || parsed.ring === "T")) {
+        const bucket = parsed.ring === "T" ? "triple" : "double";
+        const playerRingHits = ringHitsRef.current[activePlayer] ?? { triple: {}, double: {} };
+        const numKey = String(parsed.number);
+        ringHitsRef.current = {
+          ...ringHitsRef.current,
+          [activePlayer]: {
+            ...playerRingHits,
+            [bucket]: { ...playerRingHits[bucket], [numKey]: (playerRingHits[bucket][numKey] ?? 0) + 1 },
+          },
+        };
+      }
+
       /**
        * A triple/double landing on the number the player is actively working
        * banks normally to T/D (unchanged) — but if that ring still has room, the
@@ -315,6 +334,7 @@ export function MikkeMusApp() {
     setRecentlyConfirmed(null);
     setMatchThrows({});
     accuracyTotalsRef.current = {};
+    ringHitsRef.current = {};
     updatePendingAmbiguous([]);
     setAwaitingConfirmResolution(false);
     scoliaDartsRef.current = 0;
@@ -451,6 +471,21 @@ export function MikkeMusApp() {
       recordMatchResult(p, aggregate, p === winnerName);
       const accuracy = accuracyTotalsRef.current[p];
       if (accuracy) recordAccuracyTotals(p, accuracy);
+      const ringHits = ringHitsRef.current[p];
+      if (ringHits) recordRingHits(p, ringHits.triple, ringHits.double);
+
+      const dartsUsed = aggregate.hits + aggregate.misses;
+      if (dartsUsed > 0) {
+        recordMatchHistory(p, {
+          date: new Date().toISOString(),
+          won: p === winnerName,
+          dartsUsed,
+          hitPct: Math.round((aggregate.hits / dartsUsed) * 100),
+          med: accuracy && accuracy.throws > 0 ? accuracy.distance / accuracy.throws : null,
+          mhd: accuracy && accuracy.throws > 0 ? accuracy.horizontal / accuracy.throws : null,
+          mvd: accuracy && accuracy.throws > 0 ? accuracy.vertical / accuracy.throws : null,
+        });
+      }
     });
     return stats;
   }

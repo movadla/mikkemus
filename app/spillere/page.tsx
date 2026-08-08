@@ -72,29 +72,31 @@ export default function PlayersPage() {
                 </div>
               ) : (
                 <div className="flex items-center gap-3 mb-3">
-                  <div
-                    className="w-12 h-12 rounded-full overflow-hidden shrink-0 flex items-center justify-center"
-                    style={{ background: "var(--color-cell)", border: "1px solid var(--color-border)" }}
-                  >
-                    {p.photo ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={p.photo} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <span style={{ color: "var(--color-muted)" }}>{p.name.charAt(0).toUpperCase()}</span>
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <p style={{ color: "var(--color-cream)", fontWeight: 600 }}>{p.name}</p>
-                    <p style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>
-                      {p.matchesPlayed} {p.matchesPlayed === 1 ? "kamp" : "kamper"}
-                    </p>
-                  </div>
-                  <div className="text-right tabular">
-                    <p style={{ color: "var(--color-teal)", fontSize: "1.3rem", fontWeight: 700 }}>
-                      {averagePct(p.overall)}%
-                    </p>
-                    <p style={{ color: "var(--color-muted)", fontSize: "0.65rem", letterSpacing: "0.1em" }}>TOTALT</p>
-                  </div>
+                  <Link href={`/spillere/${encodeURIComponent(p.name)}`} className={`flex items-center gap-3 flex-1 min-w-0 rounded-lg ${FOCUS_RING}`}>
+                    <div
+                      className="w-12 h-12 rounded-full overflow-hidden shrink-0 flex items-center justify-center"
+                      style={{ background: "var(--color-cell)", border: "1px solid var(--color-border)" }}
+                    >
+                      {p.photo ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={p.photo} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <span style={{ color: "var(--color-muted)" }}>{p.name.charAt(0).toUpperCase()}</span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p style={{ color: "var(--color-cream)", fontWeight: 600 }}>{p.name}</p>
+                      <p style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>
+                        {p.matchesPlayed} {p.matchesPlayed === 1 ? "kamp" : "kamper"}
+                      </p>
+                    </div>
+                    <div className="text-right tabular shrink-0">
+                      <p style={{ color: "var(--color-teal)", fontSize: "1.3rem", fontWeight: 700 }}>
+                        {averagePct(p.overall)}%
+                      </p>
+                      <p style={{ color: "var(--color-muted)", fontSize: "0.65rem", letterSpacing: "0.1em" }}>TOTALT</p>
+                    </div>
+                  </Link>
                   <button
                     type="button"
                     onClick={() => setConfirmingDelete(p.name)}
