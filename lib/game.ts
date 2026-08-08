@@ -45,6 +45,22 @@ export const DARTS_PER_TURN = 3;
 /** One dart's result, for the per-turn shot-indicator boxes (green = scored a cross, red = didn't). */
 export type TurnShot = { label: string; hit: boolean };
 
+/**
+ * A triple/double hit on the player's own active number, banked normally to
+ * T/D but with an undecided choice pending: keep it on T/D, or redirect it to
+ * complete the number instead (worth `multiplier` crosses there — a triple
+ * counts 3x, a double 2x, matching the real ring's value). Resolved either by
+ * a later plain hit on the same number (auto-resolves to "keep") or, if still
+ * undecided, by an explicit choice at Confirm.
+ */
+export type PendingAmbiguous = {
+  key: number;
+  hitRecord: HitRecord;
+  ringStep: "D" | "T";
+  number: Step;
+  multiplier: 2 | 3;
+};
+
 export type TurnResult = {
   /** Crosses gained this turn, by the step they landed on. */
   hitsByStep: Partial<Record<Step, number>>;
@@ -65,6 +81,12 @@ export function currentStepFor(progress: Progress): Step | null {
     if (progress[s] < 3) return s;
   }
   return null;
+}
+
+/** The step that becomes active right after `step` is completed — null if `step` is the last one (BULL). */
+export function nextStepAfter(step: Step): Step | null {
+  const i = STEPS.indexOf(step);
+  return i >= 0 && i < STEPS.length - 1 ? STEPS[i + 1] : null;
 }
 
 /**

@@ -16,6 +16,7 @@ import {
   type TurnAggregate,
   type TurnResult,
   type TurnShot,
+  type PendingAmbiguous,
 } from "@/lib/game";
 import { playPlayerSound, recordAccuracyTotals, recordMatchResult } from "@/lib/storage";
 import { clearActiveMatch, loadActiveMatch, saveActiveMatch } from "@/lib/activeMatch";
@@ -76,6 +77,13 @@ export function MikkeMusApp() {
   // run — the save effect must not fire before that, or it would see the plain
   // "setup" initial state and wipe a saved match before it's even restored.
   const [hydratedFromStorage, setHydratedFromStorage] = useState(false);
+  // Triple/double-on-active-number hits still undecided between staying on T/D or
+  // redirecting to complete the number (see PendingAmbiguous). Resolved in LIFO
+  // order — only the most recent one is ever live/shown.
+  const [pendingAmbiguous, setPendingAmbiguous] = useState<PendingAmbiguous[]>([]);
+  const pendingAmbiguousKeyRef = useRef(0);
+  // True once Confirm has been requested but is blocked on resolving pendingAmbiguous.
+  const [awaitingConfirmResolution, setAwaitingConfirmResolution] = useState(false);
 
   const activePlayer = rewound ?? players[currentIdx] ?? null;
 
@@ -165,7 +173,49 @@ export function MikkeMusApp() {
 
       const parsed = parseSector(payload.sector, payload.bounceout);
       const { step, crosses } = stepForSector(parsed);
-      const hit = step ? registerHit(step, crosses) : false;
+
+      /**
+       * A triple/double landing on the number the player is actively working
+       * banks normally to T/D (unchanged) — but if that ring still has room, the
+       * dart could just as easily have been meant to finish the number itself
+       * (a triple/double is worth 3x/2x there), so it's flagged as undecided
+       * rather than silently locked to T/D. If the ring is already full, there's
+       * no ambiguity — it can only go to the number, at its multiplier value.
+       */
+      let hitResult: HitRecord[] | null;
+      if (
+        parsed.kind === "number" &&
+        (parsed.ring === "D" || parsed.ring === "T") &&
+        activeStepAtThrow !== null &&
+        !Number.isNaN(Number(activeStepAtThrow)) &&
+        parsed.number === Number(activeStepAtThrow)
+      ) {
+        const ringStep = parsed.ring;
+        const numberStep = activeStepAtThrow;
+        const ringFull = (progress[activePlayer][ringStep] ?? 0) >= 3;
+        const multiplier: 2 | 3 = ringStep === "T" ? 3 : 2;
+        if (ringFull) {
+          hitResult = registerHit(numberStep, multiplier);
+        } else {
+          hitResult = registerHit(ringStep, crosses);
+          if (hitResult) {
+            const created = hitResult[0];
+            setPendingAmbiguous((prev) => [
+              ...prev,
+              { key: ++pendingAmbiguousKeyRef.current, hitRecord: created, ringStep, number: numberStep, multiplier },
+            ]);
+          }
+        }
+      } else {
+        hitResult = step ? registerHit(step, crosses) : null;
+        // A plain hit landing on a number with an undecided redirect signals "still
+        // working this number" — resolve that ambiguity toward "keep on T/D" now,
+        // instead of waiting for Confirm to ask.
+        if (step !== null && !Number.isNaN(Number(step))) {
+          setPendingAmbiguous((prev) => prev.filter((p) => p.number !== step));
+        }
+      }
+      const hit = hitResult !== null;
 
       setMatchThrows((prev) => ({
         ...prev,
@@ -224,6 +274,8 @@ export function MikkeMusApp() {
     setTurnShots(EMPTY_TURN_SHOTS);
     setMatchThrows({});
     accuracyTotalsRef.current = {};
+    setPendingAmbiguous([]);
+    setAwaitingConfirmResolution(false);
     scoliaDartsRef.current = 0;
     setScreen("game");
     playPlayerSound(startPlayers[0] ?? null);
@@ -245,12 +297,12 @@ export function MikkeMusApp() {
    * the same prevCount->newCount delta twice, since `progress` in this closure doesn't
    * reflect the first call's setProgress until the next render.
    */
-  /** Returns whether the dart actually registered a cross (for the shot-indicator boxes). */
-  function registerHit(step: Step, crosses: number = 1): boolean {
-    if (!activePlayer) return false;
+  /** Returns the HitRecord(s) this dart created, or null if nothing registered (also used by GameScreen's manual taps, which ignore the return value). */
+  function registerHit(step: Step, crosses: number = 1): HitRecord[] | null {
+    if (!activePlayer) return null;
     const playerProgress = progress[activePlayer];
     const activeStep = currentStepFor(playerProgress);
-    if (!isRegistrable(step, activeStep, playerProgress)) return false;
+    if (!isRegistrable(step, activeStep, playerProgress)) return null;
 
     const turnIndex = rewound ? rewoundTurnIndex ?? 0 : turnCounters[activePlayer] ?? 0;
     const newPendingHits: HitRecord[] = [];
@@ -261,7 +313,7 @@ export function MikkeMusApp() {
       newPendingHits.push({ player: activePlayer, step, prevCount: count, newCount: nextCount, turnIndex });
       count = nextCount;
     }
-    if (newPendingHits.length === 0) return false;
+    if (newPendingHits.length === 0) return null;
 
     haptics.hit();
     setProgress((prev) => ({
@@ -269,7 +321,56 @@ export function MikkeMusApp() {
       [activePlayer]: { ...prev[activePlayer], [step]: count },
     }));
     setPendingHits((prev) => [...prev, ...newPendingHits]);
-    return true;
+    return newPendingHits;
+  }
+
+  /**
+   * Applies the player's choice for the most recent undecided triple/double-on-
+   * active-number hit. When this was the last one Confirm was waiting on, it
+   * must advance the turn itself — not via an effect watching pendingAmbiguous —
+   * because a "redirect" choice's progress/pendingHits changes are computed
+   * right here as plain local values (not read back from state, which
+   * wouldn't reflect this same call's setProgress/setPendingHits until the
+   * next render) and handed straight to advanceTurn.
+   */
+  function resolvePendingChoice(choice: "keep" | "redirect") {
+    const item = pendingAmbiguous[pendingAmbiguous.length - 1];
+    if (!item || !activePlayer) return;
+
+    let finalProgress = progress;
+    let finalPendingHits = pendingHits;
+
+    if (choice === "redirect") {
+      const rolledBack = { ...progress[item.hitRecord.player], [item.ringStep]: item.hitRecord.prevCount };
+      finalPendingHits = pendingHits.filter((h) => h !== item.hitRecord);
+
+      // Mirrors registerHit's own prevCount->newCount chaining loop — duplicated
+      // rather than called, since registerHit reads `progress` from this
+      // component's state and would miss the rollback above until re-render.
+      const turnIndex = rewound ? rewoundTurnIndex ?? 0 : turnCounters[activePlayer] ?? 0;
+      const newHits: HitRecord[] = [];
+      let count = rolledBack[item.number];
+      for (let i = 0; i < item.multiplier; i++) {
+        const nextCount = applyHit(count);
+        if (nextCount === count) break;
+        newHits.push({ player: activePlayer, step: item.number, prevCount: count, newCount: nextCount, turnIndex });
+        count = nextCount;
+      }
+      finalProgress = { ...progress, [activePlayer]: { ...rolledBack, [item.number]: count } };
+      finalPendingHits = [...finalPendingHits, ...newHits];
+
+      haptics.hit();
+      setProgress(finalProgress);
+      setPendingHits(finalPendingHits);
+    }
+
+    const remaining = pendingAmbiguous.filter((p) => p.key !== item.key);
+    setPendingAmbiguous(remaining);
+
+    if (remaining.length === 0 && awaitingConfirmResolution) {
+      setAwaitingConfirmResolution(false);
+      advanceTurn(finalProgress, finalPendingHits);
+    }
   }
 
   function undo() {
@@ -281,6 +382,8 @@ export function MikkeMusApp() {
         [last.player]: { ...prev[last.player], [last.step]: last.prevCount },
       }));
       setPendingHits((prev) => prev.slice(0, -1));
+      // If the undone dart was still awaiting a T/D-or-number choice, that choice is moot now.
+      setPendingAmbiguous((prev) => prev.filter((p) => p.hitRecord !== last));
       return;
     }
     if (history.length > 0) {
@@ -310,8 +413,27 @@ export function MikkeMusApp() {
   function confirm() {
     if (!activePlayer) return;
     scoliaDartsRef.current = 0;
-    const activeStepNow = currentStepFor(progress[activePlayer]);
-    const turn = summarizeTurn(pendingHits, activeStepNow);
+    if (pendingAmbiguous.length > 0) {
+      setAwaitingConfirmResolution(true);
+      return;
+    }
+    advanceTurn();
+  }
+
+  /**
+   * `progressOverride`/`pendingHitsOverride` let resolvePendingChoice hand in
+   * values it just computed locally, for the one case (a redirect that was the
+   * last undecided choice) where this needs to see a change from the very same
+   * event that's calling it, before that change has made it back through a
+   * render — reading `progress`/`pendingHits` here directly would still be the
+   * pre-redirect snapshot at that point.
+   */
+  function advanceTurn(progressOverride?: PlayerProgress, pendingHitsOverride?: HitRecord[]) {
+    if (!activePlayer) return;
+    const effectiveProgress = progressOverride ?? progress;
+    const effectivePendingHits = pendingHitsOverride ?? pendingHits;
+    const activeStepNow = currentStepFor(effectiveProgress[activePlayer]);
+    const turn = summarizeTurn(effectivePendingHits, activeStepNow);
     const turnIndex = rewound ? rewoundTurnIndex ?? 0 : turnCounters[activePlayer] ?? 0;
     const nextTurnLog = {
       ...turnLog,
@@ -322,12 +444,12 @@ export function MikkeMusApp() {
       setTurnCounters((prev) => ({ ...prev, [activePlayer]: (prev[activePlayer] ?? 0) + 1 }));
     }
 
-    if (pendingHits.length > 0) {
-      setHistory((prev) => [...prev, ...pendingHits]);
+    if (effectivePendingHits.length > 0) {
+      setHistory((prev) => [...prev, ...effectivePendingHits]);
       setPendingHits([]);
     }
 
-    if (isFinished(progress[activePlayer])) {
+    if (isFinished(effectiveProgress[activePlayer])) {
       haptics.win();
       setWinnerStats(finalizeMatch(nextTurnLog, activePlayer));
       setWinner(activePlayer);
@@ -392,6 +514,9 @@ export function MikkeMusApp() {
         rewound={rewound !== null}
         pendingCount={pendingHits.length}
         canUndo={pendingHits.length > 0 || history.length > 0}
+        pendingChoice={rewound === null ? pendingAmbiguous[pendingAmbiguous.length - 1] ?? null : null}
+        awaitingConfirmResolution={awaitingConfirmResolution}
+        onResolvePendingChoice={resolvePendingChoice}
         onRegisterHit={registerHit}
         onUndo={undo}
         onConfirm={confirm}

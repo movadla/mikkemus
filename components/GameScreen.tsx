@@ -1,7 +1,17 @@
 "use client";
 
 import { Fragment, useEffect, useRef, useState } from "react";
-import { STEPS, STEP_LABELS, currentStepFor, isRegistrable, type PlayerProgress, type Step, type TurnShot } from "@/lib/game";
+import {
+  STEPS,
+  STEP_LABELS,
+  currentStepFor,
+  isRegistrable,
+  nextStepAfter,
+  type PendingAmbiguous,
+  type PlayerProgress,
+  type Step,
+  type TurnShot,
+} from "@/lib/game";
 import { Mark } from "./Mark";
 
 const FOCUS_RING =
@@ -18,6 +28,10 @@ type Props = {
   rewound: boolean;
   pendingCount: number;
   canUndo: boolean;
+  /** The most recent undecided triple/double-on-active-number hit, if any — drives the ghost preview and, once awaitingConfirmResolution, the choice dialog. */
+  pendingChoice: PendingAmbiguous | null;
+  awaitingConfirmResolution: boolean;
+  onResolvePendingChoice: (choice: "keep" | "redirect") => void;
   onRegisterHit: (step: Step) => void;
   onUndo: () => void;
   onConfirm: () => void;
@@ -64,6 +78,9 @@ export function GameScreen({
   rewound,
   pendingCount,
   canUndo,
+  pendingChoice,
+  awaitingConfirmResolution,
+  onResolvePendingChoice,
   onRegisterHit,
   onUndo,
   onConfirm,
@@ -84,6 +101,20 @@ export function GameScreen({
   const accent = rewound ? "var(--color-red)" : "var(--color-teal)";
   const glowColor = rewound ? "rgba(196, 67, 46, 0.35)" : "rgba(47, 180, 194, 0.35)";
   const glowBg = rewound ? "rgba(196, 67, 46, 0.16)" : "rgba(47, 180, 194, 0.16)";
+
+  // What redirecting pendingChoice would look like: how many extra crosses land on
+  // its number (ghost preview there) and whether that fully completes it, in which
+  // case the next number's cells preview as "about to open" too.
+  const activeProgress = activePlayer ? progress[activePlayer] : undefined;
+  const pendingPreview = pendingChoice
+    ? (() => {
+        const current = activeProgress?.[pendingChoice.number] ?? 0;
+        const simulated = Math.min(3, current + pendingChoice.multiplier);
+        const wouldComplete = simulated >= 3;
+        return { number: pendingChoice.number, ghostCount: simulated - current, opensNext: wouldComplete ? nextStepAfter(pendingChoice.number) : null };
+      })()
+    : null;
+  const ringLabel = pendingChoice?.ringStep === "T" ? "Trippel" : "Dobbel";
 
   return (
     <div className="animate-screen-enter w-full flex flex-col p-4" style={{ height: "100dvh", background: "var(--color-bg)" }}>
@@ -113,6 +144,34 @@ export function GameScreen({
         </div>
         <div style={{ width: "72px" }} />
       </div>
+
+      {awaitingConfirmResolution && pendingChoice && (
+        <div className="fixed inset-0 flex items-center justify-center p-6 z-50" style={{ background: "rgba(0,0,0,0.6)" }}>
+          <div className="w-full max-w-sm rounded-xl p-6" style={{ background: "var(--color-surface)" }}>
+            <p className="text-center mb-6" style={{ color: "var(--color-cream)", fontSize: "1.05rem" }}>
+              Du traff {ringLabel} {STEP_LABELS[pendingChoice.number]} — hvor skal kastet telle?
+            </p>
+            <div className="space-y-3">
+              <button
+                type="button"
+                onClick={() => onResolvePendingChoice("redirect")}
+                className={`tactile w-full py-3 rounded-lg font-medium ${FOCUS_RING}`}
+                style={{ background: "var(--color-green)", color: "var(--color-cream)" }}
+              >
+                Fullfør {STEP_LABELS[pendingChoice.number]} ({pendingChoice.multiplier}x)
+              </button>
+              <button
+                type="button"
+                onClick={() => onResolvePendingChoice("keep")}
+                className={`tactile w-full py-3 rounded-lg font-medium ${FOCUS_RING}`}
+                style={{ background: "var(--color-teal)", color: "var(--color-bg)" }}
+              >
+                Behold på {ringLabel}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showHomeConfirm && (
         <div className="fixed inset-0 flex items-center justify-center p-6 z-50" style={{ background: "rgba(0,0,0,0.6)" }}>
@@ -244,6 +303,8 @@ export function GameScreen({
                   const isActive = p === activePlayer;
                   const count = progress[p]?.[s] ?? 0;
                   const clickable = isActive && activeStep !== null && isRegistrable(s, activeStep, progress[p]);
+                  const ghostCount = isActive && pendingPreview?.number === s ? pendingPreview.ghostCount : 0;
+                  const previewOpening = isActive && pendingPreview?.opensNext === s;
                   return (
                     <div key={p} className="relative min-h-0 min-w-0 flex items-center justify-center p-1">
                       {clickable && (
@@ -264,13 +325,17 @@ export function GameScreen({
                             count >= 3
                               ? "inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -8px 14px rgba(0,0,0,0.3)"
                               : "inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -4px 8px rgba(0,0,0,0.18)",
-                          outline: clickable ? `2px solid ${accent}` : "none",
+                          outline: clickable
+                            ? `2px solid ${accent}`
+                            : previewOpening
+                              ? `2px dashed ${accent}`
+                              : "none",
                           cursor: clickable ? "pointer" : "default",
-                          opacity: clickable || count > 0 ? 1 : 0.5,
+                          opacity: clickable || count > 0 || previewOpening ? 1 : 0.5,
                         }}
                       >
                         <div className="w-full h-full p-1">
-                          <Mark count={count} pendingCount={isActive ? pendingByStep[s] ?? 0 : 0} accent={accent} />
+                          <Mark count={count} pendingCount={isActive ? pendingByStep[s] ?? 0 : 0} ghostCount={ghostCount} accent={accent} />
                         </div>
                       </button>
                     </div>
