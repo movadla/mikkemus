@@ -606,7 +606,15 @@ export function MikkeMusApp() {
 
     if (isFinished(effectiveProgress[activePlayer])) {
       haptics.win();
-      setWinnerStats(finalizeMatch(nextTurnLog, activePlayer));
+      // Reaching the winner screen must never depend on stats persistence succeeding —
+      // see abortGame's identical guard for why.
+      let stats: Record<string, TurnAggregate> = {};
+      try {
+        stats = finalizeMatch(nextTurnLog, activePlayer);
+      } catch (err) {
+        console.error("Klarte ikke å lagre statistikk ved kampslutt:", err);
+      }
+      setWinnerStats(stats);
       setWinner(activePlayer);
       setScreen("winner");
       return;
@@ -627,7 +635,14 @@ export function MikkeMusApp() {
   }
 
   function abortGame() {
-    finalizeMatch(turnLog);
+    // Leaving the game screen must never depend on stats persistence succeeding —
+    // a bad turnLog entry or a Supabase hiccup inside finalizeMatch must not leave
+    // the player stuck looking at a "Pause spillet?" dialog that does nothing.
+    try {
+      finalizeMatch(turnLog);
+    } catch (err) {
+      console.error("Klarte ikke å lagre statistikk ved avbrytelse:", err);
+    }
     setScreen("setup");
     setPlayers([]);
   }

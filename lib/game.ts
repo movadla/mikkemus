@@ -145,6 +145,10 @@ export function aggregateTurns(turns: TurnResult[]): TurnAggregate {
   let hits = 0;
   let misses = 0;
   for (const turn of turns) {
+    // A gap in the array (e.g. an edited/rewound turn whose slot was never filled)
+    // surfaces as `undefined` here — for...of walks sparse-array holes, unlike
+    // forEach, which would silently skip them. Treat a hole as "no turn recorded".
+    if (!turn) continue;
     for (const [step, count] of Object.entries(turn.hitsByStep) as [Step, number][]) {
       hitsByStep[step] = (hitsByStep[step] ?? 0) + count;
       hits += count;
