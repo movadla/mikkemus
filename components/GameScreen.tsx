@@ -25,6 +25,8 @@ type Props = {
   dartsThrown: Record<string, number>;
   pendingByStep: Partial<Record<Step, number>>;
   turnShots: (TurnShot | null)[];
+  /** Which player's just-finished-turn marks should still render in the "just placed" accent tint, and which steps. */
+  recentlyConfirmed: { player: string; byStep: Partial<Record<Step, number>> } | null;
   rewound: boolean;
   pendingCount: number;
   canUndo: boolean;
@@ -75,6 +77,7 @@ export function GameScreen({
   dartsThrown,
   pendingByStep,
   turnShots,
+  recentlyConfirmed,
   rewound,
   pendingCount,
   canUndo,
@@ -305,6 +308,15 @@ export function GameScreen({
                   const clickable = isActive && activeStep !== null && isRegistrable(s, activeStep, progress[p]);
                   const ghostCount = isActive && pendingPreview?.number === s ? pendingPreview.ghostCount : 0;
                   const previewOpening = isActive && pendingPreview?.opensNext === s;
+                  // The active player's own in-progress turn takes priority; otherwise, this
+                  // player's just-finished turn stays highlighted until the darts are taken out
+                  // (see MikkeMusApp's clearTurnDisplay) rather than flipping to settled gold
+                  // the instant the turn moves to someone else.
+                  const heldPendingCount = isActive
+                    ? pendingByStep[s] ?? 0
+                    : recentlyConfirmed?.player === p
+                      ? recentlyConfirmed.byStep[s] ?? 0
+                      : 0;
                   return (
                     <div key={p} className="relative min-h-0 min-w-0 flex items-center justify-center p-1">
                       {clickable && (
@@ -335,7 +347,7 @@ export function GameScreen({
                         }}
                       >
                         <div className="w-full h-full p-1">
-                          <Mark count={count} pendingCount={isActive ? pendingByStep[s] ?? 0 : 0} ghostCount={ghostCount} accent={accent} />
+                          <Mark count={count} pendingCount={heldPendingCount} ghostCount={ghostCount} accent={accent} />
                         </div>
                       </button>
                     </div>

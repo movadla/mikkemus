@@ -33,8 +33,12 @@ type Screen = "setup" | "game" | "winner";
 
 const EMPTY_TURN_SHOTS: (TurnShot | null)[] = [null, null, null];
 
-/** How long a turn's 3 shots stay on screen after the round switches, before clearing for the next player. */
-const SHOT_DISPLAY_HOLD_MS = 900;
+/**
+ * Ultimate fallback for clearing the shot boxes/highlight if neither a real
+ * takeout-finished event nor the next turn's first dart ever arrives (fully
+ * manual play with no Scolia board, or a relay that never reports takeouts).
+ */
+const TURN_DISPLAY_FALLBACK_MS = 20_000;
 
 function setTurnAt(turns: TurnResult[], index: number, turn: TurnResult): TurnResult[] {
   const next = turns.slice();
@@ -64,8 +68,13 @@ export function MikkeMusApp() {
   const [turnLog, setTurnLog] = useState<Record<string, TurnResult[]>>({});
   const [turnCounters, setTurnCounters] = useState<Record<string, number>>({});
   // The current turn's darts as Scolia detects them, for the shot-indicator boxes —
-  // reset (after a short hold, see the turnToken effect below) whenever the turn advances.
+  // held on screen until the darts are physically taken out (see clearTurnDisplay).
   const [turnShots, setTurnShots] = useState<(TurnShot | null)[]>(EMPTY_TURN_SHOTS);
+  // Which player's marks from their just-finished turn should still render in the
+  // "just placed" accent tint rather than settled gold/cream, and which steps —
+  // same held-until-takeout lifetime as turnShots. Cleared in undo() too, since an
+  // undo can make it inconsistent with progress (see clearTurnDisplay call sites).
+  const [recentlyConfirmed, setRecentlyConfirmed] = useState<{ player: string; byStep: Partial<Record<Step, number>> } | null>(null);
   // Every physical dart's landing coordinate this match, per player — shown as a
   // heatmap on the winner screen and discarded after (not persisted; see
   // lib/dartboard.ts for the coordinate system these are in).
@@ -82,6 +91,18 @@ export function MikkeMusApp() {
   // order — only the most recent one is ever live/shown.
   const [pendingAmbiguous, setPendingAmbiguous] = useState<PendingAmbiguous[]>([]);
   const pendingAmbiguousKeyRef = useRef(0);
+  // Mirrors pendingAmbiguous synchronously — confirm() must check this, not the
+  // state variable, because onThrow can call setPendingAmbiguous(...) and then
+  // confirm() in the very same synchronous tick (a dart that's both ambiguous and
+  // the turn's 3rd dart), and React wouldn't have applied that state update yet by
+  // the time confirm() reads it. Every setPendingAmbiguous call goes through
+  // updatePendingAmbiguous below, which keeps this ref and the state in lockstep.
+  const pendingAmbiguousRef = useRef<PendingAmbiguous[]>([]);
+  function updatePendingAmbiguous(updater: PendingAmbiguous[] | ((prev: PendingAmbiguous[]) => PendingAmbiguous[])) {
+    const next = typeof updater === "function" ? updater(pendingAmbiguousRef.current) : updater;
+    pendingAmbiguousRef.current = next;
+    setPendingAmbiguous(next);
+  }
   // True once Confirm has been requested but is blocked on resolving pendingAmbiguous.
   const [awaitingConfirmResolution, setAwaitingConfirmResolution] = useState(false);
 
@@ -155,6 +176,12 @@ export function MikkeMusApp() {
     turnCounters,
   ]);
 
+  /** Clears the shot boxes and the "just placed" mark highlight — see the call sites below for when. */
+  function clearTurnDisplay() {
+    setTurnShots(EMPTY_TURN_SHOTS);
+    setRecentlyConfirmed(null);
+  }
+
   // Counts physical darts Scolia has detected this turn (registrable or not) —
   // distinct from pendingHits, which only holds darts that actually scored a cross.
   const scoliaDartsRef = useRef(0);
@@ -164,6 +191,14 @@ export function MikkeMusApp() {
       if (!activePlayer) return;
       const dartIndex = scoliaDartsRef.current;
       scoliaDartsRef.current += 1;
+
+      if (dartIndex === 0) {
+        // Fallback for a missed/late takeout-finished event: a genuinely new turn's
+        // first physical dart has landed, so whatever was held from the previous
+        // turn is moot now regardless. Safe to batch with this dart's own turnShots
+        // write below — React applies same-state updates in order within one tick.
+        clearTurnDisplay();
+      }
 
       // What the player was working on right before this dart lands — used both to
       // resolve the throw itself and, below, as the MED/MHD/MVD target (see
@@ -200,7 +235,7 @@ export function MikkeMusApp() {
           hitResult = registerHit(ringStep, crosses);
           if (hitResult) {
             const created = hitResult[0];
-            setPendingAmbiguous((prev) => [
+            updatePendingAmbiguous((prev) => [
               ...prev,
               { key: ++pendingAmbiguousKeyRef.current, hitRecord: created, ringStep, number: numberStep, multiplier },
             ]);
@@ -212,7 +247,7 @@ export function MikkeMusApp() {
         // working this number" — resolve that ambiguity toward "keep on T/D" now,
         // instead of waiting for Confirm to ask.
         if (step !== null && !Number.isNaN(Number(step))) {
-          setPendingAmbiguous((prev) => prev.filter((p) => p.number !== step));
+          updatePendingAmbiguous((prev) => prev.filter((p) => p.number !== step));
         }
       }
       const hit = hitResult !== null;
@@ -255,6 +290,11 @@ export function MikkeMusApp() {
         confirm();
       }
     },
+    onTakeoutFinished: (payload) => {
+      // The real signal the shot boxes/highlight are held for: darts are physically
+      // out of the board now. A "false" takeout means nothing was actually pulled.
+      if (!payload.falseTakeout) clearTurnDisplay();
+    },
   });
 
   function startGame(startPlayers: string[]) {
@@ -272,21 +312,22 @@ export function MikkeMusApp() {
     setTurnCounters({});
     setTurnToken(0);
     setTurnShots(EMPTY_TURN_SHOTS);
+    setRecentlyConfirmed(null);
     setMatchThrows({});
     accuracyTotalsRef.current = {};
-    setPendingAmbiguous([]);
+    updatePendingAmbiguous([]);
     setAwaitingConfirmResolution(false);
     scoliaDartsRef.current = 0;
     setScreen("game");
     playPlayerSound(startPlayers[0] ?? null);
   }
 
-  // Keeps a finished turn's 3 shots on screen for a moment after the round switches —
-  // long enough to see the final dart's box, short enough that they're cleared well
-  // before the next player's first throw — so a miss-everything round still reads
-  // clearly as "new round, nothing thrown yet" instead of looking frozen/unclear.
+  // Ultimate safety net for clearTurnDisplay — normally it fires on the real
+  // takeout-finished signal (or, failing that, the next turn's first dart); this
+  // only matters for fully-manual play with no Scolia board, or a relay that never
+  // reports takeouts, so the display doesn't linger forever in those cases.
   useEffect(() => {
-    const timer = setTimeout(() => setTurnShots(EMPTY_TURN_SHOTS), SHOT_DISPLAY_HOLD_MS);
+    const timer = setTimeout(clearTurnDisplay, TURN_DISPLAY_FALLBACK_MS);
     return () => clearTimeout(timer);
   }, [turnToken]);
 
@@ -334,7 +375,7 @@ export function MikkeMusApp() {
    * next render) and handed straight to advanceTurn.
    */
   function resolvePendingChoice(choice: "keep" | "redirect") {
-    const item = pendingAmbiguous[pendingAmbiguous.length - 1];
+    const item = pendingAmbiguousRef.current[pendingAmbiguousRef.current.length - 1];
     if (!item || !activePlayer) return;
 
     let finalProgress = progress;
@@ -364,8 +405,8 @@ export function MikkeMusApp() {
       setPendingHits(finalPendingHits);
     }
 
-    const remaining = pendingAmbiguous.filter((p) => p.key !== item.key);
-    setPendingAmbiguous(remaining);
+    const remaining = pendingAmbiguousRef.current.filter((p) => p.key !== item.key);
+    updatePendingAmbiguous(remaining);
 
     if (remaining.length === 0 && awaitingConfirmResolution) {
       setAwaitingConfirmResolution(false);
@@ -375,6 +416,10 @@ export function MikkeMusApp() {
 
   function undo() {
     haptics.undo();
+    // Any held "just placed" highlight can go stale the instant progress is rewound
+    // (most obviously on a second, cascading undo) — simplest correct move is to
+    // always drop it here rather than try to reconcile it with the rollback below.
+    setRecentlyConfirmed(null);
     if (pendingHits.length > 0) {
       const last = pendingHits[pendingHits.length - 1];
       setProgress((prev) => ({
@@ -383,7 +428,7 @@ export function MikkeMusApp() {
       }));
       setPendingHits((prev) => prev.slice(0, -1));
       // If the undone dart was still awaiting a T/D-or-number choice, that choice is moot now.
-      setPendingAmbiguous((prev) => prev.filter((p) => p.hitRecord !== last));
+      updatePendingAmbiguous((prev) => prev.filter((p) => p.hitRecord !== last));
       return;
     }
     if (history.length > 0) {
@@ -413,7 +458,9 @@ export function MikkeMusApp() {
   function confirm() {
     if (!activePlayer) return;
     scoliaDartsRef.current = 0;
-    if (pendingAmbiguous.length > 0) {
+    // Reads the ref, not the pendingAmbiguous state — see pendingAmbiguousRef's
+    // comment above for why the state can be stale right here.
+    if (pendingAmbiguousRef.current.length > 0) {
       setAwaitingConfirmResolution(true);
       return;
     }
@@ -447,6 +494,14 @@ export function MikkeMusApp() {
     if (effectivePendingHits.length > 0) {
       setHistory((prev) => [...prev, ...effectivePendingHits]);
       setPendingHits([]);
+      // Tallied from effectivePendingHits, not the (possibly stale) pendingHits
+      // state, so this is automatically correct whichever way a redirect choice
+      // went: lands on the number after "redirect", stays on the ring after "keep".
+      const byStep: Partial<Record<Step, number>> = {};
+      effectivePendingHits.forEach((h) => {
+        byStep[h.step] = (byStep[h.step] ?? 0) + 1;
+      });
+      setRecentlyConfirmed({ player: activePlayer, byStep });
     }
 
     if (isFinished(effectiveProgress[activePlayer])) {
@@ -511,6 +566,7 @@ export function MikkeMusApp() {
         dartsThrown={dartsThrown}
         pendingByStep={pendingByStep}
         turnShots={rewound === null ? turnShots : EMPTY_TURN_SHOTS}
+        recentlyConfirmed={rewound === null ? recentlyConfirmed : null}
         rewound={rewound !== null}
         pendingCount={pendingHits.length}
         canUndo={pendingHits.length > 0 || history.length > 0}
