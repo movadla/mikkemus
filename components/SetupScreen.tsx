@@ -3,14 +3,17 @@
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { ensurePlayer, getPlayerRecord, setPlayerPhoto, setPlayerSound, useRosterNames } from "@/lib/storage";
+import { BOT_LEVELS, BOT_LEVEL_ORDER, type BotLevel } from "@/lib/botLevels";
 import { CameraIcon, MicIcon } from "./icons";
 import { DartboardGlyph } from "./DartboardGlyph";
 
 const RECORDING_MS = 2000;
 
-export function SetupScreen({ onStart }: { onStart: (players: string[]) => void }) {
+export function SetupScreen({ onStart }: { onStart: (players: string[], botLevels: Record<string, BotLevel>) => void }) {
   const [nameInput, setNameInput] = useState("");
   const [players, setPlayers] = useState<string[]>([]);
+  const [botLevels, setBotLevels] = useState<Record<string, BotLevel>>({});
+  const [showBotPicker, setShowBotPicker] = useState(false);
   const [error, setError] = useState("");
   const [startError, setStartError] = useState(false);
   const [addingPlayer, setAddingPlayer] = useState(false);
@@ -50,6 +53,26 @@ export function SetupScreen({ onStart }: { onStart: (players: string[]) => void 
 
   function removePlayer(name: string) {
     setPlayers((prev) => prev.filter((p) => p !== name));
+    setBotLevels((prev) => {
+      if (!(name in prev)) return prev;
+      const next = { ...prev };
+      delete next[name];
+      return next;
+    });
+  }
+
+  /** Bots are never ensurePlayer'd — they're a virtual opponent, not a roster entry. */
+  function addBot(level: BotLevel) {
+    const base = `🤖 ${BOT_LEVELS[level].label}`;
+    let name = base;
+    let suffix = 2;
+    while (players.some((p) => p.toLowerCase() === name.toLowerCase())) {
+      name = `${base} (${suffix})`;
+      suffix++;
+    }
+    setPlayers((prev) => [...prev, name]);
+    setBotLevels((prev) => ({ ...prev, [name]: level }));
+    setShowBotPicker(false);
   }
 
   function openCameraFor(name: string) {
@@ -185,7 +208,7 @@ export function SetupScreen({ onStart }: { onStart: (players: string[]) => void 
               </button>
             </div>
           ) : (
-            <div className="flex justify-center">
+            <div className="flex justify-center gap-2">
               <button
                 type="button"
                 onClick={() => setAddingPlayer(true)}
@@ -198,6 +221,33 @@ export function SetupScreen({ onStart }: { onStart: (players: string[]) => void 
               >
                 Legg til spiller
               </button>
+              <button
+                type="button"
+                onClick={() => setShowBotPicker((v) => !v)}
+                className={`tactile px-4 py-1.5 rounded-lg text-sm ${FOCUS_RING}`}
+                style={{
+                  background: "var(--color-surface)",
+                  color: "var(--color-gold)",
+                  border: "1px solid var(--color-border)",
+                }}
+              >
+                🤖 Legg til bot
+              </button>
+            </div>
+          )}
+          {showBotPicker && (
+            <div className="flex flex-wrap justify-center gap-2 mt-3">
+              {BOT_LEVEL_ORDER.map((level) => (
+                <button
+                  key={level}
+                  type="button"
+                  onClick={() => addBot(level)}
+                  className={`tactile px-3 py-1.5 rounded-full text-sm ${FOCUS_RING}`}
+                  style={{ background: "var(--color-cell)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
+                >
+                  {BOT_LEVELS[level].label}
+                </button>
+              ))}
             </div>
           )}
           {error && (
@@ -212,73 +262,93 @@ export function SetupScreen({ onStart }: { onStart: (players: string[]) => void 
             SPILLERE
           </p>
           <div className="space-y-2 min-h-[64px]">
-          {players.map((p, i) => (
-            <div
-              key={p}
-              className="shadow-panel flex items-center justify-between px-4 py-3 rounded-lg"
-              style={{ background: "var(--color-surface)" }}
-            >
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => openCameraFor(p)}
-                  className={`tactile w-9 h-9 rounded-full flex items-center justify-center overflow-hidden shrink-0 ${FOCUS_RING}`}
-                  style={{
-                    background: "var(--color-cell)",
-                    border: "1.5px solid rgba(201, 162, 75, 0.5)",
-                    color: "var(--color-muted)",
-                  }}
-                  aria-label={`Ta bilde av ${p}`}
-                >
-                  {photos[p] ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={photos[p]} alt="" className="w-full h-full object-cover" />
+          {players.map((p, i) => {
+            const level = botLevels[p];
+            return (
+              <div
+                key={p}
+                className="shadow-panel flex items-center justify-between px-4 py-3 rounded-lg"
+                style={{ background: "var(--color-surface)" }}
+              >
+                <div className="flex items-center gap-3">
+                  {level ? (
+                    <span
+                      className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
+                      style={{ background: "var(--color-cell)", border: "1.5px solid rgba(201, 162, 75, 0.5)" }}
+                      aria-hidden
+                    >
+                      🤖
+                    </span>
                   ) : (
-                    <CameraIcon className="w-4 h-4" />
+                    <button
+                      type="button"
+                      onClick={() => openCameraFor(p)}
+                      className={`tactile w-9 h-9 rounded-full flex items-center justify-center overflow-hidden shrink-0 ${FOCUS_RING}`}
+                      style={{
+                        background: "var(--color-cell)",
+                        border: "1.5px solid rgba(201, 162, 75, 0.5)",
+                        color: "var(--color-muted)",
+                      }}
+                      aria-label={`Ta bilde av ${p}`}
+                    >
+                      {photos[p] ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={photos[p]} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <CameraIcon className="w-4 h-4" />
+                      )}
+                    </button>
                   )}
-                </button>
-                <span style={{ color: "var(--color-cream)" }}>
-                  <span style={{ color: "var(--color-teal)", marginRight: "0.5rem" }}>{i + 1}.</span>
-                  {p}
-                </span>
+                  <span style={{ color: "var(--color-cream)" }}>
+                    <span style={{ color: "var(--color-teal)", marginRight: "0.5rem" }}>{i + 1}.</span>
+                    {p}
+                    {level && (
+                      <span style={{ color: "var(--color-muted)", fontSize: "0.75rem", marginLeft: "0.5rem" }}>
+                        ({BOT_LEVELS[level].label})
+                      </span>
+                    )}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {!level && (
+                    <button
+                      type="button"
+                      onClick={() => recordSoundFor(p)}
+                      disabled={recordingFor === p}
+                      aria-label={hasSound[p] ? `Ta opp nytt lydklipp for ${p}` : `Ta opp lydklipp for ${p}`}
+                      className={`tactile w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${FOCUS_RING}`}
+                      style={{
+                        background: recordingFor === p ? "var(--color-red)" : "var(--color-cell)",
+                        color:
+                          recordingFor === p
+                            ? "var(--color-cream)"
+                            : hasSound[p]
+                              ? "var(--color-teal)"
+                              : "var(--color-muted)",
+                        border: "1px solid var(--color-border)",
+                      }}
+                    >
+                      <MicIcon className="w-4 h-4" />
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => removePlayer(p)}
+                    style={{ color: "var(--color-red)" }}
+                    className={`text-sm px-2 ${FOCUS_RING}`}
+                  >
+                    Fjern
+                  </button>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => recordSoundFor(p)}
-                  disabled={recordingFor === p}
-                  aria-label={hasSound[p] ? `Ta opp nytt lydklipp for ${p}` : `Ta opp lydklipp for ${p}`}
-                  className={`tactile w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${FOCUS_RING}`}
-                  style={{
-                    background: recordingFor === p ? "var(--color-red)" : "var(--color-cell)",
-                    color:
-                      recordingFor === p
-                        ? "var(--color-cream)"
-                        : hasSound[p]
-                          ? "var(--color-teal)"
-                          : "var(--color-muted)",
-                    border: "1px solid var(--color-border)",
-                  }}
-                >
-                  <MicIcon className="w-4 h-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => removePlayer(p)}
-                  style={{ color: "var(--color-red)" }}
-                  className={`text-sm px-2 ${FOCUS_RING}`}
-                >
-                  Fjern
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
           </div>
         </div>
 
         <button
           type="button"
-          onClick={() => (players.length < 1 ? setStartError(true) : onStart(players))}
+          onClick={() => (players.length < 1 ? setStartError(true) : onStart(players, botLevels))}
           className={`tactile w-full py-4 rounded-lg font-semibold text-lg ${FOCUS_RING}`}
           style={{ background: "var(--color-green)", color: "var(--color-cream)" }}
         >

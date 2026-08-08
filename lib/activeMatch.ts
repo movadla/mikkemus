@@ -1,4 +1,5 @@
 import type { HitRecord, PlayerProgress, TurnAggregate, TurnResult } from "./game";
+import type { BotLevel } from "./botLevels";
 
 export type ActiveMatchSnapshot = {
   screen: "game" | "winner";
@@ -14,6 +15,7 @@ export type ActiveMatchSnapshot = {
   turnToken: number;
   turnLog: Record<string, TurnResult[]>;
   turnCounters: Record<string, number>;
+  botLevels: Record<string, BotLevel>;
 };
 
 const STORAGE_KEY = "mikke-mus-active-match";

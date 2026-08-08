@@ -20,9 +20,11 @@ import {
 } from "@/lib/game";
 import { playPlayerSound, recordAccuracyTotals, recordMatchHistory, recordMatchResult, recordRingHits, type RingHits } from "@/lib/storage";
 import { clearActiveMatch, loadActiveMatch, saveActiveMatch } from "@/lib/activeMatch";
-import { throwAccuracy } from "@/lib/dartboard";
+import { sectorAt, throwAccuracy } from "@/lib/dartboard";
 import { haptics } from "@/lib/haptics";
-import { formatSectorLabel, parseSector, stepForSector } from "@/lib/scoliaMapping";
+import { classifyThrow, formatSectorLabel, parseSector } from "@/lib/scoliaMapping";
+import { botChooseThrow, botDecideRedirect } from "@/lib/botStrategy";
+import { type BotLevel } from "@/lib/botLevels";
 import { useScolia } from "@/lib/useScolia";
 import { SetupScreen } from "./SetupScreen";
 import { GameScreen } from "./GameScreen";
@@ -39,6 +41,10 @@ const EMPTY_TURN_SHOTS: (TurnShot | null)[] = [null, null, null];
  * manual play with no Scolia board, or a relay that never reports takeouts).
  */
 const TURN_DISPLAY_FALLBACK_MS = 20_000;
+
+/** Pause between a bot's simulated darts — purely cosmetic pacing, so the shot
+ *  boxes/marks visibly animate in one at a time instead of all landing at once. */
+const BOT_THROW_DELAY_MS = 900;
 
 function setTurnAt(turns: TurnResult[], index: number, turn: TurnResult): TurnResult[] {
   const next = turns.slice();
@@ -109,8 +115,23 @@ export function MikkeMusApp() {
   }
   // True once Confirm has been requested but is blocked on resolving pendingAmbiguous.
   const [awaitingConfirmResolution, setAwaitingConfirmResolution] = useState(false);
+  // Which players in this match are bots, and at what difficulty — set once at
+  // startGame from SetupScreen's picks. Bots are never written via ensurePlayer and
+  // are excluded from finalizeMatch's persistence calls (see there).
+  const [botLevels, setBotLevels] = useState<Record<string, BotLevel>>({});
 
   const activePlayer = rewound ?? players[currentIdx] ?? null;
+  const activeBotLevel = activePlayer ? botLevels[activePlayer] ?? null : null;
+
+  // Always-current mirrors of state the bot-turn effect below reads from inside
+  // setTimeout callbacks, where a closure over the render-time `progress`/
+  // `activePlayer` would otherwise go stale between one simulated dart and the next.
+  const progressRef = useRef(progress);
+  progressRef.current = progress;
+  const activePlayerRef = useRef(activePlayer);
+  activePlayerRef.current = activePlayer;
+  const screenRef = useRef(screen);
+  screenRef.current = screen;
 
   // Resume an in-progress match after a reload instead of dropping back to setup.
   // Deliberately not read during useState's initializer (which would run during
@@ -135,6 +156,7 @@ export function MikkeMusApp() {
       setTurnToken(restored.turnToken);
       setTurnLog(restored.turnLog);
       setTurnCounters(restored.turnCounters);
+      setBotLevels(restored.botLevels ?? {});
     }
     setHydratedFromStorage(true);
   }, []);
@@ -162,6 +184,7 @@ export function MikkeMusApp() {
       turnToken,
       turnLog,
       turnCounters,
+      botLevels,
     });
   }, [
     hydratedFromStorage,
@@ -178,6 +201,7 @@ export function MikkeMusApp() {
     turnToken,
     turnLog,
     turnCounters,
+    botLevels,
   ]);
 
   /** Clears the shot boxes and the "just placed" mark highlight — see the call sites below for when. */
@@ -189,120 +213,108 @@ export function MikkeMusApp() {
   // Counts physical darts Scolia has detected this turn (registrable or not) —
   // distinct from pendingHits, which only holds darts that actually scored a cross.
   const scoliaDartsRef = useRef(0);
+
+  /**
+   * Applies one dart's outcome to the game — the single processing path shared by
+   * real Scolia throws and the bot's simulated ones, so a bot dart is scored
+   * through exactly the same rules a physical throw would be. Bots reach this via
+   * a synthetic payload built from botStrategy's simulated coordinates + sectorAt.
+   */
+  function processDart(payload: { sector: string; bounceout: boolean; coordinates: [number, number] }) {
+    if (!activePlayer) return;
+    const dartIndex = scoliaDartsRef.current;
+    scoliaDartsRef.current += 1;
+
+    if (dartIndex === 0) {
+      // Fallback for a missed/late takeout-finished event: a genuinely new turn's
+      // first physical dart has landed, so whatever was held from the previous
+      // turn is moot now regardless. Safe to batch with this dart's own turnShots
+      // write below — React applies same-state updates in order within one tick.
+      clearTurnDisplay();
+    }
+
+    // What the player was working on right before this dart lands — used both to
+    // resolve the throw itself and, below, as the MED/MHD/MVD target (see
+    // lib/dartboard.ts: for a miss, this is still the meaningful "how far off
+    // from what you were aiming at" reference, not just a no-op).
+    const activeStepAtThrow = currentStepFor(progress[activePlayer]);
+
+    const parsed = parseSector(payload.sector, payload.bounceout);
+
+    // Physical placement, tracked independent of how the ambiguity below (if any)
+    // ends up scoring it — "favorite triple/double" is about where darts land.
+    if (parsed.kind === "number" && (parsed.ring === "D" || parsed.ring === "T")) {
+      const bucket = parsed.ring === "T" ? "triple" : "double";
+      const playerRingHits = ringHitsRef.current[activePlayer] ?? { triple: {}, double: {} };
+      const numKey = String(parsed.number);
+      ringHitsRef.current = {
+        ...ringHitsRef.current,
+        [activePlayer]: {
+          ...playerRingHits,
+          [bucket]: { ...playerRingHits[bucket], [numKey]: (playerRingHits[bucket][numKey] ?? 0) + 1 },
+        },
+      };
+    }
+
+    const classified = classifyThrow(parsed, activeStepAtThrow, progress[activePlayer]);
+    const hitResult: HitRecord[] | null = classified.step ? registerHit(classified.step, classified.crosses) : null;
+    if (classified.ambiguous && hitResult) {
+      const created = hitResult[0];
+      updatePendingAmbiguous((prev) => [
+        ...prev,
+        { key: ++pendingAmbiguousKeyRef.current, hitRecord: created, ...classified.ambiguous! },
+      ]);
+    } else if (classified.step !== null && !Number.isNaN(Number(classified.step))) {
+      // A plain hit landing on a number with an undecided redirect signals "still
+      // working this number" — resolve that ambiguity toward "keep on T/D" now,
+      // instead of waiting for Confirm to ask.
+      updatePendingAmbiguous((prev) => prev.filter((p) => p.number !== classified.step));
+    }
+    const hit = hitResult !== null;
+
+    setMatchThrows((prev) => ({
+      ...prev,
+      [activePlayer]: [...(prev[activePlayer] ?? []), payload.coordinates],
+    }));
+    const accuracy = activeStepAtThrow ? throwAccuracy(activeStepAtThrow, payload.coordinates) : null;
+    if (accuracy) {
+      const totals = accuracyTotalsRef.current[activePlayer] ?? { distance: 0, horizontal: 0, vertical: 0, throws: 0 };
+      accuracyTotalsRef.current = {
+        ...accuracyTotalsRef.current,
+        [activePlayer]: {
+          distance: totals.distance + accuracy.distance,
+          horizontal: totals.horizontal + accuracy.horizontal,
+          vertical: totals.vertical + accuracy.vertical,
+          throws: totals.throws + 1,
+        },
+      };
+    }
+
+    if (dartIndex < DARTS_PER_TURN) {
+      const shot: TurnShot = { label: formatSectorLabel(parsed), hit };
+      setTurnShots((prev) => {
+        const next = prev.slice();
+        next[dartIndex] = shot;
+        return next;
+      });
+    }
+    if (scoliaDartsRef.current >= DARTS_PER_TURN) {
+      scoliaDartsRef.current = 0;
+      confirm();
+    }
+  }
+
   const scoliaEnabled = screen === "game";
   const scolia = useScolia(scoliaEnabled, {
+    // Ignored while a bot is active — a bot's turn has no physical darts to detect,
+    // and gating this here (rather than toggling `enabled`) avoids tearing down and
+    // re-establishing the realtime/polling connection on every turn switch.
     onThrow: (payload) => {
-      if (!activePlayer) return;
-      const dartIndex = scoliaDartsRef.current;
-      scoliaDartsRef.current += 1;
-
-      if (dartIndex === 0) {
-        // Fallback for a missed/late takeout-finished event: a genuinely new turn's
-        // first physical dart has landed, so whatever was held from the previous
-        // turn is moot now regardless. Safe to batch with this dart's own turnShots
-        // write below — React applies same-state updates in order within one tick.
-        clearTurnDisplay();
-      }
-
-      // What the player was working on right before this dart lands — used both to
-      // resolve the throw itself and, below, as the MED/MHD/MVD target (see
-      // lib/dartboard.ts: for a miss, this is still the meaningful "how far off
-      // from what you were aiming at" reference, not just a no-op).
-      const activeStepAtThrow = currentStepFor(progress[activePlayer]);
-
-      const parsed = parseSector(payload.sector, payload.bounceout);
-      const { step, crosses } = stepForSector(parsed);
-
-      // Physical placement, tracked independent of how the ambiguity below (if any)
-      // ends up scoring it — "favorite triple/double" is about where darts land.
-      if (parsed.kind === "number" && (parsed.ring === "D" || parsed.ring === "T")) {
-        const bucket = parsed.ring === "T" ? "triple" : "double";
-        const playerRingHits = ringHitsRef.current[activePlayer] ?? { triple: {}, double: {} };
-        const numKey = String(parsed.number);
-        ringHitsRef.current = {
-          ...ringHitsRef.current,
-          [activePlayer]: {
-            ...playerRingHits,
-            [bucket]: { ...playerRingHits[bucket], [numKey]: (playerRingHits[bucket][numKey] ?? 0) + 1 },
-          },
-        };
-      }
-
-      /**
-       * A triple/double landing on the number the player is actively working
-       * banks normally to T/D (unchanged) — but if that ring still has room, the
-       * dart could just as easily have been meant to finish the number itself
-       * (a triple/double is worth 3x/2x there), so it's flagged as undecided
-       * rather than silently locked to T/D. If the ring is already full, there's
-       * no ambiguity — it can only go to the number, at its multiplier value.
-       */
-      let hitResult: HitRecord[] | null;
-      if (
-        parsed.kind === "number" &&
-        (parsed.ring === "D" || parsed.ring === "T") &&
-        activeStepAtThrow !== null &&
-        !Number.isNaN(Number(activeStepAtThrow)) &&
-        parsed.number === Number(activeStepAtThrow)
-      ) {
-        const ringStep = parsed.ring;
-        const numberStep = activeStepAtThrow;
-        const ringFull = (progress[activePlayer][ringStep] ?? 0) >= 3;
-        const multiplier: 2 | 3 = ringStep === "T" ? 3 : 2;
-        if (ringFull) {
-          hitResult = registerHit(numberStep, multiplier);
-        } else {
-          hitResult = registerHit(ringStep, crosses);
-          if (hitResult) {
-            const created = hitResult[0];
-            updatePendingAmbiguous((prev) => [
-              ...prev,
-              { key: ++pendingAmbiguousKeyRef.current, hitRecord: created, ringStep, number: numberStep, multiplier },
-            ]);
-          }
-        }
-      } else {
-        hitResult = step ? registerHit(step, crosses) : null;
-        // A plain hit landing on a number with an undecided redirect signals "still
-        // working this number" — resolve that ambiguity toward "keep on T/D" now,
-        // instead of waiting for Confirm to ask.
-        if (step !== null && !Number.isNaN(Number(step))) {
-          updatePendingAmbiguous((prev) => prev.filter((p) => p.number !== step));
-        }
-      }
-      const hit = hitResult !== null;
-
-      setMatchThrows((prev) => ({
-        ...prev,
-        [activePlayer]: [...(prev[activePlayer] ?? []), payload.coordinates],
-      }));
-      const accuracy = activeStepAtThrow ? throwAccuracy(activeStepAtThrow, payload.coordinates) : null;
-      if (accuracy) {
-        const totals = accuracyTotalsRef.current[activePlayer] ?? { distance: 0, horizontal: 0, vertical: 0, throws: 0 };
-        accuracyTotalsRef.current = {
-          ...accuracyTotalsRef.current,
-          [activePlayer]: {
-            distance: totals.distance + accuracy.distance,
-            horizontal: totals.horizontal + accuracy.horizontal,
-            vertical: totals.vertical + accuracy.vertical,
-            throws: totals.throws + 1,
-          },
-        };
-      }
-
-      if (dartIndex < DARTS_PER_TURN) {
-        const shot: TurnShot = { label: formatSectorLabel(parsed), hit };
-        setTurnShots((prev) => {
-          const next = prev.slice();
-          next[dartIndex] = shot;
-          return next;
-        });
-      }
-      if (scoliaDartsRef.current >= DARTS_PER_TURN) {
-        scoliaDartsRef.current = 0;
-        confirm();
-      }
+      if (activeBotLevel !== null) return;
+      processDart(payload);
     },
     onTakeoutStarted: () => {
+      if (activeBotLevel !== null) return;
       // Player started collecting darts before the 3rd was thrown (e.g. they checked out early).
       if (scoliaDartsRef.current > 0) {
         scoliaDartsRef.current = 0;
@@ -310,13 +322,14 @@ export function MikkeMusApp() {
       }
     },
     onTakeoutFinished: (payload) => {
+      if (activeBotLevel !== null) return;
       // The real signal the shot boxes/highlight are held for: darts are physically
       // out of the board now. A "false" takeout means nothing was actually pulled.
       if (!payload.falseTakeout) clearTurnDisplay();
     },
   });
 
-  function startGame(startPlayers: string[]) {
+  function startGame(startPlayers: string[], startBotLevels: Record<string, BotLevel> = {}) {
     const prog: PlayerProgress = {};
     startPlayers.forEach((p) => (prog[p] = emptyProgress()));
     setPlayers(startPlayers);
@@ -337,9 +350,10 @@ export function MikkeMusApp() {
     ringHitsRef.current = {};
     updatePendingAmbiguous([]);
     setAwaitingConfirmResolution(false);
+    setBotLevels(startBotLevels);
     scoliaDartsRef.current = 0;
     setScreen("game");
-    playPlayerSound(startPlayers[0] ?? null);
+    if (!startBotLevels[startPlayers[0]]) playPlayerSound(startPlayers[0] ?? null);
   }
 
   // Ultimate safety net for clearTurnDisplay — normally it fires on the real
@@ -350,6 +364,54 @@ export function MikkeMusApp() {
     const timer = setTimeout(clearTurnDisplay, TURN_DISPLAY_FALLBACK_MS);
     return () => clearTimeout(timer);
   }, [turnToken]);
+
+  // Auto-plays a bot's whole turn — three paced, simulated darts, each scored
+  // through the exact same processDart path a real Scolia throw would use.
+  // Re-runs whenever the active player or turn changes; the `cancelled` flag plus
+  // the activePlayerRef/screenRef guards inside throwNext stop a stale chain the
+  // instant the real turn moves on (see their own comments for why refs are
+  // needed here rather than the closed-over `player`/`screen` values going stale).
+  useEffect(() => {
+    if (screen !== "game" || rewound || !activePlayer) return;
+    const level = botLevels[activePlayer];
+    if (!level) return;
+
+    const player = activePlayer;
+    let cancelled = false;
+
+    function throwNext() {
+      if (cancelled || screenRef.current !== "game" || activePlayerRef.current !== player) return;
+      const currentProgress = progressRef.current[player];
+      if (isFinished(currentProgress)) {
+        // Won mid-turn on an earlier simulated dart — stop and let confirm() close it out.
+        scoliaDartsRef.current = 0;
+        confirm();
+        return;
+      }
+
+      const coordinates = botChooseThrow(level, currentProgress);
+      processDart({ sector: sectorAt(coordinates), bounceout: false, coordinates });
+
+      const pending = pendingAmbiguousRef.current;
+      if (pending.length > 0) {
+        const item = pending[pending.length - 1];
+        const progressBeforeThrow = { ...progressRef.current[player], [item.ringStep]: item.hitRecord.prevCount };
+        const redirect = botDecideRedirect(level, progressBeforeThrow, item.ringStep, item.multiplier);
+        resolvePendingChoice(redirect ? "redirect" : "keep");
+      }
+
+      if (!cancelled && scoliaDartsRef.current < DARTS_PER_TURN) {
+        setTimeout(throwNext, BOT_THROW_DELAY_MS);
+      }
+    }
+
+    const timer = setTimeout(throwNext, BOT_THROW_DELAY_MS);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- processDart/confirm/resolvePendingChoice close over per-render state on purpose, like the rest of this file's handlers; re-running this effect on their identity would defeat the ref-guarded single-chain-per-turn design above.
+  }, [screen, activePlayer, turnToken, botLevels, rewound]);
 
   /**
    * Registers `crosses` marks on `step` (crosses > 1 for a Scolia-detected inner bull).
@@ -468,6 +530,9 @@ export function MikkeMusApp() {
     players.forEach((p) => {
       const aggregate = aggregateTurns(finalTurnLog[p] ?? []);
       stats[p] = aggregate;
+      // A bot's darts aren't real play — never let them land in a human player's
+      // career stats, and bots are never ensurePlayer'd into the roster to begin with.
+      if (botLevels[p]) return;
       recordMatchResult(p, aggregate, p === winnerName);
       const accuracy = accuracyTotalsRef.current[p];
       if (accuracy) recordAccuracyTotals(p, accuracy);
@@ -593,6 +658,14 @@ export function MikkeMusApp() {
   return (
     <>
       {scoliaEnabled && <ScoliaStatusBadge state={scolia.state} />}
+      {activeBotLevel && rewound === null && (
+        <div
+          className="fixed top-3 left-1/2 -translate-x-1/2 z-40 px-3 py-1.5 rounded-full text-sm shadow-panel"
+          style={{ background: "var(--color-surface)", color: "var(--color-teal)", border: "1px solid var(--color-border)" }}
+        >
+          🤖 {activePlayer} kaster …
+        </div>
+      )}
       <GameScreen
         players={players}
         progress={progress}
@@ -608,9 +681,9 @@ export function MikkeMusApp() {
         pendingChoice={rewound === null ? pendingAmbiguous[pendingAmbiguous.length - 1] ?? null : null}
         awaitingConfirmResolution={awaitingConfirmResolution}
         onResolvePendingChoice={resolvePendingChoice}
-        onRegisterHit={registerHit}
+        onRegisterHit={activeBotLevel ? () => {} : registerHit}
         onUndo={undo}
-        onConfirm={confirm}
+        onConfirm={activeBotLevel ? () => {} : confirm}
         onAbort={abortGame}
       />
     </>

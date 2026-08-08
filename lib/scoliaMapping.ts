@@ -1,4 +1,4 @@
-import type { Step } from "./game";
+import type { Progress, Step } from "./game";
 
 export type ParsedSector =
   | { kind: "miss" }
@@ -54,4 +54,44 @@ export function stepForSector(parsed: ParsedSector): ThrowMapping {
     return { step: String(parsed.number) as Step, crosses: 1 };
   }
   return { step: null, crosses: 0 };
+}
+
+export type ClassifiedThrow = {
+  /** Step this throw is a candidate to register on — null if it can't score at all. */
+  step: Step | null;
+  crosses: number;
+  /** Set when this is a triple/double landing on the player's own active number with
+   *  room left in that ring — undecided between staying there or redirecting to
+   *  complete the number (see PendingAmbiguous in lib/game.ts). Null otherwise. */
+  ambiguous: { ringStep: "D" | "T"; number: Step; multiplier: 2 | 3 } | null;
+};
+
+/**
+ * Combines stepForSector with the triple/double-on-active-number ambiguity rule —
+ * this is the single source of truth for "what does this throw do to the game
+ * state," shared by MikkeMusApp's real onThrow handler and the bot's Monte Carlo
+ * planner/simulated throws, so the bot can never diverge from how a real dart
+ * would actually be scored.
+ */
+export function classifyThrow(parsed: ParsedSector, activeStep: Step | null, progress: Progress): ClassifiedThrow {
+  const { step, crosses } = stepForSector(parsed);
+
+  if (
+    parsed.kind === "number" &&
+    (parsed.ring === "D" || parsed.ring === "T") &&
+    activeStep !== null &&
+    !Number.isNaN(Number(activeStep)) &&
+    parsed.number === Number(activeStep)
+  ) {
+    const ringStep = parsed.ring;
+    const numberStep = activeStep;
+    const ringFull = progress[ringStep] >= 3;
+    const multiplier: 2 | 3 = ringStep === "T" ? 3 : 2;
+    if (ringFull) {
+      return { step: numberStep, crosses: multiplier, ambiguous: null };
+    }
+    return { step: ringStep, crosses, ambiguous: { ringStep, number: numberStep, multiplier } };
+  }
+
+  return { step, crosses, ambiguous: null };
 }
