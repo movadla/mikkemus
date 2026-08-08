@@ -1,27 +1,22 @@
-export type BotLevel = "nybegynner" | "middels" | "proff" | "legende";
+export type BotLevel = "1" | "2" | "3" | "4" | "5" | "6";
 
 export type BotLevelConfig = {
   key: BotLevel;
-  label: string;
-  /** Standard deviation (mm) of the bot's simulated throw around its aim point, per
-   *  axis. Derived from a target mean-absolute-deviation (the same unit as the
-   *  MHD/MVD stats real players are judged on) via the half-normal mean identity
-   *  E|X| = sigma * sqrt(2/pi), so a level's mm figure reads the same way a real
-   *  player's career MHD would. Fixed presets, not calibrated from real play. */
-  sigma: number;
+  name: string;
+  /** Target Mean Euclidean Distance (mm) — the same MED accuracy stat real players
+   *  are judged on (see lib/storage.ts's meanEuclideanDistance) — this level's
+   *  throws are calibrated to average (see lib/botStrategy.ts's sigmaForLevel).
+   *  Lower = more precise = stronger bot, so level 1 ("Littler") is the strongest. */
+  targetMed: number;
 };
 
-const MEAN_ABS_TO_SIGMA = Math.sqrt(Math.PI / 2);
-
-function sigmaFromMeanAbsDeviation(mm: number): number {
-  return mm * MEAN_ABS_TO_SIGMA;
-}
-
-export const BOT_LEVEL_ORDER: BotLevel[] = ["nybegynner", "middels", "proff", "legende"];
+export const BOT_LEVEL_ORDER: BotLevel[] = ["1", "2", "3", "4", "5", "6"];
 
 export const BOT_LEVELS: Record<BotLevel, BotLevelConfig> = {
-  nybegynner: { key: "nybegynner", label: "Nybegynner", sigma: sigmaFromMeanAbsDeviation(38) },
-  middels: { key: "middels", label: "Middels", sigma: sigmaFromMeanAbsDeviation(24) },
-  proff: { key: "proff", label: "Proff", sigma: sigmaFromMeanAbsDeviation(14) },
-  legende: { key: "legende", label: "Legende", sigma: sigmaFromMeanAbsDeviation(7) },
+  "1": { key: "1", name: "Littler", targetMed: 20 },
+  "2": { key: "2", name: "Cor Dekker", targetMed: 25 },
+  "3": { key: "3", name: "Dave", targetMed: 30 },
+  "4": { key: "4", name: "Chris Bell", targetMed: 35 },
+  "5": { key: "5", name: "Nivå 5", targetMed: 45 },
+  "6": { key: "6", name: "Nivå 6", targetMed: 55 },
 };

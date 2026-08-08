@@ -389,14 +389,22 @@ export function MikkeMusApp() {
         return;
       }
 
-      const coordinates = botChooseThrow(level, currentProgress);
+      const coordinates = botChooseThrow(level, progressRef.current, player, botLevels);
       processDart({ sector: sectorAt(coordinates), bounceout: false, coordinates });
 
       const pending = pendingAmbiguousRef.current;
       if (pending.length > 0) {
         const item = pending[pending.length - 1];
         const progressBeforeThrow = { ...progressRef.current[player], [item.ringStep]: item.hitRecord.prevCount };
-        const redirect = botDecideRedirect(level, progressBeforeThrow, item.ringStep, item.multiplier);
+        const redirect = botDecideRedirect(
+          level,
+          progressRef.current,
+          progressBeforeThrow,
+          player,
+          botLevels,
+          item.ringStep,
+          item.multiplier
+        );
         resolvePendingChoice(redirect ? "redirect" : "keep");
       }
 

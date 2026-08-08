@@ -63,7 +63,7 @@ export function SetupScreen({ onStart }: { onStart: (players: string[], botLevel
 
   /** Bots are never ensurePlayer'd — they're a virtual opponent, not a roster entry. */
   function addBot(level: BotLevel) {
-    const base = `🤖 ${BOT_LEVELS[level].label}`;
+    const base = `🤖 ${BOT_LEVELS[level].name} (${level})`;
     let name = base;
     let suffix = 2;
     while (players.some((p) => p.toLowerCase() === name.toLowerCase())) {
@@ -245,7 +245,7 @@ export function SetupScreen({ onStart }: { onStart: (players: string[], botLevel
                   className={`tactile px-3 py-1.5 rounded-full text-sm ${FOCUS_RING}`}
                   style={{ background: "var(--color-cell)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
                 >
-                  {BOT_LEVELS[level].label}
+                  {BOT_LEVELS[level].name} ({level})
                 </button>
               ))}
             </div>
@@ -302,11 +302,6 @@ export function SetupScreen({ onStart }: { onStart: (players: string[], botLevel
                   <span style={{ color: "var(--color-cream)" }}>
                     <span style={{ color: "var(--color-teal)", marginRight: "0.5rem" }}>{i + 1}.</span>
                     {p}
-                    {level && (
-                      <span style={{ color: "var(--color-muted)", fontSize: "0.75rem", marginLeft: "0.5rem" }}>
-                        ({BOT_LEVELS[level].label})
-                      </span>
-                    )}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
