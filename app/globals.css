@@ -281,6 +281,23 @@ button {
   animation: name-swap var(--duration-fast) var(--ease-standard) both;
 }
 
+/* Each shot-indicator box pops in as its dart lands, so three quick darts
+   read as three distinct events rather than a static row appearing at once. */
+@keyframes shot-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.animate-shot-pop {
+  animation: shot-pop var(--duration-fast) var(--ease-spring) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

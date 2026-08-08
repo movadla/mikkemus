@@ -17,6 +17,14 @@ export function parseSector(sector: string, bounceout: boolean): ParsedSector {
   return { kind: "number", ring, number: parseInt(match[2], 10) };
 }
 
+/** Short label for a parsed sector, for display (e.g. in a per-dart shot indicator). */
+export function formatSectorLabel(parsed: ParsedSector): string {
+  if (parsed.kind === "miss") return "–";
+  if (parsed.kind === "bull") return parsed.ring === "inner" ? "BULL" : "25";
+  if (parsed.ring === "S") return String(parsed.number);
+  return `${parsed.ring}${parsed.number}`;
+}
+
 export type ThrowMapping = {
   /** Step this throw is a candidate for, or null if it can never count toward any step. */
   step: Step | null;

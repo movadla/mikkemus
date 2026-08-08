@@ -42,6 +42,9 @@ export type HitRecord = {
 /** Darts thrown per turn. A turn's treff/bom is always measured against this. */
 export const DARTS_PER_TURN = 3;
 
+/** One dart's result, for the per-turn shot-indicator boxes (green = scored a cross, red = didn't). */
+export type TurnShot = { label: string; hit: boolean };
+
 export type TurnResult = {
   /** Crosses gained this turn, by the step they landed on. */
   hitsByStep: Partial<Record<Step, number>>;

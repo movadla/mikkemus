@@ -2,6 +2,7 @@
 
 import type { TurnAggregate } from "@/lib/game";
 import { getPlayerRecord } from "@/lib/storage";
+import { DartboardHeatmap } from "./DartboardHeatmap";
 
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
@@ -37,11 +38,14 @@ export function WinnerScreen({
   winner,
   players,
   stats,
+  throwsByPlayer,
   onHome,
 }: {
   winner: string;
   players: string[];
   stats: Record<string, TurnAggregate>;
+  /** Every physical dart landed this match, per player — only populated when Scolia detected real throws. */
+  throwsByPlayer: Record<string, [number, number][]>;
   onHome: () => void;
 }) {
   const photo = getPlayerRecord(winner)?.photo;
@@ -147,6 +151,28 @@ export function WinnerScreen({
             ))}
           </div>
         </div>
+
+        {players.some((p) => (throwsByPlayer[p]?.length ?? 0) > 0) && (
+          <div className="shadow-panel rounded-xl p-5 mb-6" style={{ background: "var(--color-surface)" }}>
+            <p className="mb-3" style={{ color: "var(--color-gold)", fontSize: "0.85rem", letterSpacing: "0.1em" }}>
+              KASTSPREDNING
+            </p>
+            <div className="space-y-4">
+              {players
+                .filter((p) => (throwsByPlayer[p]?.length ?? 0) > 0)
+                .map((p) => (
+                  <div key={p}>
+                    <p className="mb-1" style={{ color: "var(--color-cream)", fontSize: "0.8rem" }}>
+                      {p}
+                    </p>
+                    <div className="max-w-[220px] mx-auto">
+                      <DartboardHeatmap throws={throwsByPlayer[p]} />
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
 
         <button
           type="button"

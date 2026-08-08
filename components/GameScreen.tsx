@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useEffect, useRef, useState } from "react";
-import { STEPS, STEP_LABELS, currentStepFor, isRegistrable, type PlayerProgress, type Step } from "@/lib/game";
+import { STEPS, STEP_LABELS, currentStepFor, isRegistrable, type PlayerProgress, type Step, type TurnShot } from "@/lib/game";
 import { Mark } from "./Mark";
 
 const FOCUS_RING =
@@ -14,6 +14,7 @@ type Props = {
   turnToken: number;
   dartsThrown: Record<string, number>;
   pendingByStep: Partial<Record<Step, number>>;
+  turnShots: (TurnShot | null)[];
   rewound: boolean;
   pendingCount: number;
   canUndo: boolean;
@@ -23,6 +24,35 @@ type Props = {
   onAbort: () => void;
 };
 
+/** The three per-dart boxes under the active player's name — green on a scored cross, red otherwise. */
+function ShotIndicator({ shots }: { shots: (TurnShot | null)[] }) {
+  return (
+    <div className="flex items-center justify-center gap-1.5 mt-1.5" aria-hidden={shots.every((s) => s === null)}>
+      {shots.map((shot, i) => (
+        <div
+          key={i}
+          className={shot ? "animate-shot-pop" : undefined}
+          style={{
+            width: "1.9rem",
+            height: "1.9rem",
+            borderRadius: "0.4rem",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: "0.7rem",
+            fontWeight: 700,
+            background: shot ? (shot.hit ? "var(--color-green)" : "var(--color-red)") : "var(--color-surface)",
+            border: shot ? "none" : "1px solid var(--color-border)",
+            color: "var(--color-cream)",
+          }}
+        >
+          {shot?.label ?? ""}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function GameScreen({
   players,
   progress,
@@ -30,6 +60,7 @@ export function GameScreen({
   turnToken,
   dartsThrown,
   pendingByStep,
+  turnShots,
   rewound,
   pendingCount,
   canUndo,
@@ -78,6 +109,7 @@ export function GameScreen({
           >
             {activePlayer}
           </p>
+          {!rewound && <ShotIndicator shots={turnShots} />}
         </div>
         <div style={{ width: "72px" }} />
       </div>

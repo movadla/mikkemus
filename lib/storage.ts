@@ -4,6 +4,13 @@ import { supabase } from "./supabaseClient";
 
 export type HitStat = { hits: number; misses: number };
 
+/** Running totals behind the MED/MHD/MVD career stats — see lib/dartboard.ts for what they measure. */
+export type AccuracyStat = { sumDistance: number; sumHorizontal: number; sumVertical: number; throws: number };
+
+function emptyAccuracyStat(): AccuracyStat {
+  return { sumDistance: 0, sumHorizontal: 0, sumVertical: 0, throws: 0 };
+}
+
 export type PlayerRecord = {
   name: string;
   photo?: string;
@@ -17,6 +24,7 @@ export type PlayerRecord = {
   dartsInWins: number;
   overall: HitStat;
   steps: Record<Step, HitStat>;
+  accuracy: AccuracyStat;
 };
 
 type Roster = Record<string, PlayerRecord>;
@@ -32,6 +40,10 @@ type PlayerRow = {
   overall_hits: number;
   overall_misses: number;
   steps: Record<Step, HitStat>;
+  accuracy_sum_distance: number | null;
+  accuracy_sum_horizontal: number | null;
+  accuracy_sum_vertical: number | null;
+  accuracy_throws: number | null;
 };
 
 function emptyStepStats(): Record<Step, HitStat> {
@@ -54,6 +66,13 @@ function rowToRecord(row: PlayerRow): PlayerRecord {
     dartsInWins: row.darts_in_wins,
     overall: { hits: row.overall_hits, misses: row.overall_misses },
     steps: row.steps,
+    // Rows written before the accuracy columns existed have them as null.
+    accuracy: {
+      sumDistance: row.accuracy_sum_distance ?? 0,
+      sumHorizontal: row.accuracy_sum_horizontal ?? 0,
+      sumVertical: row.accuracy_sum_vertical ?? 0,
+      throws: row.accuracy_throws ?? 0,
+    },
   };
 }
 
@@ -69,6 +88,10 @@ function recordToRow(k: string, record: PlayerRecord): PlayerRow {
     overall_hits: record.overall.hits,
     overall_misses: record.overall.misses,
     steps: record.steps,
+    accuracy_sum_distance: record.accuracy.sumDistance,
+    accuracy_sum_horizontal: record.accuracy.sumHorizontal,
+    accuracy_sum_vertical: record.accuracy.sumVertical,
+    accuracy_throws: record.accuracy.throws,
   };
 }
 
@@ -190,6 +213,7 @@ export function ensurePlayer(name: string): PlayerRecord {
       dartsInWins: 0,
       overall: { hits: 0, misses: 0 },
       steps: emptyStepStats(),
+      accuracy: emptyAccuracyStat(),
     };
     roster = { ...roster, [k]: record };
     notify();
@@ -250,6 +274,7 @@ export function recordMatchResult(name: string, aggregate: TurnAggregate, won: b
       dartsInWins: 0,
       overall: { hits: 0, misses: 0 },
       steps: emptyStepStats(),
+      accuracy: emptyAccuracyStat(),
     } satisfies PlayerRecord);
 
   const steps = { ...existing.steps };
@@ -275,6 +300,38 @@ export function recordMatchResult(name: string, aggregate: TurnAggregate, won: b
   roster = { ...roster, [k]: record };
   notify();
   upsertRow(k, record);
+}
+
+/** Rolls one player's per-throw accuracy samples from a finished match into their career totals. */
+export function recordAccuracyTotals(name: string, totals: { distance: number; horizontal: number; vertical: number; throws: number }) {
+  if (totals.throws === 0) return;
+  const k = key(name);
+  const existing = roster[k] ?? ensurePlayer(name);
+  const accuracy: AccuracyStat = {
+    sumDistance: existing.accuracy.sumDistance + totals.distance,
+    sumHorizontal: existing.accuracy.sumHorizontal + totals.horizontal,
+    sumVertical: existing.accuracy.sumVertical + totals.vertical,
+    throws: existing.accuracy.throws + totals.throws,
+  };
+  const record = { ...existing, accuracy };
+  roster = { ...roster, [k]: record };
+  notify();
+  upsertRow(k, record);
+}
+
+/** Mean Euclidean Distance — average straight-line miss distance from target, in mm. Null with no data yet. */
+export function meanEuclideanDistance(record: PlayerRecord): number | null {
+  return record.accuracy.throws === 0 ? null : record.accuracy.sumDistance / record.accuracy.throws;
+}
+
+/** Mean Horizontal Distance — average horizontal miss component, in mm. */
+export function meanHorizontalDistance(record: PlayerRecord): number | null {
+  return record.accuracy.throws === 0 ? null : record.accuracy.sumHorizontal / record.accuracy.throws;
+}
+
+/** Mean Vertical Distance — average vertical miss component, in mm. */
+export function meanVerticalDistance(record: PlayerRecord): number | null {
+  return record.accuracy.throws === 0 ? null : record.accuracy.sumVertical / record.accuracy.throws;
 }
 
 export function averagePct(stat: HitStat): number {

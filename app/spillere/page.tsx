@@ -3,7 +3,15 @@
 import Link from "next/link";
 import { useState } from "react";
 import { STEPS, STEP_LABELS } from "@/lib/game";
-import { averageDartsPerWin, averagePct, deletePlayer, useRoster } from "@/lib/storage";
+import {
+  averageDartsPerWin,
+  averagePct,
+  deletePlayer,
+  meanEuclideanDistance,
+  meanHorizontalDistance,
+  meanVerticalDistance,
+  useRoster,
+} from "@/lib/storage";
 import { TrashIcon } from "@/components/icons";
 
 const FOCUS_RING =
@@ -125,6 +133,23 @@ export default function PlayersPage() {
                 <span className="tabular" style={{ color: "var(--color-teal)", fontWeight: 700 }}>
                   {averageDartsPerWin(p) ?? "–"}
                 </span>
+              </div>
+              <div
+                className="mt-2 pt-2 grid grid-cols-3 gap-1 text-center"
+                style={{ borderTop: "1px solid var(--color-border)" }}
+              >
+                {[
+                  { label: "MED", value: meanEuclideanDistance(p) },
+                  { label: "MHD", value: meanHorizontalDistance(p) },
+                  { label: "MVD", value: meanVerticalDistance(p) },
+                ].map(({ label, value }) => (
+                  <div key={label}>
+                    <p style={{ color: "var(--color-muted)", fontSize: "0.6rem", letterSpacing: "0.05em" }}>{label}</p>
+                    <p className="tabular" style={{ color: "var(--color-cream)", fontSize: "0.8rem", fontWeight: 600 }}>
+                      {value === null ? "–" : `${Math.round(value)}mm`}
+                    </p>
+                  </div>
+                ))}
               </div>
             </div>
           ))}
