@@ -114,7 +114,17 @@ export function MikkeMusApp() {
     setPendingAmbiguous(next);
   }
   // True once Confirm has been requested but is blocked on resolving pendingAmbiguous.
+  // Mirrored into a ref for the same reason pendingAmbiguousRef exists: confirm()'s
+  // setAwaitingConfirmResolution(true) and the immediately-following
+  // resolvePendingChoice() call (when a bot's ambiguous hit is also the turn's 3rd
+  // dart) happen in the same synchronous tick, so resolvePendingChoice reading the
+  // state variable would see the pre-update value and never advance the turn.
   const [awaitingConfirmResolution, setAwaitingConfirmResolution] = useState(false);
+  const awaitingConfirmResolutionRef = useRef(false);
+  function updateAwaitingConfirmResolution(value: boolean) {
+    awaitingConfirmResolutionRef.current = value;
+    setAwaitingConfirmResolution(value);
+  }
   // Which players in this match are bots, and at what difficulty — set once at
   // startGame from SetupScreen's picks. Bots are never written via ensurePlayer and
   // are excluded from finalizeMatch's persistence calls (see there).
@@ -123,15 +133,33 @@ export function MikkeMusApp() {
   const activePlayer = rewound ?? players[currentIdx] ?? null;
   const activeBotLevel = activePlayer ? botLevels[activePlayer] ?? null : null;
 
-  // Always-current mirrors of state the bot-turn effect below reads from inside
-  // setTimeout callbacks, where a closure over the render-time `progress`/
-  // `activePlayer` would otherwise go stale between one simulated dart and the next.
+  // Always-current mirrors of state/handlers the bot-turn effect below reads from
+  // inside setTimeout callbacks, where a closure over this render's `progress`/
+  // `activePlayer`/handlers would otherwise go stale between one simulated dart
+  // and the next. The bot-turn effect (throwNext) is itself only re-created once
+  // per turn (its useEffect dependencies don't change dart-to-dart), but
+  // processDart/resolvePendingChoice/confirm are plain closures over this render's
+  // `progress` — calling the SAME closure for all 3 darts of a turn would have
+  // dart 2 and 3 read dart 1's pre-throw progress, silently overwriting a real
+  // cross with a stale recomputation of the same number. Real Scolia throws never
+  // hit this (each event always invokes useScolia's latest callback). Synced in an
+  // effect (not assigned directly in the render body) since mutating a ref during
+  // render is itself unsafe — hoisting makes referencing these functions here
+  // valid even though they're declared further down in this component.
   const progressRef = useRef(progress);
-  progressRef.current = progress;
   const activePlayerRef = useRef(activePlayer);
-  activePlayerRef.current = activePlayer;
   const screenRef = useRef(screen);
-  screenRef.current = screen;
+  const processDartRef = useRef(processDart);
+  const resolvePendingChoiceRef = useRef(resolvePendingChoice);
+  const confirmRef = useRef(confirm);
+  useEffect(() => {
+    progressRef.current = progress;
+    activePlayerRef.current = activePlayer;
+    screenRef.current = screen;
+    processDartRef.current = processDart;
+    resolvePendingChoiceRef.current = resolvePendingChoice;
+    confirmRef.current = confirm;
+  });
 
   // Resume an in-progress match after a reload instead of dropping back to setup.
   // Deliberately not read during useState's initializer (which would run during
@@ -349,7 +377,7 @@ export function MikkeMusApp() {
     accuracyTotalsRef.current = {};
     ringHitsRef.current = {};
     updatePendingAmbiguous([]);
-    setAwaitingConfirmResolution(false);
+    updateAwaitingConfirmResolution(false);
     setBotLevels(startBotLevels);
     scoliaDartsRef.current = 0;
     setScreen("game");
@@ -385,12 +413,12 @@ export function MikkeMusApp() {
       if (isFinished(currentProgress)) {
         // Won mid-turn on an earlier simulated dart — stop and let confirm() close it out.
         scoliaDartsRef.current = 0;
-        confirm();
+        confirmRef.current();
         return;
       }
 
       const coordinates = botChooseThrow(level, progressRef.current, player, botLevels);
-      processDart({ sector: sectorAt(coordinates), bounceout: false, coordinates });
+      processDartRef.current({ sector: sectorAt(coordinates), bounceout: false, coordinates });
 
       const pending = pendingAmbiguousRef.current;
       if (pending.length > 0) {
@@ -405,7 +433,7 @@ export function MikkeMusApp() {
           item.ringStep,
           item.multiplier
         );
-        resolvePendingChoice(redirect ? "redirect" : "keep");
+        resolvePendingChoiceRef.current(redirect ? "redirect" : "keep");
       }
 
       if (!cancelled && scoliaDartsRef.current < DARTS_PER_TURN) {
@@ -418,7 +446,6 @@ export function MikkeMusApp() {
       cancelled = true;
       clearTimeout(timer);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- processDart/confirm/resolvePendingChoice close over per-render state on purpose, like the rest of this file's handlers; re-running this effect on their identity would defeat the ref-guarded single-chain-per-turn design above.
   }, [screen, activePlayer, turnToken, botLevels, rewound]);
 
   /**
@@ -498,8 +525,8 @@ export function MikkeMusApp() {
     const remaining = pendingAmbiguousRef.current.filter((p) => p.key !== item.key);
     updatePendingAmbiguous(remaining);
 
-    if (remaining.length === 0 && awaitingConfirmResolution) {
-      setAwaitingConfirmResolution(false);
+    if (remaining.length === 0 && awaitingConfirmResolutionRef.current) {
+      updateAwaitingConfirmResolution(false);
       advanceTurn(finalProgress, finalPendingHits);
     }
   }
@@ -569,7 +596,7 @@ export function MikkeMusApp() {
     // Reads the ref, not the pendingAmbiguous state — see pendingAmbiguousRef's
     // comment above for why the state can be stale right here.
     if (pendingAmbiguousRef.current.length > 0) {
-      setAwaitingConfirmResolution(true);
+      updateAwaitingConfirmResolution(true);
       return;
     }
     advanceTurn();
