@@ -11,3 +11,10 @@ create table if not exists tournaments (
   status text not null,
   winner text
 );
+
+alter table tournaments enable row level security;
+
+create policy "public read" on tournaments for select using (true);
+create policy "public insert" on tournaments for insert with check (true);
+create policy "public update" on tournaments for update using (true);
+create policy "public delete" on tournaments for delete using (true);
