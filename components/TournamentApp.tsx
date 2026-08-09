@@ -18,7 +18,7 @@ import {
   upsertTournament,
 } from "@/lib/tournamentStorage";
 import { loadActiveMatch } from "@/lib/activeMatch";
-import type { BotLevel } from "@/lib/botLevels";
+import type { BotLevel, TeamMember } from "@/lib/botLevels";
 import { MikkeMusApp } from "./MikkeMusApp";
 import { TournamentSetupScreen } from "./TournamentSetupScreen";
 import { TournamentGroupSetupScreen } from "./TournamentGroupSetupScreen";
@@ -125,14 +125,18 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
 
   if (screen === "match" && tournament && currentMatch && currentMatch.participantA && currentMatch.participantB) {
     const botLevels: Record<string, BotLevel> = {};
+    const teamRosters: Record<string, TeamMember[]> = {};
     tournament.participants.forEach((p) => {
       if (p.isBot && p.botLevel) botLevels[p.name] = p.botLevel;
+      if (p.members && p.members.length > 0) teamRosters[p.name] = p.members;
     });
     return (
       <MikkeMusApp
         initialPlayers={[currentMatch.participantA, currentMatch.participantB]}
         initialBotLevels={botLevels}
+        initialTeamRosters={teamRosters}
         onMatchComplete={handleMatchComplete}
+        onExitToHome={onExitToHome}
       />
     );
   }

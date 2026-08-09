@@ -30,7 +30,7 @@ export function AppRoot() {
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  if (mode === "single") return <MikkeMusApp />;
+  if (mode === "single") return <MikkeMusApp onExitToHome={() => setMode("home")} />;
   if (mode === "tournament") return <TournamentApp onExitToHome={() => setMode("home")} />;
 
   return (

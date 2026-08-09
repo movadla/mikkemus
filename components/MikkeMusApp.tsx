@@ -24,7 +24,7 @@ import { sectorAt, throwAccuracy } from "@/lib/dartboard";
 import { haptics } from "@/lib/haptics";
 import { classifyThrow, formatSectorLabel, parseSector } from "@/lib/scoliaMapping";
 import { botChooseThrow, botDecideRedirect } from "@/lib/botStrategy";
-import { type BotLevel } from "@/lib/botLevels";
+import { type BotLevel, type TeamMember } from "@/lib/botLevels";
 import { useScolia } from "@/lib/useScolia";
 import { SetupScreen } from "./SetupScreen";
 import { GameScreen } from "./GameScreen";
@@ -58,12 +58,19 @@ type MikkeMusAppProps = {
    *  this exact same engine, unchanged. */
   initialPlayers?: string[];
   initialBotLevels?: Record<string, BotLevel>;
+  /** Per-team roster (name + bot status per member) for any of `initialPlayers` that's a team —
+   *  lets the engine know who's physically up next within that team's turn (see teamMemberIdx). */
+  initialTeamRosters?: Record<string, TeamMember[]>;
   /** When set, the winner screen's home button reports the result here instead of resetting to
    *  SetupScreen — the caller (tournament mode) decides what happens next. */
   onMatchComplete?: (result: { winner: string; stats: Record<string, TurnAggregate> }) => void;
+  /** Bails all the way back to the true home screen (AppRoot) — wired into SetupScreen's "← Hjem"
+   *  and into aborting a tournament match (which would otherwise strand the player on the generic,
+   *  disconnected SetupScreen instead of back where they actually came from). */
+  onExitToHome?: () => void;
 };
 
-export function MikkeMusApp({ initialPlayers, initialBotLevels, onMatchComplete }: MikkeMusAppProps = {}) {
+export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRosters, onMatchComplete, onExitToHome }: MikkeMusAppProps = {}) {
   const [screen, setScreen] = useState<Screen>("setup");
   const [players, setPlayers] = useState<string[]>([]);
   const [progress, setProgress] = useState<PlayerProgress>({});
@@ -140,9 +147,26 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, onMatchComplete 
   // startGame from SetupScreen's picks. Bots are never written via ensurePlayer and
   // are excluded from finalizeMatch's persistence calls (see there).
   const [botLevels, setBotLevels] = useState<Record<string, BotLevel>>({});
+  // Per-team roster, set once at startGame — absent entirely for individual (non-team) matches.
+  const [teamRosters, setTeamRosters] = useState<Record<string, TeamMember[]>>({});
+  // Which member of a team's own roster throws NEXT time that team is up — advanced in
+  // advanceTurn, independent of the overall players[]/currentIdx rotation.
+  const [teamMemberIdx, setTeamMemberIdx] = useState<Record<string, number>>({});
 
   const activePlayer = rewound ?? players[currentIdx] ?? null;
-  const activeBotLevel = activePlayer ? botLevels[activePlayer] ?? null : null;
+  // For a team with a roster, the CURRENT thrower is a specific member (who may or may not be a
+  // bot); for a plain individual participant there's no roster, so it falls through to the flat
+  // botLevels lookup exactly as before.
+  const activeRoster = activePlayer ? teamRosters[activePlayer] : undefined;
+  const currentMember: TeamMember | null =
+    activeRoster && activeRoster.length > 0 ? activeRoster[(teamMemberIdx[activePlayer as string] ?? 0) % activeRoster.length] : null;
+  const activeBotLevel = currentMember
+    ? currentMember.isBot
+      ? currentMember.botLevel ?? null
+      : null
+    : activePlayer
+      ? botLevels[activePlayer] ?? null
+      : null;
 
   // Always-current mirrors of state/handlers the bot-turn effect below reads from
   // inside setTimeout callbacks, where a closure over this render's `progress`/
@@ -201,10 +225,12 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, onMatchComplete 
       setTurnLog(restored.turnLog);
       setTurnCounters(restored.turnCounters);
       setBotLevels(restored.botLevels ?? {});
+      setTeamRosters(restored.teamRosters ?? {});
+      setTeamMemberIdx(restored.teamMemberIdx ?? {});
     } else if (initialPlayers) {
       // Tournament mode: nothing to resume, so jump straight into the given match instead of
       // showing SetupScreen.
-      startGame(initialPlayers, initialBotLevels ?? {});
+      startGame(initialPlayers, initialBotLevels ?? {}, initialTeamRosters ?? {});
     }
     setHydratedFromStorage(true);
     // initialPlayers/initialBotLevels are only meant to apply once, on the very first mount of a
@@ -237,6 +263,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, onMatchComplete 
       turnLog,
       turnCounters,
       botLevels,
+      teamRosters,
+      teamMemberIdx,
     });
   }, [
     hydratedFromStorage,
@@ -254,6 +282,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, onMatchComplete 
     turnLog,
     turnCounters,
     botLevels,
+    teamRosters,
+    teamMemberIdx,
   ]);
 
   /** Clears the shot boxes and the "just placed" mark highlight — see the call sites below for when. */
@@ -385,7 +415,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, onMatchComplete 
     },
   });
 
-  function startGame(startPlayers: string[], startBotLevels: Record<string, BotLevel> = {}) {
+  function startGame(startPlayers: string[], startBotLevels: Record<string, BotLevel> = {}, startTeamRosters: Record<string, TeamMember[]> = {}) {
     const prog: PlayerProgress = {};
     startPlayers.forEach((p) => (prog[p] = emptyProgress()));
     setPlayers(startPlayers);
@@ -407,6 +437,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, onMatchComplete 
     updatePendingAmbiguous([]);
     updateAwaitingConfirmResolution(false);
     setBotLevels(startBotLevels);
+    setTeamRosters(startTeamRosters);
+    setTeamMemberIdx({});
     scoliaDartsRef.current = 0;
     setScreen("game");
     if (!startBotLevels[startPlayers[0]]) playPlayerSound(startPlayers[0] ?? null);
@@ -428,9 +460,10 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, onMatchComplete 
   // instant the real turn moves on (see their own comments for why refs are
   // needed here rather than the closed-over `player`/`screen` values going stale).
   useEffect(() => {
-    if (screen !== "game" || rewound || !activePlayer) return;
-    const level = botLevels[activePlayer];
-    if (!level) return;
+    if (screen !== "game" || rewound || !activePlayer || !activeBotLevel) return;
+    // Reassigned to a non-nullable local: activeBotLevel is `BotLevel | null` at the type level,
+    // and TS doesn't carry the null-check narrowing above into the nested throwNext() closure.
+    const level: BotLevel = activeBotLevel;
 
     const player = activePlayer;
     let cancelled = false;
@@ -474,7 +507,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, onMatchComplete 
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [screen, activePlayer, turnToken, botLevels, rewound]);
+  }, [screen, activePlayer, turnToken, botLevels, rewound, activeBotLevel]);
 
   /**
    * Registers `crosses` marks on `step` (crosses > 1 for a Scolia-detected inner bull).
@@ -593,9 +626,10 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, onMatchComplete 
     players.forEach((p) => {
       const aggregate = aggregateTurns(finalTurnLog[p] ?? []);
       stats[p] = aggregate;
-      // A bot's darts aren't real play — never let them land in a human player's
-      // career stats, and bots are never ensurePlayer'd into the roster to begin with.
-      if (botLevels[p]) return;
+      // A bot's darts aren't real play — never let them land in a human player's career stats
+      // (bots are never ensurePlayer'd into the roster to begin with), and a team's name has no
+      // individual Supabase player record either, so results only ever count in individual mode.
+      if (botLevels[p] || teamRosters[p]) return;
       recordMatchResult(p, aggregate, p === winnerName);
       const accuracy = accuracyTotalsRef.current[p];
       if (accuracy) recordAccuracyTotals(p, accuracy);
@@ -652,6 +686,12 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, onMatchComplete 
     setTurnLog(nextTurnLog);
     if (!rewound) {
       setTurnCounters((prev) => ({ ...prev, [activePlayer]: (prev[activePlayer] ?? 0) + 1 }));
+      // Rotate this team's own "who throws next" pointer independent of the overall players[]
+      // turn order — so next time this exact team is up, the next member in line is current.
+      const roster = teamRosters[activePlayer];
+      if (roster && roster.length > 0) {
+        setTeamMemberIdx((prev) => ({ ...prev, [activePlayer]: ((prev[activePlayer] ?? 0) + 1) % roster.length }));
+      }
     }
 
     if (effectivePendingHits.length > 0) {
@@ -706,8 +746,13 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, onMatchComplete 
     } catch (err) {
       console.error("Klarte ikke å lagre statistikk ved avbrytelse:", err);
     }
+    clearActiveMatch();
     setScreen("setup");
     setPlayers([]);
+    // A tournament match (onMatchComplete set) has nowhere sensible to land on the generic,
+    // disconnected SetupScreen — bail straight home instead; the tournament itself lives on in
+    // Supabase regardless, so "Fortsett turnering" picks it back up later.
+    if (onMatchComplete) onExitToHome?.();
   }
 
   function playAgain() {
@@ -726,7 +771,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, onMatchComplete 
     return (
       <>
         <ScoliaStatusBadge state={scolia.state} />
-        <SetupScreen onStart={startGame} />
+        <SetupScreen onStart={startGame} onHome={onExitToHome} />
       </>
     );
   }
@@ -762,7 +807,17 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, onMatchComplete 
           className="fixed top-16 left-1/2 -translate-x-1/2 z-40 px-3 py-1.5 rounded-full text-sm shadow-panel"
           style={{ background: "var(--color-surface)", color: "var(--color-teal)", border: "1px solid var(--color-border)" }}
         >
-          🤖 {activePlayer} kaster …
+          🤖 {currentMember ? currentMember.name : activePlayer} kaster …
+        </div>
+      )}
+      {/* A mixed team's human member up now — the column only shows the team's name, so this is
+          the only way the physical players know who should actually pick up the darts. */}
+      {!activeBotLevel && currentMember && rewound === null && (
+        <div
+          className="fixed top-16 left-1/2 -translate-x-1/2 z-40 px-3 py-1.5 rounded-full text-sm shadow-panel"
+          style={{ background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
+        >
+          {currentMember.name} sin tur
         </div>
       )}
       <GameScreen

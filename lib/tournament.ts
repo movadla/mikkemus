@@ -1,18 +1,19 @@
 import type { TurnAggregate } from "./game";
-import type { BotLevel } from "./botLevels";
+import type { BotLevel, TeamMember } from "./botLevels";
 
 export type TournamentMode = "individual" | "team";
 
 /** A tournament entrant — a real player/bot name in "individual" mode, or a team name whose
  *  `members` share one board and take turns physically throwing (see MikkeMusApp's game engine,
- *  which only ever sees the team's name as a single "player"). Identified by `name` throughout —
- *  same convention the rest of this app already uses (see MikkeMusApp's `players: string[]`). */
+ *  which only ever sees the team's name as a single "player", but knows each member's identity
+ *  and bot status for the internal turn rotation). Identified by `name` throughout — same
+ *  convention the rest of this app already uses (see MikkeMusApp's `players: string[]`). */
 export type Participant = {
   name: string;
   isBot: boolean;
   botLevel?: BotLevel;
-  /** Only set for a team participant. */
-  members?: string[];
+  /** Only set for a team participant — members can freely mix humans and bots. */
+  members?: TeamMember[];
 };
 
 export type TournamentMatch = {

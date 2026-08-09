@@ -12,6 +12,10 @@ export type BotLevelConfig = {
 
 export const BOT_LEVEL_ORDER: BotLevel[] = ["1", "2", "3", "4", "5", "6"];
 
+/** One entrant in a shared-board team — a real person or a bot, mixed freely. The game engine
+ *  uses this to know who's physically up next within a team's turn (see MikkeMusApp.tsx). */
+export type TeamMember = { name: string; isBot: boolean; botLevel?: BotLevel };
+
 export const BOT_LEVELS: Record<BotLevel, BotLevelConfig> = {
   "1": { key: "1", name: "Littler", targetMed: 20 },
   "2": { key: "2", name: "Cor Dekker", targetMed: 25 },
