@@ -222,6 +222,62 @@ export function buildPlayoffBracket(groups: string[][], matchesSoFar: Tournament
   return resolveByes(roundMatches);
 }
 
+export type BracketPreviewMatch = { labelA: string; labelB: string | null };
+export type BracketPreview = {
+  advancePerGroup: number;
+  bracketSize: number;
+  byes: number;
+  /** The first round's own matchups, seeded the same way buildPlayoffBracket eventually will. */
+  matches: BracketPreviewMatch[];
+  /** Round labels AFTER the first round, in order (e.g. ["Semifinale", "Finale"]) — later rounds'
+   *  actual matchups can't be previewed since they depend on who wins the first round. */
+  laterRoundLabels: string[];
+  hasBronzeMatch: boolean;
+};
+
+/**
+ * Same seeding `buildPlayoffBracket` will eventually use, but with placeholder labels ("Vinner
+ * gruppe 1", "Nr. 2 gruppe 2") instead of real names — lets the overview screen show how the
+ * playoff will be shaped before the group stage (and therefore the real advancers) is decided.
+ * Returns null when there's only one group (no playoff at all — the table decides directly).
+ */
+export function previewPlayoffBracket(groups: string[][]): BracketPreview | null {
+  if (groups.length < 2) return null;
+
+  const minGroupSize = Math.min(...groups.map((g) => g.length));
+  const advancePerGroup = Math.min(2, minGroupSize);
+
+  const placeholders: string[] = [];
+  for (let rank = 0; rank < advancePerGroup; rank++) {
+    groups.forEach((_, gi) => {
+      placeholders.push(rank === 0 ? `Vinner gruppe ${gi + 1}` : `Nr. ${rank + 1} gruppe ${gi + 1}`);
+    });
+  }
+
+  const size = nextPowerOfTwo(placeholders.length);
+  const order = bracketSeedOrder(size);
+  const slots: (string | null)[] = order.map((seed) => placeholders[seed - 1] ?? null);
+
+  const matches: BracketPreviewMatch[] = [];
+  for (let i = 0; i < slots.length; i += 2) {
+    matches.push({ labelA: slots[i] ?? "Bye", labelB: slots[i + 1] });
+  }
+
+  const laterRoundLabels: string[] = [];
+  for (let s = size / 4; s >= 1; s /= 2) {
+    laterRoundLabels.push(bracketRoundLabel(s));
+  }
+
+  return {
+    advancePerGroup,
+    bracketSize: size,
+    byes: size - placeholders.length,
+    matches,
+    laterRoundLabels,
+    hasBronzeMatch: size >= 4,
+  };
+}
+
 /** Advances the bracket once a round is fully resolved — pairs up winners into the next round,
  *  spins off the bronze match from the semifinal's losers, and marks the tournament done once the
  *  final has a winner. Safe to call speculatively (no-ops if nothing is ready to advance yet). */
