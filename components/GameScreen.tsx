@@ -136,13 +136,6 @@ export function GameScreen({
               REDIGERER TIDLIGERE TUR
             </p>
           )}
-          <p
-            key={`${activePlayer}-${turnToken}`}
-            className="animate-name-swap"
-            style={{ color: accent, fontSize: "1.3rem", fontWeight: 600 }}
-          >
-            {activePlayer}
-          </p>
           {!rewound && <ShotIndicator shots={turnShots} />}
         </div>
         <div style={{ width: "72px" }} />
@@ -262,27 +255,6 @@ export function GameScreen({
                     >
                       {p}
                     </span>
-                    {isActive && (
-                      <svg
-                        key={`swoosh-${turnToken}`}
-                        viewBox="0 0 100 14"
-                        preserveAspectRatio="none"
-                        className="absolute left-0 w-full pointer-events-none"
-                        style={{ top: "100%", height: "14px" }}
-                        aria-hidden
-                      >
-                        <path
-                          d="M4 6 Q50 -2 96 6"
-                          fill="none"
-                          stroke="var(--color-cream)"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          pathLength={1}
-                          className="animate-chalk-draw"
-                          style={{ strokeDasharray: 1 }}
-                        />
-                      </svg>
-                    )}
                   </span>
                 </div>
               );

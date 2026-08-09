@@ -332,7 +332,11 @@ export function MikkeMusApp() {
     }
   }
 
-  const scoliaEnabled = screen === "game";
+  // Also enabled on the setup screen so the status badge is visible before starting a
+  // match — real throw/takeout events arriving there are already harmless no-ops,
+  // since processDart/confirm all bail out immediately when activePlayer is null
+  // (always true on setup, since `players` is empty).
+  const scoliaEnabled = screen === "game" || screen === "setup";
   const scolia = useScolia(scoliaEnabled, {
     // Ignored while a bot is active — a bot's turn has no physical darts to detect,
     // and gating this here (rather than toggling `enabled`) avoids tearing down and
@@ -688,7 +692,12 @@ export function MikkeMusApp() {
   }
 
   if (screen === "setup") {
-    return <SetupScreen onStart={startGame} />;
+    return (
+      <>
+        <ScoliaStatusBadge state={scolia.state} />
+        <SetupScreen onStart={startGame} />
+      </>
+    );
   }
 
   if (screen === "winner" && winner) {
@@ -710,7 +719,7 @@ export function MikkeMusApp() {
       {scoliaEnabled && <ScoliaStatusBadge state={scolia.state} />}
       {activeBotLevel && rewound === null && (
         <div
-          className="fixed top-3 left-1/2 -translate-x-1/2 z-40 px-3 py-1.5 rounded-full text-sm shadow-panel"
+          className="fixed top-16 left-1/2 -translate-x-1/2 z-40 px-3 py-1.5 rounded-full text-sm shadow-panel"
           style={{ background: "var(--color-surface)", color: "var(--color-teal)", border: "1px solid var(--color-border)" }}
         >
           🤖 {activePlayer} kaster …
