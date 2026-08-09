@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { bracketRoundLabel, computeStandings, previewPlayoffBracket, type Tournament, type TournamentMatch } from "@/lib/tournament";
 
 const FOCUS_RING =
@@ -46,17 +47,47 @@ export function TournamentOverviewScreen({
   tournament,
   onPlayNext,
   onExitToHome,
+  onCancelTournament,
 }: {
   tournament: Tournament;
   onPlayNext: (match: TournamentMatch) => void;
   onExitToHome: () => void;
+  onCancelTournament: () => void;
 }) {
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const nextMatch = tournament.matches.find((m) => !m.winner && m.participantA && m.participantB) ?? null;
   const bracketMatches = tournament.matches.filter((m) => m.round === "bracket");
   const bracketRoundSizes = Array.from(new Set(bracketMatches.map((m) => m.bracketRoundSize!))).sort((a, b) => b - a);
 
   return (
     <div className="animate-screen-enter min-h-screen w-full p-4" style={{ background: "var(--color-bg)" }}>
+      {showCancelConfirm && (
+        <div className="fixed inset-0 flex items-center justify-center p-6 z-50" style={{ background: "rgba(0,0,0,0.6)" }}>
+          <div className="w-full max-w-sm rounded-xl p-6" style={{ background: "var(--color-surface)" }}>
+            <p className="text-center mb-6" style={{ color: "var(--color-cream)", fontSize: "1.1rem" }}>
+              Avbryte turneringen? Fremgangen slettes permanent og kan ikke gjenopprettes.
+            </p>
+            <div className="space-y-3">
+              <button
+                type="button"
+                onClick={onCancelTournament}
+                className={`tactile w-full py-3 rounded-lg font-medium ${FOCUS_RING}`}
+                style={{ background: "var(--color-red)", color: "var(--color-cream)" }}
+              >
+                Ja, avbryt turneringen
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowCancelConfirm(false)}
+                className={`tactile w-full py-3 rounded-lg font-medium ${FOCUS_RING}`}
+                style={{ background: "var(--color-green)", color: "var(--color-cream)" }}
+              >
+                Nei, fortsett turneringen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="max-w-md mx-auto">
         <div className="flex items-center justify-between mb-6 pt-2">
           <button type="button" onClick={onExitToHome} className={`tactile px-3 py-2 rounded-lg text-sm ${FOCUS_RING}`} style={{ background: "var(--color-surface)", color: "var(--color-cream)" }}>
@@ -191,6 +222,17 @@ export function TournamentOverviewScreen({
               )}
             </div>
           </>
+        )}
+
+        {tournament.status !== "done" && (
+          <button
+            type="button"
+            onClick={() => setShowCancelConfirm(true)}
+            className={`tactile w-full py-3 rounded-lg text-sm ${FOCUS_RING}`}
+            style={{ background: "var(--color-surface)", color: "var(--color-red)", border: "1px solid var(--color-border)" }}
+          >
+            Avbryt turnering
+          </button>
         )}
       </div>
     </div>

@@ -11,6 +11,7 @@ import {
 } from "@/lib/tournament";
 import {
   clearActiveTournamentId,
+  deleteTournament,
   fetchTournament,
   loadActiveTournamentId,
   newTournamentId,
@@ -105,6 +106,16 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
     if (updated.status === "done") clearActiveTournamentId();
   }
 
+  /** Permanently abandons the tournament (confirmed on TournamentOverviewScreen first) — unlike a
+   *  completed tournament, an aborted one has no value to keep around, so it's deleted outright
+   *  rather than just cleared locally. */
+  async function handleCancelTournament() {
+    if (!tournament) return;
+    clearActiveTournamentId();
+    await deleteTournament(tournament.id);
+    onExitToHome();
+  }
+
   if (screen === "loading") {
     return <div className="min-h-screen w-full" style={{ background: "var(--color-bg)" }} />;
   }
@@ -142,7 +153,14 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
   }
 
   if (tournament) {
-    return <TournamentOverviewScreen tournament={tournament} onPlayNext={handlePlayNext} onExitToHome={onExitToHome} />;
+    return (
+      <TournamentOverviewScreen
+        tournament={tournament}
+        onPlayNext={handlePlayNext}
+        onExitToHome={onExitToHome}
+        onCancelTournament={handleCancelTournament}
+      />
+    );
   }
 
   return <TournamentSetupScreen onBack={onExitToHome} onNext={handleSetupNext} />;

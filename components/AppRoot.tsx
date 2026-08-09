@@ -22,12 +22,15 @@ export function AppRoot() {
   // own connection once a mode is picked, so this never runs two connections at once.
   const scolia = useScolia(mode === "home", {});
 
-  // One-time read of external state (localStorage) on mount — same exception already used by
-  // MikkeMusApp's/TournamentApp's own resume-on-load effects, not a render-loop.
+  // Re-read external state (localStorage) every time the home screen itself comes back into
+  // view, not just on first mount — otherwise cancelling or finishing a tournament wouldn't
+  // update this button until a hard refresh, since returning here is just a mode change, not a
+  // remount. Same "you might not need an effect" exception already used by MikkeMusApp's/
+  // TournamentApp's own resume-on-load effects, not a render-loop.
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    setHasActiveTournament(!!loadActiveTournamentId());
-  }, []);
+    if (mode === "home") setHasActiveTournament(!!loadActiveTournamentId());
+  }, [mode]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   if (mode === "single") return <MikkeMusApp onExitToHome={() => setMode("home")} />;

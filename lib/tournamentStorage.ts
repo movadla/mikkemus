@@ -51,6 +51,15 @@ export async function upsertTournament(tournament: Tournament): Promise<void> {
   if (error) console.error("Kunne ikke lagre turnering i Supabase:", error.message);
 }
 
+/** Permanently removes an abandoned tournament — used when the player explicitly cancels one
+ *  (see TournamentOverviewScreen's confirm dialog), unlike a completed tournament, which is
+ *  always kept. */
+export async function deleteTournament(id: string): Promise<void> {
+  if (!supabase) return;
+  const { error } = await supabase.from("tournaments").delete().eq("id", id);
+  if (error) console.error("Kunne ikke slette turnering i Supabase:", error.message);
+}
+
 export async function fetchTournament(id: string): Promise<Tournament | null> {
   if (!supabase) return null;
   const { data, error } = await supabase.from("tournaments").select("*").eq("id", id).maybeSingle();
