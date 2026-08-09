@@ -11,6 +11,7 @@ type TournamentRow = {
   matches: TournamentMatch[];
   status: string;
   winner: string | null;
+  match_size: number;
 };
 
 function rowToTournament(row: TournamentRow): Tournament {
@@ -24,6 +25,8 @@ function rowToTournament(row: TournamentRow): Tournament {
     winner: row.winner ?? undefined,
     createdAt: row.created_at,
     completedAt: row.completed_at ?? undefined,
+    // Older tournaments (before match_size existed) default to the normal 1-vs-1 behavior.
+    matchSize: row.match_size ?? 2,
   };
 }
 
@@ -38,6 +41,7 @@ function tournamentToRow(t: Tournament): TournamentRow {
     matches: t.matches,
     status: t.status,
     winner: t.winner ?? null,
+    match_size: t.matchSize,
   };
 }
 

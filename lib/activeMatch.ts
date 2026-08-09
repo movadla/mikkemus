@@ -12,6 +12,7 @@ export type ActiveMatchSnapshot = {
   rewoundTurnIndex: number | null;
   winner: string | null;
   winnerStats: Record<string, TurnAggregate>;
+  placements: string[];
   turnToken: number;
   turnLog: Record<string, TurnResult[]>;
   turnCounters: Record<string, number>;

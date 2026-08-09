@@ -112,6 +112,13 @@ export function isFinished(progress: Progress): boolean {
   return STEPS.every((s) => progress[s] >= 3);
 }
 
+/** How many crosses (out of the max 30 across all 10 targets) a player still needs — used to
+ *  rank who was "closest to finishing" when a match needs more than a single winner/loser (see
+ *  MikkeMusApp's placements-at-match-end for tournament group pods with 3+ players). */
+export function remainingMarks(progress: Progress): number {
+  return STEPS.reduce((sum, s) => sum + (3 - Math.min(3, progress[s])), 0);
+}
+
 /**
  * Turns a confirmed batch of hits (all from the same turn) into a TurnResult.
  * A triple that lands 3 crosses in one tap counts as 3 treff, not 1 — matching

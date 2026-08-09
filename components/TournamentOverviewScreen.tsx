@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { bracketRoundLabel, computeStandings, previewPlayoffBracket, type Tournament, type TournamentMatch } from "@/lib/tournament";
+import { bracketRoundLabel, computeStandings, matchParticipants, previewPlayoffBracket, type Tournament, type TournamentMatch } from "@/lib/tournament";
 
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
@@ -27,16 +27,22 @@ function StandingsTable({ names, matches }: { names: string[]; matches: Tourname
 
 function MatchRow({ match }: { match: TournamentMatch }) {
   const done = !!match.winner;
+  const participants = matchParticipants(match);
   return (
     <div className="flex items-center justify-between px-3 py-1.5 rounded-lg" style={{ background: "var(--color-surface)", opacity: done ? 0.7 : 1 }}>
       <span style={{ color: "var(--color-cream)", fontSize: "0.85rem" }}>
-        <span style={{ color: match.winner === match.participantA ? "var(--color-gold)" : undefined }}>{match.participantA ?? "—"}</span>
-        {" vs "}
-        <span style={{ color: match.winner === match.participantB ? "var(--color-gold)" : undefined }}>{match.participantB ?? "—"}</span>
+        {participants.map((p, i) => (
+          <span key={p}>
+            {i > 0 && " vs "}
+            <span style={{ color: p === match.winner ? "var(--color-gold)" : undefined }}>{p}</span>
+          </span>
+        ))}
       </span>
       {done && (
         <span className="tabular" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>
-          {match.winner} vant
+          {/* A pod with more than 2 players shows the full finishing order, since "vant" alone
+              wouldn't say who came 2nd/3rd; a normal 1-vs-1 match keeps today's plain wording. */}
+          {participants.length > 2 && match.placements ? match.placements.join(" › ") : `${match.winner} vant`}
         </span>
       )}
     </div>
@@ -55,7 +61,7 @@ export function TournamentOverviewScreen({
   onCancelTournament: () => void;
 }) {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
-  const nextMatch = tournament.matches.find((m) => !m.winner && m.participantA && m.participantB) ?? null;
+  const nextMatch = tournament.matches.find((m) => !m.winner && matchParticipants(m).length >= 2) ?? null;
   const bracketMatches = tournament.matches.filter((m) => m.round === "bracket");
   const bracketRoundSizes = Array.from(new Set(bracketMatches.map((m) => m.bracketRoundSize!))).sort((a, b) => b - a);
 
@@ -117,7 +123,7 @@ export function TournamentOverviewScreen({
             className={`tactile w-full py-4 rounded-lg font-semibold text-lg mb-6 ${FOCUS_RING}`}
             style={{ background: "var(--color-green)", color: "var(--color-cream)" }}
           >
-            Spill: {nextMatch.participantA} vs {nextMatch.participantB}
+            Spill: {matchParticipants(nextMatch).join(" vs ")}
           </button>
         )}
 

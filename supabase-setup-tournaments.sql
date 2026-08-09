@@ -18,3 +18,7 @@ create policy "public read" on tournaments for select using (true);
 create policy "public insert" on tournaments for insert with check (true);
 create policy "public update" on tournaments for update using (true);
 create policy "public delete" on tournaments for delete using (true);
+
+-- Hvor mange spiller sammen i én gruppekamp (2 = vanlig, flere = faste puljer) — se
+-- lib/tournament.ts's Tournament.matchSize.
+alter table tournaments add column if not exists match_size integer not null default 2;

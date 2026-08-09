@@ -27,6 +27,15 @@ export type TournamentMatch = {
   /** Null participant = an unfilled bye slot, auto-resolved by resolveByes. */
   participantA: string | null;
   participantB: string | null;
+  /** Set ONLY for a group-stage "pod" match with more than 2 people (see Tournament.matchSize) —
+   *  participantA/B are unused then. Bracket matches never have this; the playoff is always
+   *  1-vs-1, so makeBracketMatch/resolveByes/buildPlayoffBracket/advanceBracket are untouched by
+   *  the multi-way case. */
+  participants?: string[];
+  /** Full finishing order (winner first) once the match is decided — set whenever the match is,
+   *  regardless of participant count, so standings can treat 2-way and multi-way matches the same
+   *  way. For a normal 2-player match this is just [winner, loser]. */
+  placements?: string[];
   winner?: string;
   stats?: Record<string, TurnAggregate>;
 };
@@ -42,7 +51,19 @@ export type Tournament = {
   winner?: string;
   createdAt: string;
   completedAt?: string;
+  /** How many play together in one group-stage match — 2 (normal) or more, splitting each group
+   *  into fixed pods of that size (see createTournament). The playoff is always 1-vs-1 regardless.
+   *  Only ever >2 for "individual" mode. */
+  matchSize: number;
 };
+
+/** Every real name in a match, whether it's a normal/bracket match (participantA/B) or a
+ *  group-stage pod with more than 2 people (participants) — the one place standings/UI code needs
+ *  to read "who's in this match" without caring which shape it is. */
+export function matchParticipants(m: TournamentMatch): string[] {
+  if (m.participants) return m.participants;
+  return [m.participantA, m.participantB].filter((p): p is string => !!p);
+}
 
 /** Distributes participants round-robin across `numGroups`, as evenly as possible. */
 export function distributeEvenly(names: string[], numGroups: number): string[][] {
@@ -88,17 +109,37 @@ function matchDarts(stats: Record<string, TurnAggregate> | undefined, name: stri
   return s ? s.hits + s.misses : null;
 }
 
-function headToHead(a: string, b: string, matches: TournamentMatch[]): number {
-  const m = matches.find(
-    (mm) => mm.winner && ((mm.participantA === a && mm.participantB === b) || (mm.participantA === b && mm.participantB === a))
-  );
-  if (!m?.winner) return 0;
-  return m.winner === a ? -1 : 1;
+/** The finishing order for an already-decided match — `placements` when set (always is, once a
+ *  match is recorded — see recordMatchResult), otherwise just [winner, everyone else] for old/
+ *  simple 2-way matches that predate this field. */
+function finishOrder(m: TournamentMatch): string[] {
+  if (m.placements) return m.placements;
+  if (!m.winner) return [];
+  return [m.winner, ...matchParticipants(m).filter((p) => p !== m.winner)];
 }
 
-/** Standings for one set of participants (a group, or the pool feeding a bracket seed) —
- *  points (win=2/loss=0, no draws exist in Mikke Mus), then fewest average darts per win, then
- *  head-to-head as tiebreaks. */
+/** Points for finishing at `rank` (0-indexed) out of `total` — 1st always 2, last always 0,
+ *  anyone in between (only possible with 3+ participants) gets 1. Matches the plain win=2/loss=0
+ *  rule exactly when total is 2. */
+function pointsForRank(rank: number, total: number): number {
+  if (rank === 0) return 2;
+  if (rank === total - 1) return 0;
+  return 1;
+}
+
+function headToHead(a: string, b: string, matches: TournamentMatch[]): number {
+  const m = matches.find((mm) => mm.winner && matchParticipants(mm).includes(a) && matchParticipants(mm).includes(b));
+  if (!m) return 0;
+  const order = finishOrder(m);
+  const rankA = order.indexOf(a);
+  const rankB = order.indexOf(b);
+  if (rankA === -1 || rankB === -1 || rankA === rankB) return 0;
+  return rankA < rankB ? -1 : 1;
+}
+
+/** Standings for one set of participants (a group, or the pool feeding a bracket seed) — ranked
+ *  points per finishing position (1st=2, last=0, anyone between=1 — see pointsForRank), then
+ *  fewest average darts per 1st-place finish, then head-to-head as tiebreaks. */
 export function computeStandings(names: string[], matches: TournamentMatch[]): StandingRow[] {
   const rows = new Map<string, StandingRow>();
   names.forEach((name) => rows.set(name, { name, played: 0, wins: 0, losses: 0, points: 0, avgDartsPerWin: null }));
@@ -106,24 +147,25 @@ export function computeStandings(names: string[], matches: TournamentMatch[]): S
   const winCount = new Map<string, number>();
 
   for (const m of matches) {
-    if (!m.winner || !m.participantA || !m.participantB) continue;
-    const loser = m.winner === m.participantA ? m.participantB : m.participantA;
-    const winnerRow = rows.get(m.winner);
-    const loserRow = rows.get(loser);
-    if (winnerRow) {
-      winnerRow.played += 1;
-      winnerRow.wins += 1;
-      winnerRow.points += 2;
-      const darts = matchDarts(m.stats, m.winner);
-      if (darts !== null) {
-        dartsSum.set(m.winner, (dartsSum.get(m.winner) ?? 0) + darts);
-        winCount.set(m.winner, (winCount.get(m.winner) ?? 0) + 1);
+    if (!m.winner) continue;
+    const order = finishOrder(m);
+    if (order.length < 2) continue;
+    order.forEach((name, rank) => {
+      const row = rows.get(name);
+      if (!row) return;
+      row.played += 1;
+      row.points += pointsForRank(rank, order.length);
+      if (rank === 0) {
+        row.wins += 1;
+        const darts = matchDarts(m.stats, name);
+        if (darts !== null) {
+          dartsSum.set(name, (dartsSum.get(name) ?? 0) + darts);
+          winCount.set(name, (winCount.get(name) ?? 0) + 1);
+        }
+      } else {
+        row.losses += 1;
       }
-    }
-    if (loserRow) {
-      loserRow.played += 1;
-      loserRow.losses += 1;
-    }
+    });
   }
 
   rows.forEach((row) => {
@@ -315,21 +357,39 @@ function advanceBracket(t: Tournament): Tournament {
 }
 
 /** Builds a brand-new tournament: group-stage matches generated immediately, playoff added once
- *  the group stage completes (see recordMatchResult). */
-export function createTournament(mode: TournamentMode, participants: Participant[], groups: string[][], id: string, createdAt: string): Tournament {
+ *  the group stage completes (see recordMatchResult). `matchSize` > 2 splits each group into fixed
+ *  pods of that size (as evenly as possible, via the same distributeEvenly used for groups
+ *  themselves) instead of the normal round-robin pairs — one shared-board match per pod. */
+export function createTournament(
+  mode: TournamentMode,
+  participants: Participant[],
+  groups: string[][],
+  id: string,
+  createdAt: string,
+  matchSize = 2
+): Tournament {
   const matches: TournamentMatch[] = [];
   groups.forEach((group, groupIndex) => {
-    roundRobinPairs(group).forEach(([a, b], i) => {
-      matches.push({ id: `group-${groupIndex}-${i}`, round: "group", groupIndex, participantA: a, participantB: b });
-    });
+    if (matchSize <= 2) {
+      roundRobinPairs(group).forEach(([a, b], i) => {
+        matches.push({ id: `group-${groupIndex}-${i}`, round: "group", groupIndex, participantA: a, participantB: b });
+      });
+    } else {
+      const numPods = Math.max(1, Math.floor(group.length / matchSize));
+      distributeEvenly(group, numPods).forEach((pod, pi) => {
+        matches.push({ id: `group-${groupIndex}-pod-${pi}`, round: "group", groupIndex, participantA: null, participantB: null, participants: pod });
+      });
+    }
   });
-  return { id, mode, participants, groups, matches, status: "group", createdAt };
+  return { id, mode, participants, groups, matches, status: "group", createdAt, matchSize };
 }
 
 /** Pure reducer: records one match's result and advances the tournament to its next stage
- *  (group → playoff, or one bracket round → the next) whenever that stage just completed. */
-export function recordMatchResult(tournament: Tournament, matchId: string, winner: string, stats: Record<string, TurnAggregate>): Tournament {
-  const matches = tournament.matches.map((m) => (m.id === matchId ? { ...m, winner, stats } : m));
+ *  (group → playoff, or one bracket round → the next) whenever that stage just completed.
+ *  `placements` is the full finishing order (winner first) — for a plain 2-player match the
+ *  caller passes [winner, loser], which is exactly what MikkeMusApp always computes anyway. */
+export function recordMatchResult(tournament: Tournament, matchId: string, placements: string[], stats: Record<string, TurnAggregate>): Tournament {
+  const matches = tournament.matches.map((m) => (m.id === matchId ? { ...m, winner: placements[0], placements, stats } : m));
   let next: Tournament = { ...tournament, matches };
 
   if (next.status === "group") {

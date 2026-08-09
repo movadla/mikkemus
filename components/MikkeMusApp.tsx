@@ -9,6 +9,7 @@ import {
   emptyProgress,
   isRegistrable,
   isFinished,
+  remainingMarks,
   summarizeTurn,
   type HitRecord,
   type PlayerProgress,
@@ -63,7 +64,7 @@ type MikkeMusAppProps = {
   initialTeamRosters?: Record<string, TeamMember[]>;
   /** When set, the winner screen's home button reports the result here instead of resetting to
    *  SetupScreen — the caller (tournament mode) decides what happens next. */
-  onMatchComplete?: (result: { winner: string; stats: Record<string, TurnAggregate> }) => void;
+  onMatchComplete?: (result: { winner: string; placements: string[]; stats: Record<string, TurnAggregate> }) => void;
   /** Bails all the way back to the true home screen (AppRoot) — wired into SetupScreen's "← Hjem"
    *  and into aborting a tournament match (which would otherwise strand the player on the generic,
    *  disconnected SetupScreen instead of back where they actually came from). */
@@ -81,6 +82,10 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   const [rewoundTurnIndex, setRewoundTurnIndex] = useState<number | null>(null);
   const [winner, setWinner] = useState<string | null>(null);
   const [winnerStats, setWinnerStats] = useState<Record<string, TurnAggregate>>({});
+  // Full finishing order (winner first), computed once at match end — for a 2-player match this
+  // is just [winner, loser]; for a tournament group pod with 3+ players it ranks everyone else by
+  // how close they were to finishing at that moment (see remainingMarks), not by playing it out.
+  const [placements, setPlacements] = useState<string[]>([]);
   // Bumped on every confirm that starts a new turn — lets the turn-start
   // animations replay even when the same player goes again (solo play, or
   // any time the active player doesn't literally change).
@@ -221,6 +226,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       setRewoundTurnIndex(restored.rewoundTurnIndex);
       setWinner(restored.winner);
       setWinnerStats(restored.winnerStats);
+      setPlacements(restored.placements ?? []);
       setTurnToken(restored.turnToken);
       setTurnLog(restored.turnLog);
       setTurnCounters(restored.turnCounters);
@@ -259,6 +265,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       rewoundTurnIndex,
       winner,
       winnerStats,
+      placements,
       turnToken,
       turnLog,
       turnCounters,
@@ -278,6 +285,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     rewoundTurnIndex,
     winner,
     winnerStats,
+    placements,
     turnToken,
     turnLog,
     turnCounters,
@@ -426,6 +434,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     setRewound(null);
     setRewoundTurnIndex(null);
     setWinner(null);
+    setPlacements([]);
     setTurnLog({});
     setTurnCounters({});
     setTurnToken(0);
@@ -719,6 +728,10 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       }
       setWinnerStats(stats);
       setWinner(activePlayer);
+      // Ranks everyone by how close they were to finishing at this exact moment — for a normal
+      // 2-player match this is trivially [winner, loser]; for a tournament pod with 3+ players it
+      // approximates 2nd/3rd place without playing the match out further (see remainingMarks).
+      setPlacements([...players].sort((a, b) => remainingMarks(effectiveProgress[a]) - remainingMarks(effectiveProgress[b])));
       setScreen("winner");
       return;
     }
@@ -757,7 +770,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
 
   function playAgain() {
     if (onMatchComplete && winner) {
-      onMatchComplete({ winner, stats: winnerStats });
+      onMatchComplete({ winner, placements, stats: winnerStats });
       return;
     }
     setScreen("setup");

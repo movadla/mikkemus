@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   createTournament,
+  matchParticipants,
   recordMatchResult,
   type Participant,
   type Tournament,
@@ -34,9 +35,11 @@ function findResumableMatch(tournament: Tournament): TournamentMatch | null {
   const active = loadActiveMatch();
   if (!active) return null;
   return (
-    tournament.matches.find(
-      (m) => !m.winner && m.participantA && m.participantB && active.players.includes(m.participantA) && active.players.includes(m.participantB)
-    ) ?? null
+    tournament.matches.find((m) => {
+      if (m.winner) return false;
+      const participants = matchParticipants(m);
+      return participants.length >= 2 && participants.every((p) => active.players.includes(p));
+    }) ?? null
   );
 }
 
@@ -81,10 +84,12 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
     setScreen("group-setup");
   }
 
-  async function handleGenerate(groups: string[][]) {
+  async function handleGenerate(groups: string[][], matchSize: number) {
     if (!pendingMode || !pendingParticipants) return;
     const id = newTournamentId();
-    const created = createTournament(pendingMode, pendingParticipants, groups, id, new Date().toISOString());
+    // Playing several at once is an individual-mode-only setting — a team match is always 1 team
+    // vs 1 team, regardless of whatever the (hidden, for team mode) matchSize toggle last held.
+    const created = createTournament(pendingMode, pendingParticipants, groups, id, new Date().toISOString(), pendingMode === "team" ? 2 : matchSize);
     setTournament(created);
     saveActiveTournamentId(id);
     setScreen("overview");
@@ -96,9 +101,9 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
     setScreen("match");
   }
 
-  async function handleMatchComplete(result: { winner: string; stats: Record<string, import("@/lib/game").TurnAggregate> }) {
+  async function handleMatchComplete(result: { winner: string; placements: string[]; stats: Record<string, import("@/lib/game").TurnAggregate> }) {
     if (!tournament || !currentMatch) return;
-    const updated = recordMatchResult(tournament, currentMatch.id, result.winner, result.stats);
+    const updated = recordMatchResult(tournament, currentMatch.id, result.placements, result.stats);
     setTournament(updated);
     setCurrentMatch(null);
     setScreen("overview");
@@ -124,17 +129,18 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
     return <TournamentSetupScreen onBack={onExitToHome} onNext={handleSetupNext} />;
   }
 
-  if (screen === "group-setup" && pendingParticipants) {
+  if (screen === "group-setup" && pendingMode && pendingParticipants) {
     return (
       <TournamentGroupSetupScreen
         participantNames={pendingParticipants.map((p) => p.name)}
+        mode={pendingMode}
         onBack={() => setScreen("setup")}
         onGenerate={handleGenerate}
       />
     );
   }
 
-  if (screen === "match" && tournament && currentMatch && currentMatch.participantA && currentMatch.participantB) {
+  if (screen === "match" && tournament && currentMatch && matchParticipants(currentMatch).length >= 2) {
     const botLevels: Record<string, BotLevel> = {};
     const teamRosters: Record<string, TeamMember[]> = {};
     tournament.participants.forEach((p) => {
@@ -143,7 +149,7 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
     });
     return (
       <MikkeMusApp
-        initialPlayers={[currentMatch.participantA, currentMatch.participantB]}
+        initialPlayers={matchParticipants(currentMatch)}
         initialBotLevels={botLevels}
         initialTeamRosters={teamRosters}
         onMatchComplete={handleMatchComplete}
