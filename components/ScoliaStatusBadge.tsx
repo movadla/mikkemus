@@ -2,26 +2,27 @@
 
 import type { ScoliaState } from "@/lib/useScolia";
 
+/** Label is deliberately binary (Online only once the board is actually ready to register
+ *  throws) — the color dot still carries the finer-grained relay/board state. */
 function summarize(state: ScoliaState): { label: string; color: string } {
+  const OFFLINE = "Scolia: Offline";
   if (state.relay === "connecting") {
-    return { label: "Scolia: kobler til…", color: "var(--color-muted)" };
+    return { label: OFFLINE, color: "var(--color-muted)" };
   }
   if (state.relay === "stale") {
-    return { label: "Scolia: relay ikke tilgjengelig", color: "var(--color-red)" };
+    return { label: OFFLINE, color: "var(--color-red)" };
   }
   switch (state.boardStatus) {
     case "Ready":
-      return { label: "Scolia: klar", color: "var(--color-green)" };
+      return { label: "Scolia: Online", color: "var(--color-green)" };
     case "Calibrating":
-      return { label: "Scolia: kalibrerer…", color: "var(--color-gold)" };
+      return { label: OFFLINE, color: "var(--color-gold)" };
     case "Error":
-      return { label: `Scolia: feil${state.errorType ? ` (${state.errorType})` : ""}`, color: "var(--color-red)" };
+      return { label: OFFLINE, color: "var(--color-red)" };
     case "Initializing":
-      return { label: "Scolia: starter…", color: "var(--color-muted)" };
     case "Offline":
-      return { label: "Scolia: brett offline", color: "var(--color-muted)" };
     default:
-      return { label: "Scolia: venter på status…", color: "var(--color-muted)" };
+      return { label: OFFLINE, color: "var(--color-muted)" };
   }
 }
 

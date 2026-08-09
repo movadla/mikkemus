@@ -40,6 +40,7 @@ export function WinnerScreen({
   stats,
   throwsByPlayer,
   onHome,
+  homeLabel = "Hjem",
 }: {
   winner: string;
   players: string[];
@@ -47,6 +48,8 @@ export function WinnerScreen({
   /** Every physical dart landed this match, per player — only populated when Scolia detected real throws. */
   throwsByPlayer: Record<string, [number, number][]>;
   onHome: () => void;
+  /** Overridden by tournament mode to "Til turnering" — see MikkeMusApp's onMatchComplete prop. */
+  homeLabel?: string;
 }) {
   const photo = getPlayerRecord(winner)?.photo;
 
@@ -180,7 +183,7 @@ export function WinnerScreen({
           className={`tactile w-full py-4 rounded-lg font-semibold text-lg ${FOCUS_RING}`}
           style={{ background: "var(--color-green)", color: "var(--color-cream)" }}
         >
-          Hjem
+          {homeLabel}
         </button>
       </div>
     </div>

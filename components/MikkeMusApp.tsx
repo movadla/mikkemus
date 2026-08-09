@@ -52,7 +52,18 @@ function setTurnAt(turns: TurnResult[], index: number, turn: TurnResult): TurnRe
   return next;
 }
 
-export function MikkeMusApp() {
+type MikkeMusAppProps = {
+  /** When set (and there's no in-progress match to resume), skips SetupScreen and starts a match
+   *  with these players directly — used by tournament mode to play one scheduled match through
+   *  this exact same engine, unchanged. */
+  initialPlayers?: string[];
+  initialBotLevels?: Record<string, BotLevel>;
+  /** When set, the winner screen's home button reports the result here instead of resetting to
+   *  SetupScreen — the caller (tournament mode) decides what happens next. */
+  onMatchComplete?: (result: { winner: string; stats: Record<string, TurnAggregate> }) => void;
+};
+
+export function MikkeMusApp({ initialPlayers, initialBotLevels, onMatchComplete }: MikkeMusAppProps = {}) {
   const [screen, setScreen] = useState<Screen>("setup");
   const [players, setPlayers] = useState<string[]>([]);
   const [progress, setProgress] = useState<PlayerProgress>({});
@@ -170,7 +181,12 @@ export function MikkeMusApp() {
   /* eslint-disable react-hooks/set-state-in-effect -- one-time restore-from-localStorage on mount, not a render-loop */
   useEffect(() => {
     const restored = loadActiveMatch();
-    if (restored) {
+    // In tournament mode, only resume a saved match if it's actually THIS match (same two
+    // players) — otherwise a stale leftover from an unrelated earlier match (e.g. a past
+    // "Singel game") would hijack the tournament match the caller explicitly asked to start.
+    const restoredMatchesRequested =
+      !initialPlayers || (restored && restored.players.length === initialPlayers.length && initialPlayers.every((p) => restored.players.includes(p)));
+    if (restored && restoredMatchesRequested) {
       setScreen(restored.screen);
       setPlayers(restored.players);
       setProgress(restored.progress);
@@ -185,8 +201,16 @@ export function MikkeMusApp() {
       setTurnLog(restored.turnLog);
       setTurnCounters(restored.turnCounters);
       setBotLevels(restored.botLevels ?? {});
+    } else if (initialPlayers) {
+      // Tournament mode: nothing to resume, so jump straight into the given match instead of
+      // showing SetupScreen.
+      startGame(initialPlayers, initialBotLevels ?? {});
     }
     setHydratedFromStorage(true);
+    // initialPlayers/initialBotLevels are only meant to apply once, on the very first mount of a
+    // fresh match (like the restored-match branch above) — re-running this on their identity
+    // would restart a match that's already in progress.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
 
@@ -687,11 +711,18 @@ export function MikkeMusApp() {
   }
 
   function playAgain() {
+    if (onMatchComplete && winner) {
+      onMatchComplete({ winner, stats: winnerStats });
+      return;
+    }
     setScreen("setup");
     setPlayers([]);
   }
 
   if (screen === "setup") {
+    // Tournament matches skip SetupScreen entirely (see the restore-from-localStorage effect
+    // above) — but this branch can still render for one tick before that effect's startGame call
+    // takes effect, so keep it as a harmless fallback rather than special-casing it away.
     return (
       <>
         <ScoliaStatusBadge state={scolia.state} />
@@ -701,7 +732,16 @@ export function MikkeMusApp() {
   }
 
   if (screen === "winner" && winner) {
-    return <WinnerScreen winner={winner} players={players} stats={winnerStats} throwsByPlayer={matchThrows} onHome={playAgain} />;
+    return (
+      <WinnerScreen
+        winner={winner}
+        players={players}
+        stats={winnerStats}
+        throwsByPlayer={matchThrows}
+        onHome={playAgain}
+        homeLabel={onMatchComplete ? "Til turnering" : "Hjem"}
+      />
+    );
   }
 
   const dartsThrown: Record<string, number> = {};

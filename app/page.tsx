@@ -1,5 +1,5 @@
-import { MikkeMusApp } from "@/components/MikkeMusApp";
+import { AppRoot } from "@/components/AppRoot";
 
 export default function Home() {
-  return <MikkeMusApp />;
+  return <AppRoot />;
 }
