@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { bracketRoundLabel, computeStandings, matchParticipants, previewPlayoffBracket, type Tournament, type TournamentMatch } from "@/lib/tournament";
+import { ConfirmDialog } from "./ConfirmDialog";
 
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
@@ -68,31 +69,13 @@ export function TournamentOverviewScreen({
   return (
     <div className="animate-screen-enter min-h-screen w-full p-4" style={{ background: "var(--color-bg)" }}>
       {showCancelConfirm && (
-        <div className="fixed inset-0 flex items-center justify-center p-6 z-50" style={{ background: "rgba(0,0,0,0.6)" }}>
-          <div className="w-full max-w-sm rounded-xl p-6" style={{ background: "var(--color-surface)" }}>
-            <p className="text-center mb-6" style={{ color: "var(--color-cream)", fontSize: "1.1rem" }}>
-              Avbryte turneringen? Fremgangen slettes permanent og kan ikke gjenopprettes.
-            </p>
-            <div className="space-y-3">
-              <button
-                type="button"
-                onClick={onCancelTournament}
-                className={`tactile w-full py-3 rounded-lg font-medium ${FOCUS_RING}`}
-                style={{ background: "var(--color-red)", color: "var(--color-cream)" }}
-              >
-                Ja, avbryt turneringen
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowCancelConfirm(false)}
-                className={`tactile w-full py-3 rounded-lg font-medium ${FOCUS_RING}`}
-                style={{ background: "var(--color-green)", color: "var(--color-cream)" }}
-              >
-                Nei, fortsett turneringen
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmDialog
+          message="Avbryte turneringen? Fremgangen slettes permanent og kan ikke gjenopprettes."
+          buttons={[
+            { label: "Ja, avbryt turneringen", onClick: onCancelTournament, background: "var(--color-red)" },
+            { label: "Nei, fortsett turneringen", onClick: () => setShowCancelConfirm(false), background: "var(--color-green)" },
+          ]}
+        />
       )}
       <div className="max-w-md mx-auto">
         <div className="flex items-center justify-between mb-6 pt-2">
@@ -121,7 +104,7 @@ export function TournamentOverviewScreen({
             type="button"
             onClick={() => onPlayNext(nextMatch)}
             className={`tactile w-full py-4 rounded-lg font-semibold text-lg mb-6 ${FOCUS_RING}`}
-            style={{ background: "var(--color-green)", color: "var(--color-cream)" }}
+            style={{ background: "var(--color-teal)", color: "var(--color-bg)" }}
           >
             Spill: {matchParticipants(nextMatch).join(" vs ")}
           </button>

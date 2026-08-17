@@ -21,6 +21,7 @@ import {
 } from "@/lib/tournamentStorage";
 import { loadActiveMatch } from "@/lib/activeMatch";
 import type { BotLevel, TeamMember } from "@/lib/botLevels";
+import { DartboardGlyph } from "./DartboardGlyph";
 import { MikkeMusApp } from "./MikkeMusApp";
 import { TournamentSetupScreen } from "./TournamentSetupScreen";
 import { TournamentGroupSetupScreen } from "./TournamentGroupSetupScreen";
@@ -101,6 +102,17 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
     setScreen("match");
   }
 
+  /** A match paused/aborted mid-play (not finished — see handleMatchComplete for that) has
+   *  nowhere better to land than the tournament it's still part of. Passed as MikkeMusApp's
+   *  onExitToHome specifically for the "match" screen below — that prop is otherwise only reached
+   *  by its tournament-only abort branch in this context, so redirecting it here doesn't affect
+   *  anything else. The match itself stays unplayed in `tournament.matches` and can be replayed
+   *  from the overview. */
+  function handleMatchAbort() {
+    setCurrentMatch(null);
+    setScreen("overview");
+  }
+
   async function handleMatchComplete(result: { winner: string; placements: string[]; stats: Record<string, import("@/lib/game").TurnAggregate> }) {
     if (!tournament || !currentMatch) return;
     const updated = recordMatchResult(tournament, currentMatch.id, result.placements, result.stats);
@@ -122,7 +134,14 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
   }
 
   if (screen === "loading") {
-    return <div className="min-h-screen w-full" style={{ background: "var(--color-bg)" }} />;
+    return (
+      <div
+        className="animate-screen-enter min-h-screen w-full flex items-center justify-center"
+        style={{ background: "var(--color-bg)" }}
+      >
+        <DartboardGlyph className="w-14 h-14" />
+      </div>
+    );
   }
 
   if (screen === "setup") {
@@ -153,7 +172,7 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
         initialBotLevels={botLevels}
         initialTeamRosters={teamRosters}
         onMatchComplete={handleMatchComplete}
-        onExitToHome={onExitToHome}
+        onExitToHome={handleMatchAbort}
       />
     );
   }

@@ -151,16 +151,31 @@ function subscribe(listener: () => void) {
   return () => listeners.delete(listener);
 }
 
+/** A transient network blip must not silently drop a write — retries a couple of times
+ *  with a short backoff before giving up and logging, since these calls are fire-and-forget
+ *  from the caller's perspective (the in-memory roster is already updated optimistically). */
+async function withRetry(run: () => PromiseLike<{ error: { message: string } | null }>, failureLabel: string, attempts = 3) {
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    const { error } = await run();
+    if (!error) return;
+    if (attempt === attempts - 1) {
+      console.error(failureLabel, error.message);
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)));
+  }
+}
+
 async function upsertRow(k: string, record: PlayerRecord) {
   if (!supabase) return;
-  const { error } = await supabase.from("players").upsert(recordToRow(k, record));
-  if (error) console.error("Kunne ikke lagre spiller i Supabase:", error.message);
+  const client = supabase;
+  await withRetry(() => client.from("players").upsert(recordToRow(k, record)), "Kunne ikke lagre spiller i Supabase:");
 }
 
 async function deleteRow(k: string) {
   if (!supabase) return;
-  const { error } = await supabase.from("players").delete().eq("id", k);
-  if (error) console.error("Kunne ikke slette spiller i Supabase:", error.message);
+  const client = supabase;
+  await withRetry(() => client.from("players").delete().eq("id", k), "Kunne ikke slette spiller i Supabase:");
 }
 
 let initialized = false;

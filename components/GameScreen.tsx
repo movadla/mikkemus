@@ -12,7 +12,10 @@ import {
   type Step,
   type TurnShot,
 } from "@/lib/game";
+import { isAnnouncerEnabled, setAnnouncerEnabled } from "@/lib/announcer";
+import { ConfirmDialog } from "./ConfirmDialog";
 import { Mark } from "./Mark";
+import { SpeakerIcon, SpeakerMuteIcon } from "./icons";
 
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
@@ -92,6 +95,10 @@ export function GameScreen({
   const [showHomeConfirm, setShowHomeConfirm] = useState(false);
   const [flashKey, setFlashKey] = useState(0);
   const wasRewound = useRef(false);
+  // Lazy-initialized from localStorage so the button reflects whatever the host last chose,
+  // without waiting for an effect — announce() itself reads the same localStorage value
+  // directly, so this state only drives the button's own icon/label.
+  const [announcerOn, setAnnouncerOn] = useState(() => isAnnouncerEnabled());
 
   useEffect(() => {
     if (rewound && !wasRewound.current) {
@@ -138,66 +145,60 @@ export function GameScreen({
           )}
           {!rewound && <ShotIndicator shots={turnShots} />}
         </div>
-        <div style={{ width: "72px" }} />
+        <button
+          type="button"
+          onClick={() => {
+            const next = !announcerOn;
+            setAnnouncerOn(next);
+            setAnnouncerEnabled(next);
+          }}
+          aria-label={announcerOn ? "Skru av kommentator" : "Skru på kommentator"}
+          className={`tactile w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${FOCUS_RING}`}
+          style={{ background: "var(--color-surface)", color: announcerOn ? "var(--color-teal)" : "var(--color-muted)" }}
+        >
+          {announcerOn ? <SpeakerIcon className="w-4 h-4" /> : <SpeakerMuteIcon className="w-4 h-4" />}
+        </button>
       </div>
 
       {awaitingConfirmResolution && pendingChoice && (
-        <div className="fixed inset-0 flex items-center justify-center p-6 z-50" style={{ background: "rgba(0,0,0,0.6)" }}>
-          <div className="w-full max-w-sm rounded-xl p-6" style={{ background: "var(--color-surface)" }}>
-            <p className="text-center mb-6" style={{ color: "var(--color-cream)", fontSize: "1.05rem" }}>
+        <ConfirmDialog
+          message={
+            <>
               Du traff {ringLabel} {STEP_LABELS[pendingChoice.number]} — hvor skal kastet telle?
-            </p>
-            <div className="space-y-3">
-              <button
-                type="button"
-                onClick={() => onResolvePendingChoice("redirect")}
-                className={`tactile w-full py-3 rounded-lg font-medium ${FOCUS_RING}`}
-                style={{ background: "var(--color-green)", color: "var(--color-cream)" }}
-              >
-                Fullfør {STEP_LABELS[pendingChoice.number]} ({pendingChoice.multiplier}x)
-              </button>
-              <button
-                type="button"
-                onClick={() => onResolvePendingChoice("keep")}
-                className={`tactile w-full py-3 rounded-lg font-medium ${FOCUS_RING}`}
-                style={{ background: "var(--color-teal)", color: "var(--color-bg)" }}
-              >
-                Behold på {ringLabel}
-              </button>
-            </div>
-          </div>
-        </div>
+            </>
+          }
+          messageFontSize="1.05rem"
+          buttons={[
+            {
+              label: `Fullfør ${STEP_LABELS[pendingChoice.number]} (${pendingChoice.multiplier}x)`,
+              onClick: () => onResolvePendingChoice("redirect"),
+              background: "var(--color-green)",
+            },
+            {
+              label: `Behold på ${ringLabel}`,
+              onClick: () => onResolvePendingChoice("keep"),
+              background: "var(--color-teal)",
+              color: "var(--color-bg)",
+            },
+          ]}
+        />
       )}
 
       {showHomeConfirm && (
-        <div className="fixed inset-0 flex items-center justify-center p-6 z-50" style={{ background: "rgba(0,0,0,0.6)" }}>
-          <div className="w-full max-w-sm rounded-xl p-6" style={{ background: "var(--color-surface)" }}>
-            <p className="text-center mb-6" style={{ color: "var(--color-cream)", fontSize: "1.1rem" }}>
-              Pause spillet?
-            </p>
-            <div className="space-y-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowHomeConfirm(false);
-                  onAbort();
-                }}
-                className={`tactile w-full py-3 rounded-lg font-medium ${FOCUS_RING}`}
-                style={{ background: "var(--color-red)", color: "var(--color-cream)" }}
-              >
-                Avbryt spill (stats blir lagret)
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowHomeConfirm(false)}
-                className={`tactile w-full py-3 rounded-lg font-medium ${FOCUS_RING}`}
-                style={{ background: "var(--color-green)", color: "var(--color-cream)" }}
-              >
-                Fortsett spill
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmDialog
+          message="Pause spillet?"
+          buttons={[
+            {
+              label: "Avbryt spill (stats blir lagret)",
+              onClick: () => {
+                setShowHomeConfirm(false);
+                onAbort();
+              },
+              background: "var(--color-red)",
+            },
+            { label: "Fortsett spill", onClick: () => setShowHomeConfirm(false), background: "var(--color-green)" },
+          ]}
+        />
       )}
 
       <div
@@ -228,11 +229,11 @@ export function GameScreen({
                 >
                   <span
                     className="absolute top-1 right-1.5 tabular"
-                    style={{ color: "var(--color-muted)", fontSize: "0.65rem" }}
+                    style={{ color: "var(--color-cream)", opacity: 0.55, fontSize: "0.72rem" }}
                   >
                     {dartsThrown[p] ?? 0}
                   </span>
-                  <span className="relative inline-flex">
+                  <span className="relative inline-flex max-w-full min-w-0">
                     {isActive && (
                       <span
                         aria-hidden
@@ -242,7 +243,7 @@ export function GameScreen({
                     )}
                     <span
                       key={isActive ? `active-${turnToken}` : "inactive"}
-                      className={`relative px-2.5 py-0.5 rounded-full ${isActive ? "animate-column-glow" : ""}`}
+                      className={`relative block max-w-full truncate px-2.5 py-0.5 rounded-full ${isActive ? "animate-column-glow" : ""}`}
                       style={
                         {
                           color: isActive ? accent : "var(--color-cream)",
@@ -338,18 +339,25 @@ export function GameScreen({
             type="button"
             onClick={onUndo}
             disabled={!canUndo}
-            className={`tactile py-4 rounded-xl font-semibold text-lg transition-opacity ${FOCUS_RING}`}
-            style={{ background: "var(--color-red)", color: "var(--color-cream)", opacity: canUndo ? 1 : 0.4 }}
+            className={`glossy py-4 rounded-xl font-semibold text-lg transition-opacity ${FOCUS_RING}`}
+            style={
+              {
+                "--btn-fill": "var(--color-surface)",
+                color: "var(--color-cream)",
+                border: "1px solid var(--color-border)",
+                opacity: canUndo ? 1 : 0.4,
+              } as React.CSSProperties
+            }
           >
-            Undo
+            Angre
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className={`tactile py-4 rounded-xl font-semibold text-lg ${FOCUS_RING}`}
-            style={{ background: "var(--color-green)", color: "var(--color-cream)" }}
+            className={`glossy py-4 rounded-xl font-semibold text-lg ${FOCUS_RING}`}
+            style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)" } as React.CSSProperties}
           >
-            {pendingCount === 0 ? "Confirm (bom)" : "Confirm"}
+            {pendingCount === 0 ? "Bekreft (bom)" : "Bekreft"}
           </button>
         </div>
       </div>

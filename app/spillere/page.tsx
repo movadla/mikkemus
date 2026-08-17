@@ -12,6 +12,7 @@ import {
   meanVerticalDistance,
   useRoster,
 } from "@/lib/storage";
+import { avatarAccent } from "@/lib/avatarAccent";
 import { TrashIcon } from "@/components/icons";
 
 const FOCUS_RING =
@@ -31,7 +32,13 @@ export default function PlayersPage() {
           <h1 className="font-display" style={{ color: "var(--color-cream)", fontSize: "1.4rem" }}>
             Spillere
           </h1>
-          <div style={{ width: "72px" }} />
+          <Link
+            href="/hall-of-fame"
+            className={`tactile px-3 py-2 rounded-lg text-sm ${FOCUS_RING}`}
+            style={{ background: "var(--color-surface)", color: "var(--color-gold)" }}
+          >
+            🏆
+          </Link>
         </div>
 
         {roster.length === 0 && (
@@ -81,7 +88,7 @@ export default function PlayersPage() {
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={p.photo} alt="" className="w-full h-full object-cover" />
                       ) : (
-                        <span style={{ color: "var(--color-muted)" }}>{p.name.charAt(0).toUpperCase()}</span>
+                        <span style={{ color: avatarAccent(p.name) }}>{p.name.charAt(0).toUpperCase()}</span>
                       )}
                     </div>
                     <div className="flex-1 min-w-0">

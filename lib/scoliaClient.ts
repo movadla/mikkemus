@@ -16,6 +16,9 @@ export type ThrowDetectedPayload = {
 export type TakeoutFinishedPayload = { falseTakeout: boolean; time: string };
 export type TakeoutStartedPayload = { time: string };
 export type BoardStatusPayload = { boardStatus: BoardStatus; boardPhase: BoardPhase; errorType?: BoardErrorType };
+/** Shape is genuinely undocumented — Scolia's public API page has no field-level schema for this
+ *  message. Passed through as-is; see lib/extractImageUrls.ts for the best-effort consumer side. */
+export type CameraImagesPayload = unknown;
 
 /** Closes the caller should treat as permanent — reconnecting with the same credentials will just fail again. */
 const TERMINAL_CLOSE_CODES = new Set([4100, 4102, 4103]);
@@ -25,6 +28,7 @@ type Listeners = {
   onThrow: (payload: ThrowDetectedPayload) => void;
   onTakeoutStarted: (payload: TakeoutStartedPayload) => void;
   onTakeoutFinished: (payload: TakeoutFinishedPayload) => void;
+  onCameraImages: (payload: CameraImagesPayload) => void;
   /** Connection-level state, distinct from board status — "connecting"/"open" is the WS itself, not the SBC. */
   onConnectionChange: (state: ConnectionState) => void;
 };
@@ -96,7 +100,10 @@ export class ScoliaConnection {
         case "TAKEOUT_FINISHED":
           this.listeners.onTakeoutFinished?.(message.payload as TakeoutFinishedPayload);
           break;
-        // ACKNOWLEDGED / REFUSED / CAMERA_IMAGES / SBC_CONFIGURATION / SBC_BOARD_AVAILABILITY_CHANGED
+        case "CAMERA_IMAGES":
+          this.listeners.onCameraImages?.(message.payload);
+          break;
+        // ACKNOWLEDGED / REFUSED / SBC_CONFIGURATION / SBC_BOARD_AVAILABILITY_CHANGED
         // are not needed for basic scoring and are intentionally left unhandled.
       }
     };

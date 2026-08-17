@@ -45,6 +45,10 @@ const conn = new ScoliaConnection(serialNumber, accessToken);
 
 conn.on("onConnectionChange", (state) => {
   console.log("[connection]", state);
+  if (state.kind === "open") {
+    console.log("[recalibrate] sender RECALIBRATE ved tilkobling");
+    conn.recalibrate();
+  }
   if (state.kind === "closed" && !state.terminal) {
     console.log("Kobler til på nytt om 5 sekunder...");
     setTimeout(() => conn.connect(), 5000);
@@ -73,6 +77,13 @@ conn.on("onTakeoutStarted", (payload) => {
 conn.on("onTakeoutFinished", (payload) => {
   console.log("[takeout finished]", payload);
   insertEvent("TAKEOUT_FINISHED", payload);
+});
+
+// Forwarded as-is (best effort) — the payload shape isn't documented anywhere we could find,
+// see lib/extractImageUrls.ts for how the app tries to make sense of whatever arrives.
+conn.on("onCameraImages", (payload) => {
+  console.log("[camera images]", payload);
+  insertEvent("CAMERA_IMAGES", payload);
 });
 
 // Periodic heartbeat so the browser can tell "relay is alive" from "relay has been

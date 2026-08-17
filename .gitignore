@@ -45,3 +45,6 @@ cloudflared.exe
 cloudflared-*.log
 dev-server.log
 scolia-relay.log
+*.pid
+dev-scolia-debug.log
+scolia-relay-run.log

@@ -24,6 +24,10 @@
   --color-cream: #f4f0e8;
   --color-muted: #729080;
 
+  --gradient-gold: linear-gradient(135deg, var(--color-gold), #a9812f);
+  --glow-gold: 0 0 24px rgba(201, 162, 75, 0.35);
+  --glow-gold-strong: 0 0 64px rgba(201, 162, 75, 0.5);
+
   --font-display: var(--font-fraunces), Georgia, serif;
   --font-sans: var(--font-geist-sans), system-ui, sans-serif;
 
@@ -145,6 +149,25 @@ button {
   animation: idle-glow 2.6s var(--ease-standard) infinite;
 }
 
+/* A slow, barely-there breath on the DartboardGlyph's bullseye — the same restrained
+   "alive at rest" idea as idle-glow above, just for the logo on screens with no active
+   turn to anchor it to. */
+@keyframes dartboard-breathe {
+  0%,
+  100% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+
+.animate-dartboard-breathe {
+  animation: dartboard-breathe 3.2s var(--ease-standard) infinite;
+}
+
 /* A hand-drawn chalk swoosh under the active player's name — reuses the
    same "draw the stroke in" technique as Mark.tsx's crosses (pathLength=1,
    dashoffset 1 -> 0), just as a one-shot CSS animation instead of a
@@ -200,9 +223,95 @@ button {
     0 -14px 22px rgba(0, 0, 0, 0.22) inset;
 }
 
+.card-gold {
+  background: var(--gradient-gold);
+  color: var(--color-bg);
+}
+
+/* -- glossy premium button --
+   Replaces .tactile (not composed with it — see .tactile's own comment above about why
+   two classes writing box-shadow/transform on the same element doesn't "layer") on solid
+   CTA buttons: same press feedback, plus a gradient sheen, resting elevation and hover
+   lift. Reads --btn-fill rather than a `background` set via inline style, since inline
+   style always wins over a class regardless of source order — a caller setting
+   style.background would otherwise silently blank this class's own background out. */
+.glossy {
+  --btn-fill: var(--color-teal);
+  background:
+    linear-gradient(155deg, rgba(255, 255, 255, 0.24) 0%, rgba(255, 255, 255, 0) 42%),
+    linear-gradient(0deg, rgba(0, 0, 0, 0.16) 0%, rgba(0, 0, 0, 0) 60%),
+    var(--btn-fill);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.22) inset,
+    0 3px 0 rgba(0, 0, 0, 0.4),
+    0 8px 18px rgba(0, 0, 0, 0.35);
+  transition:
+    transform var(--duration-instant) var(--ease-standard),
+    box-shadow var(--duration-fast) var(--ease-standard),
+    filter var(--duration-fast) var(--ease-standard);
+}
+
+.glossy:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.06);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.22) inset,
+    0 4px 0 rgba(0, 0, 0, 0.4),
+    0 12px 26px rgba(0, 0, 0, 0.4);
+}
+
+.glossy:active:not(:disabled) {
+  transform: translateY(2px) scale(0.97);
+  filter: brightness(0.96);
+  box-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.4),
+    0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.glossy:disabled {
+  box-shadow: none;
+  filter: grayscale(0.15);
+}
+
+/* Graduated gold intensity for ranked lists (Hall of Fame, night summaries) — gold stays
+   "earned only" per the rule above, so rank 2/3 are the same hue at lower opacity rather
+   than invented silver/bronze colors. */
+.rank-glow-1 {
+  background:
+    linear-gradient(180deg, rgba(201, 162, 75, 0.1), transparent 60%),
+    var(--color-surface);
+  border: 1.5px solid var(--color-gold);
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.4),
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 -14px 22px rgba(0, 0, 0, 0.22) inset,
+    var(--glow-gold);
+}
+
+.rank-glow-2 {
+  background: var(--color-surface);
+  border: 1px solid rgba(201, 162, 75, 0.4);
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.4),
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 -14px 22px rgba(0, 0, 0, 0.22) inset;
+}
+
+.rank-glow-3 {
+  background: var(--color-surface);
+  border: 1px solid rgba(201, 162, 75, 0.22);
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.4),
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 -14px 22px rgba(0, 0, 0, 0.22) inset;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .tactile,
-  .tactile:active {
+  .tactile:active,
+  .glossy,
+  .glossy:hover,
+  .glossy:active {
     transform: none;
   }
 }
@@ -232,7 +341,7 @@ button {
     opacity: 1;
   }
   100% {
-    transform: translateY(220px) rotate(calc(var(--r, 0deg) + 200deg));
+    transform: translateY(var(--fall, 220px)) rotate(calc(var(--r, 0deg) + 200deg));
     opacity: 0;
   }
 }

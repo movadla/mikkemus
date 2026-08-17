@@ -4,9 +4,11 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 import { ensurePlayer, getPlayerRecord, setPlayerPhoto, setPlayerSound, useRosterNames } from "@/lib/storage";
 import { BOT_LEVELS, BOT_LEVEL_ORDER, type BotLevel, type TeamMember } from "@/lib/botLevels";
-import { CameraIcon, MicIcon } from "./icons";
+import { avatarAccent } from "@/lib/avatarAccent";
+import { CameraIcon, GuestIcon, MicIcon, PeopleIcon, PersonIcon } from "./icons";
 import { DartboardGlyph } from "./DartboardGlyph";
 import { PeoplePicker, type Person } from "./PeoplePicker";
+import { PrimaryActionButton } from "./PrimaryActionButton";
 import { TeamComposer, isTeamSetupReady, type Team } from "./TeamComposer";
 
 const RECORDING_MS = 2000;
@@ -18,7 +20,12 @@ export function SetupScreen({
   onStart,
   onHome,
 }: {
-  onStart: (players: string[], botLevels: Record<string, BotLevel>, teamRosters?: Record<string, TeamMember[]>) => void;
+  onStart: (
+    players: string[],
+    botLevels: Record<string, BotLevel>,
+    teamRosters?: Record<string, TeamMember[]>,
+    guestPlayers?: Record<string, true>
+  ) => void;
   onHome?: () => void;
 }) {
   const [mode, setMode] = useState<"individual" | "team">("individual");
@@ -26,9 +33,13 @@ export function SetupScreen({
   const [nameInput, setNameInput] = useState("");
   const [players, setPlayers] = useState<string[]>([]);
   const [botLevels, setBotLevels] = useState<Record<string, BotLevel>>({});
+  // A guest plays a full match like anyone else, but is never persisted to the roster —
+  // no ensurePlayer call when added, and excluded from stats at match end (see
+  // MikkeMusApp's finalizeMatch), same exclusion mechanism bots and teams already use.
+  const [guestPlayers, setGuestPlayers] = useState<Record<string, true>>({});
+  const [addingAsGuest, setAddingAsGuest] = useState(false);
   const [showBotPicker, setShowBotPicker] = useState(false);
   const [error, setError] = useState("");
-  const [startError, setStartError] = useState(false);
   const [addingPlayer, setAddingPlayer] = useState(false);
   const rosterNames = useRosterNames();
   const [photos, setPhotos] = useState<Record<string, string>>({});
@@ -71,11 +82,19 @@ export function SetupScreen({
     );
   }
 
-  function addPlayer(name: string) {
+  function addPlayer(name: string, isGuest: boolean) {
     const trimmed = name.trim();
     if (!trimmed) return;
     if (players.some((p) => p.toLowerCase() === trimmed.toLowerCase())) {
       setError(`"${trimmed}" er allerede lagt til`);
+      return;
+    }
+    if (isGuest) {
+      setGuestPlayers((prev) => ({ ...prev, [trimmed]: true }));
+      setPlayers((prev) => [...prev, trimmed]);
+      setNameInput("");
+      setError("");
+      setAddingPlayer(false);
       return;
     }
     ensurePlayer(trimmed);
@@ -99,6 +118,12 @@ export function SetupScreen({
   function removePlayer(name: string) {
     setPlayers((prev) => prev.filter((p) => p !== name));
     setBotLevels((prev) => {
+      if (!(name in prev)) return prev;
+      const next = { ...prev };
+      delete next[name];
+      return next;
+    });
+    setGuestPlayers((prev) => {
       if (!(name in prev)) return prev;
       const next = { ...prev };
       delete next[name];
@@ -206,25 +231,31 @@ export function SetupScreen({
           <button
             type="button"
             onClick={() => setMode("individual")}
-            className={`tactile flex-1 py-3 rounded-lg font-medium ${FOCUS_RING}`}
-            style={{
-              background: mode === "individual" ? "var(--color-teal)" : "var(--color-surface)",
-              color: mode === "individual" ? "var(--color-bg)" : "var(--color-cream)",
-              border: "1px solid var(--color-border)",
-            }}
+            className={`glossy flex-1 py-3 rounded-lg font-medium flex items-center justify-center gap-2 ${FOCUS_RING}`}
+            style={
+              {
+                "--btn-fill": mode === "individual" ? "var(--color-teal)" : "var(--color-surface)",
+                color: mode === "individual" ? "var(--color-bg)" : "var(--color-cream)",
+                border: "1px solid var(--color-border)",
+              } as React.CSSProperties
+            }
           >
+            <PersonIcon className="w-4 h-4" />
             Individuelt
           </button>
           <button
             type="button"
             onClick={() => setMode("team")}
-            className={`tactile flex-1 py-3 rounded-lg font-medium ${FOCUS_RING}`}
-            style={{
-              background: mode === "team" ? "var(--color-teal)" : "var(--color-surface)",
-              color: mode === "team" ? "var(--color-bg)" : "var(--color-cream)",
-              border: "1px solid var(--color-border)",
-            }}
+            className={`glossy flex-1 py-3 rounded-lg font-medium flex items-center justify-center gap-2 ${FOCUS_RING}`}
+            style={
+              {
+                "--btn-fill": mode === "team" ? "var(--color-teal)" : "var(--color-surface)",
+                color: mode === "team" ? "var(--color-bg)" : "var(--color-cream)",
+                border: "1px solid var(--color-border)",
+              } as React.CSSProperties
+            }
           >
+            <PeopleIcon className="w-4 h-4" />
             Lag
           </button>
         </div>
@@ -239,7 +270,7 @@ export function SetupScreen({
                     <button
                       key={n}
                       type="button"
-                      onClick={() => addPlayer(n)}
+                      onClick={() => addPlayer(n, false)}
                       className={`tactile flex items-center gap-2 pl-1.5 pr-3 py-1.5 rounded-full ${FOCUS_RING}`}
                       style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
                     >
@@ -251,7 +282,7 @@ export function SetupScreen({
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={photo} alt="" className="w-full h-full object-cover" />
                         ) : (
-                          <span style={{ color: "var(--color-muted)", fontSize: "0.7rem" }}>
+                          <span style={{ color: avatarAccent(n), fontSize: "0.7rem" }}>
                             {n.charAt(0).toUpperCase()}
                           </span>
                         )}
@@ -273,8 +304,8 @@ export function SetupScreen({
                       setNameInput(e.target.value);
                       setError("");
                     }}
-                    onKeyDown={(e) => e.key === "Enter" && addPlayer(nameInput)}
-                    placeholder="Spillernavn"
+                    onKeyDown={(e) => e.key === "Enter" && addPlayer(nameInput, addingAsGuest)}
+                    placeholder={addingAsGuest ? "Gjestens navn" : "Spillernavn"}
                     className={`flex-1 px-4 py-3 rounded-lg ${FOCUS_RING}`}
                     style={{
                       background: "var(--color-surface)",
@@ -284,18 +315,21 @@ export function SetupScreen({
                   />
                   <button
                     type="button"
-                    onClick={() => addPlayer(nameInput)}
-                    className={`tactile px-5 py-3 rounded-lg font-medium ${FOCUS_RING}`}
-                    style={{ background: "var(--color-teal)", color: "var(--color-bg)" }}
+                    onClick={() => addPlayer(nameInput, addingAsGuest)}
+                    className={`glossy px-5 py-3 rounded-lg font-medium ${FOCUS_RING}`}
+                    style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)" } as React.CSSProperties}
                   >
                     Legg til
                   </button>
                 </div>
               ) : (
-                <div className="flex justify-center gap-2">
+                <div className="flex flex-wrap justify-center gap-2">
                   <button
                     type="button"
-                    onClick={() => setAddingPlayer(true)}
+                    onClick={() => {
+                      setAddingAsGuest(false);
+                      setAddingPlayer(true);
+                    }}
                     className={`tactile px-4 py-1.5 rounded-lg text-sm ${FOCUS_RING}`}
                     style={{
                       background: "var(--color-surface)",
@@ -304,6 +338,22 @@ export function SetupScreen({
                     }}
                   >
                     Legg til spiller
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAddingAsGuest(true);
+                      setAddingPlayer(true);
+                    }}
+                    className={`tactile px-4 py-1.5 rounded-lg text-sm flex items-center gap-1.5 ${FOCUS_RING}`}
+                    style={{
+                      background: "var(--color-surface)",
+                      color: "var(--color-muted)",
+                      border: "1px solid var(--color-border)",
+                    }}
+                  >
+                    <GuestIcon className="w-3.5 h-3.5" />
+                    Legg til gjest
                   </button>
                   <button
                     type="button"
@@ -346,8 +396,14 @@ export function SetupScreen({
                 SPILLERE
               </p>
               <div className="space-y-2 min-h-[64px]">
+              {players.length === 0 && (
+                <p className="text-center py-2" style={{ color: "var(--color-muted)", fontSize: "0.85rem" }}>
+                  Ingen spillere lagt til enda
+                </p>
+              )}
               {players.map((p, i) => {
                 const level = botLevels[p];
+                const isGuest = !!guestPlayers[p];
                 return (
                   <div
                     key={p}
@@ -362,6 +418,19 @@ export function SetupScreen({
                           aria-hidden
                         >
                           🤖
+                        </span>
+                      ) : isGuest ? (
+                        // Guests have nothing to save a photo to, so this is a plain badge, not a button.
+                        <span
+                          className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
+                          style={{
+                            background: "var(--color-cell)",
+                            border: "1.5px dashed var(--color-muted)",
+                            color: "var(--color-muted)",
+                          }}
+                          aria-hidden
+                        >
+                          <GuestIcon className="w-4 h-4" />
                         </span>
                       ) : (
                         <button
@@ -386,10 +455,15 @@ export function SetupScreen({
                       <span style={{ color: "var(--color-cream)" }}>
                         <span style={{ color: "var(--color-teal)", marginRight: "0.5rem" }}>{i + 1}.</span>
                         {p}
+                        {isGuest && (
+                          <span style={{ color: "var(--color-muted)", fontSize: "0.75rem", marginLeft: "0.4rem" }}>
+                            (gjest)
+                          </span>
+                        )}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      {!level && (
+                      {!level && !isGuest && (
                         <button
                           type="button"
                           onClick={() => recordSoundFor(p)}
@@ -425,19 +499,13 @@ export function SetupScreen({
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => (players.length < 1 ? setStartError(true) : onStart(players, botLevels))}
-              className={`tactile w-full py-4 rounded-lg font-semibold text-lg ${FOCUS_RING}`}
-              style={{ background: "var(--color-green)", color: "var(--color-cream)" }}
+            <PrimaryActionButton
+              onClick={() => onStart(players, botLevels, undefined, guestPlayers)}
+              ready={players.length >= 1}
+              hint="Velg minst en spiller over for å starte"
             >
               Start spill
-            </button>
-            {startError && players.length < 1 && (
-              <p className="text-center mt-3" style={{ color: "var(--color-red)", fontSize: "0.85rem" }}>
-                Velg minst en spiller over for å starte
-              </p>
-            )}
+            </PrimaryActionButton>
           </>
         )}
 
@@ -447,30 +515,30 @@ export function SetupScreen({
 
             {teamPeople.length > 0 && <TeamComposer people={teamPeople} teams={teams} onChange={setTeams} />}
 
-            <button
-              type="button"
-              disabled={!teamsReady}
+            <PrimaryActionButton
               onClick={startTeamGame}
-              className={`tactile w-full py-4 rounded-lg font-semibold text-lg transition-opacity ${FOCUS_RING}`}
-              style={{ background: "var(--color-green)", color: "var(--color-cream)", opacity: teamsReady ? 1 : 0.4 }}
+              ready={teamsReady}
+              hint="Trenger minst 2 lag, alle med minst ett medlem, og ingen utildelte spillere"
             >
               Start spill
-            </button>
-            {!teamsReady && (
-              <p className="text-center mt-3" style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>
-                Trenger minst 2 lag, alle med minst ett medlem, og ingen utildelte spillere
-              </p>
-            )}
+            </PrimaryActionButton>
           </>
         )}
 
-        <p className="text-center mt-8">
+        <p className="text-center mt-8 flex justify-center gap-4">
           <Link
             href="/spillere"
             className={`font-display text-sm underline ${FOCUS_RING}`}
             style={{ color: "var(--color-muted)", fontStyle: "italic" }}
           >
             Se spillerstatistikk
+          </Link>
+          <Link
+            href="/hall-of-fame"
+            className={`font-display text-sm underline ${FOCUS_RING}`}
+            style={{ color: "var(--color-muted)", fontStyle: "italic" }}
+          >
+            Hall of Fame
           </Link>
         </p>
       </div>

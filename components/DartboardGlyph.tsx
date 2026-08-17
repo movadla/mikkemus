@@ -5,7 +5,15 @@ export function DartboardGlyph({ className }: { className?: string }) {
       <circle cx="40" cy="40" r="36" fill="none" stroke="var(--color-cream)" strokeWidth="2" opacity="0.35" />
       <circle cx="40" cy="40" r="24" fill="none" stroke="var(--color-cream)" strokeWidth="1.5" opacity="0.3" />
       <circle cx="40" cy="40" r="12" fill="none" stroke="var(--color-cream)" strokeWidth="1.5" opacity="0.3" />
-      <circle cx="40" cy="40" r="3.5" fill="var(--color-gold)" opacity="0.7" />
+      <circle
+        cx="40"
+        cy="40"
+        r="3.5"
+        fill="var(--color-gold)"
+        opacity="0.7"
+        className="animate-dartboard-breathe"
+        style={{ transformOrigin: "40px 40px" }}
+      />
       {Array.from({ length: 10 }, (_, i) => {
         const a = (i * 36 * Math.PI) / 180;
         const x1 = 40 + 12 * Math.sin(a);

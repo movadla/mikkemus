@@ -63,12 +63,12 @@ export function WinnerScreen({
             aria-hidden
           >
             <div
+              className="animate-idle-glow"
               style={{
                 width: "240px",
                 height: "240px",
                 borderRadius: "50%",
                 background: "var(--color-gold)",
-                opacity: 0.32,
                 filter: "blur(48px)",
               }}
             />
@@ -108,10 +108,7 @@ export function WinnerScreen({
               )}
             </div>
           </div>
-          <div
-            className="animate-winner-pop shadow-panel relative z-20 rounded-2xl pt-14 pb-8 px-8 mb-6"
-            style={{ background: "linear-gradient(135deg, var(--color-gold), #a9812f)" }}
-          >
+          <div className="animate-winner-pop card-gold shadow-panel relative z-20 rounded-2xl pt-14 pb-8 px-8 mb-6">
             <p
               className="font-display"
               style={{
@@ -180,8 +177,8 @@ export function WinnerScreen({
         <button
           type="button"
           onClick={onHome}
-          className={`tactile w-full py-4 rounded-lg font-semibold text-lg ${FOCUS_RING}`}
-          style={{ background: "var(--color-green)", color: "var(--color-cream)" }}
+          className={`glossy w-full py-4 rounded-lg font-semibold text-lg ${FOCUS_RING}`}
+          style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)" } as React.CSSProperties}
         >
           {homeLabel}
         </button>

@@ -7,6 +7,7 @@ export type ScoliaCallbacks = {
   onThrow?: (payload: ThrowDetectedPayload) => void;
   onTakeoutStarted?: () => void;
   onTakeoutFinished?: (payload: TakeoutFinishedPayload) => void;
+  onCameraImages?: (payload: unknown) => void;
 };
 
 export type ScoliaState = {
@@ -109,6 +110,7 @@ export function useScolia(enabled: boolean, callbacks: ScoliaCallbacks) {
       if (row.type === "THROW_DETECTED") callbacksRef.current.onThrow?.(row.payload as ThrowDetectedPayload);
       else if (row.type === "TAKEOUT_STARTED") callbacksRef.current.onTakeoutStarted?.();
       else if (row.type === "TAKEOUT_FINISHED") callbacksRef.current.onTakeoutFinished?.(row.payload as TakeoutFinishedPayload);
+      else if (row.type === "CAMERA_IMAGES") callbacksRef.current.onCameraImages?.(row.payload);
     }
 
     /**

@@ -3,7 +3,9 @@
 import { useState } from "react";
 import type { Participant, TournamentMode } from "@/lib/tournament";
 import type { TeamMember } from "@/lib/botLevels";
+import { PeopleIcon, PersonIcon } from "./icons";
 import { PeoplePicker, type Person } from "./PeoplePicker";
+import { PrimaryActionButton } from "./PrimaryActionButton";
 import { TeamComposer, isTeamSetupReady, type Team } from "./TeamComposer";
 
 const FOCUS_RING =
@@ -72,25 +74,27 @@ export function TournamentSetupScreen({
           <button
             type="button"
             onClick={() => setMode("individual")}
-            className={`tactile flex-1 py-3 rounded-lg font-medium ${FOCUS_RING}`}
+            className={`tactile flex-1 py-3 rounded-lg font-medium flex items-center justify-center gap-2 ${FOCUS_RING}`}
             style={{
               background: mode === "individual" ? "var(--color-teal)" : "var(--color-surface)",
               color: mode === "individual" ? "var(--color-bg)" : "var(--color-cream)",
               border: "1px solid var(--color-border)",
             }}
           >
+            <PersonIcon className="w-4 h-4" />
             Individuelt
           </button>
           <button
             type="button"
             onClick={() => setMode("team")}
-            className={`tactile flex-1 py-3 rounded-lg font-medium ${FOCUS_RING}`}
+            className={`tactile flex-1 py-3 rounded-lg font-medium flex items-center justify-center gap-2 ${FOCUS_RING}`}
             style={{
               background: mode === "team" ? "var(--color-teal)" : "var(--color-surface)",
               color: mode === "team" ? "var(--color-bg)" : "var(--color-cream)",
               border: "1px solid var(--color-border)",
             }}
           >
+            <PeopleIcon className="w-4 h-4" />
             Lag
           </button>
         </div>
@@ -112,25 +116,17 @@ export function TournamentSetupScreen({
               </>
             )}
 
-            <button
-              type="button"
-              disabled={!(individualReady || teamsReady)}
+            <PrimaryActionButton
               onClick={handleNext}
-              className={`tactile w-full py-4 rounded-lg font-semibold text-lg transition-opacity ${FOCUS_RING}`}
-              style={{ background: "var(--color-green)", color: "var(--color-cream)", opacity: individualReady || teamsReady ? 1 : 0.4 }}
+              ready={individualReady || teamsReady}
+              hint={
+                mode === "team"
+                  ? "Trenger minst 2 lag, alle med minst ett medlem, og ingen utildelte spillere"
+                  : "Trenger minst 3 deltakere"
+              }
             >
               Neste: juster grupper
-            </button>
-            {mode === "individual" && !individualReady && (
-              <p className="text-center mt-3" style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>
-                Trenger minst 3 deltakere
-              </p>
-            )}
-            {mode === "team" && !teamsReady && (
-              <p className="text-center mt-3" style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>
-                Trenger minst 2 lag, alle med minst ett medlem, og ingen utildelte spillere
-              </p>
-            )}
+            </PrimaryActionButton>
           </>
         )}
       </div>

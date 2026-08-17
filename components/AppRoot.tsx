@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { loadActiveTournamentId } from "@/lib/tournamentStorage";
 import { useScolia } from "@/lib/useScolia";
 import { DartboardGlyph } from "./DartboardGlyph";
+import { DartIcon, TrophyIcon } from "./icons";
 import { MikkeMusApp } from "./MikkeMusApp";
 import { ScoliaStatusBadge } from "./ScoliaStatusBadge";
 import { TournamentApp } from "./TournamentApp";
@@ -48,20 +50,31 @@ export function AppRoot() {
           <button
             type="button"
             onClick={() => setMode("single")}
-            className={`tactile w-full py-4 rounded-lg font-semibold text-lg ${FOCUS_RING}`}
+            className={`tactile w-full py-4 rounded-lg font-semibold text-lg flex items-center justify-center gap-2.5 ${FOCUS_RING}`}
             style={{ background: "var(--color-green)", color: "var(--color-cream)" }}
           >
-            Singel game
+            <DartIcon className="w-5 h-5" />
+            Singelspill
           </button>
           <button
             type="button"
             onClick={() => setMode("tournament")}
-            className={`tactile w-full py-4 rounded-lg font-semibold text-lg ${FOCUS_RING}`}
+            className={`tactile w-full py-4 rounded-lg font-semibold text-lg flex items-center justify-center gap-2.5 ${FOCUS_RING}`}
             style={{ background: "var(--color-teal)", color: "var(--color-bg)" }}
           >
-            {hasActiveTournament ? "Fortsett turnering" : "Tournament"}
+            <TrophyIcon className="w-5 h-5" />
+            {hasActiveTournament ? "Fortsett turnering" : "Turnering"}
           </button>
         </div>
+        <p className="text-center mt-8">
+          <Link
+            href="/storskjerm"
+            className={`font-display text-sm underline ${FOCUS_RING}`}
+            style={{ color: "var(--color-muted)", fontStyle: "italic" }}
+          >
+            📺 Åpne storskjerm-visning
+          </Link>
+        </p>
       </div>
     </div>
   );

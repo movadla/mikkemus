@@ -13,6 +13,7 @@ import {
   meanVerticalDistance,
   useRoster,
 } from "@/lib/storage";
+import { avatarAccent } from "@/lib/avatarAccent";
 import { StatsLineChart, CHART_SERIES_COLORS } from "@/components/StatsLineChart";
 
 const FOCUS_RING =
@@ -80,7 +81,7 @@ export default function PlayerDetailPage() {
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={player.photo} alt="" className="w-full h-full object-cover" />
               ) : (
-                <span className="font-display" style={{ color: "var(--color-muted)", fontSize: "1.3rem" }}>
+                <span className="font-display" style={{ color: avatarAccent(player.name), fontSize: "1.3rem" }}>
                   {player.name.charAt(0).toUpperCase()}
                 </span>
               )}

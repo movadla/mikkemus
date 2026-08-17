@@ -2,25 +2,41 @@
 # Starter Next.js dashboard med Cloudflare-tunnel.
 # Oppdaterer next.config.ts automatisk med ny tunnel-URL.
 # Bruk: npm run tunnel
+#
+# Port 3002 — avgrenset til EGNE tidligere prosesser (lagret PID), ikke alt som
+# heter node/cloudflared, slik at dette kan kjøre samtidig med andre prosjekter
+# (mitt-dashboard på 3000, cl-spillet på 3001) uten å drepe hverandre.
 
 $root = $PSScriptRoot
 if (-not $root) { $root = Split-Path -Parent $MyInvocation.MyCommand.Path }
 Set-Location $root
 
-# -- 1. Rydd opp eksisterende prosesser ---------------------------------------
+$devPidFile = Join-Path $root "dev-server.pid"
+$tunnelPidFile = Join-Path $root "cloudflared.pid"
+
+# -- 1. Rydd opp KUN denne appens tidligere prosesser -------------------------
 Write-Host ""
-Write-Host "  Stopper eksisterende prosesser..." -ForegroundColor DarkGray
-Get-Process -Name "node","cloudflared" -ErrorAction SilentlyContinue |
-    Stop-Process -Force -ErrorAction SilentlyContinue
+Write-Host "  Stopper denne appens tidligere prosesser..." -ForegroundColor DarkGray
+foreach ($pidFile in @($devPidFile, $tunnelPidFile)) {
+    if (Test-Path $pidFile) {
+        $oldPid = Get-Content $pidFile -ErrorAction SilentlyContinue
+        if ($oldPid) {
+            # /T dreper hele prosess-treet (cmd.exe -> npm -> node), ikke bare wrapperen
+            taskkill /PID $oldPid /T /F 2>$null | Out-Null
+        }
+        Remove-Item $pidFile -ErrorAction SilentlyContinue
+    }
+}
 Start-Sleep -Seconds 1
 Remove-Item "$root\cloudflared-err.log","$root\dev-server.log" -ErrorAction SilentlyContinue
 
 # -- 2. Start cloudflared -----------------------------------------------------
 Write-Host "  Starter Cloudflare-tunnel..." -ForegroundColor DarkGray
-Start-Process -FilePath "$root\cloudflared.exe" `
-    -ArgumentList "tunnel","--url","http://localhost:3000" `
+$tunnelProcess = Start-Process -FilePath "$root\cloudflared.exe" `
+    -ArgumentList "tunnel","--url","http://localhost:3002" `
     -RedirectStandardError "$root\cloudflared-err.log" `
-    -NoNewWindow
+    -NoNewWindow -PassThru
+$tunnelProcess.Id | Out-File -FilePath $tunnelPidFile -Encoding ascii
 
 # -- 3. Les tunnel-URL fra logg -----------------------------------------------
 Write-Host "  Venter pa tunnel-URL (maks 30 sek)..." -ForegroundColor DarkGray
@@ -55,12 +71,13 @@ if ($config -match "trycloudflare\.com") {
 $utf8NoBom = New-Object System.Text.UTF8Encoding $false
 [System.IO.File]::WriteAllText($configPath, $config, $utf8NoBom)
 
-# -- 5. Start dev-server med oppdatert config ---------------------------------
-Write-Host "  Starter Next.js dev-server..." -ForegroundColor DarkGray
-Start-Process -FilePath "cmd.exe" `
-    -ArgumentList "/c npm run dev > `"$root\dev-server.log`" 2>&1" `
+# -- 5. Start dev-server på port 3002 med oppdatert config --------------------
+Write-Host "  Starter Next.js dev-server (port 3002)..." -ForegroundColor DarkGray
+$devProcess = Start-Process -FilePath "cmd.exe" `
+    -ArgumentList "/c npx next dev -p 3002 > `"$root\dev-server.log`" 2>&1" `
     -WorkingDirectory $root `
-    -WindowStyle Hidden
+    -WindowStyle Hidden -PassThru
+$devProcess.Id | Out-File -FilePath $devPidFile -Encoding ascii
 
 Write-Host "  Venter pa dev-server (maks 30 sek)..." -ForegroundColor DarkGray
 for ($i = 0; $i -lt 30; $i++) {
@@ -79,7 +96,17 @@ Write-Host "  $tunnelUrl" -ForegroundColor White
 Write-Host ""
 Write-Host "  $sep" -ForegroundColor Green
 Write-Host ""
-Write-Host "  Lokalt:      http://localhost:3000" -ForegroundColor DarkGray
+Write-Host "  Lokalt:      http://localhost:3002" -ForegroundColor DarkGray
 Write-Host "  Dev-logg:    $root\dev-server.log" -ForegroundColor DarkGray
 Write-Host "  Tunnel-logg: $root\cloudflared-err.log" -ForegroundColor DarkGray
+Write-Host ""
+
+# -- 7. Start Claude Code med Remote Control i eget vindu ---------------------
+Write-Host "  Starter Claude Code (Remote Control) i eget vindu..." -ForegroundColor DarkGray
+$claudeCmd = "Set-Location `"$root`"; claude --remote-control `"Mikke-mus`""
+Start-Process -FilePath "powershell.exe" `
+    -ArgumentList "-NoExit","-Command",$claudeCmd `
+    -WorkingDirectory $root
+
+Write-Host "  Se etter link/QR-kode i det nye vinduet - apne den i Claude-appen pa mobilen." -ForegroundColor DarkGray
 Write-Host ""

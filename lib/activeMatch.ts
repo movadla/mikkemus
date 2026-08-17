@@ -19,6 +19,7 @@ export type ActiveMatchSnapshot = {
   botLevels: Record<string, BotLevel>;
   teamRosters: Record<string, TeamMember[]>;
   teamMemberIdx: Record<string, number>;
+  guestPlayers: Record<string, true>;
 };
 
 const STORAGE_KEY = "mikke-mus-active-match";

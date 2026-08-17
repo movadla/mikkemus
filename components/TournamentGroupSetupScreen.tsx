@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { distributeEvenly, suggestGroups, type TournamentMode } from "@/lib/tournament";
+import { PrimaryActionButton } from "./PrimaryActionButton";
 
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
@@ -142,7 +143,7 @@ export function TournamentGroupSetupScreen({
                         style={{ background: "var(--color-cell)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
                       >
                         {groups.map((_, i) => (
-                          <option key={i} value={i}>
+                          <option key={i} value={i} style={{ background: "var(--color-cell)", color: "var(--color-cream)" }}>
                             Gruppe {i + 1}
                           </option>
                         ))}
@@ -160,20 +161,13 @@ export function TournamentGroupSetupScreen({
           ))}
         </div>
 
-        <button
-          type="button"
-          disabled={groups.some((g) => g.length < matchSize)}
+        <PrimaryActionButton
           onClick={() => onGenerate(groups, matchSize)}
-          className={`tactile w-full py-4 rounded-lg font-semibold text-lg transition-opacity ${FOCUS_RING}`}
-          style={{ background: "var(--color-green)", color: "var(--color-cream)", opacity: groups.some((g) => g.length < matchSize) ? 0.4 : 1 }}
+          ready={!groups.some((g) => g.length < matchSize)}
+          hint={`Hver gruppe trenger minst ${matchSize} deltakere`}
         >
           Generer turnering
-        </button>
-        {groups.some((g) => g.length < matchSize) && (
-          <p className="text-center mt-3" style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>
-            Hver gruppe trenger minst {matchSize} deltakere
-          </p>
-        )}
+        </PrimaryActionButton>
       </div>
     </div>
   );

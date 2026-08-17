@@ -462,8 +462,9 @@ function buildSolver(profiles: LevelProfiles): Solver {
   };
 }
 
-/** Exported for calibration/scenario checks — not used by the app's own call sites,
- *  which go through botChooseThrow/botDecideRedirect instead. */
+/** Exported both for calibration/scenario checks and for MikkeMusApp's idle-time prewarm at
+ *  match start (see startGame) — normal gameplay itself goes through botChooseThrow/
+ *  botDecideRedirect instead, which call this internally. */
 export function solverFor(level: BotLevel): Solver {
   const cached = solverCache.get(level);
   if (cached) return cached;
