@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { formatNightDate, nightAverages, type NightSummary } from "@/lib/nights";
+import { TrophyIcon } from "@/components/icons";
 
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
@@ -39,8 +40,9 @@ export function NightDetail({ night, otherDates }: { night: NightSummary | null;
                 <p className="font-display" style={{ color: "var(--color-bg)", fontStyle: "italic", fontSize: "0.9rem" }}>
                   Kveldens vinner
                 </p>
-                <p className="font-display" style={{ color: "var(--color-bg)", fontSize: "1.6rem" }}>
-                  👑 {night.players[0].name}
+                <p className="font-display flex items-center justify-center gap-2" style={{ color: "var(--color-bg)", fontSize: "1.6rem" }}>
+                  <TrophyIcon className="w-6 h-6" />
+                  {night.players[0].name}
                 </p>
               </div>
             )}

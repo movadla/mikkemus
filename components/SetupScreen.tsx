@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { ensurePlayer, getPlayerRecord, setPlayerPhoto, setPlayerSound, useRosterNames } from "@/lib/storage";
+import { reportError } from "@/lib/errorReporting";
 import { BOT_LEVELS, BOT_LEVEL_ORDER, type BotLevel, type TeamMember } from "@/lib/botLevels";
 import { avatarAccent } from "@/lib/avatarAccent";
 import { CameraIcon, GuestIcon, MicIcon, PeopleIcon, PersonIcon } from "./icons";
@@ -38,6 +39,7 @@ export function SetupScreen({
   // MikkeMusApp's finalizeMatch), same exclusion mechanism bots and teams already use.
   const [guestPlayers, setGuestPlayers] = useState<Record<string, true>>({});
   const [addingAsGuest, setAddingAsGuest] = useState(false);
+  const [confirmingRemove, setConfirmingRemove] = useState<string | null>(null);
   const [showBotPicker, setShowBotPicker] = useState(false);
   const [error, setError] = useState("");
   const [addingPlayer, setAddingPlayer] = useState(false);
@@ -161,6 +163,7 @@ export function SetupScreen({
       setPlayerPhoto(player, dataUrl);
       setPhotos((prev) => ({ ...prev, [player]: dataUrl }));
     };
+    reader.onerror = () => reportError("Kunne ikke lese bildet.", { key: "photo-read" });
     reader.readAsDataURL(file);
   }
 
@@ -177,13 +180,18 @@ export function SetupScreen({
         stream.getTracks().forEach((t) => t.stop());
         const blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
         const reader = new FileReader();
+        // Busy indicator stays lit until the save actually finishes, not just until recording stops.
         reader.onload = () => {
           const dataUrl = reader.result as string;
           setPlayerSound(name, dataUrl);
           setHasSound((prev) => ({ ...prev, [name]: true }));
+          setRecordingFor(null);
+        };
+        reader.onerror = () => {
+          reportError("Kunne ikke lagre lydklippet.", { key: "sound-save" });
+          setRecordingFor(null);
         };
         reader.readAsDataURL(blob);
-        setRecordingFor(null);
       };
       setRecordingFor(name);
       recorder.start();
@@ -192,6 +200,7 @@ export function SetupScreen({
       }, RECORDING_MS);
     } catch {
       setRecordingFor(null);
+      reportError("Fikk ikke tilgang til mikrofonen.", { key: "mic-permission" });
     }
   }
 
@@ -463,35 +472,61 @@ export function SetupScreen({
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      {!level && !isGuest && (
-                        <button
-                          type="button"
-                          onClick={() => recordSoundFor(p)}
-                          disabled={recordingFor === p}
-                          aria-label={hasSound[p] ? `Ta opp nytt lydklipp for ${p}` : `Ta opp lydklipp for ${p}`}
-                          className={`tactile w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${FOCUS_RING}`}
-                          style={{
-                            background: recordingFor === p ? "var(--color-red)" : "var(--color-cell)",
-                            color:
-                              recordingFor === p
-                                ? "var(--color-cream)"
-                                : hasSound[p]
-                                  ? "var(--color-teal)"
-                                  : "var(--color-muted)",
-                            border: "1px solid var(--color-border)",
-                          }}
-                        >
-                          <MicIcon className="w-4 h-4" />
-                        </button>
+                      {confirmingRemove === p ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              removePlayer(p);
+                              setConfirmingRemove(null);
+                            }}
+                            style={{ color: "var(--color-red)" }}
+                            className={`text-sm px-2 font-medium ${FOCUS_RING}`}
+                          >
+                            Sikker?
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmingRemove(null)}
+                            style={{ color: "var(--color-teal)" }}
+                            className={`text-sm px-2 ${FOCUS_RING}`}
+                          >
+                            Avbryt
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          {!level && !isGuest && (
+                            <button
+                              type="button"
+                              onClick={() => recordSoundFor(p)}
+                              disabled={recordingFor === p}
+                              aria-label={hasSound[p] ? `Ta opp nytt lydklipp for ${p}` : `Ta opp lydklipp for ${p}`}
+                              className={`tactile w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${FOCUS_RING}`}
+                              style={{
+                                background: recordingFor === p ? "var(--color-red)" : "var(--color-cell)",
+                                color:
+                                  recordingFor === p
+                                    ? "var(--color-cream)"
+                                    : hasSound[p]
+                                      ? "var(--color-teal)"
+                                      : "var(--color-muted)",
+                                border: "1px solid var(--color-border)",
+                              }}
+                            >
+                              <MicIcon className="w-4 h-4" />
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setConfirmingRemove(p)}
+                            style={{ color: "var(--color-red)" }}
+                            className={`text-sm px-2 ${FOCUS_RING}`}
+                          >
+                            Fjern
+                          </button>
+                        </>
                       )}
-                      <button
-                        type="button"
-                        onClick={() => removePlayer(p)}
-                        style={{ color: "var(--color-red)" }}
-                        className={`text-sm px-2 ${FOCUS_RING}`}
-                      >
-                        Fjern
-                      </button>
                     </div>
                   </div>
                 );

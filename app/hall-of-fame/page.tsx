@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRoster, type MatchHistoryEntry, type PlayerRecord } from "@/lib/storage";
 import { avatarAccent } from "@/lib/avatarAccent";
 import { formatNightDate, groupNights } from "@/lib/nights";
+import { TrophyIcon } from "@/components/icons";
 
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
@@ -70,10 +71,10 @@ export default function HallOfFamePage() {
                     style={i < 3 ? undefined : { background: "var(--color-surface)" }}
                   >
                     <span
-                      className="font-display shrink-0 w-7 text-center"
+                      className="font-display shrink-0 w-7 flex items-center justify-center"
                       style={{ color: i === 0 ? "var(--color-gold)" : "var(--color-muted)", fontSize: "1.1rem" }}
                     >
-                      {i === 0 ? "🏆" : i + 1}
+                      {i === 0 ? <TrophyIcon className="w-4 h-4" /> : i + 1}
                     </span>
                     <div
                       className="w-9 h-9 rounded-full overflow-hidden shrink-0 flex items-center justify-center"
@@ -120,7 +121,13 @@ export default function HallOfFamePage() {
                       {formatNightDate(night.date)}
                     </p>
                     {night.players[0] && night.players[0].wins > 0 && (
-                      <span style={{ color: "var(--color-gold)", fontSize: "0.75rem" }}>👑 {night.players[0].name}</span>
+                      <span
+                        className="inline-flex items-center gap-1"
+                        style={{ color: "var(--color-gold)", fontSize: "0.75rem" }}
+                      >
+                        <TrophyIcon className="w-3 h-3" />
+                        {night.players[0].name}
+                      </span>
                     )}
                   </div>
                   <div className="flex flex-wrap gap-2">

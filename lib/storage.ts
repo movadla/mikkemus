@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import { reportError } from "./errorReporting";
 import { STEPS, type Step, type TurnAggregate } from "./game";
 import { supabase } from "./supabaseClient";
 
@@ -160,6 +161,7 @@ async function withRetry(run: () => PromiseLike<{ error: { message: string } | n
     if (!error) return;
     if (attempt === attempts - 1) {
       console.error(failureLabel, error.message);
+      reportError(failureLabel.replace(/:$/, ""), { key: failureLabel });
       return;
     }
     await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)));
@@ -191,6 +193,7 @@ function ensureInitialized() {
     .then(({ data, error }) => {
       if (error) {
         console.error("Kunne ikke hente spillere fra Supabase:", error.message);
+        reportError("Kunne ikke hente spillerliste. Prøv å laste siden på nytt.", { key: "roster-fetch" });
         return;
       }
       const next: Roster = {};

@@ -13,7 +13,7 @@ import {
   useRoster,
 } from "@/lib/storage";
 import { avatarAccent } from "@/lib/avatarAccent";
-import { TrashIcon } from "@/components/icons";
+import { TrashIcon, TrophyIcon } from "@/components/icons";
 
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
@@ -34,10 +34,11 @@ export default function PlayersPage() {
           </h1>
           <Link
             href="/hall-of-fame"
-            className={`tactile px-3 py-2 rounded-lg text-sm ${FOCUS_RING}`}
+            aria-label="Hall of Fame"
+            className={`tactile px-3 py-2 rounded-lg flex items-center justify-center ${FOCUS_RING}`}
             style={{ background: "var(--color-surface)", color: "var(--color-gold)" }}
           >
-            🏆
+            <TrophyIcon className="w-4 h-4" />
           </Link>
         </div>
 

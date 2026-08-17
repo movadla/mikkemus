@@ -16,7 +16,7 @@ function nextPowerOfTwo(n: number): number {
 /** Same "how many advance per group" rule buildPlayoffBracket uses — kept in sync here purely for
  *  the live summary line, not for actually generating matches. */
 function describeSetup(groups: string[][], matchSize: number): string {
-  const podNote = matchSize > 2 ? ` Hver gruppe spilles i puljer på ${matchSize} sammen på delt brett.` : "";
+  const podNote = matchSize > 2 ? ` Hver gruppe spilles i puljer på inntil ${matchSize} sammen på delt brett.` : "";
   if (groups.length <= 1) return `Ingen sluttspill — vinneren av tabellen blir turneringsvinner.${podNote}`;
   const minSize = Math.min(...groups.map((g) => g.length));
   const advancePerGroup = Math.min(2, minSize);
@@ -32,11 +32,15 @@ export function TournamentGroupSetupScreen({
   mode,
   onBack,
   onGenerate,
+  submitting = false,
 }: {
   participantNames: string[];
   mode: TournamentMode;
   onBack: () => void;
   onGenerate: (groups: string[][], matchSize: number) => void;
+  /** True while a previous "Generer turnering" tap is still saving — disables the button so a
+   *  double-tap can't fire a second write while the first is in flight. */
+  submitting?: boolean;
 }) {
   const [matchSize, setMatchSize] = useState(2);
   const [groups, setGroups] = useState<string[][]>(() => suggestGroups(participantNames));
@@ -50,9 +54,10 @@ export function TournamentGroupSetupScreen({
 
   function changeMatchSize(size: number) {
     setMatchSize(size);
-    // Minimum group size depends on matchSize, so whatever's on screen might no longer be valid —
-    // simplest correct move is to re-suggest from scratch, same as picking a fresh mode would.
-    setGroups(suggestGroups(participantNames));
+    // Only re-suggest if the manual layout on screen is actually invalid for the new size —
+    // otherwise this would silently discard moveToGroup() edits the user just made.
+    const stillValid = groups.every((g) => g.length >= size);
+    if (!stillValid) setGroups(suggestGroups(participantNames));
   }
 
   function moveToGroup(name: string, groupIndex: number) {
@@ -163,8 +168,8 @@ export function TournamentGroupSetupScreen({
 
         <PrimaryActionButton
           onClick={() => onGenerate(groups, matchSize)}
-          ready={!groups.some((g) => g.length < matchSize)}
-          hint={`Hver gruppe trenger minst ${matchSize} deltakere`}
+          ready={!groups.some((g) => g.length < matchSize) && !submitting}
+          hint={submitting ? undefined : `Hver gruppe trenger minst ${matchSize} deltakere`}
         >
           Generer turnering
         </PrimaryActionButton>

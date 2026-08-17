@@ -50,6 +50,9 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
   const [pendingMode, setPendingMode] = useState<TournamentMode | null>(null);
   const [pendingParticipants, setPendingParticipants] = useState<Participant[] | null>(null);
   const [currentMatch, setCurrentMatch] = useState<TournamentMatch | null>(null);
+  // Guards "Generer turnering" and the cancel-tournament confirm button against a double-tap
+  // firing a second Supabase write while the first is still in flight.
+  const [submitting, setSubmitting] = useState(false);
 
   // One-time resolution of which screen to start on, from external state (localStorage's active-
   // tournament pointer + a Supabase fetch) — same "you might not need an effect" exception
@@ -61,12 +64,19 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
       setScreen("setup");
       return;
     }
-    fetchTournament(id).then((t) => {
-      if (!t) {
+    fetchTournament(id).then((result) => {
+      if (result.status === "not-found") {
         clearActiveTournamentId();
         setScreen("setup");
         return;
       }
+      if (result.status === "error") {
+        // Do NOT clear the resume pointer here — a transient network failure shouldn't
+        // permanently lose the ability to resume once the connection is back.
+        setScreen("setup");
+        return;
+      }
+      const t = result.tournament;
       setTournament(t);
       const resumable = findResumableMatch(t);
       if (resumable) {
@@ -86,7 +96,8 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
   }
 
   async function handleGenerate(groups: string[][], matchSize: number) {
-    if (!pendingMode || !pendingParticipants) return;
+    if (!pendingMode || !pendingParticipants || submitting) return;
+    setSubmitting(true);
     const id = newTournamentId();
     // Playing several at once is an individual-mode-only setting — a team match is always 1 team
     // vs 1 team, regardless of whatever the (hidden, for team mode) matchSize toggle last held.
@@ -95,6 +106,7 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
     saveActiveTournamentId(id);
     setScreen("overview");
     await upsertTournament(created);
+    setSubmitting(false);
   }
 
   function handlePlayNext(match: TournamentMatch) {
@@ -127,7 +139,8 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
    *  completed tournament, an aborted one has no value to keep around, so it's deleted outright
    *  rather than just cleared locally. */
   async function handleCancelTournament() {
-    if (!tournament) return;
+    if (!tournament || submitting) return;
+    setSubmitting(true);
     clearActiveTournamentId();
     await deleteTournament(tournament.id);
     onExitToHome();
@@ -145,7 +158,14 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
   }
 
   if (screen === "setup") {
-    return <TournamentSetupScreen onBack={onExitToHome} onNext={handleSetupNext} />;
+    return (
+      <TournamentSetupScreen
+        onBack={onExitToHome}
+        onNext={handleSetupNext}
+        initialMode={pendingMode}
+        initialParticipants={pendingParticipants}
+      />
+    );
   }
 
   if (screen === "group-setup" && pendingMode && pendingParticipants) {
@@ -155,6 +175,7 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
         mode={pendingMode}
         onBack={() => setScreen("setup")}
         onGenerate={handleGenerate}
+        submitting={submitting}
       />
     );
   }
@@ -184,9 +205,17 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
         onPlayNext={handlePlayNext}
         onExitToHome={onExitToHome}
         onCancelTournament={handleCancelTournament}
+        cancelingTournament={submitting}
       />
     );
   }
 
-  return <TournamentSetupScreen onBack={onExitToHome} onNext={handleSetupNext} />;
+  return (
+    <TournamentSetupScreen
+      onBack={onExitToHome}
+      onNext={handleSetupNext}
+      initialMode={pendingMode}
+      initialParticipants={pendingParticipants}
+    />
+  );
 }

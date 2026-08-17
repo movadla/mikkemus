@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment } from "react";
+import Link from "next/link";
 import { STEPS, STEP_LABELS } from "@/lib/game";
 import { useLiveMatch } from "@/lib/liveMatch";
 import { avatarAccent } from "@/lib/avatarAccent";
@@ -22,6 +23,20 @@ const CONFETTI = [
   { left: "50%", rotate: "8deg", delay: "300ms", color: "var(--color-cream)" },
 ];
 
+/** Deliberately understated — this page's whole point is to fill a TV/room, so a normal nav
+ *  chrome would compete with that. Stays nearly invisible until someone actually reaches for it. */
+function HomeLink() {
+  return (
+    <Link
+      href="/"
+      className="fixed top-2 left-2 z-40 text-xs opacity-20 hover:opacity-100 focus-visible:opacity-100 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)] transition-opacity"
+      style={{ color: "var(--color-cream)" }}
+    >
+      ← Hjem
+    </Link>
+  );
+}
+
 /**
  * Read-only spectator view, meant for a TV/second screen while the tablet at the board stays
  * the input device — polls lib/liveMatch.ts's live_match row, which MikkeMusApp publishes to on
@@ -34,6 +49,8 @@ export default function StorskjermPage() {
   if (!live || live.screen === "setup" || live.players.length === 0) {
     return (
       <div className="min-h-screen w-full flex flex-col items-center justify-center gap-6" style={{ background: "var(--color-bg)" }}>
+        <HomeLink />
+        <h1 className="sr-only">Venter på kamp</h1>
         <div className="relative flex items-center justify-center">
           <div
             className="animate-idle-glow absolute"
@@ -52,6 +69,8 @@ export default function StorskjermPage() {
   if (live.screen === "winner" && live.winner) {
     return (
       <div className="min-h-screen w-full flex flex-col items-center justify-center" style={{ background: "var(--color-bg)" }}>
+        <HomeLink />
+        <h1 className="sr-only">Kampvinner: {live.winner}</h1>
         <div className="relative flex flex-col items-center">
           <div
             className="absolute z-0"
@@ -89,12 +108,14 @@ export default function StorskjermPage() {
   }
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-10" style={{ background: "var(--color-bg)" }}>
-      <div className="shadow-panel rounded-xl overflow-hidden w-full" style={{ background: "var(--color-panel)" }}>
+    <div className="min-h-screen w-full flex items-center justify-center p-4 sm:p-6 md:p-10" style={{ background: "var(--color-bg)" }}>
+      <HomeLink />
+      <h1 className="sr-only">Kampoversikt – storskjerm</h1>
+      <div className="shadow-panel rounded-xl overflow-x-auto overflow-y-hidden w-full" style={{ background: "var(--color-panel)" }}>
         <div
           className="grid p-4"
           style={{
-            gridTemplateColumns: `140px repeat(${live.players.length}, 1fr)`,
+            gridTemplateColumns: `clamp(70px, 18vw, 140px) repeat(${live.players.length}, minmax(64px, 1fr))`,
             gridTemplateRows: `auto repeat(${STEPS.length}, minmax(0, 1fr))`,
             gap: "0.5rem",
           }}
@@ -102,7 +123,6 @@ export default function StorskjermPage() {
           <div />
           {live.players.map((p) => {
             const isActive = p === live.activePlayer;
-            const isBot = !!live.botLevels[p];
             const isGuest = !!live.guestPlayers[p];
             return (
               <div
@@ -130,7 +150,6 @@ export default function StorskjermPage() {
                       } as React.CSSProperties
                     }
                   >
-                    {isBot && "🤖 "}
                     {p}
                     {isGuest && <span style={{ color: "var(--color-muted)", fontSize: "1.1rem" }}> (gjest)</span>}
                   </span>
@@ -153,8 +172,8 @@ export default function StorskjermPage() {
                     <div
                       className="rounded-md flex items-center justify-center"
                       style={{
-                        width: "5rem",
-                        height: "5rem",
+                        width: "clamp(3.2rem, 12vw, 5rem)",
+                        height: "clamp(3.2rem, 12vw, 5rem)",
                         background: isDone ? "var(--color-cell-done)" : "var(--color-cell)",
                         boxShadow: isDone
                           ? "inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -8px 14px rgba(0,0,0,0.3)"

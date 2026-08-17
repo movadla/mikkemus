@@ -7,18 +7,18 @@ import type { ScoliaState } from "@/lib/useScolia";
 function summarize(state: ScoliaState): { label: string; color: string } {
   const OFFLINE = "Scolia: Offline";
   if (state.relay === "connecting") {
-    return { label: OFFLINE, color: "var(--color-muted)" };
+    return { label: "Scolia: Kobler til …", color: "var(--color-muted)" };
   }
   if (state.relay === "stale") {
-    return { label: OFFLINE, color: "var(--color-red)" };
+    return { label: "Scolia: Mistet kontakt", color: "var(--color-red)" };
   }
   switch (state.boardStatus) {
     case "Ready":
       return { label: "Scolia: Online", color: "var(--color-green)" };
     case "Calibrating":
-      return { label: OFFLINE, color: "var(--color-gold)" };
+      return { label: "Scolia: Kalibrerer …", color: "var(--color-gold)" };
     case "Error":
-      return { label: OFFLINE, color: "var(--color-red)" };
+      return { label: "Scolia: Feil på brettet", color: "var(--color-red)" };
     case "Initializing":
     case "Offline":
     default:

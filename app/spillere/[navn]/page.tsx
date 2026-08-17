@@ -68,7 +68,9 @@ export default function PlayerDetailPage() {
           <h1 className="font-display" style={{ color: "var(--color-cream)", fontSize: "1.4rem" }}>
             {player.name}
           </h1>
-          <div style={{ width: "72px" }} />
+          <Link href="/" className={`tactile px-3 py-2 rounded-lg text-sm ${FOCUS_RING}`} style={{ background: "var(--color-surface)", color: "var(--color-cream)" }}>
+            Hjem
+          </Link>
         </div>
 
         <div className="shadow-panel rounded-xl p-4 mb-4" style={{ background: "var(--color-surface)" }}>

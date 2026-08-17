@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { loadActiveTournamentId } from "@/lib/tournamentStorage";
 import { useScolia } from "@/lib/useScolia";
 import { DartboardGlyph } from "./DartboardGlyph";
-import { DartIcon, TrophyIcon } from "./icons";
+import { DartIcon, TrophyIcon, TvIcon } from "./icons";
 import { MikkeMusApp } from "./MikkeMusApp";
 import { ScoliaStatusBadge } from "./ScoliaStatusBadge";
 import { TournamentApp } from "./TournamentApp";
@@ -69,10 +69,11 @@ export function AppRoot() {
         <p className="text-center mt-8">
           <Link
             href="/storskjerm"
-            className={`font-display text-sm underline ${FOCUS_RING}`}
+            className={`font-display text-sm underline inline-flex items-center gap-1.5 ${FOCUS_RING}`}
             style={{ color: "var(--color-muted)", fontStyle: "italic" }}
           >
-            📺 Åpne storskjerm-visning
+            <TvIcon className="w-3.5 h-3.5" />
+            Åpne storskjerm-visning
           </Link>
         </p>
       </div>

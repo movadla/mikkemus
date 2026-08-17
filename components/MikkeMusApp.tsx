@@ -21,6 +21,7 @@ import {
 } from "@/lib/game";
 import { playPlayerSound, recordAccuracyTotals, recordMatchHistory, recordMatchResult, recordRingHits, type RingHits } from "@/lib/storage";
 import { announce } from "@/lib/announcer";
+import { reportError } from "@/lib/errorReporting";
 import { clearActiveMatch, loadActiveMatch, saveActiveMatch } from "@/lib/activeMatch";
 import { publishLiveMatch } from "@/lib/liveMatch";
 import { sectorAt, throwAccuracy } from "@/lib/dartboard";
@@ -804,6 +805,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         stats = finalizeMatch(nextTurnLog, activePlayer);
       } catch (err) {
         console.error("Klarte ikke å lagre statistikk ved kampslutt:", err);
+        reportError("Kunne ikke lagre kampresultatet.", { key: "finalize-match" });
       }
       setWinnerStats(stats);
       setWinner(activePlayer);
@@ -838,6 +840,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       finalizeMatch(turnLog);
     } catch (err) {
       console.error("Klarte ikke å lagre statistikk ved avbrytelse:", err);
+      reportError("Kunne ikke lagre kampresultatet.", { key: "finalize-match" });
     }
     clearActiveMatch();
     setScreen("setup");
@@ -855,6 +858,15 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     }
     setScreen("setup");
     setPlayers([]);
+  }
+
+  /** Same roster, fresh match — bot levels/team rosters/guest flags all still reflect the match
+   *  that just finished, so this is just startGame with today's already-known values instead of
+   *  sending the host back through SetupScreen to re-enter everyone. Tournament mode has its own
+   *  "Til turnering" flow via playAgain/onMatchComplete, so this is never offered there (see the
+   *  WinnerScreen call site below). */
+  function rematch() {
+    startGame(players, botLevels, teamRosters, guestPlayers);
   }
 
   if (screen === "setup") {
@@ -878,6 +890,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         throwsByPlayer={matchThrows}
         onHome={playAgain}
         homeLabel={onMatchComplete ? "Til turnering" : "Hjem"}
+        onPlayAgain={onMatchComplete ? undefined : rematch}
       />
     );
   }
@@ -901,7 +914,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
           className="fixed top-16 left-1/2 -translate-x-1/2 z-40 px-3 py-1.5 rounded-full text-sm shadow-panel"
           style={{ background: "var(--color-surface)", color: "var(--color-teal)", border: "1px solid var(--color-border)" }}
         >
-          🤖 {currentMember ? currentMember.name : activePlayer} kaster …
+          {currentMember ? currentMember.name : activePlayer} kaster …
         </div>
       )}
       {/* A mixed team's human member up now — the column only shows the team's name, so this is
@@ -930,7 +943,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         awaitingConfirmResolution={awaitingConfirmResolution}
         onResolvePendingChoice={resolvePendingChoice}
         onRegisterHit={activeBotLevel ? () => {} : registerHit}
-        onUndo={undo}
+        onUndo={activeBotLevel ? () => {} : undo}
         onConfirm={activeBotLevel ? () => {} : confirm}
         onAbort={abortGame}
       />

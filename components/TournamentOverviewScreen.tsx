@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { bracketRoundLabel, computeStandings, matchParticipants, previewPlayoffBracket, type Tournament, type TournamentMatch } from "@/lib/tournament";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { TrophyIcon } from "./icons";
 
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
@@ -42,8 +43,13 @@ function MatchRow({ match }: { match: TournamentMatch }) {
       {done && (
         <span className="tabular" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>
           {/* A pod with more than 2 players shows the full finishing order, since "vant" alone
-              wouldn't say who came 2nd/3rd; a normal 1-vs-1 match keeps today's plain wording. */}
-          {participants.length > 2 && match.placements ? match.placements.join(" › ") : `${match.winner} vant`}
+              wouldn't say who came 2nd/3rd; a normal 1-vs-1 match keeps today's plain wording. A
+              bye never actually played, so it gets its own wording instead of reading as a win. */}
+          {match.isBye
+            ? "walkover videre"
+            : participants.length > 2 && match.placements
+              ? match.placements.join(" › ")
+              : `${match.winner} vant`}
         </span>
       )}
     </div>
@@ -55,11 +61,15 @@ export function TournamentOverviewScreen({
   onPlayNext,
   onExitToHome,
   onCancelTournament,
+  cancelingTournament = false,
 }: {
   tournament: Tournament;
   onPlayNext: (match: TournamentMatch) => void;
   onExitToHome: () => void;
   onCancelTournament: () => void;
+  /** True while a previous "Ja, avbryt turneringen" tap is still deleting — the dialog stays open
+   *  through that wait, so the button must guard itself against a second tap firing again. */
+  cancelingTournament?: boolean;
 }) {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const nextMatch = tournament.matches.find((m) => !m.winner && matchParticipants(m).length >= 2) ?? null;
@@ -72,8 +82,12 @@ export function TournamentOverviewScreen({
         <ConfirmDialog
           message="Avbryte turneringen? Fremgangen slettes permanent og kan ikke gjenopprettes."
           buttons={[
-            { label: "Ja, avbryt turneringen", onClick: onCancelTournament, background: "var(--color-red)" },
             { label: "Nei, fortsett turneringen", onClick: () => setShowCancelConfirm(false), background: "var(--color-green)" },
+            {
+              label: cancelingTournament ? "Avbryter …" : "Ja, avbryt turneringen",
+              onClick: cancelingTournament ? () => {} : onCancelTournament,
+              background: "var(--color-red)",
+            },
           ]}
         />
       )}
@@ -89,12 +103,13 @@ export function TournamentOverviewScreen({
         </div>
 
         {tournament.status === "done" && tournament.winner && (
-          <div className="shadow-panel rounded-xl p-5 mb-6 text-center" style={{ background: "linear-gradient(135deg, var(--color-gold), #a9812f)" }}>
-            <p className="font-display" style={{ color: "var(--color-bg)", fontStyle: "italic", fontSize: "0.9rem" }}>
+          <div className="card-gold shadow-panel rounded-xl p-5 mb-6 text-center">
+            <p className="font-display" style={{ fontStyle: "italic", fontSize: "0.9rem" }}>
               Turneringsvinner
             </p>
-            <p className="font-display" style={{ color: "var(--color-bg)", fontSize: "1.6rem" }}>
-              🏆 {tournament.winner}
+            <p className="font-display flex items-center justify-center gap-2" style={{ fontSize: "1.6rem" }}>
+              <TrophyIcon className="w-6 h-6" />
+              {tournament.winner}
             </p>
           </div>
         )}

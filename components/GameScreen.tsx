@@ -186,17 +186,17 @@ export function GameScreen({
 
       {showHomeConfirm && (
         <ConfirmDialog
-          message="Pause spillet?"
+          message="Avslutte kampen?"
           buttons={[
+            { label: "Fortsett spill", onClick: () => setShowHomeConfirm(false), background: "var(--color-green)" },
             {
-              label: "Avbryt spill (stats blir lagret)",
+              label: "Avslutt kamp (stats blir lagret)",
               onClick: () => {
                 setShowHomeConfirm(false);
                 onAbort();
               },
               background: "var(--color-red)",
             },
-            { label: "Fortsett spill", onClick: () => setShowHomeConfirm(false), background: "var(--color-green)" },
           ]}
         />
       )}

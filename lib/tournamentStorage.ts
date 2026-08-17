@@ -1,3 +1,4 @@
+import { reportError } from "./errorReporting";
 import { supabase } from "./supabaseClient";
 import type { Participant, Tournament, TournamentMatch, TournamentMode } from "./tournament";
 
@@ -52,7 +53,10 @@ function tournamentToRow(t: Tournament): TournamentRow {
 export async function upsertTournament(tournament: Tournament): Promise<void> {
   if (!supabase) return;
   const { error } = await supabase.from("tournaments").upsert(tournamentToRow(tournament));
-  if (error) console.error("Kunne ikke lagre turnering i Supabase:", error.message);
+  if (error) {
+    console.error("Kunne ikke lagre turnering i Supabase:", error.message);
+    reportError("Kunne ikke lagre turnering i skyen.", { key: "tournament-upsert" });
+  }
 }
 
 /** Permanently removes an abandoned tournament — used when the player explicitly cancels one
@@ -61,17 +65,29 @@ export async function upsertTournament(tournament: Tournament): Promise<void> {
 export async function deleteTournament(id: string): Promise<void> {
   if (!supabase) return;
   const { error } = await supabase.from("tournaments").delete().eq("id", id);
-  if (error) console.error("Kunne ikke slette turnering i Supabase:", error.message);
+  if (error) {
+    console.error("Kunne ikke slette turnering i Supabase:", error.message);
+    reportError("Kunne ikke slette turnering i skyen. Prøv igjen senere.", { key: "tournament-delete" });
+  }
 }
 
-export async function fetchTournament(id: string): Promise<Tournament | null> {
-  if (!supabase) return null;
+export type FetchTournamentResult =
+  | { status: "found"; tournament: Tournament }
+  | { status: "not-found" }
+  | { status: "error" };
+
+/** Distinguishes "genuinely doesn't exist" from "couldn't reach Supabase" — the caller (see
+ *  TournamentApp's resume-on-load effect) must only clear the local resume pointer on the former;
+ *  clearing it on a transient network error would permanently lose the ability to resume. */
+export async function fetchTournament(id: string): Promise<FetchTournamentResult> {
+  if (!supabase) return { status: "error" };
   const { data, error } = await supabase.from("tournaments").select("*").eq("id", id).maybeSingle();
   if (error) {
     console.error("Kunne ikke hente turnering fra Supabase:", error.message);
-    return null;
+    reportError("Kunne ikke hente turnering. Prøv å laste siden på nytt.", { key: "tournament-fetch" });
+    return { status: "error" };
   }
-  return data ? rowToTournament(data as TournamentRow) : null;
+  return data ? { status: "found", tournament: rowToTournament(data as TournamentRow) } : { status: "not-found" };
 }
 
 export function newTournamentId(): string {

@@ -38,6 +38,9 @@ export type TournamentMatch = {
   placements?: string[];
   winner?: string;
   stats?: Record<string, TurnAggregate>;
+  /** Set only by resolveByes — the "winner" here never actually played, so the UI must show this
+   *  distinctly from a real result (see previewPlayoffBracket's own "(walkover videre)" wording). */
+  isBye?: boolean;
 };
 
 export type Tournament = {
@@ -216,8 +219,8 @@ function bracketSeedOrder(size: number): number[] {
  *  side advances without a real game. */
 function resolveByes(matches: TournamentMatch[]): TournamentMatch[] {
   return matches.map((m) => {
-    if (m.participantA && !m.participantB) return { ...m, winner: m.participantA };
-    if (!m.participantA && m.participantB) return { ...m, winner: m.participantB };
+    if (m.participantA && !m.participantB) return { ...m, winner: m.participantA, isBye: true };
+    if (!m.participantA && m.participantB) return { ...m, winner: m.participantB, isBye: true };
     return m;
   });
 }
@@ -375,7 +378,9 @@ export function createTournament(
         matches.push({ id: `group-${groupIndex}-${i}`, round: "group", groupIndex, participantA: a, participantB: b });
       });
     } else {
-      const numPods = Math.max(1, Math.floor(group.length / matchSize));
+      // round(), not floor() — same "closest to target size" idiom suggestGroups already uses,
+      // so e.g. 5 people at matchSize 3 gives 2 pods (3+2) instead of one oversized pod of 5.
+      const numPods = Math.max(1, Math.round(group.length / matchSize));
       distributeEvenly(group, numPods).forEach((pod, pi) => {
         matches.push({ id: `group-${groupIndex}-pod-${pi}`, round: "group", groupIndex, participantA: null, participantB: null, participants: pod });
       });

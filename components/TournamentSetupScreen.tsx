@@ -11,19 +11,51 @@ import { TeamComposer, isTeamSetupReady, type Team } from "./TeamComposer";
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
 
+/** Rebuilds the pool of pickable people from a previously-submitted participant list — used to
+ *  restore state when navigating back from group-setup (see initialMode/initialParticipants). */
+function peopleFromParticipants(mode: TournamentMode, participants: Participant[]): Person[] {
+  if (mode === "individual") {
+    return participants.map((p) => ({ name: p.name, isBot: p.isBot, botLevel: p.botLevel }));
+  }
+  const seen = new Set<string>();
+  const pool: Person[] = [];
+  participants.forEach((p) => {
+    (p.members ?? []).forEach((m) => {
+      if (seen.has(m.name)) return;
+      seen.add(m.name);
+      pool.push({ name: m.name, isBot: m.isBot, botLevel: m.botLevel });
+    });
+  });
+  return pool;
+}
+
+function teamsFromParticipants(mode: TournamentMode, participants: Participant[]): Team[] {
+  if (mode !== "team") return [{ name: "Lag 1", members: [] }, { name: "Lag 2", members: [] }];
+  return participants.map((p) => ({ name: p.name, members: (p.members ?? []).map((m) => m.name) }));
+}
+
 export function TournamentSetupScreen({
   onBack,
   onNext,
+  initialMode = null,
+  initialParticipants = null,
 }: {
   onBack: () => void;
   onNext: (mode: TournamentMode, participants: Participant[]) => void;
+  /** Seeds mode/people/teams from a previous submission — lets "Tilbake" from group-setup restore
+   *  what was already entered instead of remounting this screen back to a blank slate. */
+  initialMode?: TournamentMode | null;
+  initialParticipants?: Participant[] | null;
 }) {
-  const [mode, setMode] = useState<TournamentMode | null>(null);
-  const [people, setPeople] = useState<Person[]>([]);
-  const [teams, setTeams] = useState<Team[]>([
-    { name: "Lag 1", members: [] },
-    { name: "Lag 2", members: [] },
-  ]);
+  const [mode, setMode] = useState<TournamentMode | null>(initialMode);
+  const [people, setPeople] = useState<Person[]>(() =>
+    initialMode && initialParticipants ? peopleFromParticipants(initialMode, initialParticipants) : []
+  );
+  const [teams, setTeams] = useState<Team[]>(() =>
+    initialMode && initialParticipants
+      ? teamsFromParticipants(initialMode, initialParticipants)
+      : [{ name: "Lag 1", members: [] }, { name: "Lag 2", members: [] }]
+  );
 
   /** Removing a person from the pool must also drop them from whichever team they were on. */
   function handlePeopleChange(next: Person[]) {

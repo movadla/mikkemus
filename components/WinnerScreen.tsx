@@ -41,6 +41,7 @@ export function WinnerScreen({
   throwsByPlayer,
   onHome,
   homeLabel = "Hjem",
+  onPlayAgain,
 }: {
   winner: string;
   players: string[];
@@ -50,6 +51,9 @@ export function WinnerScreen({
   onHome: () => void;
   /** Overridden by tournament mode to "Til turnering" — see MikkeMusApp's onMatchComplete prop. */
   homeLabel?: string;
+  /** Starts a fresh match with the same roster — omitted in tournament mode, where onHome/
+   *  homeLabel already handles "what's next" via "Til turnering". */
+  onPlayAgain?: () => void;
 }) {
   const photo = getPlayerRecord(winner)?.photo;
 
@@ -174,11 +178,29 @@ export function WinnerScreen({
           </div>
         )}
 
+        {onPlayAgain && (
+          <button
+            type="button"
+            onClick={onPlayAgain}
+            className={`glossy w-full py-4 rounded-lg font-semibold text-lg mb-3 ${FOCUS_RING}`}
+            style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)" } as React.CSSProperties}
+          >
+            Spill igjen
+          </button>
+        )}
         <button
           type="button"
           onClick={onHome}
-          className={`glossy w-full py-4 rounded-lg font-semibold text-lg ${FOCUS_RING}`}
-          style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)" } as React.CSSProperties}
+          className={
+            onPlayAgain
+              ? `tactile w-full py-4 rounded-lg font-semibold text-lg ${FOCUS_RING}`
+              : `glossy w-full py-4 rounded-lg font-semibold text-lg ${FOCUS_RING}`
+          }
+          style={
+            onPlayAgain
+              ? { background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }
+              : ({ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)" } as React.CSSProperties)
+          }
         >
           {homeLabel}
         </button>

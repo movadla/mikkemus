@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { reportError } from "./errorReporting";
 import { supabase } from "./supabaseClient";
 import type { PlayerProgress } from "./game";
 import type { BotLevel } from "./botLevels";
@@ -27,7 +28,10 @@ type LiveMatchRow = { id: string; state: LiveMatchState | null; updated_at: stri
 export async function publishLiveMatch(state: LiveMatchState | null) {
   if (!supabase) return;
   const { error } = await supabase.from("live_match").upsert({ id: "current", state, updated_at: new Date().toISOString() });
-  if (error) console.error("Kunne ikke oppdatere live_match:", error.message);
+  if (error) {
+    console.error("Kunne ikke oppdatere live_match:", error.message);
+    reportError("Kunne ikke oppdatere storskjerm-visningen.", { key: "live-match-publish" });
+  }
 }
 
 const POLL_MS = 1000;
@@ -53,8 +57,12 @@ export function useLiveMatch(): LiveMatchState | null {
         .select("state")
         .eq("id", "current")
         .maybeSingle()
-        .then(({ data }) => {
+        .then(({ data, error }) => {
           if (cancelled) return;
+          if (error) {
+            reportError("Fikk ikke kontakt med kampdata.", { key: "live-match-fetch" });
+            return;
+          }
           setState((data as Pick<LiveMatchRow, "state"> | null)?.state ?? null);
         });
     }
