@@ -18,7 +18,7 @@ describe("startBullDuel", () => {
   it("initializes every player at 0 points with empty stats, first player active", () => {
     const state = startBullDuel(["Anna", "Bjørn"], 10);
     expect(state.points).toEqual({ Anna: 0, Bjørn: 0 });
-    expect(state.stats.Anna).toEqual({ throws: 0, hits: 0, luckSum: 0, luckCount: 0 });
+    expect(state.stats.Anna).toEqual({ throws: 0, points: 0, redHits: 0, greenHits: 0, luckSum: 0, luckCount: 0 });
     expect(activePlayerFor(state)).toBe("Anna");
     expect(state.winner).toBeNull();
   });
@@ -30,22 +30,25 @@ describe("registerBullDart", () => {
     state = registerBullDart(state, "Bull", BULL_CENTER);
     expect(state.points.Anna).toBe(2);
     expect(state.points.Bjørn).toBe(0);
-    expect(state.stats.Anna).toMatchObject({ throws: 1, hits: 1 });
+    expect(state.stats.Anna).toMatchObject({ throws: 1, points: 2, redHits: 1, greenHits: 0 });
     expect(state.stats.Anna.luckCount).toBe(1);
   });
 
-  it("counts a manually-tapped dart (no coordinates) toward throws/hits but excludes it from the xG average", () => {
+  it("counts a manually-tapped dart (no coordinates) toward throws/points but excludes it from the xG average", () => {
     let state = startBullDuel(["Anna"], 10);
     state = registerBullDart(state, "Bull", null);
     expect(state.points.Anna).toBe(2);
-    expect(state.stats.Anna).toMatchObject({ throws: 1, hits: 1, luckSum: 0, luckCount: 0 });
+    expect(state.stats.Anna).toMatchObject({ throws: 1, points: 2, redHits: 1, greenHits: 0, luckSum: 0, luckCount: 0 });
   });
 
-  it("counts a miss as a thrown dart but not a hit", () => {
+  it("counts a miss as a thrown dart but not a hit, and tracks red vs green separately", () => {
     let state = startBullDuel(["Anna"], 10);
     state = registerBullDart(state, "None", MISS);
     expect(state.points.Anna).toBe(0);
-    expect(state.stats.Anna).toMatchObject({ throws: 1, hits: 0 });
+    expect(state.stats.Anna).toMatchObject({ throws: 1, points: 0, redHits: 0, greenHits: 0 });
+
+    state = registerBullDart(state, "25", [0, 10]);
+    expect(state.stats.Anna).toMatchObject({ throws: 2, points: 1, redHits: 0, greenHits: 1 });
   });
 
   it("declares a winner on an exact hit of the target", () => {

@@ -13,14 +13,20 @@ export function Mark({
   pendingCount = 0,
   ghostCount = 0,
   accent = "var(--color-teal)",
+  slowMotion = false,
 }: {
   count: number;
   pendingCount?: number;
   ghostCount?: number;
   accent?: string;
+  /** True for a brief window right after Angre — stretches the stroke transition below so
+   *  whichever cross just got undone is unmistakable as it un-draws, instead of a global
+   *  red flash (the previous way of signaling an undo happened). */
+  slowMotion?: boolean;
 }) {
   const confirmedCount = count - pendingCount;
   const previewedCount = count + ghostCount;
+  const strokeMs = slowMotion ? 650 : 190;
 
   function ghostStrokeProps(threshold: number) {
     const isGhost = threshold > count && threshold <= previewedCount;
@@ -68,7 +74,7 @@ export function Mark({
           strokeDasharray: 1,
           strokeDashoffset: count >= 1 ? 0 : 1,
           opacity: count >= 1 ? 1 : 0,
-          transition: "stroke-dashoffset 190ms ease-out, opacity 190ms ease-out",
+          transition: `stroke-dashoffset ${strokeMs}ms ease-out, opacity ${strokeMs}ms ease-out`,
         }}
       />
       <line
@@ -84,8 +90,7 @@ export function Mark({
           strokeDasharray: 1,
           strokeDashoffset: count >= 2 ? 0 : 1,
           opacity: count >= 2 ? 1 : 0,
-          transition: "stroke-dashoffset 190ms ease-out, opacity 190ms ease-out",
-          transitionDelay: "65ms",
+          transition: `stroke-dashoffset ${strokeMs}ms ease-out 65ms, opacity ${strokeMs}ms ease-out 65ms`,
         }}
       />
       <circle
@@ -100,8 +105,7 @@ export function Mark({
           strokeDasharray: 1,
           strokeDashoffset: count >= 3 ? 0 : 1,
           opacity: count >= 3 ? 1 : 0,
-          transition: "stroke-dashoffset 150ms ease-out, opacity 150ms ease-out",
-          transitionDelay: "55ms",
+          transition: `stroke-dashoffset ${strokeMs}ms ease-out 55ms, opacity ${strokeMs}ms ease-out 55ms`,
         }}
       />
     </svg>

@@ -26,11 +26,12 @@ function emptyLuckByStep(): Record<Step, LuckStat> {
   return s;
 }
 
-/** Career totals behind Bull-duell's kast/treff/%/xG stats — see lib/bullDuel.ts. */
-export type BullDuelStat = { throws: number; hits: number; luckSum: number; luckCount: number };
+/** Career totals behind Bull-duell's kast/poeng/treff%/xG stats — see
+ *  lib/bullDuel.ts. `redHits`/`greenHits` back the rødt/grønt drilldown. */
+export type BullDuelStat = { throws: number; points: number; redHits: number; greenHits: number; luckSum: number; luckCount: number };
 
 function emptyBullDuelStat(): BullDuelStat {
-  return { throws: 0, hits: 0, luckSum: 0, luckCount: 0 };
+  return { throws: 0, points: 0, redHits: 0, greenHits: 0, luckSum: 0, luckCount: 0 };
 }
 
 /** Keyed by the number (1–20) as a string — how many times a Triple or Double of that number has landed, regardless of how the game ended up scoring it. */
@@ -138,10 +139,15 @@ function rowToRecord(row: PlayerRow): PlayerRecord {
     },
     luck: luckByStepFromRow(row),
     // Rows written before the bull_duel column existed (or with an empty
-    // '{}' default) have some/all fields missing — fall back per-field.
+    // '{}' default, or from before the points/redHits/greenHits fields
+    // replaced the old "hits" count) have some/all fields missing — fall
+    // back per-field. Old "hits" data isn't migrated into points (a count
+    // and a point-sum aren't the same number) — it's simply reset to 0.
     bullDuel: {
       throws: row.bull_duel?.throws ?? 0,
-      hits: row.bull_duel?.hits ?? 0,
+      points: row.bull_duel?.points ?? 0,
+      redHits: row.bull_duel?.redHits ?? 0,
+      greenHits: row.bull_duel?.greenHits ?? 0,
       luckSum: row.bull_duel?.luckSum ?? 0,
       luckCount: row.bull_duel?.luckCount ?? 0,
     },
@@ -463,7 +469,9 @@ export function recordBullDuelMatch(name: string, totals: BullDuelStat) {
   const existing = roster[k] ?? ensurePlayer(name);
   const bullDuel: BullDuelStat = {
     throws: existing.bullDuel.throws + totals.throws,
-    hits: existing.bullDuel.hits + totals.hits,
+    points: existing.bullDuel.points + totals.points,
+    redHits: existing.bullDuel.redHits + totals.redHits,
+    greenHits: existing.bullDuel.greenHits + totals.greenHits,
     luckSum: existing.bullDuel.luckSum + totals.luckSum,
     luckCount: existing.bullDuel.luckCount + totals.luckCount,
   };
@@ -566,9 +574,10 @@ export function meanLuckForStep(record: PlayerRecord, step: Step): number | null
   return stat.count === 0 ? null : stat.sum / stat.count;
 }
 
-/** Career Bull-duell hit percentage (bull hits / darts thrown). Null with no data yet. */
+/** Career Bull-duell hit percentage (red+green hits / darts thrown). Null with no data yet. */
 export function bullDuelHitPct(record: PlayerRecord): number | null {
-  return record.bullDuel.throws === 0 ? null : Math.round((record.bullDuel.hits / record.bullDuel.throws) * 100);
+  if (record.bullDuel.throws === 0) return null;
+  return Math.round(((record.bullDuel.redHits + record.bullDuel.greenHits) / record.bullDuel.throws) * 100);
 }
 
 /** Career mean Bull-duell "Expected Goals" — see lib/dartboard.ts's luckForBullDuelThrow. Null with no data yet. */

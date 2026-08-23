@@ -47,6 +47,7 @@ export function SetupScreen({
   const [guestPlayers, setGuestPlayers] = useState<Record<string, true>>({});
   const [addingAsGuest, setAddingAsGuest] = useState(false);
   const [confirmingRemove, setConfirmingRemove] = useState<string | null>(null);
+  const [showAddMenu, setShowAddMenu] = useState(false);
   const [showBotPicker, setShowBotPicker] = useState(false);
   const [error, setError] = useState("");
   const [addingPlayer, setAddingPlayer] = useState(false);
@@ -104,6 +105,7 @@ export function SetupScreen({
       setNameInput("");
       setError("");
       setAddingPlayer(false);
+      setShowAddMenu(false);
       return;
     }
     ensurePlayer(trimmed);
@@ -111,6 +113,7 @@ export function SetupScreen({
     setNameInput("");
     setError("");
     setAddingPlayer(false);
+    setShowAddMenu(false);
     const record = getPlayerRecord(trimmed);
     if (record?.photo) {
       setPhotos((prev) => ({ ...prev, [trimmed]: record.photo! }));
@@ -142,7 +145,7 @@ export function SetupScreen({
 
   /** Bots are never ensurePlayer'd — they're a virtual opponent, not a roster entry. */
   function addBot(level: BotLevel) {
-    const base = `🤖 ${BOT_LEVELS[level].name} (${level})`;
+    const base = `${BOT_LEVELS[level].name} (${level}) 🤖`;
     let name = base;
     let suffix = 2;
     while (players.some((p) => p.toLowerCase() === name.toLowerCase())) {
@@ -152,6 +155,7 @@ export function SetupScreen({
     setPlayers((prev) => [...prev, name]);
     setBotLevels((prev) => ({ ...prev, [name]: level }));
     setShowBotPicker(false);
+    setShowAddMenu(false);
   }
 
   function openCameraFor(name: string) {
@@ -310,103 +314,6 @@ export function SetupScreen({
               </div>
             )}
 
-            <div className="mb-8">
-              {addingPlayer ? (
-                <div className="flex gap-2">
-                  <input
-                    autoFocus
-                    value={nameInput}
-                    onChange={(e) => {
-                      setNameInput(e.target.value);
-                      setError("");
-                    }}
-                    onKeyDown={(e) => e.key === "Enter" && addPlayer(nameInput, addingAsGuest)}
-                    placeholder={addingAsGuest ? "Gjestens navn" : "Spillernavn"}
-                    className={`flex-1 px-4 py-3 rounded-lg ${FOCUS_RING}`}
-                    style={{
-                      background: "var(--color-surface)",
-                      color: "var(--color-cream)",
-                      border: "1px solid var(--color-border)",
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => addPlayer(nameInput, addingAsGuest)}
-                    className={`glossy px-5 py-3 rounded-lg font-medium ${FOCUS_RING}`}
-                    style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)" } as React.CSSProperties}
-                  >
-                    Legg til
-                  </button>
-                </div>
-              ) : (
-                <div className="flex flex-wrap justify-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAddingAsGuest(false);
-                      setAddingPlayer(true);
-                    }}
-                    className={`tactile px-4 py-1.5 rounded-lg text-sm ${FOCUS_RING}`}
-                    style={{
-                      background: "var(--color-surface)",
-                      color: "var(--color-teal)",
-                      border: "1px solid var(--color-border)",
-                    }}
-                  >
-                    Legg til spiller
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAddingAsGuest(true);
-                      setAddingPlayer(true);
-                    }}
-                    className={`tactile px-4 py-1.5 rounded-lg text-sm flex items-center gap-1.5 ${FOCUS_RING}`}
-                    style={{
-                      background: "var(--color-surface)",
-                      color: "var(--color-muted)",
-                      border: "1px solid var(--color-border)",
-                    }}
-                  >
-                    <GuestIcon className="w-3.5 h-3.5" />
-                    Legg til gjest
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowBotPicker((v) => !v)}
-                    className={`tactile px-4 py-1.5 rounded-lg text-sm ${FOCUS_RING}`}
-                    style={{
-                      background: "var(--color-surface)",
-                      color: "var(--color-gold)",
-                      border: "1px solid var(--color-border)",
-                    }}
-                  >
-                    🤖 Legg til bot
-                  </button>
-                </div>
-              )}
-              {showBotPicker && (
-                <div className="flex flex-wrap justify-center gap-2 mt-3">
-                  {BOT_LEVEL_ORDER.map((level) => (
-                    <button
-                      key={level}
-                      type="button"
-                      onClick={() => addBot(level)}
-                      className={`tactile px-3 py-1.5 rounded-full text-sm ${FOCUS_RING}`}
-                      style={{ background: "var(--color-cell)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
-                    >
-                      {BOT_LEVELS[level].name} ({level})
-                    </button>
-                  ))}
-                </div>
-              )}
-              {error && (
-                <p className="text-sm mt-2 text-center" style={{ color: "var(--color-red)" }}>
-                  {error}
-                </p>
-              )}
-            </div>
-
             <div className="shadow-panel rounded-xl p-4 mb-8" style={{ background: "var(--color-panel)", border: "1px solid var(--color-border)" }}>
               <p className="text-center mb-3" style={{ color: "var(--color-gold)", fontSize: "0.75rem", letterSpacing: "0.1em" }}>
                 SPILLERE
@@ -538,6 +445,127 @@ export function SetupScreen({
                   </div>
                 );
               })}
+              {addingPlayer ? (
+                <div className="flex gap-2">
+                  <input
+                    autoFocus
+                    value={nameInput}
+                    onChange={(e) => {
+                      setNameInput(e.target.value);
+                      setError("");
+                    }}
+                    onKeyDown={(e) => e.key === "Enter" && addPlayer(nameInput, addingAsGuest)}
+                    placeholder={addingAsGuest ? "Gjestens navn" : "Spillernavn"}
+                    className={`flex-1 px-4 py-3 rounded-lg ${FOCUS_RING}`}
+                    style={{
+                      background: "var(--color-surface)",
+                      color: "var(--color-cream)",
+                      border: "1px solid var(--color-border)",
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => addPlayer(nameInput, addingAsGuest)}
+                    className={`glossy px-5 py-3 rounded-lg font-medium ${FOCUS_RING}`}
+                    style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)" } as React.CSSProperties}
+                  >
+                    Legg til
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAddingPlayer(false);
+                      setError("");
+                    }}
+                    aria-label="Avbryt"
+                    className={`tactile px-4 py-3 rounded-lg text-sm ${FOCUS_RING}`}
+                    style={{ background: "var(--color-surface)", color: "var(--color-muted)", border: "1px solid var(--color-border)" }}
+                  >
+                    Avbryt
+                  </button>
+                </div>
+              ) : showAddMenu ? (
+                <div
+                  className="flex items-center justify-center flex-wrap gap-2 px-4 py-3 rounded-lg"
+                  style={{ background: "var(--color-surface)", border: "1.5px solid var(--color-green)" }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAddingAsGuest(false);
+                      setAddingPlayer(true);
+                    }}
+                    className={`tactile px-3 py-1.5 rounded-lg text-sm ${FOCUS_RING}`}
+                    style={{ background: "var(--color-cell)", color: "var(--color-teal)", border: "1px solid var(--color-border)" }}
+                  >
+                    Ny spiller
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAddingAsGuest(true);
+                      setAddingPlayer(true);
+                    }}
+                    className={`tactile px-3 py-1.5 rounded-lg text-sm flex items-center gap-1.5 ${FOCUS_RING}`}
+                    style={{ background: "var(--color-cell)", color: "var(--color-muted)", border: "1px solid var(--color-border)" }}
+                  >
+                    <GuestIcon className="w-3.5 h-3.5" />
+                    Gjest
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowBotPicker((v) => !v)}
+                    className={`tactile px-3 py-1.5 rounded-lg text-sm ${FOCUS_RING}`}
+                    style={{ background: "var(--color-cell)", color: "var(--color-gold)", border: "1px solid var(--color-border)" }}
+                  >
+                    Bot 🤖
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAddMenu(false);
+                      setShowBotPicker(false);
+                    }}
+                    aria-label="Lukk"
+                    className={`text-sm px-2 ${FOCUS_RING}`}
+                    style={{ color: "var(--color-muted)" }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowAddMenu(true)}
+                  className={`shadow-panel flex items-center justify-center gap-2 w-full px-4 py-3 rounded-lg font-medium ${FOCUS_RING}`}
+                  style={{ background: "var(--color-surface)", border: "1.5px solid var(--color-green)", color: "var(--color-green)" }}
+                >
+                  <span aria-hidden style={{ fontSize: "1.1rem", lineHeight: 1, fontWeight: 700 }}>
+                    +
+                  </span>
+                  Legg til
+                </button>
+              )}
+              {showAddMenu && showBotPicker && (
+                <div className="flex flex-wrap justify-center gap-2">
+                  {BOT_LEVEL_ORDER.map((level) => (
+                    <button
+                      key={level}
+                      type="button"
+                      onClick={() => addBot(level)}
+                      className={`tactile px-3 py-1.5 rounded-full text-sm ${FOCUS_RING}`}
+                      style={{ background: "var(--color-cell)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
+                    >
+                      {BOT_LEVELS[level].name} ({level})
+                    </button>
+                  ))}
+                </div>
+              )}
+              {error && (
+                <p className="text-sm text-center" style={{ color: "var(--color-red)" }}>
+                  {error}
+                </p>
+              )}
               </div>
             </div>
 

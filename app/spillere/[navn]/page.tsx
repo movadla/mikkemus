@@ -128,7 +128,7 @@ export default function PlayerDetailPage() {
           <StatCard label="FAVORITT-DOBBEL" value={favDouble !== null ? `D${favDouble}` : "–"} />
           <StatCard label="MED / MHD / MVD" value={med === null ? "–" : `${Math.round(med)} / ${Math.round(mhd!)} / ${Math.round(mvd!)}mm`} />
           <StatCard label="EXPECTED GOALS (SNITT)" value={luck === null ? "–" : luck.toFixed(1)} />
-          <StatCard label="BULL-DUELL: KAST / TREFF / %" value={player.bullDuel.throws === 0 ? "–" : `${player.bullDuel.throws} / ${player.bullDuel.hits} / ${bullDuelPct}%`} />
+          <StatCard label="BULL-DUELL: KAST / POENG / TREFF%" value={player.bullDuel.throws === 0 ? "–" : `${player.bullDuel.throws} / ${player.bullDuel.points} / ${bullDuelPct}%`} />
           <StatCard label="BULL-DUELL: EXPECTED GOALS (SNITT)" value={bullDuelLuck === null ? "–" : bullDuelLuck.toFixed(1)} />
         </div>
 

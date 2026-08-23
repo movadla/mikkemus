@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import {
   STEPS,
   STEP_LABELS,
@@ -13,12 +13,18 @@ import {
   type TurnShot,
 } from "@/lib/game";
 import { isAnnouncerEnabled, setAnnouncerEnabled } from "@/lib/announcer";
+import { avatarAccent } from "@/lib/avatarAccent";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { Mark } from "./Mark";
 import { SpeakerIcon, SpeakerMuteIcon } from "./icons";
 
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
+
+// How long a just-undone cross stays in its slow-motion un-draw (see Mark's
+// slowMotion prop) — long enough to be unmistakable, short enough not to
+// block the next dart.
+const RETRACT_MS = 650;
 
 type Props = {
   players: string[];
@@ -93,24 +99,32 @@ export function GameScreen({
   onAbort,
 }: Props) {
   const [showHomeConfirm, setShowHomeConfirm] = useState(false);
-  const [flashKey, setFlashKey] = useState(0);
-  const wasRewound = useRef(false);
   // Lazy-initialized from localStorage so the button reflects whatever the host last chose,
   // without waiting for an effect — announce() itself reads the same localStorage value
   // directly, so this state only drives the button's own icon/label.
   const [announcerOn, setAnnouncerOn] = useState(() => isAnnouncerEnabled());
 
+  // Retriggerable "just undid a dart" window — drives Mark's slow-motion un-draw below.
+  // Replaces an earlier full-panel red flash, which read as an error state rather than
+  // "this stroke was removed".
+  const [retractToken, setRetractToken] = useState(0);
+  const [retracting, setRetracting] = useState(false);
   useEffect(() => {
-    if (rewound && !wasRewound.current) {
-      setFlashKey((k) => k + 1);
-    }
-    wasRewound.current = rewound;
-  }, [rewound]);
+    if (retractToken === 0) return;
+    const timer = setTimeout(() => setRetracting(false), RETRACT_MS);
+    return () => clearTimeout(timer);
+  }, [retractToken]);
+
+  function handleUndo() {
+    setRetractToken((t) => t + 1);
+    setRetracting(true);
+    onUndo();
+  }
 
   const activeStep = activePlayer ? currentStepFor(progress[activePlayer]) : null;
-  const accent = rewound ? "var(--color-red)" : "var(--color-teal)";
-  const glowColor = rewound ? "rgba(196, 67, 46, 0.35)" : "rgba(47, 180, 194, 0.35)";
-  const glowBg = rewound ? "rgba(196, 67, 46, 0.16)" : "rgba(47, 180, 194, 0.16)";
+  const accent = "var(--color-teal)";
+  const glowColor = "rgba(47, 180, 194, 0.35)";
+  const glowBg = "rgba(47, 180, 194, 0.16)";
 
   // What redirecting pendingChoice would look like: how many extra crosses land on
   // its number (ghost preview there) and whether that fully completes it, in which
@@ -205,9 +219,6 @@ export function GameScreen({
         className="relative flex-1 min-h-0 flex flex-col rounded-xl overflow-hidden shadow-panel max-w-3xl mx-auto w-full"
         style={{ background: "var(--color-panel)" }}
       >
-        {rewound && (
-          <div key={flashKey} className="animate-rewind-flash absolute inset-0 z-20 rounded-xl pointer-events-none" aria-hidden />
-        )}
         <div className="flex-1 min-h-0 w-full overflow-x-auto overflow-y-hidden">
           <div
             className="grid h-full"
@@ -243,13 +254,17 @@ export function GameScreen({
                     )}
                     <span
                       key={isActive ? `active-${turnToken}` : "inactive"}
-                      className={`relative block max-w-full truncate px-2.5 py-0.5 rounded-full ${isActive ? "animate-column-glow" : ""}`}
+                      className={`relative block max-w-full truncate px-2.5 py-0.5 rounded-full transition-all duration-300 ${isActive ? "animate-column-glow" : ""}`}
                       style={
                         {
                           color: isActive ? accent : "var(--color-cream)",
-                          fontSize: "0.85rem",
+                          fontSize: isActive ? "1.05rem" : "0.85rem",
                           fontWeight: isActive ? 700 : 500,
                           background: isActive ? glowBg : "transparent",
+                          // A fixed per-player color, always on (not just while active) — so the
+                          // same name reads as "the same player" turn after turn and screen after
+                          // screen, independent of whose turn it currently is.
+                          border: `1.5px solid ${avatarAccent(p)}`,
                           "--glow-color": glowColor,
                         } as React.CSSProperties
                       }
@@ -320,7 +335,7 @@ export function GameScreen({
                         }}
                       >
                         <div className="w-full h-full p-1">
-                          <Mark count={count} pendingCount={heldPendingCount} ghostCount={ghostCount} accent={accent} />
+                          <Mark count={count} pendingCount={heldPendingCount} ghostCount={ghostCount} accent={accent} slowMotion={isActive && retracting} />
                         </div>
                       </button>
                     </div>
@@ -334,10 +349,10 @@ export function GameScreen({
       </div>
 
       <div className="shrink-0 pt-3 max-w-3xl mx-auto w-full">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid gap-3" style={{ gridTemplateColumns: "0.7fr 1.3fr" }}>
           <button
             type="button"
-            onClick={onUndo}
+            onClick={handleUndo}
             disabled={!canUndo}
             className={`glossy py-4 rounded-xl font-semibold text-lg transition-opacity ${FOCUS_RING}`}
             style={
@@ -354,7 +369,7 @@ export function GameScreen({
           <button
             type="button"
             onClick={onConfirm}
-            className={`glossy py-4 rounded-xl font-semibold text-lg ${FOCUS_RING}`}
+            className={`glossy py-5 rounded-xl font-bold text-xl ${FOCUS_RING}`}
             style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)" } as React.CSSProperties}
           >
             {pendingCount === 0 ? "Bekreft (bom)" : "Bekreft"}

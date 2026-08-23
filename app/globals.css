@@ -117,15 +117,6 @@ button {
   }
 }
 
-@keyframes rewind-flash {
-  0% {
-    background: rgba(196, 67, 46, 0.45);
-  }
-  100% {
-    background: transparent;
-  }
-}
-
 .animate-column-glow {
   animation: column-glow 1.4s var(--ease-standard) both;
 }
@@ -185,10 +176,6 @@ button {
 
 .animate-chalk-draw {
   animation: chalk-draw 420ms var(--ease-standard) both;
-}
-
-.animate-rewind-flash {
-  animation: rewind-flash 700ms var(--ease-standard);
 }
 
 /* -- tactile depth: raised buttons that press down on tap --

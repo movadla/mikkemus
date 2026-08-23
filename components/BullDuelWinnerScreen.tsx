@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment } from "react";
+import { Fragment, useState } from "react";
 import type { BullDuelState } from "@/lib/bullDuel";
 import { getPlayerRecord } from "@/lib/storage";
 
@@ -40,6 +40,7 @@ export function BullDuelWinnerScreen({
 }) {
   const winner = duel.winner as string;
   const photo = getPlayerRecord(winner)?.photo;
+  const [expanded, setExpanded] = useState<string | null>(null);
 
   return (
     <div className="animate-screen-enter min-h-screen w-full flex items-center justify-center p-6" style={{ background: "var(--color-bg)" }}>
@@ -105,7 +106,7 @@ export function BullDuelWinnerScreen({
               KAST
             </span>
             <span className="text-right" style={{ color: "var(--color-muted)", fontSize: "0.7rem" }}>
-              TREFF
+              POENG
             </span>
             <span className="text-right" style={{ color: "var(--color-muted)", fontSize: "0.7rem" }}>
               %
@@ -115,25 +116,55 @@ export function BullDuelWinnerScreen({
             </span>
             {duel.players.map((p) => {
               const stats = duel.stats[p];
-              const pct = stats.throws === 0 ? null : Math.round((stats.hits / stats.throws) * 100);
+              const hits = stats.redHits + stats.greenHits;
+              const pct = stats.throws === 0 ? null : Math.round((hits / stats.throws) * 100);
               const luck = stats.luckCount === 0 ? null : stats.luckSum / stats.luckCount;
+              const isExpanded = expanded === p;
               return (
                 <Fragment key={p}>
-                  <span style={{ color: p === winner ? "var(--color-gold)" : "var(--color-cream)", fontWeight: p === winner ? 600 : 400 }}>
-                    {p}
-                  </span>
-                  <span className="tabular text-right" style={{ color: "var(--color-cream)" }}>
-                    {stats.throws}
-                  </span>
-                  <span className="tabular text-right" style={{ color: "var(--color-cream)" }}>
-                    {stats.hits}
-                  </span>
-                  <span className="tabular text-right" style={{ color: "var(--color-cream)" }}>
-                    {pct === null ? "–" : `${pct}%`}
-                  </span>
-                  <span className="tabular text-right" style={{ color: luck === null ? "var(--color-muted)" : "var(--color-gold-strong)" }}>
-                    {luck === null ? "–" : formatLuck(luck)}
-                  </span>
+                  {/* display:contents keeps these cells as direct grid items while still
+                      giving the whole row one click/keyboard target for the drilldown. */}
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setExpanded(isExpanded ? null : p)}
+                    onKeyDown={(e) => {
+                      if (e.key !== "Enter" && e.key !== " ") return;
+                      e.preventDefault();
+                      setExpanded(isExpanded ? null : p);
+                    }}
+                    className={FOCUS_RING}
+                    style={{ display: "contents", cursor: "pointer" }}
+                  >
+                    <span style={{ color: p === winner ? "var(--color-gold)" : "var(--color-cream)", fontWeight: p === winner ? 600 : 400 }}>
+                      {p}
+                    </span>
+                    <span className="tabular text-right" style={{ color: "var(--color-cream)" }}>
+                      {stats.points}
+                    </span>
+                    <span className="tabular text-right" style={{ color: "var(--color-cream)" }}>
+                      {pct === null ? "–" : `${pct}%`}
+                    </span>
+                    <span className="tabular text-right" style={{ color: luck === null ? "var(--color-muted)" : "var(--color-gold-strong)" }}>
+                      {luck === null ? "–" : formatLuck(luck)}
+                    </span>
+                  </div>
+                  {isExpanded && (
+                    <div
+                      className="tabular text-left flex items-center gap-3"
+                      style={{ gridColumn: "1 / -1", fontSize: "0.78rem", color: "var(--color-muted)", paddingBottom: "0.15rem" }}
+                    >
+                      <span className="flex items-center gap-1">
+                        <span style={{ width: "9px", height: "9px", borderRadius: "2px", background: "var(--color-red)", display: "inline-block" }} />
+                        {stats.redHits} rød
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span style={{ width: "9px", height: "9px", borderRadius: "2px", background: "var(--color-green)", display: "inline-block" }} />
+                        {stats.greenHits} grønn
+                      </span>
+                      <span>· {stats.throws} kast</span>
+                    </div>
+                  )}
                 </Fragment>
               );
             })}

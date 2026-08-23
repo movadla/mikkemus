@@ -886,15 +886,9 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   }
 
   function abortGame() {
-    // Leaving the game screen must never depend on stats persistence succeeding —
-    // a bad turnLog entry or a Supabase hiccup inside finalizeMatch must not leave
-    // the player stuck looking at a "Pause spillet?" dialog that does nothing.
-    try {
-      finalizeMatch(turnLog);
-    } catch (err) {
-      console.error("Klarte ikke å lagre statistikk ved avbrytelse:", err);
-      reportError("Kunne ikke lagre kampresultatet.", { key: "finalize-match" });
-    }
+    // A match that's abandoned before anyone wins never persists any stats —
+    // only a match that actually finishes counts as a "kamp", same principle
+    // Bull-duell was built with from the start (see lib/bullDuel.ts).
     clearActiveMatch();
     setScreen("setup");
     setPlayers([]);

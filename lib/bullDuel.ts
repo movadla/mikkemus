@@ -4,13 +4,14 @@ import { aimPointFor, luckForBullDuelThrow } from "./dartboard";
 import { DARTS_PER_TURN } from "./game";
 import { parseSector, stepForSector } from "./scoliaMapping";
 
-/** Running per-match totals behind a player's kast/treff/%/xG row on the
+/** Running per-match totals behind a player's kast/poeng/treff%/xG row on the
  *  Bull-duell winner screen — same shape lib/storage.ts's career BullDuelStat
- *  accumulates into across matches. */
-export type BullDuelPlayerStats = { throws: number; hits: number; luckSum: number; luckCount: number };
+ *  accumulates into across matches. `redHits`/`greenHits` back the
+ *  rødt/grønt drilldown — "treff" alone is `redHits + greenHits`. */
+export type BullDuelPlayerStats = { throws: number; points: number; redHits: number; greenHits: number; luckSum: number; luckCount: number };
 
 function emptyBullDuelStats(): BullDuelPlayerStats {
-  return { throws: 0, hits: 0, luckSum: 0, luckCount: 0 };
+  return { throws: 0, points: 0, redHits: 0, greenHits: 0, luckSum: 0, luckCount: 0 };
 }
 
 /** Sensible default target for the picker screen — a normal handful of bull
@@ -69,7 +70,9 @@ export function registerBullDart(state: BullDuelState, sector: string, coords: [
   const luck = coords ? luckForBullDuelThrow(coords, state.points[player], state.target) : null;
   const stats: BullDuelPlayerStats = {
     throws: prev.throws + 1,
-    hits: prev.hits + (points > 0 ? 1 : 0),
+    points: prev.points + points,
+    redHits: prev.redHits + (points === 2 ? 1 : 0),
+    greenHits: prev.greenHits + (points === 1 ? 1 : 0),
     luckSum: prev.luckSum + (luck ?? 0),
     luckCount: prev.luckCount + (luck !== null ? 1 : 0),
   };

@@ -37,7 +37,7 @@ export function PeoplePicker({ people, onChange }: { people: Person[]; onChange:
   }
 
   function addBot(level: BotLevel) {
-    const base = `🤖 ${BOT_LEVELS[level].name} (${level})`;
+    const base = `${BOT_LEVELS[level].name} (${level}) 🤖`;
     let name = base;
     let suffix = 2;
     while (people.some((p) => p.name.toLowerCase() === name.toLowerCase())) {
