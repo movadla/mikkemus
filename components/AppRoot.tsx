@@ -4,8 +4,9 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { loadActiveTournamentId } from "@/lib/tournamentStorage";
 import { useScolia } from "@/lib/useScolia";
+import { BullDuelApp } from "./BullDuelApp";
 import { DartboardGlyph } from "./DartboardGlyph";
-import { DartIcon, TrophyIcon, TvIcon } from "./icons";
+import { BullseyeIcon, DartIcon, TrophyIcon, TvIcon } from "./icons";
 import { MikkeMusApp } from "./MikkeMusApp";
 import { ScoliaStatusBadge } from "./ScoliaStatusBadge";
 import { TournamentApp } from "./TournamentApp";
@@ -13,7 +14,7 @@ import { TournamentApp } from "./TournamentApp";
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
 
-type Mode = "home" | "single" | "tournament";
+type Mode = "home" | "single" | "tournament" | "bullduel";
 
 /** The very first thing rendered — chooses between a one-off "Singel game" (today's app,
  *  unchanged) and "Tournament" mode. Replaces the old direct `<MikkeMusApp />` in app/page.tsx. */
@@ -37,6 +38,7 @@ export function AppRoot() {
 
   if (mode === "single") return <MikkeMusApp onExitToHome={() => setMode("home")} />;
   if (mode === "tournament") return <TournamentApp onExitToHome={() => setMode("home")} />;
+  if (mode === "bullduel") return <BullDuelApp onExitToHome={() => setMode("home")} />;
 
   return (
     <div className="animate-screen-enter min-h-screen w-full flex items-center justify-center p-6" style={{ background: "var(--color-bg)" }}>
@@ -64,6 +66,15 @@ export function AppRoot() {
           >
             <TrophyIcon className="w-5 h-5" />
             {hasActiveTournament ? "Fortsett turnering" : "Turnering"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("bullduel")}
+            className={`tactile w-full py-4 rounded-lg font-semibold text-lg flex items-center justify-center gap-2.5 ${FOCUS_RING}`}
+            style={{ background: "var(--color-gold)", color: "var(--color-bg)" }}
+          >
+            <BullseyeIcon className="w-5 h-5" />
+            Bull-duell
           </button>
         </div>
         <p className="text-center mt-8">

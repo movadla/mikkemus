@@ -20,6 +20,11 @@ const FOCUS_RING =
 export function SetupScreen({
   onStart,
   onHome,
+  title = (
+    <>
+      Mikke Mus <span aria-hidden>🐭</span>
+    </>
+  ),
 }: {
   onStart: (
     players: string[],
@@ -28,6 +33,8 @@ export function SetupScreen({
     guestPlayers?: Record<string, true>
   ) => void;
   onHome?: () => void;
+  /** Overridden by other modes (e.g. Bull-duell) that reuse this same player picker. */
+  title?: React.ReactNode;
 }) {
   const [mode, setMode] = useState<"individual" | "team">("individual");
 
@@ -233,7 +240,7 @@ export function SetupScreen({
           className="text-center mb-6 font-display"
           style={{ color: "var(--color-cream)", fontSize: "2.5rem", letterSpacing: "0.02em" }}
         >
-          Mikke Mus <span aria-hidden>🐭</span>
+          {title}
         </h1>
 
         <div className="flex gap-3 mb-6">

@@ -1,8 +1,10 @@
 "use client";
 
-import type { TurnAggregate } from "@/lib/game";
+import { STEPS, STEP_LABELS, type Step, type TurnAggregate } from "@/lib/game";
 import { getPlayerRecord } from "@/lib/storage";
 import { DartboardHeatmap } from "./DartboardHeatmap";
+
+type LuckByStep = Record<Step, { mean: number | null; count: number }>;
 
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
@@ -34,10 +36,34 @@ function totalDarts(stat?: TurnAggregate): number {
   return stat.hits + stat.misses;
 }
 
+// xG is an expected-crosses value (0-3, same unit the game scores in, like
+// football xG) rather than a signed luck delta — always non-negative, so no
+// "+" prefix or sign-based color; a plain neutral number instead.
+function formatLuck(luck: number): string {
+  return luck.toFixed(1);
+}
+
+/** Overall mean across all 10 sections, recovered from their per-section
+ *  means+counts (a weighted average is exact here, since mean_i already
+ *  equals sum_i/count_i) — same "one summary number above the per-section
+ *  grid" pattern the player profile page uses for treffprosent. */
+function overallMeanLuck(luckByStep: LuckByStep): number | null {
+  let sum = 0;
+  let count = 0;
+  STEPS.forEach((step) => {
+    const { mean, count: stepCount } = luckByStep[step];
+    if (mean === null) return;
+    sum += mean * stepCount;
+    count += stepCount;
+  });
+  return count === 0 ? null : sum / count;
+}
+
 export function WinnerScreen({
   winner,
   players,
   stats,
+  luckByPlayer,
   throwsByPlayer,
   onHome,
   homeLabel = "Hjem",
@@ -46,6 +72,11 @@ export function WinnerScreen({
   winner: string;
   players: string[];
   stats: Record<string, TurnAggregate>;
+  /** Mean "Expected Goals" per player this match, broken down per section
+   *  (20-14, D, T, BULL) — null/0 for a section with no real Scolia darts to
+   *  judge (bots are always all-null here — see MikkeMusApp's finalizeMatch).
+   *  See lib/dartboard.ts. */
+  luckByPlayer: Record<string, LuckByStep>;
   /** Every physical dart landed this match, per player — only populated when Scolia detected real throws. */
   throwsByPlayer: Record<string, [number, number][]>;
   onHome: () => void;
@@ -155,6 +186,46 @@ export function WinnerScreen({
             ))}
           </div>
         </div>
+
+        {players.some((p) => STEPS.some((s) => luckByPlayer[p]?.[s].count > 0)) && (
+          <div className="shadow-panel rounded-xl p-5 mb-6" style={{ background: "var(--color-surface)" }}>
+            <p className="mb-3" style={{ color: "var(--color-gold)", fontSize: "0.85rem", letterSpacing: "0.1em" }}>
+              EXPECTED GOALS
+            </p>
+            <div className="space-y-4">
+              {players
+                .filter((p) => STEPS.some((s) => luckByPlayer[p]?.[s].count > 0))
+                .map((p) => {
+                  const luckByStep = luckByPlayer[p];
+                  const overall = overallMeanLuck(luckByStep);
+                  return (
+                    <div key={p}>
+                      <div className="flex justify-between items-center mb-1.5">
+                        <span style={{ color: "var(--color-cream)" }}>{p}</span>
+                        <span className="tabular" style={{ color: "var(--color-gold-strong)", fontWeight: 600 }}>
+                          {overall === null ? "–" : formatLuck(overall)}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-5 gap-1">
+                        {STEPS.map((s) => (
+                          <div
+                            key={s}
+                            className="rounded-md py-1.5 text-center tabular"
+                            style={{ background: "var(--color-cell)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -4px 8px rgba(0,0,0,0.18)" }}
+                          >
+                            <p style={{ color: "var(--color-muted)", fontSize: "0.6rem" }}>{STEP_LABELS[s]}</p>
+                            <p style={{ color: "var(--color-cream)", fontSize: "0.75rem", fontWeight: 600 }}>
+                              {luckByStep[s].count === 0 ? "–" : formatLuck(luckByStep[s].mean as number)}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
+        )}
 
         {players.some((p) => (throwsByPlayer[p]?.length ?? 0) > 0) && (
           <div className="shadow-panel rounded-xl p-5 mb-6" style={{ background: "var(--color-surface)" }}>

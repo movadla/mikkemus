@@ -10,6 +10,7 @@ import {
   isRegistrable,
   isFinished,
   remainingMarks,
+  STEPS,
   summarizeTurn,
   type HitRecord,
   type PlayerProgress,
@@ -19,12 +20,12 @@ import {
   type TurnShot,
   type PendingAmbiguous,
 } from "@/lib/game";
-import { playPlayerSound, recordAccuracyTotals, recordMatchHistory, recordMatchResult, recordRingHits, type RingHits } from "@/lib/storage";
+import { playPlayerSound, recordAccuracyTotals, recordLuckTotals, recordMatchHistory, recordMatchResult, recordRingHits, type RingHits } from "@/lib/storage";
 import { announce } from "@/lib/announcer";
 import { reportError } from "@/lib/errorReporting";
 import { clearActiveMatch, loadActiveMatch, saveActiveMatch } from "@/lib/activeMatch";
 import { publishLiveMatch } from "@/lib/liveMatch";
-import { sectorAt, throwAccuracy } from "@/lib/dartboard";
+import { luckForThrow, sectorAt, throwAccuracy } from "@/lib/dartboard";
 import { haptics } from "@/lib/haptics";
 import { classifyThrow, formatSectorLabel, parseSector } from "@/lib/scoliaMapping";
 import { botChooseThrow, botDecideRedirect, solverFor } from "@/lib/botStrategy";
@@ -58,6 +59,13 @@ function setTurnAt(turns: TurnResult[], index: number, turn: TurnResult): TurnRe
   return next;
 }
 
+/** Same per-section breakdown as lib/storage.ts's career luck record — one running xG total per step, not just one overall mean. */
+function emptyLuckByStep(): Record<Step, { sum: number; count: number }> {
+  const s = {} as Record<Step, { sum: number; count: number }>;
+  STEPS.forEach((step) => (s[step] = { sum: 0, count: 0 }));
+  return s;
+}
+
 type MikkeMusAppProps = {
   /** When set (and there's no in-progress match to resume), skips SetupScreen and starts a match
    *  with these players directly — used by tournament mode to play one scheduled match through
@@ -87,6 +95,11 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   const [rewoundTurnIndex, setRewoundTurnIndex] = useState<number | null>(null);
   const [winner, setWinner] = useState<string | null>(null);
   const [winnerStats, setWinnerStats] = useState<Record<string, TurnAggregate>>({});
+  // Mean "Expected Goals" per player THIS MATCH, broken down per section
+  // (20-14, D, T, BULL) rather than one overall number — set once, at
+  // finalizeMatch, same lifetime as winnerStats. {mean: null, count: 0} for
+  // a section with no real Scolia darts to judge this match.
+  const [winnerLuck, setWinnerLuck] = useState<Record<string, Record<Step, { mean: number | null; count: number }>>>({});
   // Full finishing order (winner first), computed once at match end — for a 2-player match this
   // is just [winner, loser]; for a tournament group pod with 3+ players it ranks everyone else by
   // how close they were to finishing at that moment (see remainingMarks), not by playing it out.
@@ -116,6 +129,11 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   // Running MED/MHD/MVD sums this match, per player — a ref (not state) since it's
   // only ever read once, at match end, and shouldn't trigger a re-render per dart.
   const accuracyTotalsRef = useRef<Record<string, { distance: number; horizontal: number; vertical: number; throws: number }>>({});
+  // Running "Expected Goals" sums this match, per player AND per section —
+  // same ref-not-state reasoning as accuracyTotalsRef above. Only real
+  // Scolia darts with an inferrable target contribute (see lib/dartboard.ts:
+  // luckForThrow).
+  const luckTotalsRef = useRef<Record<string, Record<Step, { sum: number; count: number }>>>({});
   // Which specific number's Triple/Double physically landed this match, per player —
   // for the career "favorite triple/double" stat. Counts every ring hit as thrown,
   // regardless of how the triple/double-redirect ambiguity later got resolved.
@@ -234,6 +252,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       setRewoundTurnIndex(restored.rewoundTurnIndex);
       setWinner(restored.winner);
       setWinnerStats(restored.winnerStats);
+      setWinnerLuck(restored.winnerLuck ?? {});
       setPlacements(restored.placements ?? []);
       setTurnToken(restored.turnToken);
       setTurnLog(restored.turnLog);
@@ -277,6 +296,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       rewoundTurnIndex,
       winner,
       winnerStats,
+      winnerLuck,
       placements,
       turnToken,
       turnLog,
@@ -309,6 +329,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     rewoundTurnIndex,
     winner,
     winnerStats,
+    winnerLuck,
     placements,
     turnToken,
     turnLog,
@@ -417,6 +438,15 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         },
       };
     }
+    const luck = luckForThrow(payload.coordinates, activeStepAtThrow, progress[activePlayer]);
+    if (luck !== null) {
+      const luckByStep = luckTotalsRef.current[activePlayer] ?? emptyLuckByStep();
+      const stepTotals = luckByStep[luck.step];
+      luckTotalsRef.current = {
+        ...luckTotalsRef.current,
+        [activePlayer]: { ...luckByStep, [luck.step]: { sum: stepTotals.sum + luck.xg, count: stepTotals.count + 1 } },
+      };
+    }
 
     if (dartIndex < DARTS_PER_TURN) {
       const shot: TurnShot = { label: formatSectorLabel(parsed), hit };
@@ -501,6 +531,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     setRecentlyConfirmed(null);
     setMatchThrows({});
     accuracyTotalsRef.current = {};
+    luckTotalsRef.current = {};
     ringHitsRef.current = {};
     updatePendingAmbiguous([]);
     updateAwaitingConfirmResolution(false);
@@ -708,6 +739,24 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
 
   function finalizeMatch(finalTurnLog: Record<string, TurnResult[]>, winnerName: string | null = null) {
     const stats: Record<string, TurnAggregate> = {};
+    // A bot's darts are a simulated Monte Carlo plan, not a physical throw —
+    // "luck" doesn't mean anything for one, and would just look like a bug on
+    // the winner screen ("Bot 3: +12.4"). Unlike the KASTSPREDNING heatmap
+    // (matchThrows), which is a neutral visualization of where darts landed,
+    // this panel makes a judgment call about the thrower, so bots are
+    // excluded here — team rosters and guests are real humans and stay in.
+    // Broken down per section (see lib/dartboard.ts's luckForThrow) rather
+    // than one overall mean, mirroring the career stat's own breakdown.
+    const luckByPlayer: Record<string, Record<Step, { mean: number | null; count: number }>> = {};
+    players.forEach((p) => {
+      const luckByStep = botLevels[p] ? null : luckTotalsRef.current[p];
+      const perStep = {} as Record<Step, { mean: number | null; count: number }>;
+      STEPS.forEach((step) => {
+        const totals = luckByStep?.[step];
+        perStep[step] = { mean: totals && totals.count > 0 ? totals.sum / totals.count : null, count: totals?.count ?? 0 };
+      });
+      luckByPlayer[p] = perStep;
+    });
     players.forEach((p) => {
       const aggregate = aggregateTurns(finalTurnLog[p] ?? []);
       stats[p] = aggregate;
@@ -724,6 +773,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       recordMatchResult(p, aggregate, p === winnerName);
       const accuracy = accuracyTotalsRef.current[p];
       if (accuracy) recordAccuracyTotals(p, accuracy);
+      const luckTotals = luckTotalsRef.current[p];
+      if (luckTotals) recordLuckTotals(p, luckTotals);
       const ringHits = ringHitsRef.current[p];
       if (ringHits) recordRingHits(p, ringHits.triple, ringHits.double);
 
@@ -737,7 +788,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         mvd: accuracy && accuracy.throws > 0 ? accuracy.vertical / accuracy.throws : null,
       });
     });
-    return stats;
+    return { stats, luckByPlayer };
   }
 
   function confirm() {
@@ -801,13 +852,15 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       // Reaching the winner screen must never depend on stats persistence succeeding —
       // see abortGame's identical guard for why.
       let stats: Record<string, TurnAggregate> = {};
+      let luckByPlayer: Record<string, Record<Step, { mean: number | null; count: number }>> = {};
       try {
-        stats = finalizeMatch(nextTurnLog, activePlayer);
+        ({ stats, luckByPlayer } = finalizeMatch(nextTurnLog, activePlayer));
       } catch (err) {
         console.error("Klarte ikke å lagre statistikk ved kampslutt:", err);
         reportError("Kunne ikke lagre kampresultatet.", { key: "finalize-match" });
       }
       setWinnerStats(stats);
+      setWinnerLuck(luckByPlayer);
       setWinner(activePlayer);
       // Ranks everyone by how close they were to finishing at this exact moment — for a normal
       // 2-player match this is trivially [winner, loser]; for a tournament pod with 3+ players it
@@ -887,6 +940,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         winner={winner}
         players={players}
         stats={winnerStats}
+        luckByPlayer={winnerLuck}
         throwsByPlayer={matchThrows}
         onHome={playAgain}
         homeLabel={onMatchComplete ? "Til turnering" : "Hjem"}

@@ -6,10 +6,14 @@ import { STEPS, STEP_LABELS } from "@/lib/game";
 import {
   averageDartsPerWin,
   averagePct,
+  bullDuelHitPct,
   favoriteNumber,
   favoriteRingNumber,
+  meanBullDuelLuck,
   meanEuclideanDistance,
   meanHorizontalDistance,
+  meanLuck,
+  meanLuckForStep,
   meanVerticalDistance,
   useRoster,
 } from "@/lib/storage";
@@ -55,6 +59,9 @@ export default function PlayerDetailPage() {
   const med = meanEuclideanDistance(player);
   const mhd = meanHorizontalDistance(player);
   const mvd = meanVerticalDistance(player);
+  const luck = meanLuck(player);
+  const bullDuelPct = bullDuelHitPct(player);
+  const bullDuelLuck = meanBullDuelLuck(player);
 
   const history = player.matchHistory;
 
@@ -120,6 +127,30 @@ export default function PlayerDetailPage() {
           <StatCard label="FAVORITT-TRIPPEL" value={favTriple !== null ? `T${favTriple}` : "–"} />
           <StatCard label="FAVORITT-DOBBEL" value={favDouble !== null ? `D${favDouble}` : "–"} />
           <StatCard label="MED / MHD / MVD" value={med === null ? "–" : `${Math.round(med)} / ${Math.round(mhd!)} / ${Math.round(mvd!)}mm`} />
+          <StatCard label="EXPECTED GOALS (SNITT)" value={luck === null ? "–" : luck.toFixed(1)} />
+          <StatCard label="BULL-DUELL: KAST / TREFF / %" value={player.bullDuel.throws === 0 ? "–" : `${player.bullDuel.throws} / ${player.bullDuel.hits} / ${bullDuelPct}%`} />
+          <StatCard label="BULL-DUELL: EXPECTED GOALS (SNITT)" value={bullDuelLuck === null ? "–" : bullDuelLuck.toFixed(1)} />
+        </div>
+
+        <div className="shadow-panel rounded-xl p-4 mb-4" style={{ background: "var(--color-surface)" }}>
+          <p className="mb-3" style={{ color: "var(--color-gold)", fontSize: "0.85rem", letterSpacing: "0.1em" }}>
+            EXPECTED GOALS PR. SEKSJON
+          </p>
+          <div className="grid grid-cols-5 gap-1">
+            {STEPS.map((s) => {
+              const stepLuck = meanLuckForStep(player, s);
+              return (
+                <div
+                  key={s}
+                  className="rounded-md py-1.5 text-center tabular"
+                  style={{ background: "var(--color-cell)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -4px 8px rgba(0,0,0,0.18)" }}
+                >
+                  <p style={{ color: "var(--color-muted)", fontSize: "0.6rem" }}>{STEP_LABELS[s]}</p>
+                  <p style={{ color: "var(--color-cream)", fontSize: "0.75rem", fontWeight: 600 }}>{stepLuck === null ? "–" : stepLuck.toFixed(1)}</p>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         <div className="shadow-panel rounded-xl p-4 mb-4" style={{ background: "var(--color-surface)" }}>

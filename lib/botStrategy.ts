@@ -95,7 +95,7 @@ type OutcomeProbs = {
 const REFERENCE_NUMBER = 20;
 const MC_SAMPLES = 6000;
 
-function gaussianSample(sigma: number): number {
+export function gaussianSample(sigma: number): number {
   // Box-Muller — independent draws per axis, matching the isotropic dispersion
   // model the calibrated levels use (see sigmaForLevel below).
   const u1 = Math.max(Math.random(), Number.EPSILON);

@@ -92,9 +92,19 @@ export function useScolia(enabled: boolean, callbacks: ScoliaCallbacks) {
 
     function applyStatusRow(row: StatusRow | null) {
       if (!row) return;
-      noteAlive();
+      // Bug fix: this used to call noteAlive() unconditionally — treating "I
+      // successfully queried Supabase" as "the relay just reported in", even
+      // when the row itself is hours old (relay stuck/crashed without the
+      // watchdog noticing, or the physical board connection silently hung).
+      // That let the badge say "Online" indefinitely off a single stale read.
+      // The row's own `updated_at` (written by the relay itself on every
+      // real status/heartbeat, see scripts/scolia-relay.ts) is the only
+      // trustworthy freshness signal.
+      const updatedAtMs = Date.parse(row.updated_at);
+      const isFresh = !Number.isNaN(updatedAtMs) && Date.now() - updatedAtMs <= STALE_AFTER_MS;
+      if (isFresh) lastSeenAtRef.current = updatedAtMs;
       setState({
-        relay: "live",
+        relay: isFresh ? "live" : "stale",
         boardStatus: row.board_status as BoardStatus | null,
         boardPhase: row.board_phase as BoardPhase,
         errorType: row.error_type as BoardErrorType,

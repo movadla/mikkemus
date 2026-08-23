@@ -1,4 +1,4 @@
-import type { HitRecord, PlayerProgress, TurnAggregate, TurnResult } from "./game";
+import type { HitRecord, PlayerProgress, Step, TurnAggregate, TurnResult } from "./game";
 import type { BotLevel, TeamMember } from "./botLevels";
 
 export type ActiveMatchSnapshot = {
@@ -12,6 +12,10 @@ export type ActiveMatchSnapshot = {
   rewoundTurnIndex: number | null;
   winner: string | null;
   winnerStats: Record<string, TurnAggregate>;
+  // Optional: absent in snapshots saved before "Expected Goals" (or before
+  // its per-section breakdown) existed — restore falls back to {} rather
+  // than requiring a migration.
+  winnerLuck?: Record<string, Record<Step, { mean: number | null; count: number }>>;
   placements: string[];
   turnToken: number;
   turnLog: Record<string, TurnResult[]>;

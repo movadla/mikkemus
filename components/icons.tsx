@@ -212,3 +212,19 @@ export function PeopleIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+/** A target with crosshairs — the Bull-duell mode button. Distinct from
+ *  DartIcon's plain concentric rings so the two mode buttons don't look alike. */
+export function BullseyeIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className={className} aria-hidden>
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="4.5" />
+      <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" />
+      <path d="M12 1v3.5" />
+      <path d="M12 19.5V23" />
+      <path d="M1 12h3.5" />
+      <path d="M19.5 12H23" />
+    </svg>
+  );
+}

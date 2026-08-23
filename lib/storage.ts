@@ -12,6 +12,27 @@ function emptyAccuracyStat(): AccuracyStat {
   return { sumDistance: 0, sumHorizontal: 0, sumVertical: 0, throws: 0 };
 }
 
+/** Running total behind one section's "Expected Goals" mean (expected crosses per dart) — see lib/dartboard.ts. */
+export type LuckStat = { sum: number; count: number };
+
+function emptyLuckStat(): LuckStat {
+  return { sum: 0, count: 0 };
+}
+
+/** Same per-section breakdown as `steps: Record<Step, HitStat>` — one running xG total per section, not just one overall mean. */
+function emptyLuckByStep(): Record<Step, LuckStat> {
+  const s = {} as Record<Step, LuckStat>;
+  STEPS.forEach((step) => (s[step] = emptyLuckStat()));
+  return s;
+}
+
+/** Career totals behind Bull-duell's kast/treff/%/xG stats — see lib/bullDuel.ts. */
+export type BullDuelStat = { throws: number; hits: number; luckSum: number; luckCount: number };
+
+function emptyBullDuelStat(): BullDuelStat {
+  return { throws: 0, hits: 0, luckSum: 0, luckCount: 0 };
+}
+
 /** Keyed by the number (1–20) as a string — how many times a Triple or Double of that number has landed, regardless of how the game ended up scoring it. */
 export type RingHits = Record<string, number>;
 
@@ -43,6 +64,8 @@ export type PlayerRecord = {
   overall: HitStat;
   steps: Record<Step, HitStat>;
   accuracy: AccuracyStat;
+  luck: Record<Step, LuckStat>;
+  bullDuel: BullDuelStat;
   tripleHits: RingHits;
   doubleHits: RingHits;
   matchHistory: MatchHistoryEntry[];
@@ -65,6 +88,12 @@ type PlayerRow = {
   accuracy_sum_horizontal: number | null;
   accuracy_sum_vertical: number | null;
   accuracy_throws: number | null;
+  // Superseded by the `luck` column below (per-section breakdown) — left in
+  // place as harmless dead columns rather than a destructive migration.
+  luck_sum: number | null;
+  luck_count: number | null;
+  luck: Partial<Record<Step, LuckStat>> | null;
+  bull_duel: BullDuelStat | null;
   best_darts_to_finish: number | null;
   triple_hits: RingHits | null;
   double_hits: RingHits | null;
@@ -79,6 +108,15 @@ function emptyStepStats(): Record<Step, HitStat> {
 
 function key(name: string) {
   return name.trim().toLowerCase();
+}
+
+/** Rows written before the `luck` column existed (or missing individual sections within it) fall back per-section, same convention as emptyStepStats. */
+function luckByStepFromRow(row: PlayerRow): Record<Step, LuckStat> {
+  const luck = {} as Record<Step, LuckStat>;
+  STEPS.forEach((step) => {
+    luck[step] = { sum: row.luck?.[step]?.sum ?? 0, count: row.luck?.[step]?.count ?? 0 };
+  });
+  return luck;
 }
 
 function rowToRecord(row: PlayerRow): PlayerRecord {
@@ -97,6 +135,15 @@ function rowToRecord(row: PlayerRow): PlayerRecord {
       sumHorizontal: row.accuracy_sum_horizontal ?? 0,
       sumVertical: row.accuracy_sum_vertical ?? 0,
       throws: row.accuracy_throws ?? 0,
+    },
+    luck: luckByStepFromRow(row),
+    // Rows written before the bull_duel column existed (or with an empty
+    // '{}' default) have some/all fields missing — fall back per-field.
+    bullDuel: {
+      throws: row.bull_duel?.throws ?? 0,
+      hits: row.bull_duel?.hits ?? 0,
+      luckSum: row.bull_duel?.luckSum ?? 0,
+      luckCount: row.bull_duel?.luckCount ?? 0,
     },
     bestDartsToFinish: row.best_darts_to_finish ?? null,
     tripleHits: row.triple_hits ?? {},
@@ -121,6 +168,12 @@ function recordToRow(k: string, record: PlayerRecord): PlayerRow {
     accuracy_sum_horizontal: record.accuracy.sumHorizontal,
     accuracy_sum_vertical: record.accuracy.sumVertical,
     accuracy_throws: record.accuracy.throws,
+    // luck_sum/luck_count are no longer written (superseded by `luck`) —
+    // left as null rather than resurrecting a stale aggregate.
+    luck_sum: null,
+    luck_count: null,
+    luck: record.luck,
+    bull_duel: record.bullDuel,
     best_darts_to_finish: record.bestDartsToFinish,
     triple_hits: record.tripleHits,
     double_hits: record.doubleHits,
@@ -265,6 +318,8 @@ export function ensurePlayer(name: string): PlayerRecord {
       overall: { hits: 0, misses: 0 },
       steps: emptyStepStats(),
       accuracy: emptyAccuracyStat(),
+      luck: emptyLuckByStep(),
+      bullDuel: emptyBullDuelStat(),
       tripleHits: {},
       doubleHits: {},
       matchHistory: [],
@@ -330,6 +385,8 @@ export function recordMatchResult(name: string, aggregate: TurnAggregate, won: b
       overall: { hits: 0, misses: 0 },
       steps: emptyStepStats(),
       accuracy: emptyAccuracyStat(),
+      luck: emptyLuckByStep(),
+      bullDuel: emptyBullDuelStat(),
       tripleHits: {},
       doubleHits: {},
       matchHistory: [],
@@ -377,6 +434,40 @@ export function recordAccuracyTotals(name: string, totals: { distance: number; h
     throws: existing.accuracy.throws + totals.throws,
   };
   const record = { ...existing, accuracy };
+  roster = { ...roster, [k]: record };
+  notify();
+  upsertRow(k, record);
+}
+
+/** Rolls one player's per-throw "Expected Goals" samples from a finished match into their career mean, broken down per section (see lib/dartboard.ts's luckForThrow). */
+export function recordLuckTotals(name: string, totalsByStep: Record<Step, { sum: number; count: number }>) {
+  if (STEPS.every((step) => totalsByStep[step].count === 0)) return;
+  const k = key(name);
+  const existing = roster[k] ?? ensurePlayer(name);
+  const luck = { ...existing.luck };
+  STEPS.forEach((step) => {
+    const totals = totalsByStep[step];
+    if (totals.count === 0) return;
+    luck[step] = { sum: luck[step].sum + totals.sum, count: luck[step].count + totals.count };
+  });
+  const record = { ...existing, luck };
+  roster = { ...roster, [k]: record };
+  notify();
+  upsertRow(k, record);
+}
+
+/** Rolls one player's Bull-duell match totals (kast/treff/xG) into their career stats. Only called for a match that actually finished — see lib/bullDuel.ts. */
+export function recordBullDuelMatch(name: string, totals: BullDuelStat) {
+  if (totals.throws === 0) return;
+  const k = key(name);
+  const existing = roster[k] ?? ensurePlayer(name);
+  const bullDuel: BullDuelStat = {
+    throws: existing.bullDuel.throws + totals.throws,
+    hits: existing.bullDuel.hits + totals.hits,
+    luckSum: existing.bullDuel.luckSum + totals.luckSum,
+    luckCount: existing.bullDuel.luckCount + totals.luckCount,
+  };
+  const record = { ...existing, bullDuel };
   roster = { ...roster, [k]: record };
   notify();
   upsertRow(k, record);
@@ -458,6 +549,31 @@ export function meanHorizontalDistance(record: PlayerRecord): number | null {
 /** Mean Vertical Distance — average vertical miss component, in mm. */
 export function meanVerticalDistance(record: PlayerRecord): number | null {
   return record.accuracy.throws === 0 ? null : record.accuracy.sumVertical / record.accuracy.throws;
+}
+
+/** Career mean "Expected Goals" (expected crosses per dart) across ALL sections combined — see lib/dartboard.ts. Null with no data yet. */
+export function meanLuck(record: PlayerRecord): number | null {
+  const totals = STEPS.reduce(
+    (acc, step) => ({ sum: acc.sum + record.luck[step].sum, count: acc.count + record.luck[step].count }),
+    { sum: 0, count: 0 }
+  );
+  return totals.count === 0 ? null : totals.sum / totals.count;
+}
+
+/** Career mean "Expected Goals" for ONE section (e.g. just "T", or just "20") — see lib/dartboard.ts. Null with no data yet for that section. */
+export function meanLuckForStep(record: PlayerRecord, step: Step): number | null {
+  const stat = record.luck[step];
+  return stat.count === 0 ? null : stat.sum / stat.count;
+}
+
+/** Career Bull-duell hit percentage (bull hits / darts thrown). Null with no data yet. */
+export function bullDuelHitPct(record: PlayerRecord): number | null {
+  return record.bullDuel.throws === 0 ? null : Math.round((record.bullDuel.hits / record.bullDuel.throws) * 100);
+}
+
+/** Career mean Bull-duell "Expected Goals" — see lib/dartboard.ts's luckForBullDuelThrow. Null with no data yet. */
+export function meanBullDuelLuck(record: PlayerRecord): number | null {
+  return record.bullDuel.luckCount === 0 ? null : record.bullDuel.luckSum / record.bullDuel.luckCount;
 }
 
 export function averagePct(stat: HitStat): number {
