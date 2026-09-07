@@ -338,8 +338,7 @@ export function playPerfectRoundVariant(variant: PerfectRoundVariant) {
 
 /**
  * Every knob runs 1-5 rather than 0-1 so a choice made by ear on /lyd can be reported back
- * and pinned down exactly ("boom: darkness 4, volume 3, grit 2") instead of being
- * re-guessed from a description.
+ * and pinned down exactly ("boom 4-3-2") instead of being re-guessed from a description.
  */
 function clampLevel(level: number): number {
   return Math.max(1, Math.min(5, level));
@@ -358,7 +357,7 @@ function makeSaturation(ctx: AudioContext, amount: number): WaveShaperNode | nul
     const shaper = ctx.createWaveShaper();
     const n = 1024;
     const curve = new Float32Array(n);
-    const k = amount * 40;
+    const k = amount * 60;
     for (let i = 0; i < n; i++) {
       const x = (i * 2) / n - 1;
       curve[i] = ((1 + k) * x) / (1 + k * Math.abs(x));
@@ -372,21 +371,26 @@ function makeSaturation(ctx: AudioContext, amount: number): WaveShaperNode | nul
 }
 
 export type BoomParams = {
-  /** 1 = half-dark and short, 5 = very dark and long. Moves the pitch sweep and the tail. */
+  /** 1 = half-dark, 5 = very dark. Moves the pitch range down. */
   darkness: number;
   /** 1 = restrained, 5 = heavy. */
   volume: number;
-  /** 1 = clean tone, 5 = lots of attack/grit. Drives the noise transient and saturation. */
+  /** 1 = clean tone, 5 = lots of attack grit. Noise transient plus saturation. */
   grit: number;
+  /** 1 = soft swell, 5 = hard slam. A fast downward pitch click on the attack — this is
+   *  what "punch" actually is on a kick drum, far more than raw level. */
+  punch: number;
+  /** 1 = very short, 5 = long tail. Kept separate from darkness so a hit can be short AND
+   *  deep — the first dart wants exactly that. */
+  length: number;
 };
 
-export const BOOM_DEFAULT: BoomParams = { darkness: 3, volume: 3, grit: 2 };
+export const BOOM_DEFAULT: BoomParams = { darkness: 4, volume: 3, grit: 2, punch: 4, length: 1 };
 
 /**
- * A deep impact. A sine swept downward is the classic cinematic boom — the pitch drop is
- * what the ear reads as weight, not raw loudness. Darkness moves both ends of that sweep
- * down and stretches the tail; grit adds the noise crack on the attack plus saturation, so
- * the hit still cuts through when the fundamental is below what the speaker can produce.
+ * A deep impact. Three stacked layers: a fast pitch-click for punch, a swept body for
+ * weight, and a noise transient for the crack. The pitch drop is what the ear reads as
+ * weight — raw level alone just sounds loud, not heavy.
  */
 export function playBoom(params: BoomParams = BOOM_DEFAULT) {
   const ctx = getContext();
@@ -397,44 +401,65 @@ export function playBoom(params: BoomParams = BOOM_DEFAULT) {
     if (!buses) return;
     const t = ctx.currentTime + 0.02;
 
-    const startFreq = lerpLevel(params.darkness, 175, 58);
-    const endFreq = lerpLevel(params.darkness, 68, 22);
-    const duration = lerpLevel(params.darkness, 0.55, 2.2);
-    const peak = lerpLevel(params.volume, 0.22, 1.0);
+    const bodyStart = lerpLevel(params.darkness, 165, 62);
+    const bodyEnd = lerpLevel(params.darkness, 62, 24);
+    const duration = lerpLevel(params.length, 0.32, 2.2);
+    const peak = lerpLevel(params.volume, 0.25, 1.0);
     const gritAmount = (clampLevel(params.grit) - 1) / 4;
+    const punchAmount = (clampLevel(params.punch) - 1) / 4;
 
     const env = ctx.createGain();
     env.gain.setValueAtTime(0.0001, t);
-    env.gain.linearRampToValueAtTime(peak, t + 0.012);
+    env.gain.linearRampToValueAtTime(peak, t + 0.006);
+    // A quick initial drop before the long tail — the shape of a struck drum rather than
+    // a fading tone, and a big part of why it reads as an impact.
+    env.gain.exponentialRampToValueAtTime(Math.max(0.0002, peak * 0.55), t + duration * 0.18);
     env.gain.exponentialRampToValueAtTime(0.0001, t + duration);
     env.connect(buses.master);
     // Low end gets only a little reverb — more than that turns to mud.
     const send = ctx.createGain();
-    send.gain.value = 0.22;
+    send.gain.value = 0.18;
     env.connect(send);
     send.connect(buses.reverb);
 
-    const saturation = makeSaturation(ctx, gritAmount * 0.6);
+    const saturation = makeSaturation(ctx, gritAmount * 0.5 + punchAmount * 0.35);
     if (saturation) saturation.connect(env);
     const bodyInput: AudioNode = saturation ?? env;
 
+    // Body — the weight.
     const osc = ctx.createOscillator();
     osc.type = "sine";
-    osc.frequency.setValueAtTime(startFreq, t);
-    osc.frequency.exponentialRampToValueAtTime(endFreq, t + duration * 0.55);
+    osc.frequency.setValueAtTime(bodyStart, t);
+    osc.frequency.exponentialRampToValueAtTime(bodyEnd, t + duration * 0.45);
     osc.connect(bodyInput);
     osc.start(t);
     osc.stop(t + duration + 0.05);
 
+    // Punch — a very fast sweep from well above the body down into it, gone in ~50ms.
+    if (punchAmount > 0) {
+      const click = ctx.createOscillator();
+      click.type = "sine";
+      const clickStart = bodyStart * lerpLevel(params.punch, 1.5, 6);
+      click.frequency.setValueAtTime(clickStart, t);
+      click.frequency.exponentialRampToValueAtTime(bodyStart, t + lerpLevel(params.punch, 0.05, 0.028));
+      const clickEnv = ctx.createGain();
+      clickEnv.gain.setValueAtTime(peak * 0.9 * punchAmount, t);
+      clickEnv.gain.exponentialRampToValueAtTime(0.0001, t + lerpLevel(params.punch, 0.06, 0.11));
+      click.connect(clickEnv);
+      clickEnv.connect(bodyInput);
+      click.start(t);
+      click.stop(t + 0.2);
+    }
+
     // An octave up, quiet — insurance for speakers that cannot do the fundamental.
     const harm = ctx.createOscillator();
     harm.type = "sine";
-    harm.frequency.setValueAtTime(startFreq * 2, t);
-    harm.frequency.exponentialRampToValueAtTime(endFreq * 2, t + duration * 0.4);
+    harm.frequency.setValueAtTime(bodyStart * 2, t);
+    harm.frequency.exponentialRampToValueAtTime(bodyEnd * 2, t + duration * 0.4);
     const harmEnv = ctx.createGain();
     harmEnv.gain.setValueAtTime(0.0001, t);
-    harmEnv.gain.linearRampToValueAtTime(peak * 0.28, t + 0.01);
-    harmEnv.gain.exponentialRampToValueAtTime(0.0001, t + duration * 0.5);
+    harmEnv.gain.linearRampToValueAtTime(peak * 0.3, t + 0.008);
+    harmEnv.gain.exponentialRampToValueAtTime(0.0001, t + duration * 0.45);
     harm.connect(harmEnv);
     harmEnv.connect(buses.master);
     harm.start(t);
@@ -446,10 +471,10 @@ export function playBoom(params: BoomParams = BOOM_DEFAULT) {
       src.buffer = noise;
       const lp = ctx.createBiquadFilter();
       lp.type = "lowpass";
-      lp.frequency.value = lerpLevel(params.grit, 500, 2600);
+      lp.frequency.value = lerpLevel(params.grit, 600, 3200);
       const nEnv = ctx.createGain();
-      nEnv.gain.setValueAtTime(peak * 0.65 * gritAmount, t);
-      nEnv.gain.exponentialRampToValueAtTime(0.0001, t + lerpLevel(params.grit, 0.06, 0.22));
+      nEnv.gain.setValueAtTime(peak * 0.7 * gritAmount, t);
+      nEnv.gain.exponentialRampToValueAtTime(0.0001, t + lerpLevel(params.grit, 0.05, 0.2));
       src.connect(lp);
       lp.connect(nEnv);
       nEnv.connect(buses.master);
@@ -462,24 +487,116 @@ export function playBoom(params: BoomParams = BOOM_DEFAULT) {
   }
 }
 
+/**
+ * The boom as it escalates across a turn: dart 1 short and dark, then longer and harder for
+ * 2 and 3. Only length, volume and grit climb — darkness stays put, so the three read as the
+ * same drum hit harder rather than as three different sounds.
+ */
+export function boomForStreak(streak: 1 | 2 | 3, base: BoomParams = BOOM_DEFAULT): BoomParams {
+  return {
+    darkness: base.darkness,
+    punch: Math.min(5, base.punch + (streak - 1)),
+    volume: Math.min(5, base.volume + (streak - 1)),
+    grit: Math.min(5, base.grit + (streak - 1)),
+    length: Math.min(5, base.length + (streak - 1) * 1.5),
+  };
+}
+
+/**
+ * One clap. Applause is the part of a crowd that synthesizes convincingly — a clap really is
+ * just a short filtered noise transient — and a bed of them is what makes the whole thing
+ * read as people rather than as wind.
+ */
+function clap(ctx: AudioContext, buses: Buses, noise: AudioBuffer, at: number, peak: number) {
+  const src = ctx.createBufferSource();
+  src.buffer = noise;
+  src.playbackRate.value = 0.85 + Math.random() * 0.5;
+
+  const bp = ctx.createBiquadFilter();
+  bp.type = "bandpass";
+  bp.frequency.value = 1100 + Math.random() * 1800;
+  bp.Q.value = 0.8 + Math.random();
+
+  const hp = ctx.createBiquadFilter();
+  hp.type = "highpass";
+  hp.frequency.value = 700;
+
+  const env = ctx.createGain();
+  const decay = 0.028 + Math.random() * 0.05;
+  env.gain.setValueAtTime(peak * (0.5 + Math.random() * 0.8), at);
+  env.gain.exponentialRampToValueAtTime(0.0001, at + decay);
+
+  src.connect(bp);
+  bp.connect(hp);
+  hp.connect(env);
+  env.connect(buses.master);
+  env.connect(buses.reverb);
+  src.start(at);
+  src.stop(at + decay + 0.03);
+}
+
+/**
+ * One shouting voice. Bandpassed noise reads as wind, not as a person — what makes a voice
+ * a voice is a pitched, harmonic-rich source filtered by vowel formants. A sawtooth through
+ * three resonant bandpasses at roughly "aah" formant frequencies is the cheap standing-in
+ * version of exactly that, and it's the difference between a crowd and a hiss.
+ */
+function shout(ctx: AudioContext, buses: Buses, at: number, duration: number, pitch: number, peak: number) {
+  const osc = ctx.createOscillator();
+  osc.type = "sawtooth";
+  // A shout swoops: up into it, then falling away.
+  osc.frequency.setValueAtTime(pitch * 0.85, at);
+  osc.frequency.linearRampToValueAtTime(pitch * 1.08, at + duration * 0.25);
+  osc.frequency.linearRampToValueAtTime(pitch * 0.8, at + duration);
+
+  const env = ctx.createGain();
+  env.gain.setValueAtTime(0.0001, at);
+  env.gain.linearRampToValueAtTime(peak, at + 0.06 + Math.random() * 0.06);
+  env.gain.exponentialRampToValueAtTime(0.0001, at + duration);
+  env.connect(buses.master);
+  env.connect(buses.reverb);
+
+  // "aah"-ish formants, jittered per voice so a crowd isn't all the same mouth.
+  const formants: [number, number, number][] = [
+    [700 + Math.random() * 180, 9, 1],
+    [1150 + Math.random() * 350, 11, 0.55],
+    [2500 + Math.random() * 500, 13, 0.25],
+  ];
+  for (const [freq, q, gain] of formants) {
+    const bp = ctx.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.value = freq;
+    bp.Q.value = q;
+    const g = ctx.createGain();
+    g.gain.value = gain;
+    osc.connect(bp);
+    bp.connect(g);
+    g.connect(env);
+  }
+
+  osc.start(at);
+  osc.stop(at + duration + 0.05);
+}
+
 export type CrowdParams = {
-  /** 1 = bright and thin, 5 = dark and muffled. The top end of the noise bed. */
+  /** 1 = bright and thin, 5 = dark and muffled. */
   darkness: number;
   /** 1 = scattered, 5 = the whole room. */
   volume: number;
-  /** 1 = a few voices, 5 = a packed crowd. Drives the shout count and the length. */
+  /** 1 = a few people, 5 = a packed crowd. Drives clap and voice counts, and the length. */
   density: number;
 };
 
 export const CROWD_DEFAULT: CrowdParams = { darkness: 3, volume: 3, density: 3 };
 
 /**
- * Crowd cheer. Unlike brass, a crowd genuinely IS filtered noise — hundreds of voices
- * average out into a band of it — so this gets far closer to the real thing than the
- * oscillator fanfares ever could. Three layers do the work: a noise bed shaped to the
- * vocal range, an irregular level wobble so it breathes instead of hissing flatly, and
- * short brighter bursts standing in for individual shouts, which is the detail that reads
- * as people rather than as static.
+ * Crowd cheer, built from what a crowd actually consists of rather than from generic noise:
+ * a dense bed of individual claps, a handful of pitched shouting voices with vowel formants,
+ * and a quiet noise layer underneath as room tone. The earlier version was only that last
+ * layer, which is why it read as wind rather than as people.
+ *
+ * Honest limit: this lands somewhere near "crowd" but a real recording would be
+ * unmistakable, and one is a ~50KB file away if this still isn't convincing.
  */
 export function playCrowd(params: CrowdParams = CROWD_DEFAULT) {
   const ctx = getContext();
@@ -492,74 +609,67 @@ export function playCrowd(params: CrowdParams = CROWD_DEFAULT) {
     if (!noise) return;
     const t = ctx.currentTime + 0.02;
 
-    const topEnd = lerpLevel(params.darkness, 3600, 1050);
-    const peak = lerpLevel(params.volume, 0.09, 0.7);
-    const duration = lerpLevel(params.density, 0.9, 3.2);
-    const shouts = Math.round(lerpLevel(params.density, 2, 20));
-    const swell = lerpLevel(params.density, 0.18, 0.5);
+    const peak = lerpLevel(params.volume, 0.1, 0.75);
+    const duration = lerpLevel(params.density, 1.0, 3.2);
+    const swell = lerpLevel(params.density, 0.12, 0.35);
+    const dark = (clampLevel(params.darkness) - 1) / 4;
 
+    // 1. Applause — the main body of the sound.
+    const clapCount = Math.round(lerpLevel(params.density, 14, 130));
+    for (let i = 0; i < clapCount; i++) {
+      // Weighted toward the start so the crowd erupts and then thins out.
+      const progress = Math.pow(Math.random(), 0.75);
+      const at = t + swell * 0.3 + progress * duration * 0.92;
+      clap(ctx, buses, noise, at, peak * 0.42 * (1 - dark * 0.35));
+    }
+
+    // 2. Voices over the top.
+    const voices = Math.round(lerpLevel(params.density, 2, 12));
+    for (let i = 0; i < voices; i++) {
+      const at = t + swell * 0.4 + Math.random() * duration * 0.7;
+      const len = 0.35 + Math.random() * 0.6;
+      // A spread of adult voices, higher ones cut through more.
+      const pitch = 115 + Math.random() * 145;
+      shout(ctx, buses, at, len, pitch, peak * (0.1 + Math.random() * 0.12));
+    }
+
+    // 3. Room tone underneath — quiet, just enough to glue the transients together.
     const bed = ctx.createBufferSource();
     bed.buffer = noise;
     bed.loop = true;
-
     const band = ctx.createBiquadFilter();
     band.type = "bandpass";
-    band.frequency.value = lerpLevel(params.darkness, 1200, 700);
-    band.Q.value = 0.55;
-
-    const hp = ctx.createBiquadFilter();
-    hp.type = "highpass";
-    hp.frequency.value = lerpLevel(params.darkness, 380, 220);
-
+    band.frequency.value = lerpLevel(params.darkness, 1100, 650);
+    band.Q.value = 0.5;
     const lp = ctx.createBiquadFilter();
     lp.type = "lowpass";
-    lp.frequency.setValueAtTime(topEnd * 0.6, t);
-    lp.frequency.linearRampToValueAtTime(topEnd, t + swell);
-    lp.frequency.linearRampToValueAtTime(topEnd * 0.5, t + duration);
-
-    const env = ctx.createGain();
-    env.gain.setValueAtTime(0.0001, t);
-    env.gain.linearRampToValueAtTime(peak, t + swell);
-    // Irregular wobble across the sustain — this is what stops it sounding like static.
-    const steps = 7;
+    lp.frequency.value = lerpLevel(params.darkness, 3400, 1100);
+    const bedEnv = ctx.createGain();
+    bedEnv.gain.setValueAtTime(0.0001, t);
+    bedEnv.gain.linearRampToValueAtTime(peak * 0.3, t + swell);
+    const steps = 6;
     for (let i = 1; i <= steps; i++) {
       const at = t + swell + ((duration - swell) * i) / (steps + 1);
-      env.gain.linearRampToValueAtTime(peak * (0.6 + Math.random() * 0.4), at);
+      bedEnv.gain.linearRampToValueAtTime(peak * 0.3 * (0.55 + Math.random() * 0.45), at);
     }
-    env.gain.exponentialRampToValueAtTime(0.0001, t + duration);
-
+    bedEnv.gain.exponentialRampToValueAtTime(0.0001, t + duration);
     bed.connect(band);
-    band.connect(hp);
-    hp.connect(lp);
-    lp.connect(env);
-    env.connect(buses.master);
-    env.connect(buses.reverb);
+    band.connect(lp);
+    lp.connect(bedEnv);
+    bedEnv.connect(buses.master);
+    bedEnv.connect(buses.reverb);
     bed.start(t);
     bed.stop(t + duration + 0.1);
-
-    for (let i = 0; i < shouts; i++) {
-      const at = t + swell * 0.5 + Math.random() * Math.max(0.1, duration - swell);
-      const len = 0.14 + Math.random() * 0.3;
-      const src = ctx.createBufferSource();
-      src.buffer = noise;
-      src.playbackRate.value = 0.8 + Math.random() * 0.5;
-      const bp = ctx.createBiquadFilter();
-      bp.type = "bandpass";
-      bp.frequency.value = lerpLevel(params.darkness, 900, 600) + Math.random() * lerpLevel(params.darkness, 1800, 900);
-      bp.Q.value = 1.6 + Math.random() * 2;
-      const sEnv = ctx.createGain();
-      sEnv.gain.setValueAtTime(0.0001, at);
-      sEnv.gain.linearRampToValueAtTime(peak * (0.16 + Math.random() * 0.22), at + 0.05);
-      sEnv.gain.exponentialRampToValueAtTime(0.0001, at + len);
-      src.connect(bp);
-      bp.connect(sEnv);
-      sEnv.connect(buses.master);
-      sEnv.connect(buses.reverb);
-      src.start(at);
-      src.stop(at + len + 0.05);
-    }
   } catch {
     // Never let a synth glitch break a turn.
   }
 }
 
+/** The crowd as it escalates across a turn — louder and denser per hit, same character. */
+export function crowdForStreak(streak: 1 | 2 | 3, base: CrowdParams = CROWD_DEFAULT): CrowdParams {
+  return {
+    darkness: base.darkness,
+    volume: Math.min(5, base.volume - 2 + streak),
+    density: Math.min(5, base.density - 2 + streak),
+  };
+}

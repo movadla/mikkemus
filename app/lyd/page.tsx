@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useState } from "react";
 import {
   BOOM_DEFAULT,
+  boomForStreak,
   CROWD_DEFAULT,
+  crowdForStreak,
   playBoom,
   playCrowd,
   playFanfareVariant,
@@ -87,12 +89,12 @@ function PlayButton({ onClick, accent, children }: { onClick: () => void; accent
 /** Preset combinations worth hearing before touching the sliders — each one lands somewhere
  *  distinctly different in the space, so they double as a map of what the knobs can do. */
 const BOOM_PRESETS: { label: string; params: BoomParams }[] = [
-  { label: "Lett dunk", params: { darkness: 1, volume: 2, grit: 1 } },
-  { label: "Halvmørk", params: { darkness: 2, volume: 3, grit: 2 } },
-  { label: "Mørk", params: { darkness: 3, volume: 4, grit: 2 } },
-  { label: "Veldig mørk", params: { darkness: 5, volume: 4, grit: 1 } },
-  { label: "Kinodrønn", params: { darkness: 5, volume: 5, grit: 4 } },
-  { label: "Rå og grusete", params: { darkness: 4, volume: 5, grit: 5 } },
+  { label: "Kort og mørk", params: { darkness: 4, volume: 3, grit: 2, punch: 4, length: 1 } },
+  { label: "Hard og kort", params: { darkness: 4, volume: 4, grit: 3, punch: 5, length: 1 } },
+  { label: "Tung og lang", params: { darkness: 5, volume: 4, grit: 2, punch: 3, length: 4 } },
+  { label: "Kinodrønn", params: { darkness: 5, volume: 5, grit: 4, punch: 4, length: 5 } },
+  { label: "Rå og grusete", params: { darkness: 3, volume: 5, grit: 5, punch: 5, length: 2 } },
+  { label: "Lett dunk", params: { darkness: 2, volume: 2, grit: 1, punch: 3, length: 1 } },
 ];
 
 const CROWD_PRESETS: { label: string; params: CrowdParams }[] = [
@@ -156,6 +158,22 @@ export default function LydPage() {
             accent={boomAccent}
           />
           <Slider
+            label="Trøkk / slag"
+            low="1 · mykt"
+            high="5 · hardt slag"
+            value={boom.punch}
+            onChange={(v) => setBoom({ ...boom, punch: v })}
+            accent={boomAccent}
+          />
+          <Slider
+            label="Lengde"
+            low="1 · veldig kort"
+            high="5 · lang hale"
+            value={boom.length}
+            onChange={(v) => setBoom({ ...boom, length: v })}
+            accent={boomAccent}
+          />
+          <Slider
             label="Støy / grus"
             low="1 · rein tone"
             high="5 · mye anslag"
@@ -164,7 +182,7 @@ export default function LydPage() {
             accent={boomAccent}
           />
           <PlayButton onClick={() => playBoom(boom)} accent={boomAccent}>
-            ▶ Spill boom ({boom.darkness}·{boom.volume}·{boom.grit})
+            ▶ Spill boom ({boom.darkness}·{boom.volume}·{boom.grit}·{boom.punch}·{boom.length})
           </PlayButton>
           <div className="grid grid-cols-2 gap-2 mt-3">
             {BOOM_PRESETS.map((p) => (
@@ -232,26 +250,25 @@ export default function LydPage() {
 
         <Panel title="OPPTRAPPING — SLIK DET VILLE HØRTES UT I SPILLET">
           <p className="mb-3" style={{ color: "var(--color-muted)", fontSize: "0.72rem", lineHeight: 1.5 }}>
-            Bruker jubel-innstillingene over, med volum og tetthet trappet opp per treff.
+            Boomen blir lengre og hardere per treff, jubelen høyere og tettere — begge bygget på innstillingene dine
+            over. Mørkheten holdes fast, så de tre leses som samme slag hardere, ikke tre ulike lyder.
           </p>
           <div className="space-y-2">
-            {[1, 2, 3].map((step) => (
+            {([1, 2, 3] as const).map((step) => (
               <PlayButton
                 key={step}
                 accent={crowdAccent}
                 onClick={() => {
-                  const scaled: CrowdParams = {
-                    darkness: crowd.darkness,
-                    volume: Math.min(5, crowd.volume - 2 + step),
-                    density: Math.min(5, crowd.density - 2 + step),
-                  };
-                  playBoom(boom);
-                  playCrowd(scaled);
+                  playBoom(boomForStreak(step, boom));
+                  playCrowd(crowdForStreak(step, crowd));
                 }}
               >
                 ▶ Treff {step} av 3 {step === 3 ? "— alle tre" : ""}
               </PlayButton>
             ))}
+            <PlayButton accent={boomAccent} onClick={() => ([1, 2, 3] as const).forEach((s, i) => setTimeout(() => playBoom(boomForStreak(s, boom)), i * 900))}>
+              ▶ Bare boomene etter hverandre (1 → 2 → 3)
+            </PlayButton>
           </div>
         </Panel>
 
