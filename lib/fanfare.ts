@@ -160,22 +160,6 @@ function brassNote(ctx: AudioContext, buses: Buses, freq: number, start: number,
   }
 }
 
-/** A soft percussive tone (no brass spectrum) — the "dunk"/"pling" halves of the hit cue. */
-function softTone(ctx: AudioContext, buses: Buses, freq: number, start: number, duration: number, peak: number, type: OscillatorType) {
-  const osc = ctx.createOscillator();
-  const env = ctx.createGain();
-  osc.type = type;
-  osc.frequency.value = freq;
-  env.gain.setValueAtTime(0.0001, start);
-  env.gain.linearRampToValueAtTime(peak, start + 0.012);
-  env.gain.exponentialRampToValueAtTime(0.0001, start + duration);
-  osc.connect(env);
-  env.connect(buses.master);
-  env.connect(buses.reverb);
-  osc.start(start);
-  osc.stop(start + duration + 0.03);
-}
-
 // Note frequencies (equal temperament).
 const C4 = 261.63;
 const G4 = 392.0;
@@ -271,32 +255,13 @@ export function playFanfareVariant(variant: FanfareVariant) {
  * MikkeMusApp's processDart, which breaks the streak on any miss.
  */
 export function playHitStreakSound(streak: 1 | 2 | 3) {
-  const ctx = getContext();
-  if (!ctx) return;
-  try {
-    if (ctx.state === "suspended") ctx.resume().catch(() => {});
-    const buses = getBuses(ctx);
-    if (!buses) return;
-    const now = ctx.currentTime + 0.02;
-
-    if (streak === 3) {
-      playPerfectRoundVariant(PERFECT_ROUND);
-      return;
-    }
-
-    const gain = streak === 1 ? 0.1 : 0.16;
-    softTone(ctx, buses, streak === 1 ? G4 / 2 : G4 / 2 + 25, now, 0.1, gain, "triangle");
-    softTone(ctx, buses, streak === 1 ? C6 * 0.63 : C6 * 0.75, now + 0.06, 0.16, gain, "sine");
-  } catch {
-    // Never let a synth glitch break a turn.
-  }
+  // A deep boom whose tail rings on longer with each dart in the streak — see boomForStreak.
+  // This replaced the earlier two-note "dunk-pling" outright; playPerfectRoundVariant is
+  // still exported so /lyd can put the old brass cues next to the new ones.
+  playBoom(boomForStreak(streak));
 }
 
 export type PerfectRoundVariant = 1 | 2;
-
-/** Which perfect-round flourish a real 3-for-3 turn plays — same "pick it on /lyd, change
- *  this one line" arrangement as WIN_FANFARE. */
-const PERFECT_ROUND: PerfectRoundVariant = 1;
 
 /**
  * The two candidate perfect-round flourishes — both deliberately shorter and lower than
@@ -385,7 +350,8 @@ export type BoomParams = {
   length: number;
 };
 
-export const BOOM_DEFAULT: BoomParams = { darkness: 4, volume: 3, grit: 2, punch: 4, length: 1 };
+/** Picked by ear on /lyd: everything at max except the tail, which is what grows per dart. */
+export const BOOM_DEFAULT: BoomParams = { darkness: 5, volume: 5, grit: 5, punch: 5, length: 3 };
 
 /**
  * A deep impact. Three stacked layers: a fast pitch-click for punch, a swept body for
@@ -488,18 +454,12 @@ export function playBoom(params: BoomParams = BOOM_DEFAULT) {
 }
 
 /**
- * The boom as it escalates across a turn: dart 1 short and dark, then longer and harder for
- * 2 and 3. Only length, volume and grit climb — darkness stays put, so the three read as the
- * same drum hit harder rather than as three different sounds.
+ * The boom as it escalates across a turn. Only the tail grows — dart 1 short, then longer
+ * for 2 and 3 — while darkness, volume, punch and grit stay where they are, so the three
+ * read as the same slam ringing on longer rather than as three different sounds.
  */
 export function boomForStreak(streak: 1 | 2 | 3, base: BoomParams = BOOM_DEFAULT): BoomParams {
-  return {
-    darkness: base.darkness,
-    punch: Math.min(5, base.punch + (streak - 1)),
-    volume: Math.min(5, base.volume + (streak - 1)),
-    grit: Math.min(5, base.grit + (streak - 1)),
-    length: Math.min(5, base.length + (streak - 1) * 1.5),
-  };
+  return { ...base, length: Math.min(5, base.length + (streak - 1)) };
 }
 
 /**

@@ -10,7 +10,6 @@ import {
   playBoom,
   playCrowd,
   playFanfareVariant,
-  playHitStreakSound,
   playPerfectRoundVariant,
   primeAudio,
   type BoomParams,
@@ -293,12 +292,6 @@ export default function LydPage() {
             </PlayButton>
             <PlayButton onClick={() => playPerfectRoundVariant(2)} accent="var(--color-teal)">
               ▶ Perfekt runde 2
-            </PlayButton>
-            <PlayButton onClick={() => playHitStreakSound(1)} accent="var(--color-green)">
-              ▶ Dagens dunk-pling (pil 1)
-            </PlayButton>
-            <PlayButton onClick={() => playHitStreakSound(2)} accent="var(--color-green)">
-              ▶ Dagens dunk-pling (pil 1+2)
             </PlayButton>
           </div>
         </Panel>

@@ -342,6 +342,52 @@ button {
   animation: confetti-fall 1500ms ease-in both;
 }
 
+/* Full-screen rain for the winner screen, as opposed to .confetti-piece's single burst
+   over the winner card: it repeats, so the celebration lasts as long as the screen is up
+   rather than being over before anyone looks at it. Each piece carries its own duration
+   and delay inline so they don't fall in visible ranks. */
+.confetti-rain {
+  position: absolute;
+  top: -24px;
+  width: 9px;
+  height: 16px;
+  border-radius: 2px;
+  animation-name: confetti-fall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+/* The winner's photo, breathing — scale alone reads as a glitch on a circular frame, so
+   the gold ring pulses with it and carries most of the effect. */
+@keyframes winner-photo-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow:
+      0 6px 16px rgba(0, 0, 0, 0.45),
+      0 0 0 0 rgba(201, 162, 75, 0.55);
+  }
+  50% {
+    transform: scale(1.07);
+    box-shadow:
+      0 8px 24px rgba(0, 0, 0, 0.5),
+      0 0 26px 8px rgba(201, 162, 75, 0.55);
+  }
+}
+
+.animate-winner-photo-pulse {
+  animation: winner-photo-pulse 1.15s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .confetti-rain {
+    animation-iteration-count: 1;
+  }
+  .animate-winner-photo-pulse {
+    animation: none;
+  }
+}
+
 /* -- screen + turn transitions --
    The "to" state must land on transform: none, not translateY(0) — any
    non-"none" transform (even a zero one) makes this element a containing

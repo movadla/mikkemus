@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { STEPS, STEP_LABELS, type Step, type TurnAggregate } from "@/lib/game";
 import { getPlayerRecord } from "@/lib/storage";
-import { generateConfetti } from "@/lib/confetti";
+import { generateConfetti, generateConfettiRain } from "@/lib/confetti";
 import { DartboardHeatmap } from "./DartboardHeatmap";
 
 type LuckByStep = Record<Step, { sum: number; count: number }>;
@@ -12,6 +12,7 @@ const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
 
 const CONFETTI_COUNT = 40;
+const RAIN_COUNT = 90;
 
 function treffPct(stat?: TurnAggregate): number {
   if (!stat) return 0;
@@ -74,10 +75,33 @@ export function WinnerScreen({
 }) {
   const photo = getPlayerRecord(winner)?.photo;
   const confetti = useMemo(() => generateConfetti(CONFETTI_COUNT), []);
+  const rain = useMemo(() => generateConfettiRain(RAIN_COUNT), []);
 
   return (
-    <div className="animate-screen-enter min-h-screen w-full flex items-center justify-center p-6" style={{ background: "var(--color-bg)" }}>
-      <div className="w-full max-w-md text-center">
+    <div className="animate-screen-enter relative min-h-screen w-full flex items-center justify-center p-6 overflow-hidden" style={{ background: "var(--color-bg)" }}>
+      {/* Rain across the whole screen, behind the card — the burst above the winner card
+          stays as its own accent on top of this. */}
+      <div className="absolute inset-0 pointer-events-none z-0" aria-hidden>
+        {rain.map((c, i) => (
+          <span
+            key={i}
+            className="confetti-rain"
+            style={
+              {
+                left: c.left,
+                width: c.width,
+                height: c.height,
+                background: c.color,
+                animationDelay: c.delay,
+                animationDuration: c.duration,
+                "--r": c.rotate,
+                "--fall": c.fall,
+              } as React.CSSProperties
+            }
+          />
+        ))}
+      </div>
+      <div className="relative z-10 w-full max-w-md text-center">
         <div className="relative">
           <div
             className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none"
@@ -111,7 +135,7 @@ export function WinnerScreen({
           </div>
           <div className="relative z-30 flex justify-center" style={{ marginBottom: "-44px" }}>
             <div
-              className="rounded-full overflow-hidden flex items-center justify-center shrink-0"
+              className="animate-winner-photo-pulse rounded-full overflow-hidden flex items-center justify-center shrink-0"
               style={{
                 width: "88px",
                 height: "88px",

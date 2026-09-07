@@ -3,12 +3,13 @@
 import { Fragment, useMemo, useState } from "react";
 import type { BullDuelState } from "@/lib/bullDuel";
 import { getPlayerRecord } from "@/lib/storage";
-import { generateConfetti } from "@/lib/confetti";
+import { generateConfetti, generateConfettiRain } from "@/lib/confetti";
 
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
 
 const CONFETTI_COUNT = 40;
+const RAIN_COUNT = 90;
 
 // xG is an expected-points value (0-2, same unit the game scores in, like
 // football xG) rather than a signed luck delta — always non-negative, so
@@ -30,10 +31,32 @@ export function BullDuelWinnerScreen({
   const photo = getPlayerRecord(winner)?.photo;
   const [expanded, setExpanded] = useState<string | null>(null);
   const confetti = useMemo(() => generateConfetti(CONFETTI_COUNT), []);
+  const rain = useMemo(() => generateConfettiRain(RAIN_COUNT), []);
 
   return (
-    <div className="animate-screen-enter min-h-screen w-full flex items-center justify-center p-6" style={{ background: "var(--color-bg)" }}>
-      <div className="w-full max-w-md text-center">
+    <div className="animate-screen-enter relative min-h-screen w-full flex items-center justify-center p-6 overflow-hidden" style={{ background: "var(--color-bg)" }}>
+      {/* Full-screen rain behind the card — see WinnerScreen for the same treatment. */}
+      <div className="absolute inset-0 pointer-events-none z-0" aria-hidden>
+        {rain.map((c, i) => (
+          <span
+            key={i}
+            className="confetti-rain"
+            style={
+              {
+                left: c.left,
+                width: c.width,
+                height: c.height,
+                background: c.color,
+                animationDelay: c.delay,
+                animationDuration: c.duration,
+                "--r": c.rotate,
+                "--fall": c.fall,
+              } as React.CSSProperties
+            }
+          />
+        ))}
+      </div>
+      <div className="relative z-10 w-full max-w-md text-center">
         <div className="relative">
           <div
             className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none"
@@ -56,7 +79,7 @@ export function BullDuelWinnerScreen({
           </div>
           <div className="relative z-30 flex justify-center" style={{ marginBottom: "-44px" }}>
             <div
-              className="rounded-full overflow-hidden flex items-center justify-center shrink-0"
+              className="animate-winner-photo-pulse rounded-full overflow-hidden flex items-center justify-center shrink-0"
               style={{ width: "88px", height: "88px", border: "4px solid var(--color-gold)", background: "var(--color-surface)", boxShadow: "0 6px 16px rgba(0,0,0,0.45)" }}
             >
               {photo ? (
