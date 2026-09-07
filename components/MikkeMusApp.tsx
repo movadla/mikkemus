@@ -143,11 +143,6 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   // The current turn's darts as Scolia detects them, for the shot-indicator boxes —
   // held on screen until the darts are physically taken out (see clearTurnDisplay).
   const [turnShots, setTurnShots] = useState<(TurnShot | null)[]>(EMPTY_TURN_SHOTS);
-  // Which player's marks from their just-finished turn should still render in the
-  // "just placed" accent tint rather than settled gold/cream, and which steps —
-  // same held-until-takeout lifetime as turnShots. Cleared in undo() too, since an
-  // undo can make it inconsistent with progress (see clearTurnDisplay call sites).
-  const [recentlyConfirmed, setRecentlyConfirmed] = useState<{ player: string; byStep: Partial<Record<Step, number>> } | null>(null);
   // Every physical dart's landing coordinate this match, per player — shown as a
   // heatmap on the winner screen and discarded after (not persisted; see
   // lib/dartboard.ts for the coordinate system these are in).
@@ -369,7 +364,6 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   /** Clears the shot boxes and the "just placed" mark highlight — see the call sites below for when. */
   function clearTurnDisplay() {
     setTurnShots(EMPTY_TURN_SHOTS);
-    setRecentlyConfirmed(null);
     // Clears the heat GameScreen derives from this — the build belongs to one turn, and
     // clearing it here (rather than in an effect over there) keeps that view a pure
     // function of props with no state or timers of its own.
@@ -631,7 +625,6 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     setTurnCounters({});
     setTurnToken(0);
     setTurnShots(EMPTY_TURN_SHOTS);
-    setRecentlyConfirmed(null);
     setMatchThrows({});
     accuracyTotalsRef.current = {};
     luckTotalsRef.current = {};
@@ -822,7 +815,6 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     // Any held "just placed" highlight can go stale the instant progress is rewound
     // (most obviously on a second, cascading undo) — simplest correct move is to
     // always drop it here rather than try to reconcile it with the rollback below.
-    setRecentlyConfirmed(null);
     if (pendingHits.length > 0) {
       const last = pendingHits[pendingHits.length - 1];
       setProgress((prev) => ({
@@ -949,14 +941,6 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     if (effectivePendingHits.length > 0) {
       setHistory((prev) => [...prev, ...effectivePendingHits]);
       setPendingHits([]);
-      // Tallied from effectivePendingHits, not the (possibly stale) pendingHits
-      // state, so this is automatically correct whichever way a redirect choice
-      // went: lands on the number after "redirect", stays on the ring after "keep".
-      const byStep: Partial<Record<Step, number>> = {};
-      effectivePendingHits.forEach((h) => {
-        byStep[h.step] = (byStep[h.step] ?? 0) + 1;
-      });
-      setRecentlyConfirmed({ player: activePlayer, byStep });
     }
 
     if (isFinished(effectiveProgress[activePlayer])) {
@@ -1096,7 +1080,6 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         dartsThrown={dartsThrown}
         pendingByStep={pendingByStep}
         turnShots={rewound === null ? turnShots : EMPTY_TURN_SHOTS}
-        recentlyConfirmed={rewound === null ? recentlyConfirmed : null}
         rewound={rewound !== null}
         pendingCount={pendingHits.length}
         canUndo={pendingHits.length > 0 || history.length > 0}

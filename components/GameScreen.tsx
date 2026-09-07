@@ -62,8 +62,6 @@ type Props = {
   dartsThrown: Record<string, number>;
   pendingByStep: Partial<Record<Step, number>>;
   turnShots: (TurnShot | null)[];
-  /** Which player's just-finished-turn marks should still render in the "just placed" accent tint, and which steps. */
-  recentlyConfirmed: { player: string; byStep: Partial<Record<Step, number>> } | null;
   rewound: boolean;
   pendingCount: number;
   canUndo: boolean;
@@ -120,7 +118,6 @@ export function GameScreen({
   dartsThrown,
   pendingByStep,
   turnShots,
-  recentlyConfirmed,
   rewound,
   pendingCount,
   canUndo,
@@ -405,15 +402,11 @@ export function GameScreen({
                   const clickable = isActive && activeStep !== null && isRegistrable(s, activeStep, progress[p]);
                   const ghostCount = isActive && pendingPreview?.number === s ? pendingPreview.ghostCount : 0;
                   const previewOpening = isActive && pendingPreview?.opensNext === s;
-                  // The active player's own in-progress turn takes priority; otherwise, this
-                  // player's just-finished turn stays highlighted until the darts are taken out
-                  // (see MikkeMusApp's clearTurnDisplay) rather than flipping to settled gold
-                  // the instant the turn moves to someone else.
-                  const heldPendingCount = isActive
-                    ? pendingByStep[s] ?? 0
-                    : recentlyConfirmed?.player === p
-                      ? recentlyConfirmed.byStep[s] ?? 0
-                      : 0;
+                  // Only the active player's own unconfirmed marks are provisional. A finished
+                  // turn settles to cream at Confirm rather than staying accent-coloured until
+                  // the darts come out — accent then means exactly one thing, "not locked in
+                  // yet", and what you just threw is still readable in the ShotIndicator up top.
+                  const heldPendingCount = isActive ? pendingByStep[s] ?? 0 : 0;
                   // Ring state is one choice, not three stacked ones: playable outranks the
                   // would-open-next preview, and a settled cell carries neither.
                   const tileState = clickable ? "cell-tile--active" : previewOpening ? "cell-tile--preview" : "";

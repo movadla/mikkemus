@@ -1,8 +1,14 @@
 /**
  * `pendingCount` is how many of the trailing crosses (out of `count`) belong
  * to the turn in progress — not yet locked in by Confirm. Those stages draw
- * in `accent` instead of the settled cream/gold, so a turn's own marks read
- * as provisional right up until they're confirmed.
+ * in `accent` instead of settled cream, so a turn's own marks read as
+ * provisional right up until they're confirmed, and only until then: accent
+ * means "not locked in yet" and nothing else.
+ *
+ * All three settled stages are cream, the closing circle included. It used to
+ * be gold, from before a closed cell got its own gold surface (see
+ * .cell-tile--done) — with the background carrying "finished", a gold ring on
+ * top of it just muddies both.
  *
  * `ghostCount` previews strokes beyond `count` in a dashed, faded style —
  * used while a triple/double redirect choice is undecided, to show "this is
@@ -99,7 +105,7 @@ export function Mark({
         r="27"
         pathLength={1}
         fill="none"
-        stroke={confirmedCount >= 3 ? "var(--color-gold)" : accent}
+        stroke={confirmedCount >= 3 ? "var(--color-cream)" : accent}
         strokeWidth={6}
         style={{
           strokeDasharray: 1,
