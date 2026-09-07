@@ -28,6 +28,32 @@ const FOCUS_RING =
 // block the next dart.
 const RETRACT_MS = 650;
 
+/** Kept just past each animation's own length, so the class is removed only after it has
+ *  finished playing and the next hit re-applies it from the start. */
+const SHAKE_MS = 320;
+const SLAM_MS = 560;
+
+/** Heat left on the screen by an unbroken turn, indexed by how many darts have hit. Held
+ *  until the turn ends rather than fading per dart — the build across the turn is the
+ *  point, mirroring how the boom's tail grows (see lib/fanfare.ts). */
+const HEAT_GLOW = [
+  "none",
+  "inset 0 0 60px 6px rgba(201, 162, 75, 0.10)",
+  "inset 0 0 90px 12px rgba(211, 132, 60, 0.20)",
+  "inset 0 0 130px 20px rgba(214, 92, 58, 0.34)",
+];
+
+/** Two identical keyframes per level — see the comment where these are used for why the
+ *  duplication is the mechanism rather than an oversight. */
+const SHAKE_NAMES = [
+  ["", ""],
+  ["hit-shake-soft-a", "hit-shake-soft-b"],
+  ["hit-shake-firm-a", "hit-shake-firm-b"],
+  ["hit-shake-hard-a", "hit-shake-hard-b"],
+];
+
+const SLAM_NAMES = ["step-slam-a", "step-slam-b"];
+
 type Props = {
   players: string[];
   progress: PlayerProgress;
@@ -44,6 +70,12 @@ type Props = {
   /** The most recent undecided triple/double-on-active-number hit, if any — drives the ghost preview and, once awaitingConfirmResolution, the choice dialog. */
   pendingChoice: PendingAmbiguous | null;
   awaitingConfirmResolution: boolean;
+  /** Retriggerable "a dart just landed" signal, with how many in a row have hit this turn —
+   *  drives the screen shake and the heat that builds across an unbroken turn. Token rather
+   *  than a boolean so two identical hits in a row still read as two separate events. */
+  hitPulse: { token: number; streak: number } | null;
+  /** Retriggerable "this row just reached 3/3" signal, for the closing slam. */
+  closedStep: { token: number; step: Step } | null;
   onResolvePendingChoice: (choice: "keep" | "redirect") => void;
   onRegisterHit: (step: Step) => void;
   onUndo: () => void;
@@ -94,6 +126,8 @@ export function GameScreen({
   canUndo,
   pendingChoice,
   awaitingConfirmResolution,
+  hitPulse,
+  closedStep,
   onResolvePendingChoice,
   onRegisterHit,
   onUndo,
@@ -122,6 +156,16 @@ export function GameScreen({
   // suspends it after the phone naturally times out between darts).
   useEffect(() => startWakeLock(), []);
 
+  // Shake and slam are derived straight from the incoming tokens rather than mirrored into
+  // state on a timer. A CSS animation only restarts when its animation-name actually
+  // changes, so each level has two identical keyframes and the token's parity picks between
+  // them — two identical hits in a row still replay, with no state, effect or timeout here.
+  const shakeAnimation = hitPulse ? `${SHAKE_NAMES[Math.min(3, hitPulse.streak)][hitPulse.token % 2]} ${SHAKE_MS}ms ease-out` : undefined;
+  const slamAnimation = closedStep ? `${SLAM_NAMES[closedStep.token % 2]} ${SLAM_MS}ms cubic-bezier(0.2, 0.9, 0.25, 1) both` : undefined;
+  // Heat belongs to the turn, not the dart: the parent clears hitPulse when a turn ends
+  // (see clearTurnDisplay), so this stays lit across an unbroken turn and drops on its own.
+  const heat = hitPulse?.streak ?? 0;
+
   function handleUndo() {
     setRetractToken((t) => t + 1);
     setRetracting(true);
@@ -149,13 +193,23 @@ export function GameScreen({
 
   return (
     <div
-      className="animate-screen-enter w-full flex flex-col p-4"
-      style={{ height: "100dvh", background: "var(--color-bg)" }}
+      className="animate-screen-enter motion-hit relative w-full flex flex-col p-4"
+      style={{ height: "100dvh", background: "var(--color-bg)", animation: shakeAnimation }}
       // Covers resuming an in-progress match after a page reload, where startGame's own
       // primeAudio() call never ran this session — the first tap anywhere on this screen
       // unlocks audio instead, well before any win-fanfare/hit-streak sound needs it.
       onPointerDownCapture={primeAudio}
     >
+      {/* Heat from an unbroken turn — sits above the board but takes no pointer events, so
+          it can never swallow a tap meant for a cell. */}
+      <div
+        className="absolute inset-0 pointer-events-none z-30"
+        style={{
+          boxShadow: HEAT_GLOW[Math.min(3, heat)],
+          transition: "box-shadow 320ms var(--ease-standard, ease-out)",
+        }}
+        aria-hidden
+      />
       <div className="flex items-center justify-between mb-3 max-w-3xl mx-auto w-full shrink-0">
         <button
           type="button"
@@ -308,12 +362,14 @@ export function GameScreen({
               return (
               <Fragment key={s}>
                 <div
-                  className="sticky left-0 z-10 flex items-center justify-center tabular"
+                  className="motion-slam sticky left-0 z-10 flex items-center justify-center tabular rounded-md"
                   style={{
-                    color: "var(--color-cream)",
+                    color: closedStep?.step === s ? "var(--color-gold)" : "var(--color-cream)",
                     fontSize: "1.3rem",
                     fontWeight: 700,
                     background: "var(--color-panel)",
+                    transition: "color 320ms var(--ease-standard, ease-out)",
+                    animation: closedStep?.step === s ? slamAnimation : undefined,
                   }}
                 >
                   {STEP_LABELS[s]}

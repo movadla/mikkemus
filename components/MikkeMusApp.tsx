@@ -38,6 +38,7 @@ import { SetupScreen } from "./SetupScreen";
 import { GameScreen } from "./GameScreen";
 import { WinnerScreen } from "./WinnerScreen";
 import { ScoliaStatusBadge } from "./ScoliaStatusBadge";
+import { TripleCelebration } from "./TripleCelebration";
 import { CameraImages } from "./CameraImages";
 
 type Screen = "setup" | "game" | "winner";
@@ -369,6 +370,10 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   function clearTurnDisplay() {
     setTurnShots(EMPTY_TURN_SHOTS);
     setRecentlyConfirmed(null);
+    // Clears the heat GameScreen derives from this — the build belongs to one turn, and
+    // clearing it here (rather than in an effect over there) keeps that view a pure
+    // function of props with no state or timers of its own.
+    setHitPulse(null);
   }
 
   // Counts physical darts Scolia has detected this turn (registrable or not) —
@@ -376,10 +381,26 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   const scoliaDartsRef = useRef(0);
 
   // How many darts in a row, counting from the FIRST dart of this turn, have all hit —
-  // drives the tiered "dunk-pling" hit-streak sound (see lib/fanfare.ts). Reset to 0 at
-  // the start of each turn; the first miss freezes it below the current dart index, which
-  // is what silences the sound for the rest of the turn (see processDart).
+  // drives the escalating boom (see lib/fanfare.ts) and the matching screen shake/heat.
+  // Reset to 0 at the start of each turn; the first miss freezes it below the current dart
+  // index, which is what silences the sound for the rest of the turn (see processDart).
   const hitStreakRef = useRef(0);
+
+  // Physical triples landing on whatever number was active at the time, this turn. Three of
+  // them is the rarest turn there is and triggers TripleCelebration. Counted from where the
+  // dart actually landed rather than from how the T/D-or-number choice is later resolved —
+  // the achievement is hitting the triple you were aiming at, whatever it ends up scoring as.
+  const activeTriplesRef = useRef(0);
+
+  // Retriggerable signals for GameScreen's shake/heat and the closing-row slam. Tokens
+  // rather than booleans so the same value twice in a row still reads as a new event.
+  const [hitPulse, setHitPulse] = useState<{ token: number; streak: number } | null>(null);
+  const [closedStep, setClosedStep] = useState<{ token: number; step: Step } | null>(null);
+  const pulseTokenRef = useRef(0);
+
+  // Set when a three-triple turn lands; the board photo it wants arrives a beat later (see
+  // TripleCelebration), so the overlay opens first and picks the image up when it comes.
+  const [tripleCelebration, setTripleCelebration] = useState(false);
 
   // Best-effort camera-image display (see lib/extractImageUrls.ts) — cleared wherever the
   // turn advances (below) so a stale image doesn't linger over the next player's throw.
@@ -403,6 +424,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       // write below — React applies same-state updates in order within one tick.
       clearTurnDisplay();
       hitStreakRef.current = 0;
+      activeTriplesRef.current = 0;
     }
 
     // What the player was working on right before this dart lands — used both to
@@ -452,13 +474,33 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       updatePendingAmbiguous((prev) => prev.filter((p) => p.number !== classified.step));
     }
     const hit = hitResult !== null;
-    // Tiered "dunk-pling" streak sound — only while every dart so far THIS turn (from
+    // Escalating boom + screen shake + heat — only while every dart so far THIS turn (from
     // dart 1) has hit. hitStreakRef.current === dartIndex means the streak is still
     // unbroken going into this dart; any miss (here or earlier) permanently desyncs the
     // two for the rest of the turn, which is exactly what silences dart 2/3 after a miss.
     if (hit && hitStreakRef.current === dartIndex) {
       hitStreakRef.current += 1;
-      if (hitStreakRef.current <= 3) playHitStreakSound(hitStreakRef.current as 1 | 2 | 3);
+      if (hitStreakRef.current <= 3) {
+        const streak = hitStreakRef.current as 1 | 2 | 3;
+        playHitStreakSound(streak);
+        setHitPulse({ token: ++pulseTokenRef.current, streak });
+      }
+    }
+
+    // A row reaching 3/3 gets its own slam — see the step-slam animation in globals.css.
+    const closed = hitResult?.find((h) => h.newCount >= 3 && h.prevCount < 3);
+    if (closed) setClosedStep({ token: ++pulseTokenRef.current, step: closed.step });
+
+    // Three triples on the active number, in one turn.
+    if (
+      parsed.kind === "number" &&
+      parsed.ring === "T" &&
+      activeStepAtThrow !== null &&
+      !Number.isNaN(Number(activeStepAtThrow)) &&
+      parsed.number === Number(activeStepAtThrow)
+    ) {
+      activeTriplesRef.current += 1;
+      if (activeTriplesRef.current === 3) setTripleCelebration(true);
     }
 
     setMatchThrows((prev) => ({
@@ -1060,12 +1102,15 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         canUndo={pendingHits.length > 0 || history.length > 0}
         pendingChoice={rewound === null ? pendingAmbiguous[pendingAmbiguous.length - 1] ?? null : null}
         awaitingConfirmResolution={awaitingConfirmResolution}
+        hitPulse={hitPulse}
+        closedStep={closedStep}
         onResolvePendingChoice={resolvePendingChoice}
         onRegisterHit={activeBotLevel ? () => {} : registerHit}
         onUndo={activeBotLevel ? () => {} : undo}
         onConfirm={activeBotLevel ? () => {} : confirm}
         onAbort={abortGame}
       />
+      {tripleCelebration && <TripleCelebration images={cameraImages} onDismiss={() => setTripleCelebration(false)} />}
     </>
   );
 }

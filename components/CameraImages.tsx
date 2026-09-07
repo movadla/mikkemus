@@ -3,10 +3,9 @@
 type Props = { images: string[] };
 
 /**
- * Best-effort only. Scolia's CAMERA_IMAGES payload shape isn't documented (see
- * lib/extractImageUrls.ts) and the board this app talks to has been offline throughout
- * development, so this has never been verified against a real payload — it renders whatever
- * image-like references were found, and quietly renders nothing when none were.
+ * Renders whatever image-like references were found in the payload (see
+ * lib/extractImageUrls.ts), and quietly renders nothing when there were none. Confirmed
+ * against real board output 2026-09-07: three base64 JPEGs, one per camera, per takeout.
  */
 export function CameraImages({ images }: Props) {
   if (images.length === 0) return null;

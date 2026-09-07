@@ -357,6 +357,75 @@ button {
   animation-iteration-count: infinite;
 }
 
+/* -- treff-tilbakemelding --
+   A dart landing is the moment the player actually experiences sixty times a match, so it
+   gets its own physical feedback: the screen takes the hit, and the heat left behind builds
+   across an unbroken turn. Both scale with the same streak the boom does (lib/fanfare.ts). */
+/* Each of these exists twice under different names on purpose: a CSS animation only
+   restarts when its animation-name changes, so GameScreen alternates between the -a and -b
+   copy on every hit. That's what lets two identical darts in a row both land visibly,
+   without any state, timer or forced reflow on the React side. */
+@keyframes hit-shake-soft-a {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(-2px, 1px); }
+  60% { transform: translate(2px, -1px); }
+}
+@keyframes hit-shake-soft-b {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(-2px, 1px); }
+  60% { transform: translate(2px, -1px); }
+}
+
+@keyframes hit-shake-firm-a {
+  0%, 100% { transform: translate(0, 0); }
+  15% { transform: translate(-4px, 2px); }
+  40% { transform: translate(4px, -2px); }
+  70% { transform: translate(-2px, 1px); }
+}
+@keyframes hit-shake-firm-b {
+  0%, 100% { transform: translate(0, 0); }
+  15% { transform: translate(-4px, 2px); }
+  40% { transform: translate(4px, -2px); }
+  70% { transform: translate(-2px, 1px); }
+}
+
+@keyframes hit-shake-hard-a {
+  0%, 100% { transform: translate(0, 0); }
+  10% { transform: translate(-7px, 3px) rotate(-0.35deg); }
+  30% { transform: translate(7px, -3px) rotate(0.35deg); }
+  55% { transform: translate(-5px, 2px); }
+  80% { transform: translate(3px, -1px); }
+}
+@keyframes hit-shake-hard-b {
+  0%, 100% { transform: translate(0, 0); }
+  10% { transform: translate(-7px, 3px) rotate(-0.35deg); }
+  30% { transform: translate(7px, -3px) rotate(0.35deg); }
+  55% { transform: translate(-5px, 2px); }
+  80% { transform: translate(3px, -1px); }
+}
+
+/* The flash a closing row gives off — a step reaching 3/3 used to slip by unmarked, which
+   made finishing a number feel like nothing at all. */
+@keyframes step-slam-a {
+  0% { transform: scale(1); }
+  22% { transform: scale(1.045); box-shadow: 0 0 0 2px rgba(201, 162, 75, 0.85), 0 0 26px 6px rgba(201, 162, 75, 0.45); }
+  100% { transform: scale(1); box-shadow: none; }
+}
+@keyframes step-slam-b {
+  0% { transform: scale(1); }
+  22% { transform: scale(1.045); box-shadow: 0 0 0 2px rgba(201, 162, 75, 0.85), 0 0 26px 6px rgba(201, 162, 75, 0.45); }
+  100% { transform: scale(1); box-shadow: none; }
+}
+
+/* These animations are applied through the style attribute (the name has to change per hit,
+   see above), so switching them off needs !important to outrank the inline value. */
+@media (prefers-reduced-motion: reduce) {
+  .motion-hit,
+  .motion-slam {
+    animation: none !important;
+  }
+}
+
 /* The winner's photo, breathing — scale alone reads as a glitch on a circular frame, so
    the gold ring pulses with it and carries most of the effect. */
 @keyframes winner-photo-pulse {

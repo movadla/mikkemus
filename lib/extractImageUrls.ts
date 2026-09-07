@@ -1,11 +1,11 @@
 /**
  * Scolia's CAMERA_IMAGES payload shape isn't documented anywhere we could find (checked
- * scoliadarts.com/api/ and the FAQ — only marketing copy, no field-level schema, and the board
- * is currently offline so no real payload has been observed either). Rather than assume one
- * exact shape and break the moment it's wrong, this walks whatever object arrives looking for
- * anything that reads as an image reference (an http(s) URL or a data: URI) so the best-effort
- * display in components/CameraImages.tsx still works across shape variations, and simply finds
- * nothing (renders nothing) if the payload doesn't carry images at all.
+ * scoliadarts.com/api/ and the FAQ — only marketing copy, no field-level schema). Verified
+ * against a real payload 2026-09-07 once the board was finally online: it arrives as
+ * `{ images: [dataUri, dataUri, dataUri] }` — three base64 JPEGs, one per camera, sent
+ * around each takeout. The walk is kept rather than narrowed to that exact shape, since
+ * nothing documents it as stable: it looks for anything that reads as an image reference
+ * (an http(s) URL or a data: URI) and simply finds nothing if the payload carries none.
  */
 export function extractImageUrls(payload: unknown, max = 4): string[] {
   const found: string[] = [];
