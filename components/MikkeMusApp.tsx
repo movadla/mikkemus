@@ -27,6 +27,7 @@ import { clearActiveMatch, loadActiveMatch, saveActiveMatch } from "@/lib/active
 import { publishLiveMatch } from "@/lib/liveMatch";
 import { luckForThrow, sectorAt, throwAccuracy } from "@/lib/dartboard";
 import { haptics } from "@/lib/haptics";
+import { playFanfare, playHitStreakSound, primeAudio } from "@/lib/fanfare";
 import { classifyThrow, formatSectorLabel, parseSector } from "@/lib/scoliaMapping";
 import { botChooseThrow, botDecideRedirect, solverFor } from "@/lib/botStrategy";
 import { type BotLevel, type TeamMember } from "@/lib/botLevels";
@@ -99,7 +100,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   // (20-14, D, T, BULL) rather than one overall number — set once, at
   // finalizeMatch, same lifetime as winnerStats. {mean: null, count: 0} for
   // a section with no real Scolia darts to judge this match.
-  const [winnerLuck, setWinnerLuck] = useState<Record<string, Record<Step, { mean: number | null; count: number }>>>({});
+  const [winnerLuck, setWinnerLuck] = useState<Record<string, Record<Step, { sum: number; count: number }>>>({});
   // Full finishing order (winner first), computed once at match end — for a 2-player match this
   // is just [winner, loser]; for a tournament group pod with 3+ players it ranks everyone else by
   // how close they were to finishing at that moment (see remainingMarks), not by playing it out.
@@ -350,6 +351,12 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   // distinct from pendingHits, which only holds darts that actually scored a cross.
   const scoliaDartsRef = useRef(0);
 
+  // How many darts in a row, counting from the FIRST dart of this turn, have all hit —
+  // drives the tiered "dunk-pling" hit-streak sound (see lib/fanfare.ts). Reset to 0 at
+  // the start of each turn; the first miss freezes it below the current dart index, which
+  // is what silences the sound for the rest of the turn (see processDart).
+  const hitStreakRef = useRef(0);
+
   // Best-effort camera-image display (see lib/extractImageUrls.ts) — cleared wherever the
   // turn advances (below) so a stale image doesn't linger over the next player's throw.
   const [cameraImages, setCameraImages] = useState<string[]>([]);
@@ -371,6 +378,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       // turn is moot now regardless. Safe to batch with this dart's own turnShots
       // write below — React applies same-state updates in order within one tick.
       clearTurnDisplay();
+      hitStreakRef.current = 0;
     }
 
     // What the player was working on right before this dart lands — used both to
@@ -420,6 +428,14 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       updatePendingAmbiguous((prev) => prev.filter((p) => p.number !== classified.step));
     }
     const hit = hitResult !== null;
+    // Tiered "dunk-pling" streak sound — only while every dart so far THIS turn (from
+    // dart 1) has hit. hitStreakRef.current === dartIndex means the streak is still
+    // unbroken going into this dart; any miss (here or earlier) permanently desyncs the
+    // two for the rest of the turn, which is exactly what silences dart 2/3 after a miss.
+    if (hit && hitStreakRef.current === dartIndex) {
+      hitStreakRef.current += 1;
+      if (hitStreakRef.current <= 3) playHitStreakSound(hitStreakRef.current as 1 | 2 | 3);
+    }
 
     setMatchThrows((prev) => ({
       ...prev,
@@ -446,6 +462,22 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         ...luckTotalsRef.current,
         [activePlayer]: { ...luckByStep, [luck.step]: { sum: stepTotals.sum + luck.xg, count: stepTotals.count + 1 } },
       };
+    }
+
+    // Won the leg on this exact dart — end the turn right now instead of waiting for
+    // the rest of this turn's physical darts (or a takeout) to trickle in. Mirrors how
+    // the bot's own throwNext loop above already stops early on a mid-turn finish.
+    // finalProgress/finalPendingHits mirror resolvePendingChoice's own pattern below:
+    // registerHit's setProgress/setPendingHits haven't flushed to a render yet within
+    // this same synchronous call, so `progress`/`pendingHits` state is applied by hand.
+    if (hitResult && pendingAmbiguousRef.current.length === 0) {
+      const lastHit = hitResult[hitResult.length - 1];
+      const finalProgress = { ...progress, [activePlayer]: { ...progress[activePlayer], [lastHit.step]: lastHit.newCount } };
+      if (isFinished(finalProgress[activePlayer])) {
+        scoliaDartsRef.current = 0;
+        advanceTurn(finalProgress, [...pendingHits, ...hitResult]);
+        return;
+      }
     }
 
     if (dartIndex < DARTS_PER_TURN) {
@@ -512,6 +544,11 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     startTeamRosters: Record<string, TeamMember[]> = {},
     startGuestPlayers: Record<string, true> = {}
   ) {
+    // Called synchronously from a real button tap (SetupScreen/tournament) — the
+    // narrow window where the browser actually allows unlocking audio playback, well
+    // before a win-fanfare or hit-streak sound needs to fire from a Scolia/Supabase
+    // event later. See lib/fanfare.ts's primeAudio for why this matters.
+    primeAudio();
     const prog: PlayerProgress = {};
     startPlayers.forEach((p) => (prog[p] = emptyProgress()));
     setPlayers(startPlayers);
@@ -745,15 +782,17 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     // (matchThrows), which is a neutral visualization of where darts landed,
     // this panel makes a judgment call about the thrower, so bots are
     // excluded here — team rosters and guests are real humans and stay in.
-    // Broken down per section (see lib/dartboard.ts's luckForThrow) rather
-    // than one overall mean, mirroring the career stat's own breakdown.
-    const luckByPlayer: Record<string, Record<Step, { mean: number | null; count: number }>> = {};
+    // Broken down per section (see lib/dartboard.ts's luckForThrow) as a running
+    // SUM, not a mean — a sum is what's directly comparable to the actual crosses
+    // landed (an xG-style "forventet vs faktisk" read), which a per-dart average
+    // can't give you.
+    const luckByPlayer: Record<string, Record<Step, { sum: number; count: number }>> = {};
     players.forEach((p) => {
       const luckByStep = botLevels[p] ? null : luckTotalsRef.current[p];
-      const perStep = {} as Record<Step, { mean: number | null; count: number }>;
+      const perStep = {} as Record<Step, { sum: number; count: number }>;
       STEPS.forEach((step) => {
         const totals = luckByStep?.[step];
-        perStep[step] = { mean: totals && totals.count > 0 ? totals.sum / totals.count : null, count: totals?.count ?? 0 };
+        perStep[step] = { sum: totals?.sum ?? 0, count: totals?.count ?? 0 };
       });
       luckByPlayer[p] = perStep;
     });
@@ -848,11 +887,11 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
 
     if (isFinished(effectiveProgress[activePlayer])) {
       haptics.win();
-      announce(`${activePlayer} vinner!`);
+      playFanfare();
       // Reaching the winner screen must never depend on stats persistence succeeding —
       // see abortGame's identical guard for why.
       let stats: Record<string, TurnAggregate> = {};
-      let luckByPlayer: Record<string, Record<Step, { mean: number | null; count: number }>> = {};
+      let luckByPlayer: Record<string, Record<Step, { sum: number; count: number }>> = {};
       try {
         ({ stats, luckByPlayer } = finalizeMatch(nextTurnLog, activePlayer));
       } catch (err) {

@@ -15,7 +15,7 @@ export type ActiveMatchSnapshot = {
   // Optional: absent in snapshots saved before "Expected Goals" (or before
   // its per-section breakdown) existed — restore falls back to {} rather
   // than requiring a migration.
-  winnerLuck?: Record<string, Record<Step, { mean: number | null; count: number }>>;
+  winnerLuck?: Record<string, Record<Step, { sum: number; count: number }>>;
   placements: string[];
   turnToken: number;
   turnLog: Record<string, TurnResult[]>;

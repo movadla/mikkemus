@@ -559,19 +559,24 @@ export function meanVerticalDistance(record: PlayerRecord): number | null {
   return record.accuracy.throws === 0 ? null : record.accuracy.sumVertical / record.accuracy.throws;
 }
 
-/** Career mean "Expected Goals" (expected crosses per dart) across ALL sections combined — see lib/dartboard.ts. Null with no data yet. */
-export function meanLuck(record: PlayerRecord): number | null {
+/** Career "Expected Hits" — cumulative expected-crosses total (xG-style sum, NOT an average)
+ *  across ALL sections combined, directly comparable to `record.overall.hits` (the actual
+ *  crosses landed) so the two can be read side by side as "forventet / faktisk". Comparing a
+ *  mean per dart to a 3-per-section target doesn't mean anything; comparing two sums does — see
+ *  lib/dartboard.ts. Null with no data yet. */
+export function luckSum(record: PlayerRecord): number | null {
   const totals = STEPS.reduce(
     (acc, step) => ({ sum: acc.sum + record.luck[step].sum, count: acc.count + record.luck[step].count }),
     { sum: 0, count: 0 }
   );
-  return totals.count === 0 ? null : totals.sum / totals.count;
+  return totals.count === 0 ? null : totals.sum;
 }
 
-/** Career mean "Expected Goals" for ONE section (e.g. just "T", or just "20") — see lib/dartboard.ts. Null with no data yet for that section. */
-export function meanLuckForStep(record: PlayerRecord, step: Step): number | null {
+/** Career "Expected Hits" sum for ONE section (e.g. just "T", or just "20") — comparable to
+ *  `record.steps[step].hits` (actual). Null with no data yet for that section. */
+export function luckSumForStep(record: PlayerRecord, step: Step): number | null {
   const stat = record.luck[step];
-  return stat.count === 0 ? null : stat.sum / stat.count;
+  return stat.count === 0 ? null : stat.sum;
 }
 
 /** Career Bull-duell hit percentage (red+green hits / darts thrown). Null with no data yet. */
@@ -580,9 +585,10 @@ export function bullDuelHitPct(record: PlayerRecord): number | null {
   return Math.round(((record.bullDuel.redHits + record.bullDuel.greenHits) / record.bullDuel.throws) * 100);
 }
 
-/** Career mean Bull-duell "Expected Goals" — see lib/dartboard.ts's luckForBullDuelThrow. Null with no data yet. */
-export function meanBullDuelLuck(record: PlayerRecord): number | null {
-  return record.bullDuel.luckCount === 0 ? null : record.bullDuel.luckSum / record.bullDuel.luckCount;
+/** Career Bull-duell "Expected Hits" sum — comparable to `record.bullDuel.points` (actual). See
+ *  lib/dartboard.ts's luckForBullDuelThrow. Null with no data yet. */
+export function bullDuelLuckSum(record: PlayerRecord): number | null {
+  return record.bullDuel.luckCount === 0 ? null : record.bullDuel.luckSum;
 }
 
 export function averagePct(stat: HitStat): number {

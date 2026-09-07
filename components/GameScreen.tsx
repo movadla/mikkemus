@@ -14,6 +14,8 @@ import {
 } from "@/lib/game";
 import { isAnnouncerEnabled, setAnnouncerEnabled } from "@/lib/announcer";
 import { avatarAccent } from "@/lib/avatarAccent";
+import { primeAudio } from "@/lib/fanfare";
+import { startWakeLock } from "@/lib/wakeLock";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { Mark } from "./Mark";
 import { SpeakerIcon, SpeakerMuteIcon } from "./icons";
@@ -115,6 +117,11 @@ export function GameScreen({
     return () => clearTimeout(timer);
   }, [retractToken]);
 
+  // Keeps the screen from locking while this screen is mounted — see lib/wakeLock.ts for
+  // why (a hands-free Scolia match has no further tap to re-unlock audio once iOS
+  // suspends it after the phone naturally times out between darts).
+  useEffect(() => startWakeLock(), []);
+
   function handleUndo() {
     setRetractToken((t) => t + 1);
     setRetracting(true);
@@ -141,7 +148,14 @@ export function GameScreen({
   const ringLabel = pendingChoice?.ringStep === "T" ? "Trippel" : "Dobbel";
 
   return (
-    <div className="animate-screen-enter w-full flex flex-col p-4" style={{ height: "100dvh", background: "var(--color-bg)" }}>
+    <div
+      className="animate-screen-enter w-full flex flex-col p-4"
+      style={{ height: "100dvh", background: "var(--color-bg)" }}
+      // Covers resuming an in-progress match after a page reload, where startGame's own
+      // primeAudio() call never ran this session — the first tap anywhere on this screen
+      // unlocks audio instead, well before any win-fanfare/hit-streak sound needs it.
+      onPointerDownCapture={primeAudio}
+    >
       <div className="flex items-center justify-between mb-3 max-w-3xl mx-auto w-full shrink-0">
         <button
           type="button"
@@ -177,9 +191,23 @@ export function GameScreen({
       {awaitingConfirmResolution && pendingChoice && (
         <ConfirmDialog
           message={
-            <>
-              Du traff {ringLabel} {STEP_LABELS[pendingChoice.number]} — hvor skal kastet telle?
-            </>
+            (() => {
+              const ringCount = activeProgress?.[pendingChoice.ringStep] ?? 0;
+              const numberCount = activeProgress?.[pendingChoice.number] ?? 0;
+              const ringResult = Math.min(3, ringCount + 1);
+              const numberResult = Math.min(3, numberCount + pendingChoice.multiplier);
+              return (
+                <>
+                  <div>
+                    Du traff {ringLabel} {STEP_LABELS[pendingChoice.number]} — hvor skal kastet telle?
+                  </div>
+                  <div className="mt-2 text-sm" style={{ color: "var(--color-muted)" }}>
+                    {ringLabel}: {ringCount}/3 → {ringResult}/3 · {STEP_LABELS[pendingChoice.number]}: {numberCount}/3 → {numberResult}
+                    /3{numberResult >= 3 ? " (ferdig)" : ""}
+                  </div>
+                </>
+              );
+            })()
           }
           messageFontSize="1.05rem"
           buttons={[
@@ -204,7 +232,7 @@ export function GameScreen({
           buttons={[
             { label: "Fortsett spill", onClick: () => setShowHomeConfirm(false), background: "var(--color-green)" },
             {
-              label: "Avslutt kamp (stats blir lagret)",
+              label: "Avslutt kamp (stat lagres ikke)",
               onClick: () => {
                 setShowHomeConfirm(false);
                 onAbort();

@@ -1,26 +1,14 @@
 "use client";
 
-import { Fragment, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import type { BullDuelState } from "@/lib/bullDuel";
 import { getPlayerRecord } from "@/lib/storage";
+import { generateConfetti } from "@/lib/confetti";
 
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
 
-const CONFETTI = [
-  { left: "6%", rotate: "-18deg", delay: "0ms", color: "var(--color-gold)" },
-  { left: "16%", rotate: "24deg", delay: "90ms", color: "var(--color-cream)" },
-  { left: "26%", rotate: "-8deg", delay: "180ms", color: "var(--color-gold-strong)" },
-  { left: "36%", rotate: "32deg", delay: "40ms", color: "var(--color-cream)" },
-  { left: "46%", rotate: "-26deg", delay: "220ms", color: "var(--color-gold)" },
-  { left: "56%", rotate: "14deg", delay: "120ms", color: "var(--color-gold-strong)" },
-  { left: "64%", rotate: "-30deg", delay: "10ms", color: "var(--color-cream)" },
-  { left: "72%", rotate: "20deg", delay: "200ms", color: "var(--color-gold)" },
-  { left: "80%", rotate: "-14deg", delay: "70ms", color: "var(--color-cream)" },
-  { left: "88%", rotate: "28deg", delay: "160ms", color: "var(--color-gold-strong)" },
-  { left: "94%", rotate: "-22deg", delay: "260ms", color: "var(--color-gold)" },
-  { left: "50%", rotate: "8deg", delay: "300ms", color: "var(--color-cream)" },
-];
+const CONFETTI_COUNT = 40;
 
 // xG is an expected-points value (0-2, same unit the game scores in, like
 // football xG) rather than a signed luck delta — always non-negative, so
@@ -41,6 +29,7 @@ export function BullDuelWinnerScreen({
   const winner = duel.winner as string;
   const photo = getPlayerRecord(winner)?.photo;
   const [expanded, setExpanded] = useState<string | null>(null);
+  const confetti = useMemo(() => generateConfetti(CONFETTI_COUNT), []);
 
   return (
     <div className="animate-screen-enter min-h-screen w-full flex items-center justify-center p-6" style={{ background: "var(--color-bg)" }}>
@@ -57,7 +46,7 @@ export function BullDuelWinnerScreen({
             />
           </div>
           <div className="absolute inset-x-0 top-0 h-full overflow-hidden pointer-events-none z-10" aria-hidden>
-            {CONFETTI.map((c, i) => (
+            {confetti.map((c, i) => (
               <span
                 key={i}
                 className="confetti-piece"

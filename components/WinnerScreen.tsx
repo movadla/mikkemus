@@ -1,28 +1,17 @@
 "use client";
 
+import { useMemo } from "react";
 import { STEPS, STEP_LABELS, type Step, type TurnAggregate } from "@/lib/game";
 import { getPlayerRecord } from "@/lib/storage";
+import { generateConfetti } from "@/lib/confetti";
 import { DartboardHeatmap } from "./DartboardHeatmap";
 
-type LuckByStep = Record<Step, { mean: number | null; count: number }>;
+type LuckByStep = Record<Step, { sum: number; count: number }>;
 
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
 
-const CONFETTI = [
-  { left: "6%", rotate: "-18deg", delay: "0ms", color: "var(--color-gold)" },
-  { left: "16%", rotate: "24deg", delay: "90ms", color: "var(--color-cream)" },
-  { left: "26%", rotate: "-8deg", delay: "180ms", color: "var(--color-gold-strong)" },
-  { left: "36%", rotate: "32deg", delay: "40ms", color: "var(--color-cream)" },
-  { left: "46%", rotate: "-26deg", delay: "220ms", color: "var(--color-gold)" },
-  { left: "56%", rotate: "14deg", delay: "120ms", color: "var(--color-gold-strong)" },
-  { left: "64%", rotate: "-30deg", delay: "10ms", color: "var(--color-cream)" },
-  { left: "72%", rotate: "20deg", delay: "200ms", color: "var(--color-gold)" },
-  { left: "80%", rotate: "-14deg", delay: "70ms", color: "var(--color-cream)" },
-  { left: "88%", rotate: "28deg", delay: "160ms", color: "var(--color-gold-strong)" },
-  { left: "94%", rotate: "-22deg", delay: "260ms", color: "var(--color-gold)" },
-  { left: "50%", rotate: "8deg", delay: "300ms", color: "var(--color-cream)" },
-];
+const CONFETTI_COUNT = 40;
 
 function treffPct(stat?: TurnAggregate): number {
   if (!stat) return 0;
@@ -43,20 +32,17 @@ function formatLuck(luck: number): string {
   return luck.toFixed(1);
 }
 
-/** Overall mean across all 10 sections, recovered from their per-section
- *  means+counts (a weighted average is exact here, since mean_i already
- *  equals sum_i/count_i) — same "one summary number above the per-section
- *  grid" pattern the player profile page uses for treffprosent. */
-function overallMeanLuck(luckByStep: LuckByStep): number | null {
+/** Sum across all 10 sections' own sums — a total, not an average, so it's directly
+ *  comparable to the match's actual total crosses (see the "forventet / faktisk" display
+ *  below) the same way the career stat's own sum is comparable to `overall.hits`. */
+function overallSumLuck(luckByStep: LuckByStep): number | null {
   let sum = 0;
   let count = 0;
   STEPS.forEach((step) => {
-    const { mean, count: stepCount } = luckByStep[step];
-    if (mean === null) return;
-    sum += mean * stepCount;
-    count += stepCount;
+    sum += luckByStep[step].sum;
+    count += luckByStep[step].count;
   });
-  return count === 0 ? null : sum / count;
+  return count === 0 ? null : sum;
 }
 
 export function WinnerScreen({
@@ -87,6 +73,7 @@ export function WinnerScreen({
   onPlayAgain?: () => void;
 }) {
   const photo = getPlayerRecord(winner)?.photo;
+  const confetti = useMemo(() => generateConfetti(CONFETTI_COUNT), []);
 
   return (
     <div className="animate-screen-enter min-h-screen w-full flex items-center justify-center p-6" style={{ background: "var(--color-bg)" }}>
@@ -109,7 +96,7 @@ export function WinnerScreen({
             />
           </div>
           <div className="absolute inset-x-0 top-0 h-full overflow-hidden pointer-events-none z-10" aria-hidden>
-            {CONFETTI.map((c, i) => (
+            {confetti.map((c, i) => (
               <span
                 key={i}
                 className="confetti-piece"
@@ -190,35 +177,39 @@ export function WinnerScreen({
         {players.some((p) => STEPS.some((s) => luckByPlayer[p]?.[s].count > 0)) && (
           <div className="shadow-panel rounded-xl p-5 mb-6" style={{ background: "var(--color-surface)" }}>
             <p className="mb-3" style={{ color: "var(--color-gold)", fontSize: "0.85rem", letterSpacing: "0.1em" }}>
-              EXPECTED GOALS
+              EXPECTED HITS (FORVENTET / FAKTISK)
             </p>
             <div className="space-y-4">
               {players
                 .filter((p) => STEPS.some((s) => luckByPlayer[p]?.[s].count > 0))
                 .map((p) => {
                   const luckByStep = luckByPlayer[p];
-                  const overall = overallMeanLuck(luckByStep);
+                  const overall = overallSumLuck(luckByStep);
+                  const actualTotal = stats[p]?.hits ?? 0;
                   return (
                     <div key={p}>
                       <div className="flex justify-between items-center mb-1.5">
                         <span style={{ color: "var(--color-cream)" }}>{p}</span>
                         <span className="tabular" style={{ color: "var(--color-gold-strong)", fontWeight: 600 }}>
-                          {overall === null ? "–" : formatLuck(overall)}
+                          {overall === null ? "–" : `${formatLuck(overall)} / ${actualTotal}`}
                         </span>
                       </div>
                       <div className="grid grid-cols-5 gap-1">
-                        {STEPS.map((s) => (
-                          <div
-                            key={s}
-                            className="rounded-md py-1.5 text-center tabular"
-                            style={{ background: "var(--color-cell)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -4px 8px rgba(0,0,0,0.18)" }}
-                          >
-                            <p style={{ color: "var(--color-muted)", fontSize: "0.6rem" }}>{STEP_LABELS[s]}</p>
-                            <p style={{ color: "var(--color-cream)", fontSize: "0.75rem", fontWeight: 600 }}>
-                              {luckByStep[s].count === 0 ? "–" : formatLuck(luckByStep[s].mean as number)}
-                            </p>
-                          </div>
-                        ))}
+                        {STEPS.map((s) => {
+                          const actualStep = stats[p]?.hitsByStep[s] ?? 0;
+                          return (
+                            <div
+                              key={s}
+                              className="rounded-md py-1.5 text-center tabular"
+                              style={{ background: "var(--color-cell)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -4px 8px rgba(0,0,0,0.18)" }}
+                            >
+                              <p style={{ color: "var(--color-muted)", fontSize: "0.6rem" }}>{STEP_LABELS[s]}</p>
+                              <p style={{ color: "var(--color-cream)", fontSize: "0.75rem", fontWeight: 600 }}>
+                                {luckByStep[s].count === 0 ? "–" : `${formatLuck(luckByStep[s].sum)}/${actualStep}`}
+                              </p>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   );

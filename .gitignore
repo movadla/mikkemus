@@ -48,3 +48,6 @@ scolia-relay.log
 *.pid
 dev-scolia-debug.log
 scolia-relay-run.log
+
+.vercel
+.env*

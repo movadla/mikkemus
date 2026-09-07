@@ -13,6 +13,7 @@ import {
 } from "@/lib/bullDuel";
 import { sectorAt } from "@/lib/dartboard";
 import { haptics } from "@/lib/haptics";
+import { playFanfare } from "@/lib/fanfare";
 import { recordBullDuelMatch } from "@/lib/storage";
 import { useScolia } from "@/lib/useScolia";
 import { BullDuelGameScreen } from "./BullDuelGameScreen";
@@ -140,6 +141,7 @@ export function BullDuelApp({ onExitToHome }: { onExitToHome: () => void }) {
     if (!duel?.winner || recordedWinnerRef.current === duel.winner) return;
     recordedWinnerRef.current = duel.winner;
     haptics.win();
+    playFanfare();
     duel.players.forEach((p) => {
       if (botLevels[p] || teamRosters[p] || guestPlayers[p]) return;
       const stats = duel.stats[p];
