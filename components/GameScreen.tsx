@@ -175,7 +175,6 @@ export function GameScreen({
   const activeStep = activePlayer ? currentStepFor(progress[activePlayer]) : null;
   const accent = "var(--color-teal)";
   const glowColor = "rgba(47, 180, 194, 0.35)";
-  const glowBg = "rgba(47, 180, 194, 0.16)";
 
   // What redirecting pendingChoice would look like: how many extra crosses land on
   // its number (ghost preview there) and whether that fully completes it, in which
@@ -190,6 +189,11 @@ export function GameScreen({
       })()
     : null;
   const ringLabel = pendingChoice?.ringStep === "T" ? "Trippel" : "Dobbel";
+
+  /** 20-14 are the ordered run; D/T/BULL are a different kind of target and are set apart. */
+  const isNumberStep = (s: Step) => !Number.isNaN(Number(s));
+  /** Every player has finished this row, so it's settled history rather than live board. */
+  const allClosed = (s: Step) => players.length > 0 && players.every((p) => (progress[p]?.[s] ?? 0) >= 3);
 
   return (
     <div
@@ -315,14 +319,20 @@ export function GameScreen({
               return (
                 <div
                   key={p}
-                  className="relative flex flex-col items-center justify-center gap-1 p-2 text-center transition-colors duration-300"
+                  className={`relative flex flex-col items-center justify-center gap-1.5 p-2 pb-2.5 text-center transition-colors duration-300 grid-rule-left ${isActive ? "column-active" : ""}`}
                   style={{
                     borderBottom: isActive ? `2px solid ${accent}` : "2px solid var(--color-border)",
                   }}
                 >
                   <span
-                    className="absolute top-1 right-1.5 tabular"
-                    style={{ color: "var(--color-cream)", opacity: 0.55, fontSize: "0.72rem" }}
+                    className="absolute top-1 right-1.5 tabular px-1.5 rounded"
+                    style={{
+                      color: "var(--color-muted)",
+                      fontSize: "0.66rem",
+                      background: "rgba(0,0,0,0.25)",
+                      lineHeight: "1.35",
+                    }}
+                    title="Piler kastet"
                   >
                     {dartsThrown[p] ?? 0}
                   </span>
@@ -336,17 +346,18 @@ export function GameScreen({
                     )}
                     <span
                       key={isActive ? `active-${turnToken}` : "inactive"}
-                      className={`relative block max-w-full truncate px-2.5 py-0.5 rounded-full transition-all duration-300 ${isActive ? "animate-column-glow" : ""}`}
+                      className={`relative block max-w-full truncate px-3 py-0.5 rounded-full transition-all duration-300 ${isActive ? "animate-column-glow" : ""}`}
                       style={
                         {
-                          color: isActive ? accent : "var(--color-cream)",
-                          fontSize: isActive ? "1.05rem" : "0.85rem",
+                          color: isActive ? "var(--color-bg)" : "var(--color-cream)",
+                          // One fixed size for both states. The old jump from 0.85 to 1.05rem
+                          // shifted the whole header's layout on every single turn change.
+                          fontSize: "0.95rem",
                           fontWeight: isActive ? 700 : 500,
-                          background: isActive ? glowBg : "transparent",
-                          // A fixed per-player color, always on (not just while active) — so the
-                          // same name reads as "the same player" turn after turn and screen after
-                          // screen, independent of whose turn it currently is.
-                          border: `1.5px solid ${avatarAccent(p)}`,
+                          background: isActive ? accent : "rgba(255,255,255,0.04)",
+                          boxShadow: isActive
+                            ? "0 1px 0 rgba(255,255,255,0.3) inset, 0 2px 8px rgba(0,0,0,0.35)"
+                            : "0 1px 0 rgba(255,255,255,0.05) inset",
                           "--glow-color": glowColor,
                         } as React.CSSProperties
                       }
@@ -354,6 +365,14 @@ export function GameScreen({
                       {p}
                     </span>
                   </span>
+                  {/* Fixed per-player colour, always on, so the same name reads as the same
+                      player turn after turn. Moved off the name pill's border, where it fought
+                      with the teal active state for the same edge. */}
+                  <span
+                    aria-hidden
+                    className="block rounded-full"
+                    style={{ width: "26px", height: "3px", background: avatarAccent(p), opacity: isActive ? 1 : 0.65 }}
+                  />
                 </div>
               );
             })}
@@ -362,11 +381,17 @@ export function GameScreen({
               return (
               <Fragment key={s}>
                 <div
-                  className="motion-slam sticky left-0 z-10 flex items-center justify-center tabular rounded-md"
+                  className="motion-slam grid-rule-top sticky left-0 z-10 flex items-center justify-center tabular"
                   style={{
-                    color: closedStep?.step === s ? "var(--color-gold)" : "var(--color-cream)",
-                    fontSize: "1.3rem",
-                    fontWeight: 700,
+                    // A step everyone has closed is done business — it fades back rather than
+                    // shouting the same as the live rows above it.
+                    color: closedStep?.step === s ? "var(--color-gold)" : allClosed(s) ? "var(--color-muted)" : "var(--color-cream)",
+                    // Numbers are the run you work through in order; D/T/BULL are a different
+                    // kind of target, so they're set apart rather than dressed identically.
+                    fontFamily: isNumberStep(s) ? "var(--font-display)" : "var(--font-sans)",
+                    fontSize: isNumberStep(s) ? "1.35rem" : "0.95rem",
+                    fontWeight: isNumberStep(s) ? 600 : 700,
+                    letterSpacing: isNumberStep(s) ? "0" : "0.08em",
                     background: "var(--color-panel)",
                     transition: "color 320ms var(--ease-standard, ease-out)",
                     animation: closedStep?.step === s ? slamAnimation : undefined,
@@ -389,8 +414,14 @@ export function GameScreen({
                     : recentlyConfirmed?.player === p
                       ? recentlyConfirmed.byStep[s] ?? 0
                       : 0;
+                  // Ring state is one choice, not three stacked ones: playable outranks the
+                  // would-open-next preview, and a settled cell carries neither.
+                  const tileState = clickable ? "cell-tile--active" : previewOpening ? "cell-tile--preview" : "";
                   return (
-                    <div key={p} className="relative min-h-0 min-w-0 flex items-center justify-center p-1">
+                    <div
+                      key={p}
+                      className={`relative min-h-0 min-w-0 flex items-center justify-center p-1 grid-rule-top grid-rule-left ${isActive ? "column-active" : ""}`}
+                    >
                       {clickable && (
                         <span
                           aria-hidden
@@ -402,20 +433,13 @@ export function GameScreen({
                         type="button"
                         disabled={!clickable}
                         onClick={() => onRegisterHit(s)}
-                        className={`relative w-full h-full min-h-0 min-w-0 max-w-full max-h-full rounded-md flex items-center justify-center ${clickable ? "tactile" : ""} ${FOCUS_RING}`}
+                        className={`cell-tile ${count >= 3 ? "cell-tile--done" : ""} ${tileState} relative w-full h-full min-h-0 min-w-0 max-w-full max-h-full rounded-md flex items-center justify-center ${FOCUS_RING}`}
                         style={{
-                          background: count >= 3 ? "var(--color-cell-done)" : "var(--color-cell)",
-                          boxShadow:
-                            count >= 3
-                              ? "inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -8px 14px rgba(0,0,0,0.3)"
-                              : "inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -4px 8px rgba(0,0,0,0.18)",
-                          outline: clickable
-                            ? `2px solid ${accent}`
-                            : previewOpening
-                              ? `2px dashed ${accent}`
-                              : "none",
                           cursor: clickable ? "pointer" : "default",
-                          opacity: clickable || count > 0 || previewOpening ? 1 : 0.5,
+                          // Untouched, unreachable cells recede rather than disappear — still
+                          // legible as part of the board, just clearly not in play.
+                          opacity: clickable || count > 0 || previewOpening ? 1 : 0.55,
+                          transform: clickable ? "translateY(-1px)" : undefined,
                         }}
                       >
                         <div className="w-full h-full p-1">
@@ -432,8 +456,8 @@ export function GameScreen({
         </div>
       </div>
 
-      <div className="shrink-0 pt-3 max-w-3xl mx-auto w-full">
-        <div className="grid gap-3" style={{ gridTemplateColumns: "0.7fr 1.3fr" }}>
+      <div className="action-bar shrink-0 mt-3 -mx-4 px-4 pt-3 pb-1">
+        <div className="grid gap-3 max-w-3xl mx-auto w-full" style={{ gridTemplateColumns: "0.7fr 1.3fr" }}>
           <button
             type="button"
             onClick={handleUndo}

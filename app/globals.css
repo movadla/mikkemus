@@ -14,6 +14,14 @@
      step or the winner screen. Teal is the everyday interactive accent —
      buttons, the active player, focus rings, stats. Red stays reserved for
      undo/delete/errors so it never gets diluted into a "just another accent". */
+  /* A closed step is the one thing in the game you actually earn, and gold is the earned
+     colour per the rule above — but the grid used to mark it with a slightly lighter green,
+     so the payoff never announced itself. These are the gold-tinted surfaces that fixes. */
+  --color-cell-done-top: #4a4028;
+  --color-cell-done-bottom: #33301f;
+  --color-cell-open-top: #22392b;
+  --color-cell-open-bottom: #182c21;
+
   --color-gold: #c9a24b;
   --color-gold-strong: #e0c471;
   --color-teal: #2fb4c2;
@@ -301,6 +309,79 @@ button {
   .glossy:active {
     transform: none;
   }
+}
+
+/* -- the score grid --
+   The grid is most of what's on screen for the whole match, so it carries the app's look
+   more than any other surface. These give the cells material: a vertical gradient (light
+   falls from above, so a tile lighter at the top reads as raised), a hairline top edge, and
+   an occlusion shadow at the bottom. Flat fills read as a spreadsheet no matter how good
+   the surrounding panel is. */
+.cell-tile {
+  background: linear-gradient(180deg, var(--color-cell-open-top) 0%, var(--color-cell-open-bottom) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    inset 0 -6px 10px rgba(0, 0, 0, 0.22),
+    0 1px 2px rgba(0, 0, 0, 0.25);
+  transition:
+    background var(--duration-base) var(--ease-standard),
+    box-shadow var(--duration-base) var(--ease-standard);
+}
+
+/* Closed: the gold payoff. Warmer surface, a gold inner rim, and a low outer bloom so a
+   finished row is visible at a glance from across the room. */
+.cell-tile--done {
+  background: linear-gradient(180deg, var(--color-cell-done-top) 0%, var(--color-cell-done-bottom) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 235, 190, 0.22),
+    inset 0 0 0 1px rgba(201, 162, 75, 0.45),
+    inset 0 -8px 14px rgba(0, 0, 0, 0.3),
+    0 0 16px rgba(201, 162, 75, 0.14);
+}
+
+/* Playable right now. A box-shadow ring instead of `outline`, which follows the border
+   radius properly and composites with the tile's own inset shading rather than replacing
+   it — an outline sat on top as a hard rectangle and read as a debug box. */
+.cell-tile--active {
+  box-shadow:
+    0 0 0 2px var(--color-teal),
+    0 0 20px rgba(47, 180, 194, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -6px 10px rgba(0, 0, 0, 0.22);
+}
+
+/* Would open next if the pending triple/double choice is redirected — same ring geometry as
+   --active, dashed-equivalent weight, so the preview reads as related but not yet real. */
+.cell-tile--preview {
+  box-shadow:
+    0 0 0 1.5px rgba(47, 180, 194, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    inset 0 -6px 10px rgba(0, 0, 0, 0.22);
+}
+
+/* Hairline rules between rows and columns. Structure was carried entirely by padding
+   before, which is what made the grid feel like floating chips rather than a board. */
+.grid-rule-top {
+  border-top: 1px solid rgba(255, 255, 255, 0.045);
+}
+
+.grid-rule-left {
+  border-left: 1px solid rgba(255, 255, 255, 0.035);
+}
+
+/* A wash down the active player's column — the single fastest way to answer "whose turn is
+   it" from across a room, which is the actual viewing distance for a phone at the oche. */
+.column-active {
+  background: linear-gradient(180deg, rgba(47, 180, 194, 0.075) 0%, rgba(47, 180, 194, 0.025) 100%);
+}
+
+/* The action bar reads as docked hardware rather than two buttons floating on the
+   background: its own slightly raised surface, a hairline lip, and a shadow it casts up
+   into the grid above. */
+.action-bar {
+  background: linear-gradient(180deg, rgba(23, 40, 31, 0.75) 0%, rgba(18, 33, 26, 0.95) 100%);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 -10px 24px rgba(0, 0, 0, 0.35);
 }
 
 /* -- winner screen flourish -- */
