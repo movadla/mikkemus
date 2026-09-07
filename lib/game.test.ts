@@ -6,11 +6,13 @@ import {
   emptyProgress,
   isFinished,
   isRegistrable,
+  meaningfulPending,
   nextStepAfter,
   remainingMarks,
   STEPS,
   summarizeTurn,
   type HitRecord,
+  type PendingAmbiguous,
 } from "./game";
 
 describe("emptyProgress", () => {
@@ -151,5 +153,36 @@ describe("aggregateTurns", () => {
     expect(totals.misses).toBe(3);
     expect(totals.hitsByStep).toEqual({ "20": 2, "19": 1 });
     expect(totals.missesByStep).toEqual({ "20": 1, "19": 2 });
+  });
+});
+
+describe("meaningfulPending", () => {
+  function pendingOn(number: "19" | "18", key: number): PendingAmbiguous {
+    return {
+      key,
+      hitRecord: { player: "A", step: "D", prevCount: 0, newCount: 1, turnIndex: 0 },
+      ringStep: "D",
+      number,
+      multiplier: 2,
+    };
+  }
+
+  it("keeps a choice whose number still has room", () => {
+    const progress = { ...emptyProgress(), "19": 1 };
+    expect(meaningfulPending([pendingOn("19", 1)], progress)).toHaveLength(1);
+  });
+
+  it("drops a choice whose number filled up after an earlier choice in the same turn", () => {
+    // Two D19s while 19 sat at 1/3 queue two choices; answering the first with
+    // "complete 19" fills it, so the second one can no longer change anything —
+    // and answering it would roll its D cross back without adding any, losing a cross.
+    const progress = { ...emptyProgress(), "19": 3 };
+    expect(meaningfulPending([pendingOn("19", 1), pendingOn("19", 2)], progress)).toEqual([]);
+  });
+
+  it("only drops the choices whose own number is full", () => {
+    const progress = { ...emptyProgress(), "19": 3, "18": 2 };
+    const kept = meaningfulPending([pendingOn("19", 1), pendingOn("18", 2)], progress);
+    expect(kept.map((p) => p.number)).toEqual(["18"]);
   });
 });

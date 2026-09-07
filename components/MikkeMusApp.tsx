@@ -9,6 +9,7 @@ import {
   emptyProgress,
   isRegistrable,
   isFinished,
+  meaningfulPending,
   remainingMarks,
   STEPS,
   summarizeTurn,
@@ -759,7 +760,13 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       setPendingHits(finalPendingHits);
     }
 
-    const remaining = pendingAmbiguousRef.current.filter((p) => p.key !== item.key);
+    // Filtered against finalProgress, not `progress` — this same choice may have just
+    // filled the number, which is exactly what makes a sibling choice on that number moot
+    // (see meaningfulPending), and the state won't reflect it until the next render.
+    const remaining = meaningfulPending(
+      pendingAmbiguousRef.current.filter((p) => p.key !== item.key),
+      finalProgress[activePlayer]
+    );
     updatePendingAmbiguous(remaining);
 
     if (remaining.length === 0 && awaitingConfirmResolutionRef.current) {
@@ -858,7 +865,9 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     scoliaDartsRef.current = 0;
     // Reads the ref, not the pendingAmbiguous state — see pendingAmbiguousRef's
     // comment above for why the state can be stale right here.
-    if (pendingAmbiguousRef.current.length > 0) {
+    const pending = meaningfulPending(pendingAmbiguousRef.current, progress[activePlayer]);
+    if (pending.length !== pendingAmbiguousRef.current.length) updatePendingAmbiguous(pending);
+    if (pending.length > 0) {
       updateAwaitingConfirmResolution(true);
       return;
     }

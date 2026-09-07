@@ -61,6 +61,19 @@ export type PendingAmbiguous = {
   multiplier: 2 | 3;
 };
 
+/**
+ * Drops pending triple/double choices that can't change anything any more: the number they
+ * would redirect to is already full (3/3), so "complete the number" adds zero crosses and
+ * the dart stays on D/T either way. This happens for real within a single turn — two D19s
+ * while 19 sits at 1/3 queue two choices, and answering the first with "complete 19" fills
+ * 19, leaving the second question with only one real answer. Worse than merely redundant:
+ * answering "complete" there rolls that dart's D cross back and then adds nothing (applyHit
+ * caps at 3), silently costing a cross.
+ */
+export function meaningfulPending(pending: PendingAmbiguous[], progressForPlayer: Progress): PendingAmbiguous[] {
+  return pending.filter((p) => progressForPlayer[p.number] < 3);
+}
+
 export type TurnResult = {
   /** Crosses gained this turn, by the step they landed on. */
   hitsByStep: Partial<Record<Step, number>>;
