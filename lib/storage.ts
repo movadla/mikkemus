@@ -174,10 +174,13 @@ function recordToRow(k: string, record: PlayerRecord): PlayerRow {
     accuracy_sum_horizontal: record.accuracy.sumHorizontal,
     accuracy_sum_vertical: record.accuracy.sumVertical,
     accuracy_throws: record.accuracy.throws,
-    // luck_sum/luck_count are no longer written (superseded by `luck`) —
-    // left as null rather than resurrecting a stale aggregate.
-    luck_sum: null,
-    luck_count: null,
+    // Dead columns, superseded by the per-section `luck` below — but they're NOT NULL in
+    // the table, so writing null here made EVERY write to `players` fail wholesale
+    // ("null value in column luck_sum violates not-null constraint"), silently killing all
+    // stat saving from 2026-08-22 until this was found. Written as 0 rather than dropped
+    // from the payload, since an insert can't rely on a default that may not exist.
+    luck_sum: 0,
+    luck_count: 0,
     luck: record.luck,
     bull_duel: record.bullDuel,
     best_darts_to_finish: record.bestDartsToFinish,

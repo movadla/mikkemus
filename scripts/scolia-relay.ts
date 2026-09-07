@@ -59,8 +59,22 @@ conn.on("onConnectionChange", (state) => {
   }
 });
 
+/**
+ * The board stops detecting throws entirely while it's in the Takeout phase — it's waiting
+ * to see the darts come out. If that detection is missed (seen in practice: a TAKEOUT_STARTED
+ * with no TAKEOUT_FINISHED ever following), the board sits in Takeout forever and every
+ * subsequent throw is silently ignored, while the relay and the app both still look perfectly
+ * healthy — status keeps heartbeating and the badge stays "Online". RESET_PHASE is the API's
+ * way out; nothing was calling it. A real takeout resolves in seconds, so a full minute in
+ * that phase means stuck, not slow.
+ */
+const STUCK_TAKEOUT_MS = 60_000;
+let takeoutSince: number | null = null;
+
 conn.on("onStatus", (payload) => {
   console.log("[status]", payload);
+  if (payload.boardPhase === "Takeout") takeoutSince ??= Date.now();
+  else takeoutSince = null;
   upsertStatus(payload.boardStatus, payload.boardPhase, payload.errorType ?? null);
 });
 
@@ -76,6 +90,7 @@ conn.on("onTakeoutStarted", (payload) => {
 
 conn.on("onTakeoutFinished", (payload) => {
   console.log("[takeout finished]", payload);
+  takeoutSince = null;
   insertEvent("TAKEOUT_FINISHED", payload);
 });
 
@@ -87,8 +102,18 @@ conn.on("onCameraImages", (payload) => {
 });
 
 // Periodic heartbeat so the browser can tell "relay is alive" from "relay has been
-// down for a while" even during long stretches with no real status change.
-setInterval(() => conn.getStatus(), 30_000);
+// down for a while" even during long stretches with no real status change. Doubles as the
+// tick that notices a board stuck in Takeout (see STUCK_TAKEOUT_MS above) and frees it.
+setInterval(() => {
+  if (takeoutSince !== null && Date.now() - takeoutSince > STUCK_TAKEOUT_MS) {
+    console.log("[recover] brettet har stått i Takeout i over ett minutt — sender RESET_PHASE");
+    conn.resetPhase();
+    // Restart the clock rather than clearing it: if RESET_PHASE doesn't take, this retries
+    // once a minute instead of firing on every heartbeat.
+    takeoutSince = Date.now();
+  }
+  conn.getStatus();
+}, 30_000);
 
 conn.connect();
 console.log(`Scolia-relay kjører for brett ${serialNumber}. Ctrl+C for å stoppe.`);
