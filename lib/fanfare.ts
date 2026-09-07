@@ -159,20 +159,38 @@ function softTone(ctx: AudioContext, buses: Buses, freq: number, start: number, 
 }
 
 // Note frequencies (equal temperament).
+const C4 = 261.63;
 const G4 = 392.0;
 const C5 = 523.25;
 const E5 = 659.25;
 const G5 = 783.99;
+const A5 = 880.0;
 const C6 = 1046.5;
 const E6 = 1318.51;
 const G6 = 1568.0;
 
+export type FanfareVariant = 1 | 2 | 3;
+
 /**
- * Match won — the full fanfare: a rising bugle-style call into a held top note with a
- * major triad under it, left to ring out in the reverb. Roughly two seconds, which is
- * what makes it read as a fanfare rather than as a notification chime.
+ * Which variant the real win actually plays. There's no way to judge a synthesized fanfare
+ * from the code, so /lyd plays all three side by side and this is the one line that changes
+ * once a favourite is picked.
  */
+const WIN_FANFARE: FanfareVariant = 1;
+
+/** Match won. See WIN_FANFARE — /lyd is where these get compared. */
 export function playFanfare() {
+  playFanfareVariant(WIN_FANFARE);
+}
+
+/**
+ * The three candidate win fanfares:
+ *  1. Rising bugle call into a held top note over a triad, then a closing accent.
+ *  2. Classic cavalry "charge!" — repeated short notes driving up into the top note.
+ *  3. Slower and broader: a low pickup into a big sustained major chord, more orchestra
+ *     than solo trumpet, leaning on the reverb tail.
+ */
+export function playFanfareVariant(variant: FanfareVariant) {
   const ctx = getContext();
   if (!ctx) return;
   try {
@@ -181,7 +199,32 @@ export function playFanfare() {
     if (!buses) return;
     const t = ctx.currentTime + 0.03;
 
-    // "tud-de-li-TUUU" — three short rising notes into the held one.
+    if (variant === 2) {
+      // Short, driving, staccato — the "charge!" shape: G G G C E, then the top held.
+      brassNote(ctx, buses, G5, t, 0.1, 0.17);
+      brassNote(ctx, buses, G5, t + 0.12, 0.1, 0.17);
+      brassNote(ctx, buses, G5, t + 0.24, 0.1, 0.17);
+      brassNote(ctx, buses, C6, t + 0.36, 0.12, 0.18);
+      brassNote(ctx, buses, E6, t + 0.5, 0.12, 0.18);
+      brassNote(ctx, buses, G6, t + 0.64, 1.1, 0.2);
+      brassNote(ctx, buses, C6, t + 0.64, 1.05, 0.1);
+      brassNote(ctx, buses, E6, t + 0.64, 1.05, 0.09);
+      return;
+    }
+
+    if (variant === 3) {
+      // Broad and pompous: low pickup, then a big sustained chord left to ring.
+      brassNote(ctx, buses, C4, t, 0.3, 0.13);
+      brassNote(ctx, buses, G4, t + 0.26, 0.3, 0.14);
+      brassNote(ctx, buses, C5, t + 0.52, 1.7, 0.15);
+      brassNote(ctx, buses, E5, t + 0.62, 1.6, 0.12);
+      brassNote(ctx, buses, G5, t + 0.72, 1.5, 0.12);
+      brassNote(ctx, buses, C6, t + 0.82, 1.4, 0.11);
+      brassNote(ctx, buses, E6, t + 0.92, 1.3, 0.08);
+      return;
+    }
+
+    // Variant 1 — "tud-de-li-TUUU": three short rising notes into the held one.
     brassNote(ctx, buses, G5, t, 0.15, 0.17);
     brassNote(ctx, buses, C6, t + 0.15, 0.14, 0.17);
     brassNote(ctx, buses, E6, t + 0.29, 0.15, 0.18);
@@ -219,19 +262,55 @@ export function playHitStreakSound(streak: 1 | 2 | 3) {
     const now = ctx.currentTime + 0.02;
 
     if (streak === 3) {
-      // Perfect round — a real fanfare: rising call into a held triad.
-      brassNote(ctx, buses, C5, now, 0.13, 0.15);
-      brassNote(ctx, buses, E5, now + 0.13, 0.12, 0.15);
-      brassNote(ctx, buses, G5, now + 0.25, 0.13, 0.16);
-      brassNote(ctx, buses, C6, now + 0.4, 0.7, 0.18);
-      brassNote(ctx, buses, G5, now + 0.4, 0.65, 0.09);
-      brassNote(ctx, buses, E5, now + 0.4, 0.65, 0.08);
+      playPerfectRoundVariant(PERFECT_ROUND);
       return;
     }
 
     const gain = streak === 1 ? 0.1 : 0.16;
     softTone(ctx, buses, streak === 1 ? G4 / 2 : G4 / 2 + 25, now, 0.1, gain, "triangle");
     softTone(ctx, buses, streak === 1 ? C6 * 0.63 : C6 * 0.75, now + 0.06, 0.16, gain, "sine");
+  } catch {
+    // Never let a synth glitch break a turn.
+  }
+}
+
+export type PerfectRoundVariant = 1 | 2;
+
+/** Which perfect-round flourish a real 3-for-3 turn plays — same "pick it on /lyd, change
+ *  this one line" arrangement as WIN_FANFARE. */
+const PERFECT_ROUND: PerfectRoundVariant = 1;
+
+/**
+ * The two candidate perfect-round flourishes — both deliberately shorter and lower than
+ * any win fanfare, so a good turn never gets mistaken for a won match:
+ *  1. A small rising call into a held triad.
+ *  2. A quick climbing run that lands on a bright top note, more "ka-ching" than fanfare.
+ */
+export function playPerfectRoundVariant(variant: PerfectRoundVariant) {
+  const ctx = getContext();
+  if (!ctx) return;
+  try {
+    if (ctx.state === "suspended") ctx.resume().catch(() => {});
+    const buses = getBuses(ctx);
+    if (!buses) return;
+    const now = ctx.currentTime + 0.02;
+
+    if (variant === 2) {
+      brassNote(ctx, buses, G4, now, 0.08, 0.13);
+      brassNote(ctx, buses, C5, now + 0.07, 0.08, 0.14);
+      brassNote(ctx, buses, E5, now + 0.14, 0.08, 0.14);
+      brassNote(ctx, buses, G5, now + 0.21, 0.08, 0.15);
+      brassNote(ctx, buses, A5, now + 0.28, 0.55, 0.17);
+      brassNote(ctx, buses, E5, now + 0.28, 0.5, 0.08);
+      return;
+    }
+
+    brassNote(ctx, buses, C5, now, 0.13, 0.15);
+    brassNote(ctx, buses, E5, now + 0.13, 0.12, 0.15);
+    brassNote(ctx, buses, G5, now + 0.25, 0.13, 0.16);
+    brassNote(ctx, buses, C6, now + 0.4, 0.7, 0.18);
+    brassNote(ctx, buses, G5, now + 0.4, 0.65, 0.09);
+    brassNote(ctx, buses, E5, now + 0.4, 0.65, 0.08);
   } catch {
     // Never let a synth glitch break a turn.
   }

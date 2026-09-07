@@ -77,7 +77,7 @@ export function AppRoot() {
             Bull-duell
           </button>
         </div>
-        <p className="text-center mt-8">
+        <p className="text-center mt-8 flex items-center justify-center gap-4">
           <Link
             href="/storskjerm"
             className={`font-display text-sm underline inline-flex items-center gap-1.5 ${FOCUS_RING}`}
@@ -85,6 +85,13 @@ export function AppRoot() {
           >
             <TvIcon className="w-3.5 h-3.5" />
             Åpne storskjerm-visning
+          </Link>
+          <Link
+            href="/lyd"
+            className={`font-display text-sm underline ${FOCUS_RING}`}
+            style={{ color: "var(--color-muted)", fontStyle: "italic" }}
+          >
+            Lyder
           </Link>
         </p>
       </div>
