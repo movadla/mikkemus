@@ -3,7 +3,7 @@
 # Oppdaterer next.config.ts automatisk med ny tunnel-URL.
 # Bruk: npm run tunnel
 #
-# Port 3002 — avgrenset til EGNE tidligere prosesser (lagret PID), ikke alt som
+# Port 3011 — avgrenset til EGNE tidligere prosesser (lagret PID), ikke alt som
 # heter node/cloudflared, slik at dette kan kjøre samtidig med andre prosjekter
 # (mitt-dashboard på 3000, cl-spillet på 3001) uten å drepe hverandre.
 
@@ -33,7 +33,7 @@ Remove-Item "$root\cloudflared-err.log","$root\dev-server.log" -ErrorAction Sile
 # -- 2. Start cloudflared -----------------------------------------------------
 Write-Host "  Starter Cloudflare-tunnel..." -ForegroundColor DarkGray
 $tunnelProcess = Start-Process -FilePath "$root\cloudflared.exe" `
-    -ArgumentList "tunnel","--url","http://localhost:3002" `
+    -ArgumentList "tunnel","--url","http://localhost:3011" `
     -RedirectStandardError "$root\cloudflared-err.log" `
     -NoNewWindow -PassThru
 $tunnelProcess.Id | Out-File -FilePath $tunnelPidFile -Encoding ascii
@@ -71,10 +71,10 @@ if ($config -match "trycloudflare\.com") {
 $utf8NoBom = New-Object System.Text.UTF8Encoding $false
 [System.IO.File]::WriteAllText($configPath, $config, $utf8NoBom)
 
-# -- 5. Start dev-server på port 3002 med oppdatert config --------------------
-Write-Host "  Starter Next.js dev-server (port 3002)..." -ForegroundColor DarkGray
+# -- 5. Start dev-server på port 3011 med oppdatert config --------------------
+Write-Host "  Starter Next.js dev-server (port 3011)..." -ForegroundColor DarkGray
 $devProcess = Start-Process -FilePath "cmd.exe" `
-    -ArgumentList "/c npx next dev -p 3002 > `"$root\dev-server.log`" 2>&1" `
+    -ArgumentList "/c npx next dev -p 3011 > `"$root\dev-server.log`" 2>&1" `
     -WorkingDirectory $root `
     -WindowStyle Hidden -PassThru
 $devProcess.Id | Out-File -FilePath $devPidFile -Encoding ascii
@@ -96,7 +96,7 @@ Write-Host "  $tunnelUrl" -ForegroundColor White
 Write-Host ""
 Write-Host "  $sep" -ForegroundColor Green
 Write-Host ""
-Write-Host "  Lokalt:      http://localhost:3002" -ForegroundColor DarkGray
+Write-Host "  Lokalt:      http://localhost:3011" -ForegroundColor DarkGray
 Write-Host "  Dev-logg:    $root\dev-server.log" -ForegroundColor DarkGray
 Write-Host "  Tunnel-logg: $root\cloudflared-err.log" -ForegroundColor DarkGray
 Write-Host ""

@@ -1,5 +1,5 @@
 import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
-  allowedDevOrigins: ["nothing-tariff-sufficient-stating.trycloudflare.com"] as string[],
+  allowedDevOrigins: ["talk-being-travesti-fare.trycloudflare.com"] as string[],
 };
 export default nextConfig;
