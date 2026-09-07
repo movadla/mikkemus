@@ -67,6 +67,30 @@ function emptyLuckByStep(): Record<Step, { sum: number; count: number }> {
   return s;
 }
 
+/**
+ * Normalizes a restored localStorage snapshot's winnerLuck into today's {sum, count}
+ * shape. A snapshot saved before Expected Hits switched from a per-dart mean to a running
+ * sum (see lib/storage.ts) stored {mean, count} instead — reading `.sum` on one of those
+ * as `undefined` and calling .toFixed() on it in WinnerScreen crashes the whole screen on
+ * restore. Reconstructs sum = mean * count for an old-shaped entry, and defaults anything
+ * else missing/malformed to 0 rather than trusting untyped JSON from localStorage.
+ */
+function sanitizeWinnerLuck(raw: unknown): Record<string, Record<Step, { sum: number; count: number }>> {
+  const out: Record<string, Record<Step, { sum: number; count: number }>> = {};
+  const byPlayer = (raw ?? {}) as Record<string, Partial<Record<Step, { sum?: number; mean?: number; count?: number }>>>;
+  Object.entries(byPlayer).forEach(([player, byStep]) => {
+    const perStep = emptyLuckByStep();
+    STEPS.forEach((step) => {
+      const entry = byStep?.[step];
+      const count = typeof entry?.count === "number" ? entry.count : 0;
+      const sum = typeof entry?.sum === "number" ? entry.sum : typeof entry?.mean === "number" ? entry.mean * count : 0;
+      perStep[step] = { sum, count };
+    });
+    out[player] = perStep;
+  });
+  return out;
+}
+
 type MikkeMusAppProps = {
   /** When set (and there's no in-progress match to resume), skips SetupScreen and starts a match
    *  with these players directly — used by tournament mode to play one scheduled match through
@@ -96,10 +120,9 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   const [rewoundTurnIndex, setRewoundTurnIndex] = useState<number | null>(null);
   const [winner, setWinner] = useState<string | null>(null);
   const [winnerStats, setWinnerStats] = useState<Record<string, TurnAggregate>>({});
-  // Mean "Expected Goals" per player THIS MATCH, broken down per section
-  // (20-14, D, T, BULL) rather than one overall number — set once, at
-  // finalizeMatch, same lifetime as winnerStats. {mean: null, count: 0} for
-  // a section with no real Scolia darts to judge this match.
+  // "Expected Hits" sum per player THIS MATCH, broken down per section (20-14, D, T,
+  // BULL) rather than one overall number — set once, at finalizeMatch, same lifetime as
+  // winnerStats. {sum: 0, count: 0} for a section with no real Scolia darts to judge.
   const [winnerLuck, setWinnerLuck] = useState<Record<string, Record<Step, { sum: number; count: number }>>>({});
   // Full finishing order (winner first), computed once at match end — for a 2-player match this
   // is just [winner, loser]; for a tournament group pod with 3+ players it ranks everyone else by
@@ -253,7 +276,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       setRewoundTurnIndex(restored.rewoundTurnIndex);
       setWinner(restored.winner);
       setWinnerStats(restored.winnerStats);
-      setWinnerLuck(restored.winnerLuck ?? {});
+      setWinnerLuck(sanitizeWinnerLuck(restored.winnerLuck));
       setPlacements(restored.placements ?? []);
       setTurnToken(restored.turnToken);
       setTurnLog(restored.turnLog);
