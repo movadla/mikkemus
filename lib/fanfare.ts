@@ -4,7 +4,18 @@ function getContext(): AudioContext | null {
   if (typeof window === "undefined") return null;
   const Ctor = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
   if (!Ctor) return null;
-  sharedContext ??= new Ctor();
+  // `new Ctor()` itself can throw — e.g. an installed iOS PWA (standalone display mode,
+  // no browser chrome) has been seen refusing AudioContext construction outright in some
+  // iOS versions. Every caller (primeAudio/playFanfare/playHitStreakSound) relies on this
+  // returning null on failure rather than throwing, since primeAudio is called directly
+  // from startGame's click handler with nothing else catching it.
+  if (!sharedContext) {
+    try {
+      sharedContext = new Ctor();
+    } catch {
+      return null;
+    }
+  }
   return sharedContext;
 }
 
