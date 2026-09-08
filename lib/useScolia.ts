@@ -32,6 +32,8 @@ type EventRow = { id: number; type: string; payload: unknown };
 const STALE_AFTER_MS = 90_000;
 const EVENTS_POLL_MS = 1_000;
 const STATUS_POLL_MS = 5_000;
+/** See the poll below — a ceiling, not an expected batch size. */
+const MAX_EVENTS_PER_POLL = 20;
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -146,7 +148,13 @@ export function useScolia(enabled: boolean, callbacks: ScoliaCallbacks) {
       channels = { status: statusChannel, events: eventsChannel };
     }
 
-    // Start listening for events from "now" — not from the beginning of the table.
+    // Start listening for events from "now" — not from the beginning of the table. Until
+    // this lands, lastEventIdRef is still 0, and a poll firing in that window asks for
+    // "everything with id > 0" — the entire history, replayed through onThrow as if every
+    // dart ever thrown had just landed. The poll ticks every second, so any device slower
+    // than that to answer one query hits it; the flag below is what keeps the poll off
+    // until there's a real baseline to poll from.
+    const baselineReadyRef = { current: false };
     client
       .from("scolia_events")
       .select("id")
@@ -155,6 +163,7 @@ export function useScolia(enabled: boolean, callbacks: ScoliaCallbacks) {
       .maybeSingle()
       .then(({ data }) => {
         lastEventIdRef.current = (data as { id: number } | null)?.id ?? 0;
+        baselineReadyRef.current = true;
       });
 
     client
@@ -179,11 +188,17 @@ export function useScolia(enabled: boolean, callbacks: ScoliaCallbacks) {
      * does happen to connect. processEventRow/applyStatusRow dedupe between them.
      */
     const eventsPoll = setInterval(() => {
+      if (!baselineReadyRef.current) return;
       client
         .from("scolia_events")
         .select("id, type, payload")
         .gt("id", lastEventIdRef.current)
         .order("id", { ascending: true })
+        // A hard ceiling on how much one tick can ever deliver. A turn is three darts, so
+        // anything approaching this is already a fault; the cap keeps such a fault from
+        // arriving as a flood of phantom throws (and from pulling megabytes of base64
+        // camera images over mobile data in a single request).
+        .limit(MAX_EVENTS_PER_POLL)
         .then(({ data }) => {
           if (cancelled) return;
           if (data) {
