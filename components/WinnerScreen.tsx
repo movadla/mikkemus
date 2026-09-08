@@ -227,7 +227,15 @@ export function WinnerScreen({
                               className="cell-tile rounded-md py-1.5 text-center tabular section-label">
                               <p style={{ color: "var(--color-muted)", fontSize: "0.6rem" }}>{STEP_LABELS[s]}</p>
                               <p style={{ color: "var(--color-cream)", fontSize: "0.75rem", fontWeight: 600 }}>
-                                {luckByStep[s].count === 0 ? "–" : `${formatLuck(luckByStep[s].sum)}/${actualStep}`}
+                                {/* The actual count is only worth printing when it isn't the
+                                    3 that closing a field always means — for the winner that
+                                    is every field, so it was pure noise. A loser's unfinished
+                                    fields still show theirs, where the number says something. */}
+                                {luckByStep[s].count === 0
+                                  ? "–"
+                                  : actualStep === 3
+                                    ? formatLuck(luckByStep[s].sum)
+                                    : `${formatLuck(luckByStep[s].sum)}/${actualStep}`}
                               </p>
                             </div>
                           );
