@@ -3,12 +3,12 @@
 :root {
   /* Layered surfaces — each step a deliberate jump, not eyeballed drift,
      so panels and buttons visibly float above what's behind them. */
-  --color-bg: #11160f;
-  --color-panel: #12211a;
-  --color-surface: #17281f;
-  --color-cell: #1d3527;
-  --color-cell-done: #2f5741;
-  --color-border: #24402f;
+  --color-bg: #161c16;
+  --color-panel: #19291f;
+  --color-surface: #1e3226;
+  --color-cell: #24402f;
+  --color-cell-done: #366449;
+  --color-border: #2e4f39;
 
   /* Two accents, two jobs. Gold is earned: it only ever marks a completed
      step or the winner screen. Teal is the everyday interactive accent —
@@ -17,10 +17,10 @@
   /* A closed step is the one thing in the game you actually earn, and gold is the earned
      colour per the rule above — but the grid used to mark it with a slightly lighter green,
      so the payoff never announced itself. These are the gold-tinted surfaces that fixes. */
-  --color-cell-done-top: #4a4028;
-  --color-cell-done-bottom: #33301f;
-  --color-cell-open-top: #22392b;
-  --color-cell-open-bottom: #182c21;
+  --color-cell-done-top: #554a2f;
+  --color-cell-done-bottom: #3d3926;
+  --color-cell-open-top: #2a4433;
+  --color-cell-open-bottom: #203629;
 
   --color-gold: #c9a24b;
   --color-gold-strong: #e0c471;
@@ -30,10 +30,10 @@
   --color-green: #4a8b5c;
 
   --color-cream: #f4f0e8;
-  --color-muted: #729080;
+  --color-muted: #86a494;
   /* Section headings — brighter than muted, which is tuned for de-emphasised body text and
      sits too close to the panel behind it for small letterspaced caps. */
-  --color-label: #93b0a0;
+  --color-label: #a3bfae;
 
   /* The heat that builds across an unbroken turn (see HEAT_GLOW in GameScreen). Tokens
      rather than literals in the component, where they were the only two colours in the app
@@ -109,7 +109,7 @@ body::after {
   inset: 0;
   z-index: 9998;
   pointer-events: none;
-  background: radial-gradient(ellipse at 50% 35%, transparent 0%, rgba(0, 0, 0, 0.35) 100%);
+  background: radial-gradient(ellipse at 50% 35%, transparent 0%, rgba(0, 0, 0, 0.24) 100%);
 }
 
 button {
@@ -368,10 +368,16 @@ button {
    the surrounding panel is. */
 .cell-tile {
   background: linear-gradient(180deg, var(--color-cell-open-top) 0%, var(--color-cell-open-bottom) 100%);
+  /* Four layers, and each is doing a job: a bright top edge for the lit rim, a hairline dark
+     bottom edge so the tile ends on a crisp line rather than fading out, the inner floor
+     shadow for depth, and a small drop so it sits ON the board instead of in it. The top rim
+     had to come up with the surfaces — a highlight tuned against near-black reads as nothing
+     once the tile beneath it is lighter. */
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.07),
-    inset 0 -6px 10px rgba(0, 0, 0, 0.22),
-    0 1px 2px rgba(0, 0, 0, 0.25);
+    inset 0 1px 0 rgba(255, 255, 255, 0.11),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3),
+    inset 0 -7px 12px rgba(0, 0, 0, 0.24),
+    0 1px 2px rgba(0, 0, 0, 0.3);
   transition:
     background var(--duration-base) var(--ease-standard),
     box-shadow var(--duration-base) var(--ease-standard);
@@ -383,9 +389,9 @@ button {
   background: linear-gradient(180deg, var(--color-cell-done-top) 0%, var(--color-cell-done-bottom) 100%);
   box-shadow:
     inset 0 1px 0 rgba(255, 235, 190, 0.22),
-    inset 0 0 0 1px rgba(201, 162, 75, 0.45),
+    inset 0 0 0 1px rgba(201, 162, 75, 0.55),
     inset 0 -8px 14px rgba(0, 0, 0, 0.3),
-    0 0 16px rgba(201, 162, 75, 0.14);
+    0 0 18px rgba(201, 162, 75, 0.18);
 }
 
 /* The cell you're actually on: full ring plus bloom. D and T are pre-bankable at any time,
@@ -420,11 +426,11 @@ button {
 /* Hairline rules between rows and columns. Structure was carried entirely by padding
    before, which is what made the grid feel like floating chips rather than a board. */
 .grid-rule-top {
-  border-top: 1px solid rgba(255, 255, 255, 0.045);
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
 }
 
 .grid-rule-left {
-  border-left: 1px solid rgba(255, 255, 255, 0.035);
+  border-left: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 /* The row you're actually aiming at. This was the weakest signal on the whole screen: the
