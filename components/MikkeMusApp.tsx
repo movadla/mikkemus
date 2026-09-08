@@ -3,7 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import {
   aggregateTurns,
+  ambiguousBlockingRing,
   applyHit,
+  chainCrosses,
   currentStepFor,
   DARTS_PER_TURN,
   emptyProgress,
@@ -20,6 +22,8 @@ import {
   type TurnResult,
   type TurnShot,
   type PendingAmbiguous,
+  type CrossDelta,
+  type Progress,
 } from "@/lib/game";
 import { playPlayerSound, recordAccuracyTotals, recordLuckTotals, recordMatchHistory, recordMatchResult, recordRingHits, type RingHits } from "@/lib/storage";
 import { announce } from "@/lib/announcer";
@@ -474,7 +478,17 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     }
 
     const classified = classifyThrow(parsed, activeStepAtThrow, progress[activePlayer]);
-    const hitResult: HitRecord[] | null = classified.step ? registerHit(classified.step, classified.crosses) : null;
+    // A parked, still-undecided triple/double must not be the reason this dart finds its row
+    // full — see ambiguousBlockingRing in lib/game.ts.
+    const parked = classified.step
+      ? ambiguousBlockingRing(pendingAmbiguousRef.current, classified.step, progress[activePlayer])
+      : null;
+    const applied = classified.step
+      ? parked
+        ? freeRingAndRegister(parked, classified.step, classified.crosses)
+        : applyPlainHit(classified.step, classified.crosses)
+      : null;
+    const hitResult: HitRecord[] | null = applied?.hits ?? null;
     if (classified.ambiguous && hitResult) {
       const created = hitResult[0];
       updatePendingAmbiguous((prev) => [
@@ -556,11 +570,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     // turnLog — and therefore from hit percentage, per-step stats and the career totals in
     // Supabase, while `progress` (and so the game itself) stayed correct. A 30-dart clean
     // sweep reported 21 crosses and 70%.
-    const lastHit = hitResult?.[hitResult.length - 1];
-    const finalProgress = lastHit
-      ? { ...progress, [activePlayer]: { ...progress[activePlayer], [lastHit.step]: lastHit.newCount } }
-      : progress;
-    const finalPendingHits = hitResult ? [...pendingHits, ...hitResult] : pendingHits;
+    const finalProgress = applied?.progress ?? progress;
+    const finalPendingHits = applied?.pendingHits ?? pendingHits;
 
     // Won the leg on this exact dart — end the turn right now instead of waiting for
     // the rest of this turn's physical darts (or a takeout) to trickle in. Mirrors how
@@ -797,6 +808,68 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     }));
     setPendingHits((prev) => [...prev, ...newPendingHits]);
     return newPendingHits;
+  }
+
+  /** The board as it stands after one dart — processDart needs these by hand, because the
+   *  state the same synchronous handler just set has not flushed yet. */
+  type DartApplication = { hits: HitRecord[] | null; progress: PlayerProgress; pendingHits: HitRecord[] };
+
+  function applyPlainHit(step: Step, crosses: number): DartApplication {
+    const hits = registerHit(step, crosses);
+    const last = hits?.[hits.length - 1];
+    return {
+      hits,
+      progress:
+        last && activePlayer
+          ? { ...progress, [activePlayer]: { ...progress[activePlayer], [last.step]: last.newCount } }
+          : progress,
+      pendingHits: hits ? [...pendingHits, ...hits] : pendingHits,
+    };
+  }
+
+  /**
+   * Moves a parked, undecided triple/double off its ring so this dart can score there, then
+   * registers this dart — see ambiguousBlockingRing in lib/game.ts for why that trade is free.
+   *
+   * Written as plain locals and set once, the same way resolvePendingChoice does it: this all
+   * happens inside one handler, where `progress` still describes the board before the dart.
+   */
+  function freeRingAndRegister(parked: PendingAmbiguous, step: Step, crosses: number): DartApplication {
+    if (!activePlayer) return { hits: null, progress, pendingHits };
+    const player = activePlayer;
+    const turnIndex = rewound ? rewoundTurnIndex ?? 0 : turnCounters[player] ?? 0;
+    const asRecords = (s: Step, deltas: CrossDelta[]): HitRecord[] =>
+      deltas.map((d) => ({ player, step: s, prevCount: d.prevCount, newCount: d.newCount, turnIndex }));
+
+    // 1. Un-park: the ring cross goes back where it came from.
+    const board: Progress = { ...progress[player], [parked.ringStep]: parked.hitRecord.prevCount };
+    let kept = pendingHits.filter((h) => h !== parked.hitRecord);
+
+    // 2. The parked dart pays out on its number instead. Capped like any other hit, so it can
+    //    come to nothing when the number is full too — that is still no worse than before.
+    const redirected = chainCrosses(board[parked.number], parked.multiplier);
+    if (redirected.length > 0) {
+      board[parked.number] = redirected[redirected.length - 1].newCount;
+      kept = [...kept, ...asRecords(parked.number, redirected)];
+    }
+
+    // 3. This dart takes the slot that just came free.
+    const landed = chainCrosses(board[step], crosses);
+    const hits = landed.length > 0 ? asRecords(step, landed) : null;
+    if (landed.length > 0) board[step] = landed[landed.length - 1].newCount;
+
+    // Counted so a later dart still sees the true number of darts on this step. The
+    // perfect-close marker itself is deliberately not awarded from this path — it belongs to
+    // three darts closing a row the ordinary way, and this one is a re-assignment.
+    dartsOnStepRef.current[step] = (dartsOnStepRef.current[step] ?? 0) + 1;
+
+    const nextProgress = { ...progress, [player]: board };
+    const nextPending = hits ? [...kept, ...hits] : kept;
+    setProgress(nextProgress);
+    setPendingHits(nextPending);
+    updatePendingAmbiguous(pendingAmbiguousRef.current.filter((p) => p.key !== parked.key));
+    if (hits) haptics.hit();
+    return { hits, progress: nextProgress, pendingHits: nextPending };
   }
 
   /**

@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   aggregateTurns,
+  ambiguousBlockingRing,
   applyHit,
+  chainCrosses,
   currentStepFor,
   emptyProgress,
   isFinished,
@@ -184,5 +186,88 @@ describe("meaningfulPending", () => {
     const progress = { ...emptyProgress(), "19": 3, "18": 2 };
     const kept = meaningfulPending([pendingOn("19", 1), pendingOn("18", 2)], progress);
     expect(kept.map((p) => p.number)).toEqual(["18"]);
+  });
+});
+
+describe("chainCrosses", () => {
+  it("stacks a single dart's crosses in sequence", () => {
+    expect(chainCrosses(0, 3)).toEqual([
+      { prevCount: 0, newCount: 1 },
+      { prevCount: 1, newCount: 2 },
+      { prevCount: 2, newCount: 3 },
+    ]);
+  });
+
+  it("stops at the cap instead of overfilling", () => {
+    expect(chainCrosses(2, 3)).toEqual([{ prevCount: 2, newCount: 3 }]);
+    expect(chainCrosses(3, 3)).toEqual([]);
+  });
+});
+
+describe("ambiguousBlockingRing", () => {
+  const parked = (key: number, ringStep: "D" | "T"): PendingAmbiguous => ({
+    key,
+    ringStep,
+    number: "17",
+    multiplier: ringStep === "T" ? 3 : 2,
+    hitRecord: { player: "A", step: ringStep, prevCount: 2, newCount: 3, turnIndex: 0 },
+  });
+
+  it("frees the ring when it is full only because of an undecided triple", () => {
+    const progress = { ...emptyProgress(), "17": 2, T: 3 };
+    expect(ambiguousBlockingRing([parked(1, "T")], "T", progress)).toEqual(parked(1, "T"));
+  });
+
+  it("leaves the ring alone while it still has room", () => {
+    const progress = { ...emptyProgress(), "17": 2, T: 2 };
+    expect(ambiguousBlockingRing([parked(1, "T")], "T", progress)).toBeNull();
+  });
+
+  it("only frees the ring the incoming dart actually needs", () => {
+    const progress = { ...emptyProgress(), T: 3, D: 3 };
+    expect(ambiguousBlockingRing([parked(1, "T")], "D", progress)).toBeNull();
+  });
+
+  it("never applies to number steps or BULL", () => {
+    const progress = { ...emptyProgress(), "17": 3, BULL: 3 };
+    expect(ambiguousBlockingRing([parked(1, "T")], "17", progress)).toBeNull();
+    expect(ambiguousBlockingRing([parked(1, "T")], "BULL", progress)).toBeNull();
+  });
+
+  it("picks the most recently parked dart on that ring", () => {
+    const progress = { ...emptyProgress(), T: 3 };
+    const pending = [parked(1, "T"), parked(2, "D"), parked(3, "T")];
+    expect(ambiguousBlockingRing(pending, "T", progress)?.key).toBe(3);
+  });
+
+  it("does nothing when no dart is parked there", () => {
+    const progress = { ...emptyProgress(), T: 3 };
+    expect(ambiguousBlockingRing([], "T", progress)).toBeNull();
+  });
+
+  // The turn that surfaced the rule: 17 on 1/3 and T on 2/3, then T17 -> 17 -> T2.
+  // Walked through the way processDart applies it, to pin the outcome end to end.
+  it("closes both rows on the turn that used to throw the last dart away", () => {
+    const board = { ...emptyProgress(), "17": 1, T: 2 };
+
+    // Dart 1, T17: banked on T for now, and parked as undecided.
+    board.T = 3;
+    const held = parked(1, "T");
+    held.hitRecord = { player: "A", step: "T", prevCount: 2, newCount: 3, turnIndex: 0 };
+
+    // Dart 2, plain 17.
+    board["17"] = 2;
+
+    // Dart 3, T2 — a slenger, so it can only ever score on T, and T looks full.
+    const blocking = ambiguousBlockingRing([held], "T", board);
+    expect(blocking).not.toBeNull();
+
+    // Un-park, pay the parked dart out on its number, then let this dart take the ring.
+    board.T = blocking!.hitRecord.prevCount;
+    for (const d of chainCrosses(board[blocking!.number], blocking!.multiplier)) board[blocking!.number] = d.newCount;
+    for (const d of chainCrosses(board.T, 1)) board.T = d.newCount;
+
+    expect(board["17"]).toBe(3);
+    expect(board.T).toBe(3);
   });
 });

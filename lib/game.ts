@@ -74,6 +74,61 @@ export function meaningfulPending(pending: PendingAmbiguous[], progressForPlayer
   return pending.filter((p) => progressForPlayer[p.number] < 3);
 }
 
+export type CrossDelta = { prevCount: number; newCount: number };
+
+/**
+ * Chains prevCount->newCount for `crosses` marks on one step, stopping at the cap. A single
+ * dart worth several crosses has to stack them in sequence: applying the same delta twice
+ * would just re-write the first one.
+ */
+export function chainCrosses(from: number, crosses: number): CrossDelta[] {
+  const deltas: CrossDelta[] = [];
+  let count = from;
+  for (let i = 0; i < crosses; i++) {
+    const next = applyHit(count);
+    if (next === count) break;
+    deltas.push({ prevCount: count, newCount: next });
+    count = next;
+  }
+  return deltas;
+}
+
+/**
+ * The parked triple/double that has to give up its ring so a dart can score on `step`.
+ *
+ * A D/T dart that can score nowhere else is turned away when its row is full — but the row
+ * may be full only because an undecided triple/double from earlier in the same turn is still
+ * sitting there waiting for the choice at Confirm. Nothing is settled until all three darts
+ * are in, so that placeholder must not be what turns a real dart away.
+ *
+ * Moving the parked one to its number can never cost crosses. It keeps whatever it can score
+ * (on the number instead of the ring, or nothing when the number is full too), while the new
+ * dart scores where it otherwise would have been discarded outright.
+ *
+ * The case that surfaced it: 17 on 1/3, T on 2/3, then T17 -> 17 -> T2. The T17 filled T at
+ * throw time, so the T2 was thrown away — and 17 was left on 2/3. Freeing the ring closes
+ * both rows instead.
+ *
+ * Not to be confused with the auto-resolve this file used to have, which ran the inference
+ * backwards: it read a later plain hit on the number as proof the triple meant to stay on the
+ * ring, which is precisely the opposite of what such a throw is worth. That guessed at intent.
+ * This one only moves a dart when doing so is free.
+ */
+export function ambiguousBlockingRing(
+  pending: PendingAmbiguous[],
+  step: Step,
+  progressForPlayer: Progress,
+): PendingAmbiguous | null {
+  if (step !== "D" && step !== "T") return null;
+  if (progressForPlayer[step] < 3) return null;
+  // Most recent first: the freshest parked dart is the one whose ring cross is least likely
+  // to be the one the player was consciously banking.
+  for (let i = pending.length - 1; i >= 0; i--) {
+    if (pending[i].ringStep === step) return pending[i];
+  }
+  return null;
+}
+
 export type TurnResult = {
   /** Crosses gained this turn, by the step they landed on. */
   hitsByStep: Partial<Record<Step, number>>;
