@@ -374,7 +374,7 @@ export function GameScreen({
               return (
                 <div
                   key={p}
-                  className={`relative flex flex-col items-center justify-center gap-1.5 p-2 pb-2.5 text-center transition-colors duration-300 grid-rule-left ${isActive ? "column-active" : ""}`}
+                  className={`player-head relative flex flex-col items-center justify-center gap-1.5 p-2 pb-2.5 text-center transition-colors duration-300 grid-rule-left ${isActive ? "column-active" : ""}`}
                   style={{
                     borderBottom: isActive ? `2px solid ${accent}` : "2px solid var(--color-border)",
                   }}
@@ -483,7 +483,7 @@ export function GameScreen({
                   return (
                     <div
                       key={p}
-                      className={`relative min-h-0 min-w-0 flex items-center justify-center p-1 grid-rule-top grid-rule-left ${isActive ? "column-active" : ""} ${s === activeStep ? "row-active" : ""}`}
+                      className={`cell-wrap relative min-h-0 min-w-0 flex items-center justify-center p-1 grid-rule-top grid-rule-left ${isActive ? "column-active" : ""} ${s === activeStep ? "row-active" : ""}`}
                     >
                       {/* Only the current target breathes. It used to run on every clickable
                           cell, which meant the always-open D and T rows pulsed all match. */}
@@ -507,7 +507,7 @@ export function GameScreen({
                           transform: clickable ? "translateY(-1px)" : undefined,
                         }}
                       >
-                        <div className="w-full h-full p-1">
+                        <div className="mark-pad w-full h-full p-1">
                           <Mark
                             count={count}
                             pendingCount={heldPendingCount}

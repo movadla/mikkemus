@@ -476,6 +476,16 @@ button {
   box-shadow: 0 -10px 24px rgba(0, 0, 0, 0.35);
 }
 
+/* Centred here rather than with Tailwind's `left-1/2 -translate-x-1/2`, because that utility
+   sets the standalone `translate` property. The landscape rule below re-places this toast in
+   the right-hand column, and an override of `transform` alone leaves that `translate` in
+   place — while adding `translate: none` next to it gets dropped by the CSS minifier as a
+   no-op. Keeping both positions on `transform` means there is only ever one property to win. */
+.turn-toast {
+  left: 50%;
+  transform: translateX(-50%);
+}
+
 /* -- landscape on a phone --
    Sideways there is roughly 390px of height for a ten-row board, and stacking the action bar
    underneath it left only three rows visible — you had to scroll to reach D and T, which
@@ -486,15 +496,19 @@ button {
   /* Grid, not a wrapped flex row. Wrapping produced lines with no definite height, so the
      board collapsed and the page grew past the viewport instead — an explicit two-area grid
      over the root's own 100dvh gives the board a real height to divide among its ten rows. */
+  /* The board takes the full height on the left; everything that is not the board — the
+     nav/sound/calibrate buttons, the shot boxes, Angre/Bekreft — stacks in one column on the
+     right. Chrome across the top used to cost about 45px of the ~390 available, which is a
+     row and a half of a ten-row board. */
   .game-root {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 9rem;
+    grid-template-columns: minmax(0, 1fr) 10.5rem;
     grid-template-rows: auto minmax(0, 1fr);
     grid-template-areas:
-      "header header"
+      "board header"
       "board actions";
     column-gap: 0.4rem;
-    padding: 0.4rem;
+    padding: 0.3rem;
   }
 
   /* Rows must be free to compress here: a floor is what forced the scrolling. Ten of them
@@ -509,12 +523,62 @@ button {
   .game-header {
     grid-area: header;
     max-width: none;
-    margin: 0 0 0.3rem 0;
+    /* Clears the fixed "Scolia: …" badge, which is pinned to this same top-right corner and
+       otherwise sits straight on top of these buttons. Costs no board height: the board spans
+       both grid rows, so it takes whatever this column doesn't. */
+    margin: 2.2rem 0 0.3rem 0;
+    gap: 0.25rem;
+    justify-content: flex-start;
   }
 
   .game-header button {
-    padding-top: 0.2rem;
-    padding-bottom: 0.2rem;
+    padding: 0.25rem 0.45rem;
+    font-size: 0.75rem;
+  }
+
+  /* The two icon buttons carry fixed w-9/h-9 — too big for a 10.5rem column beside "Hjem". */
+  .game-header button:not(:first-child) {
+    width: 1.9rem;
+    height: 1.9rem;
+    padding: 0;
+  }
+
+  /* Every pixel here is a pixel the ten rows below don't get. The name still has to be
+     readable across the room, so it keeps its pill and colour — it just loses the padding,
+     the identity bar's gap and the oversized type. */
+  .player-head {
+    padding: 0.15rem 0.15rem 0.25rem;
+    gap: 0.1rem;
+  }
+
+  .player-head > span > span > span,
+  .player-head > span > span {
+    font-size: 0.78rem !important;
+  }
+
+  /* Cells: the mark is drawn square, so it is the ROW height that caps how big it gets.
+     Reclaiming the double padding around it is most of the difference between a legible
+     cross and a speck. */
+  .cell-wrap {
+    padding: 0.08rem;
+  }
+
+  .mark-pad {
+    padding: 0;
+  }
+
+  /* Out of the board's way. The right column has dead space between the chrome at its top
+     and the buttons at its bottom, which is exactly where a "who is throwing" note belongs —
+     centred over the board, it sat on top of the player names. */
+  .turn-toast {
+    top: 50% !important;
+    left: auto !important;
+    right: 0.3rem !important;
+    transform: translateY(-50%) !important;
+    width: 9.9rem;
+    text-align: center;
+    font-size: 0.72rem;
+    padding: 0.3rem 0.4rem;
   }
 
   .game-board {

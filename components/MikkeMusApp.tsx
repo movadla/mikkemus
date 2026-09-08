@@ -1113,7 +1113,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       <CameraImages images={cameraImages} />
       {activeBotLevel && rewound === null && (
         <div
-          className="fixed top-16 left-1/2 -translate-x-1/2 z-40 px-3 py-1.5 rounded-full text-sm shadow-panel"
+          className="turn-toast fixed top-16 z-40 px-3 py-1.5 rounded-full text-sm shadow-panel"
           style={{ background: "var(--color-surface)", color: "var(--color-teal)", border: "1px solid var(--color-border)" }}
         >
           {currentMember ? currentMember.name : activePlayer} kaster …
@@ -1123,7 +1123,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
           the only way the physical players know who should actually pick up the darts. */}
       {!activeBotLevel && currentMember && rewound === null && (
         <div
-          className="fixed top-16 left-1/2 -translate-x-1/2 z-40 px-3 py-1.5 rounded-full text-sm shadow-panel"
+          className="turn-toast fixed top-16 z-40 px-3 py-1.5 rounded-full text-sm shadow-panel"
           style={{ background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
         >
           {currentMember.name} sin tur
