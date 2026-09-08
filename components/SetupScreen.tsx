@@ -282,8 +282,19 @@ export function SetupScreen({
 
         {mode === "individual" && (
           <>
+            {/* These used to wrap loose between the mode toggle and the panel below, with no
+                frame and no label — a free-floating row of pills that read as debris rather
+                than as a step. Boxed and titled, the screen now reads top to bottom as one
+                sequence: pick from before, see who's in, start. */}
             {availableRoster.length > 0 && (
-              <div className="flex flex-wrap justify-center gap-2 mb-6">
+              <div
+                className="shadow-panel rounded-xl p-4 mb-4"
+                style={{ background: "var(--color-panel)", border: "1px solid var(--color-border)" }}
+              >
+                <p className="section-label text-center mb-3" style={{ color: "var(--color-muted)" }}>
+                  TIDLIGERE SPILLERE
+                </p>
+                <div className="flex flex-wrap justify-center gap-2">
                 {availableRoster.map((n) => {
                   const photo = getPlayerRecord(n)?.photo;
                   return (
@@ -296,7 +307,7 @@ export function SetupScreen({
                     >
                       <span
                         className="w-6 h-6 rounded-full overflow-hidden shrink-0 flex items-center justify-center"
-                        style={{ background: "var(--color-cell)", border: "1.5px solid rgba(201, 162, 75, 0.5)" }}
+                        style={{ background: "var(--color-cell)", border: `1.5px solid ${avatarAccent(n)}` }}
                       >
                         {photo ? (
                           // eslint-disable-next-line @next/next/no-img-element
@@ -311,12 +322,13 @@ export function SetupScreen({
                     </button>
                   );
                 })}
+                </div>
               </div>
             )}
 
             <div className="shadow-panel rounded-xl p-4 mb-8" style={{ background: "var(--color-panel)", border: "1px solid var(--color-border)" }}>
-              <p className="text-center mb-3" style={{ color: "var(--color-gold)", fontSize: "0.75rem", letterSpacing: "0.1em" }}>
-                SPILLERE
+              <p className="section-label text-center mb-3" style={{ color: "var(--color-gold)" }}>
+                MED I KAMPEN
               </p>
               <div className="space-y-2 min-h-[64px]">
               {players.length === 0 && (
@@ -337,7 +349,7 @@ export function SetupScreen({
                       {level ? (
                         <span
                           className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
-                          style={{ background: "var(--color-cell)", border: "1.5px solid rgba(201, 162, 75, 0.5)" }}
+                          style={{ background: "var(--color-cell)", border: "1.5px solid var(--color-border)" }}
                           aria-hidden
                         >
                           🤖
@@ -362,7 +374,7 @@ export function SetupScreen({
                           className={`tactile w-9 h-9 rounded-full flex items-center justify-center overflow-hidden shrink-0 ${FOCUS_RING}`}
                           style={{
                             background: "var(--color-cell)",
-                            border: "1.5px solid rgba(201, 162, 75, 0.5)",
+                            border: `1.5px solid ${avatarAccent(p)}`,
                             color: "var(--color-muted)",
                           }}
                           aria-label={`Ta bilde av ${p}`}
@@ -394,16 +406,16 @@ export function SetupScreen({
                               removePlayer(p);
                               setConfirmingRemove(null);
                             }}
-                            style={{ color: "var(--color-red)" }}
-                            className={`text-sm px-2 font-medium ${FOCUS_RING}`}
+                            className={`tactile px-3 py-1.5 rounded-lg text-sm font-medium ${FOCUS_RING}`}
+                            style={{ background: "var(--color-cell)", color: "var(--color-red)", border: "1px solid var(--color-border)" }}
                           >
                             Sikker?
                           </button>
                           <button
                             type="button"
                             onClick={() => setConfirmingRemove(null)}
-                            style={{ color: "var(--color-teal)" }}
-                            className={`text-sm px-2 ${FOCUS_RING}`}
+                            className={`tactile px-3 py-1.5 rounded-lg text-sm ${FOCUS_RING}`}
+                            style={{ background: "var(--color-cell)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
                           >
                             Avbryt
                           </button>
@@ -434,8 +446,8 @@ export function SetupScreen({
                           <button
                             type="button"
                             onClick={() => setConfirmingRemove(p)}
-                            style={{ color: "var(--color-red)" }}
-                            className={`text-sm px-2 ${FOCUS_RING}`}
+                            className={`tactile px-3 py-1.5 rounded-lg text-sm ${FOCUS_RING}`}
+                            style={{ background: "var(--color-cell)", color: "var(--color-red)", border: "1px solid var(--color-border)" }}
                           >
                             Fjern
                           </button>
@@ -487,7 +499,7 @@ export function SetupScreen({
               ) : showAddMenu ? (
                 <div
                   className="flex items-center justify-center flex-wrap gap-2 px-4 py-3 rounded-lg"
-                  style={{ background: "var(--color-surface)", border: "1.5px solid var(--color-green)" }}
+                  style={{ background: "var(--color-surface)", border: "1.5px dashed var(--color-border)" }}
                 >
                   <button
                     type="button"
@@ -495,9 +507,10 @@ export function SetupScreen({
                       setAddingAsGuest(false);
                       setAddingPlayer(true);
                     }}
-                    className={`tactile px-3 py-1.5 rounded-lg text-sm ${FOCUS_RING}`}
-                    style={{ background: "var(--color-cell)", color: "var(--color-teal)", border: "1px solid var(--color-border)" }}
+                    className={`tactile px-3 py-1.5 rounded-lg text-sm flex items-center gap-1.5 ${FOCUS_RING}`}
+                    style={{ background: "var(--color-cell)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
                   >
+                    <PersonIcon className="w-3.5 h-3.5" />
                     Ny spiller
                   </button>
                   <button
@@ -507,7 +520,7 @@ export function SetupScreen({
                       setAddingPlayer(true);
                     }}
                     className={`tactile px-3 py-1.5 rounded-lg text-sm flex items-center gap-1.5 ${FOCUS_RING}`}
-                    style={{ background: "var(--color-cell)", color: "var(--color-muted)", border: "1px solid var(--color-border)" }}
+                    style={{ background: "var(--color-cell)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
                   >
                     <GuestIcon className="w-3.5 h-3.5" />
                     Gjest
@@ -515,10 +528,11 @@ export function SetupScreen({
                   <button
                     type="button"
                     onClick={() => setShowBotPicker((v) => !v)}
-                    className={`tactile px-3 py-1.5 rounded-lg text-sm ${FOCUS_RING}`}
-                    style={{ background: "var(--color-cell)", color: "var(--color-gold)", border: "1px solid var(--color-border)" }}
+                    className={`tactile px-3 py-1.5 rounded-lg text-sm flex items-center gap-1.5 ${FOCUS_RING}`}
+                    style={{ background: "var(--color-cell)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
                   >
-                    Bot 🤖
+                    <span aria-hidden>🤖</span>
+                    Bot
                   </button>
                   <button
                     type="button"
@@ -527,8 +541,8 @@ export function SetupScreen({
                       setShowBotPicker(false);
                     }}
                     aria-label="Lukk"
-                    className={`text-sm px-2 ${FOCUS_RING}`}
-                    style={{ color: "var(--color-muted)" }}
+                    className={`tactile w-8 h-8 rounded-lg text-sm flex items-center justify-center shrink-0 ${FOCUS_RING}`}
+                    style={{ background: "var(--color-cell)", color: "var(--color-muted)", border: "1px solid var(--color-border)" }}
                   >
                     ✕
                   </button>
@@ -537,8 +551,8 @@ export function SetupScreen({
                 <button
                   type="button"
                   onClick={() => setShowAddMenu(true)}
-                  className={`shadow-panel flex items-center justify-center gap-2 w-full px-4 py-3 rounded-lg font-medium ${FOCUS_RING}`}
-                  style={{ background: "var(--color-surface)", border: "1.5px solid var(--color-green)", color: "var(--color-green)" }}
+                  className={`tactile flex items-center justify-center gap-2 w-full px-4 py-3 rounded-lg font-medium ${FOCUS_RING}`}
+                  style={{ background: "var(--color-surface)", border: "1.5px dashed var(--color-border)", color: "var(--color-teal)" }}
                 >
                   <span aria-hidden style={{ fontSize: "1.1rem", lineHeight: 1, fontWeight: 700 }}>
                     +
