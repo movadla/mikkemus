@@ -512,7 +512,11 @@ button {
        the two `.` columns either side absorb the slack. Without that the rows were centred
        inside a full-width board area while the shot rail sat out at its right edge — the two
        ended up nowhere near each other, which defeats putting the rail beside the board. */
-    grid-template-columns: 6.5rem minmax(0, 1fr) max-content 3.2rem minmax(0, 1fr) 11rem;
+    /* The nav column is a 2.6rem rail holding one (i) button. Everything it used to carry —
+       status, Hjem, lyd, kalibrer — lives in a panel that OVERLAYS the board when that button
+       is pressed, so the freed width goes to the board and the live panel permanently and the
+       layout never shifts when the panel opens or closes. */
+    grid-template-columns: 2.6rem minmax(0, 1fr) max-content 3.6rem minmax(0, 1fr) 13.5rem;
     grid-template-rows: minmax(0, 1fr) auto;
     grid-template-areas:
       "nav . board shots . stats"
@@ -521,31 +525,67 @@ button {
     padding: 0.3rem;
   }
 
-  /* The status badge is fixed and lives outside this component, so it can't be a grid item —
-     it is instead pinned to the same left edge and given the same width as the nav column, so
-     the four chrome elements read as one aligned stack. Fixed min-height rather than
-     shrink-to-fit: "Scolia: Feil på brettet" wraps to two lines where "Scolia: Online" doesn't,
-     and the buttons below must not shift when the board's state changes. */
+  /* The board's status moves into the (i) button's dot and its panel. The fixed badge would
+     otherwise sit on top of the board, which is the space this whole layout exists to free. */
   .scolia-badge {
-    top: 0.3rem !important;
-    left: 0.3rem !important;
-    right: auto !important;
-    width: 6.5rem;
-    min-height: 2.1rem;
-    border-radius: 0.5rem !important;
-    padding: 0.25rem 0.4rem !important;
-    gap: 0.3rem !important;
+    display: none !important;
   }
 
-  .scolia-badge > span:first-child {
-    width: 0.5rem !important;
-    height: 0.5rem !important;
+  .chrome-toggle {
+    width: 2.2rem;
+    height: 2.2rem;
+    margin-top: 0.1rem;
+    /* Above the backdrop and the panel both, so the same button that opened it closes it —
+       otherwise the panel covers its own toggle and the only way out is the backdrop. */
+    position: relative;
+    z-index: 47;
   }
 
-  .scolia-badge > span:last-child {
-    font-size: 0.54rem !important;
-    line-height: 1.15;
-    white-space: normal;
+  .chrome-toggle-dot {
+    position: absolute;
+    top: -0.1rem;
+    right: -0.1rem;
+    width: 0.45rem;
+    height: 0.45rem;
+    border-radius: 50%;
+  }
+
+  /* Sits under the rail, turned on its side — there is no width for it upright, and the mode
+     matters enough to keep on screen rather than behind the panel. */
+  .rewind-flag {
+    position: absolute;
+    left: 0.15rem;
+    top: 3.2rem;
+    writing-mode: vertical-rl;
+    margin: 0;
+  }
+
+  /* Catches the tap that closes the panel. Deliberately barely tinted: the board behind stays
+     readable, so opening the panel to check the connection never hides the game. */
+  .chrome-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 45;
+    background: rgba(0, 0, 0, 0.35);
+    border: none;
+  }
+
+  /* Opens to the RIGHT of the rail, not over it — it unfolds from the button the way the
+     button implies, and still stops short of the board (203px against the board's 220). */
+  .chrome-panel {
+    position: fixed;
+    z-index: 46;
+    top: 0.3rem;
+    left: 3.2rem;
+    width: 9.5rem;
+    padding: 0.5rem;
+    border-radius: 0.6rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    animation: chrome-panel-in 180ms var(--ease-standard) both;
   }
 
   /* Rows must be free to compress here: a floor is what forced the scrolling. Ten of them
@@ -557,26 +597,11 @@ button {
 
   /* Each of these carries max-w-3xl and mx-auto for the portrait layout; inside a grid area
      that would centre them in a narrower box and waste the width landscape exists to give. */
-  /* Stacked under the badge, all three the full width of the column so their edges line up
-     with it and with each other. The top margin clears the badge above (0.3 + 2.1 + a gap). */
+  /* Just the rail the (i) button sits in. */
   .game-header {
     grid-area: nav;
     max-width: none;
-    margin: 2.75rem 0 0 0;
-    flex-direction: column;
-    align-items: stretch;
-    justify-content: flex-start;
-    gap: 0.35rem;
-  }
-
-  /* Sound and calibrate carry a fixed w-9/h-9 from the portrait layout, which would leave them
-     square and narrower than Hjem right above them. Everything here is one width. */
-  .game-header button {
-    width: 100% !important;
-    height: auto !important;
-    padding: 0.4rem 0.3rem !important;
-    font-size: 0.7rem;
-    justify-content: center;
+    margin: 0;
   }
 
   /* Every pixel here is a pixel the ten rows below don't get. The name still has to be
@@ -621,15 +646,17 @@ button {
   /* Out of the board's way. The right column has dead space between the chrome at its top
      and the buttons at its bottom, which is exactly where a "who is throwing" note belongs —
      centred over the board, it sat on top of the player names. */
-  /* Bottom of the nav column — the emptiest area on the screen, and clear of both the board
-     and the live panel. It used to sit centred in the right column, which is now the panel. */
+  /* Over the top of the live panel's board, under the thrower's photo. The nav column it used
+     to sit in is now a 2.6rem rail with no room for it, and every other free surface is the
+     game board itself. Covering the top of your own heatmap costs nothing at the one moment
+     this appears — it is someone else's turn. */
   .turn-toast {
-    top: auto !important;
-    bottom: 0.4rem !important;
-    left: 0.3rem !important;
-    right: auto !important;
+    top: 2.9rem !important;
+    bottom: auto !important;
+    left: auto !important;
+    right: 0.3rem !important;
     transform: none !important;
-    width: 6.5rem;
+    width: 13.1rem;
     text-align: center;
     font-size: 0.72rem;
     padding: 0.3rem 0.4rem;
@@ -705,6 +732,17 @@ button {
     height: 2.6rem !important;
     font-size: 0.95rem !important;
     border-radius: 0.55rem !important;
+  }
+}
+
+@keyframes chrome-panel-in {
+  from {
+    opacity: 0;
+    transform: translateX(-8px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
   }
 }
 

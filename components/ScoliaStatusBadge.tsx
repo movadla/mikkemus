@@ -4,7 +4,7 @@ import type { ScoliaState } from "@/lib/useScolia";
 
 /** Label is deliberately binary (Online only once the board is actually ready to register
  *  throws) — the color dot still carries the finer-grained relay/board state. */
-function summarize(state: ScoliaState): { label: string; color: string } {
+export function summarizeScolia(state: ScoliaState): { label: string; color: string } {
   const OFFLINE = "Scolia: Offline";
   if (state.relay === "connecting") {
     return { label: "Scolia: Kobler til …", color: "var(--color-muted)" };
@@ -27,7 +27,7 @@ function summarize(state: ScoliaState): { label: string; color: string } {
 }
 
 export function ScoliaStatusBadge({ state }: { state: ScoliaState }) {
-  const { label, color } = summarize(state);
+  const { label, color } = summarizeScolia(state);
 
   return (
     <div

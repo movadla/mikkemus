@@ -40,7 +40,7 @@ import { extractImageUrls } from "@/lib/extractImageUrls";
 import { SetupScreen } from "./SetupScreen";
 import { GameScreen } from "./GameScreen";
 import { WinnerScreen } from "./WinnerScreen";
-import { ScoliaStatusBadge } from "./ScoliaStatusBadge";
+import { ScoliaStatusBadge, summarizeScolia } from "./ScoliaStatusBadge";
 import { TripleCelebration } from "./TripleCelebration";
 import { CameraImages } from "./CameraImages";
 
@@ -1341,6 +1341,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         matchThrows={activeThrows}
         dartsThisTurn={dartsThisTurn}
         liveStats={liveStats}
+        scolia={scoliaEnabled ? summarizeScolia(scolia.state) : null}
         pendingByStep={pendingByStep}
         turnShots={rewound === null ? turnShots : EMPTY_TURN_SHOTS}
         rewound={rewound !== null}

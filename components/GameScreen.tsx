@@ -97,12 +97,83 @@ type Props = {
   dartsThisTurn: number;
   /** Live treff%/xH for the active player, or null when there is no active player. */
   liveStats: { hitPct: number | null; expected: number | null; actual: number | null } | null;
+  /** Board status, for the dot on the (i) button and the line inside its panel. Null when the
+   *  Scolia integration is switched off entirely. */
+  scolia: { label: string; color: string } | null;
   onResolvePendingChoice: (choice: "keep" | "redirect") => void;
   onRegisterHit: (step: Step) => void;
   onUndo: () => void;
   onConfirm: () => void;
   onAbort: () => void;
 };
+
+/**
+ * Home, announcer and calibrate. One definition, two homes: a row across the top in portrait,
+ * a stack inside the (i) panel in landscape. Written once so the two can't drift — they are
+ * the same three controls, not two similar sets.
+ */
+function ChromeControls({
+  stacked = false,
+  onHome,
+  announcerOn,
+  onToggleAnnouncer,
+  onCalibrate,
+  calibrating,
+}: {
+  stacked?: boolean;
+  onHome: () => void;
+  announcerOn: boolean;
+  onToggleAnnouncer: () => void;
+  onCalibrate: () => void;
+  calibrating: "idle" | "sending" | "sent" | "failed";
+}) {
+  const icon = stacked
+    ? `tactile w-full h-8 rounded-lg flex items-center justify-center gap-2 text-sm ${FOCUS_RING}`
+    : `tactile w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${FOCUS_RING}`;
+  return (
+    <>
+      <button
+        type="button"
+        onClick={onHome}
+        className={`tactile rounded-lg text-sm ${stacked ? "w-full h-8" : "px-3 py-2"} ${FOCUS_RING}`}
+        style={{ background: "var(--color-surface)", color: "var(--color-cream)" }}
+      >
+        ← Hjem
+      </button>
+      <button
+        type="button"
+        onClick={onToggleAnnouncer}
+        aria-label={announcerOn ? "Skru av kommentator" : "Skru på kommentator"}
+        className={icon}
+        style={{ background: "var(--color-surface)", color: announcerOn ? "var(--color-teal)" : "var(--color-muted)" }}
+      >
+        {announcerOn ? <SpeakerIcon className="w-4 h-4" /> : <SpeakerMuteIcon className="w-4 h-4" />}
+        {stacked && <span style={{ fontSize: "0.7rem" }}>{announcerOn ? "Lyd på" : "Lyd av"}</span>}
+      </button>
+      <button
+        type="button"
+        onClick={onCalibrate}
+        disabled={calibrating !== "idle"}
+        aria-label="Kalibrer brettet"
+        title="Kalibrer brettet"
+        className={icon}
+        style={{
+          background: "var(--color-surface)",
+          color:
+            calibrating === "sent"
+              ? "var(--color-teal)"
+              : calibrating === "failed"
+                ? "var(--color-red)"
+                : "var(--color-muted)",
+          opacity: calibrating === "sending" ? 0.5 : 1,
+        }}
+      >
+        <CalibrateIcon className="w-4 h-4" />
+        {stacked && <span style={{ fontSize: "0.7rem" }}>Kalibrer</span>}
+      </button>
+    </>
+  );
+}
 
 /** The three per-dart boxes under the active player's name — green on a scored cross, red otherwise. */
 function ShotIndicator({ shots }: { shots: (TurnShot | null)[] }) {
@@ -157,12 +228,16 @@ export function GameScreen({
   matchThrows,
   dartsThisTurn,
   liveStats,
+  scolia,
   onUndo,
   onConfirm,
   onAbort,
 }: Props) {
   // Picks the wide variant of the mark glyph — see lib/useCompactLandscape.ts.
   const compactLandscape = useCompactLandscape();
+  // Landscape only — the settings panel behind the (i) button. It overlays rather than taking
+  // a column of its own, so opening it never moves the board a single pixel.
+  const [chromeOpen, setChromeOpen] = useState(false);
   const [showHomeConfirm, setShowHomeConfirm] = useState(false);
   // Lazy-initialized from localStorage so the button reflects whatever the host last chose,
   // without waiting for an effect — announce() itself reads the same localStorage value
@@ -266,58 +341,105 @@ export function GameScreen({
           two, mixing game state into a bar of controls — they've moved down next to Bekreft,
           where the eye already is at the end of a turn and where the button that acts on them
           lives. */}
-      <div className="game-header landscape-tight flex items-center gap-2 mb-2 max-w-3xl mx-auto w-full shrink-0">
-        <button
-          type="button"
-          onClick={() => setShowHomeConfirm(true)}
-          className={`tactile px-3 py-2 rounded-lg text-sm ${FOCUS_RING}`}
-          style={{ background: "var(--color-surface)", color: "var(--color-cream)" }}
+      {/* Portrait keeps the controls out in the open — there is room across the top and no
+          reason to hide them. Landscape collapses the lot behind the (i) button below, where
+          every pixel of width is one the board and the live panel can use instead. */}
+      {!compactLandscape && (
+        <div className="game-header landscape-tight flex items-center gap-2 mb-2 max-w-3xl mx-auto w-full shrink-0">
+          <ChromeControls
+            onHome={() => setShowHomeConfirm(true)}
+            announcerOn={announcerOn}
+            onToggleAnnouncer={() => {
+              const next = !announcerOn;
+              setAnnouncerOn(next);
+              setAnnouncerEnabled(next);
+            }}
+            onCalibrate={handleCalibrate}
+            calibrating={calibrating}
+          />
+          {/* Not gold: this is a mode warning, not something earned, and gold only means the
+              latter (see globals.css). Red is the app's "careful" colour. */}
+          {rewound && (
+            <p style={{ color: "var(--color-red)", fontSize: "var(--text-meta)", letterSpacing: "0.15em" }}>
+              REDIGERER TIDLIGERE TUR
+            </p>
+          )}
+        </div>
+      )}
+
+      {compactLandscape && (
+        <div className="game-header flex items-start justify-center">
+          <button
+            type="button"
+            onClick={() => setChromeOpen((v) => !v)}
+            aria-label={chromeOpen ? "Lukk innstillinger" : "Vis innstillinger"}
+            aria-expanded={chromeOpen}
+            className={`chrome-toggle tactile relative rounded-full flex items-center justify-center ${FOCUS_RING}`}
+            style={{
+              background: chromeOpen ? "var(--color-teal)" : "var(--color-surface)",
+              color: chromeOpen ? "var(--color-bg)" : "var(--color-cream)",
+              border: "1px solid var(--color-border)",
+            }}
+          >
+            <span style={{ fontFamily: "var(--font-display)", fontSize: "0.95rem", lineHeight: 1 }}>i</span>
+            {/* The board's status still has to be glanceable with the panel shut — the label
+                is hidden, the colour is not. */}
+            {scolia && (
+              <span
+                aria-hidden
+                className="chrome-toggle-dot"
+                style={{ background: scolia.color, boxShadow: `0 0 5px 1px ${scolia.color}` }}
+              />
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* Rewind is a mode you can be stuck in without noticing, so in landscape it gets its own
+          pill rather than riding along in a header that no longer exists. */}
+      {compactLandscape && rewound && (
+        <p
+          className="rewind-flag"
+          style={{ color: "var(--color-red)", fontSize: "0.55rem", letterSpacing: "0.12em" }}
         >
-          ← Hjem
-        </button>
-        {/* Not gold: this is a mode warning, not something earned, and gold only means the
-            latter (see globals.css). Red is the app's "careful" colour. */}
-        {rewound && (
-          <p style={{ color: "var(--color-red)", fontSize: "var(--text-meta)", letterSpacing: "0.15em" }}>
-            REDIGERER TIDLIGERE TUR
-          </p>
-        )}
-        {/* Both of these sit on the LEFT beside Hjem. They used to be pinned right, where the
-            fixed "Scolia: …" badge overlaps them the moment the screen is phone-width. */}
-        <button
-          type="button"
-          onClick={() => {
-            const next = !announcerOn;
-            setAnnouncerOn(next);
-            setAnnouncerEnabled(next);
-          }}
-          aria-label={announcerOn ? "Skru av kommentator" : "Skru på kommentator"}
-          className={`tactile w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${FOCUS_RING}`}
-          style={{ background: "var(--color-surface)", color: announcerOn ? "var(--color-teal)" : "var(--color-muted)" }}
-        >
-          {announcerOn ? <SpeakerIcon className="w-4 h-4" /> : <SpeakerMuteIcon className="w-4 h-4" />}
-        </button>
-        <button
-          type="button"
-          onClick={handleCalibrate}
-          disabled={calibrating !== "idle"}
-          aria-label="Kalibrer brettet"
-          title="Kalibrer brettet"
-          className={`tactile w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${FOCUS_RING}`}
-          style={{
-            background: "var(--color-surface)",
-            color:
-              calibrating === "sent"
-                ? "var(--color-teal)"
-                : calibrating === "failed"
-                  ? "var(--color-red)"
-                  : "var(--color-muted)",
-            opacity: calibrating === "sending" ? 0.5 : 1,
-          }}
-        >
-          <CalibrateIcon className="w-4 h-4" />
-        </button>
-      </div>
+          REDIGERER
+        </p>
+      )}
+
+      {compactLandscape && chromeOpen && (
+        <>
+          <button
+            type="button"
+            aria-label="Lukk innstillinger"
+            className="chrome-backdrop"
+            onClick={() => setChromeOpen(false)}
+          />
+          <div className="chrome-panel shadow-panel" role="dialog" aria-label="Innstillinger">
+            {scolia && (
+              <div className="flex items-center gap-2 mb-2">
+                <span
+                  aria-hidden
+                  className="rounded-full shrink-0"
+                  style={{ width: "0.5rem", height: "0.5rem", background: scolia.color, boxShadow: `0 0 5px 1px ${scolia.color}` }}
+                />
+                <span style={{ color: "var(--color-cream)", fontSize: "0.68rem" }}>{scolia.label}</span>
+              </div>
+            )}
+            <ChromeControls
+              stacked
+              onHome={() => setShowHomeConfirm(true)}
+              announcerOn={announcerOn}
+              onToggleAnnouncer={() => {
+                const next = !announcerOn;
+                setAnnouncerOn(next);
+                setAnnouncerEnabled(next);
+              }}
+              onCalibrate={handleCalibrate}
+              calibrating={calibrating}
+            />
+          </div>
+        </>
+      )}
 
       {awaitingConfirmResolution && pendingChoice && (
         <ConfirmDialog
