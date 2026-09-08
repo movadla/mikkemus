@@ -32,10 +32,21 @@ const FOCUS_RING =
 // block the next dart.
 const RETRACT_MS = 650;
 
-/** Kept just past each animation's own length, so the class is removed only after it has
- *  finished playing and the next hit re-applies it from the start. */
-const SHAKE_MS = 320;
 const SLAM_MS = 560;
+
+/**
+ * How long the screen shakes, per dart in the streak. The first two are a flick; the third
+ * dart of an unbroken turn earns a tremor that keeps going and decays, rather than the same
+ * short jolt as the first — the whole point of a streak is that the third one is different.
+ * Linear at that length, because the decay is already written into the keyframes and easing
+ * it as well just front-loads everything and leaves the tail limp.
+ */
+const SHAKE = [
+  null,
+  { ms: 320, ease: "ease-out" },
+  { ms: 340, ease: "ease-out" },
+  { ms: 1300, ease: "linear" },
+] as const;
 
 /** Heat left on the screen by an unbroken turn, indexed by how many darts have hit. Held
  *  until the turn ends rather than fading per dart — the build across the turn is the
@@ -178,7 +189,12 @@ export function GameScreen({
   // state on a timer. A CSS animation only restarts when its animation-name actually
   // changes, so each level has two identical keyframes and the token's parity picks between
   // them — two identical hits in a row still replay, with no state, effect or timeout here.
-  const shakeAnimation = hitPulse ? `${SHAKE_NAMES[Math.min(3, hitPulse.streak)][hitPulse.token % 2]} ${SHAKE_MS}ms ease-out` : undefined;
+  const shakeLevel = hitPulse ? Math.min(3, Math.max(1, hitPulse.streak)) : 0;
+  const shakeStep = SHAKE[shakeLevel];
+  const shakeAnimation =
+    hitPulse && shakeStep
+      ? `${SHAKE_NAMES[shakeLevel][hitPulse.token % 2]} ${shakeStep.ms}ms ${shakeStep.ease}`
+      : undefined;
   const slamAnimation = closedStep ? `${SLAM_NAMES[closedStep.token % 2]} ${SLAM_MS}ms cubic-bezier(0.2, 0.9, 0.25, 1) both` : undefined;
   // Heat belongs to the turn, not the dart: the parent clears hitPulse when a turn ends
   // (see clearTurnDisplay), so this stays lit across an unbroken turn and drops on its own.

@@ -198,11 +198,19 @@ export function WinnerScreen({
           </div>
         </div>
 
-        {players.some((p) => STEPS.some((s) => luckByPlayer[p]?.[s].count > 0)) && (
-          <div className="shadow-panel rounded-xl p-5 mb-6" style={{ background: "var(--color-surface)" }}>
-            <p className="mb-3 section-label">
-              EXPECTED HITS (FORVENTET / FAKTISK)
+        {/* Always rendered, even with nothing to show. Hiding it outright meant a match that
+            produced no judgeable darts looked identical to one where the stat had broken —
+            and until the match's luck totals were persisted, any mid-match reload silently
+            emptied this. A line saying why is worth more than a missing card. */}
+        <div className="shadow-panel rounded-xl p-5 mb-6" style={{ background: "var(--color-surface)" }}>
+          <p className="mb-3 section-label">EXPECTED HITS (FORVENTET / FAKTISK)</p>
+          {!players.some((p) => STEPS.some((s) => luckByPlayer[p]?.[s].count > 0)) ? (
+            <p style={{ color: "var(--color-muted)", fontSize: "0.8rem", lineHeight: 1.45 }}>
+              Ingen piler i denne kampen kunne bedømmes. xH regnes ut fra Scolia sine
+              koordinater, så manuelt registrerte kast teller ikke — og en bots kast holdes
+              utenfor med vilje, siden de er en simulert plan og ikke et kast.
             </p>
+          ) : (
             <div className="space-y-4">
               {players
                 .filter((p) => STEPS.some((s) => luckByPlayer[p]?.[s].count > 0))
@@ -245,8 +253,8 @@ export function WinnerScreen({
                   );
                 })}
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         {players.some((p) => (throwsByPlayer[p]?.length ?? 0) > 0) && (
           <div className="shadow-panel rounded-xl p-5 mb-6" style={{ background: "var(--color-surface)" }}>

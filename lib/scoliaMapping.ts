@@ -19,7 +19,10 @@ export function parseSector(sector: string, bounceout: boolean): ParsedSector {
 
 /** Short label for a parsed sector, for display (e.g. in a per-dart shot indicator). */
 export function formatSectorLabel(parsed: ParsedSector): string {
-  if (parsed.kind === "miss") return "–";
+  // A word, not a dash. A dart that landed outside the double ring or bounced out sat next to
+  // boxes reading "7" or "T19" as a bare "–", which read as a rendering fault rather than as
+  // what it is — the two really are different outcomes, and both deserve to say so.
+  if (parsed.kind === "miss") return "BOM";
   if (parsed.kind === "bull") return parsed.ring === "inner" ? "BULL" : "25";
   if (parsed.ring === "S") return String(parsed.number);
   return `${parsed.ring}${parsed.number}`;

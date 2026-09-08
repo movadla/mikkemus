@@ -348,6 +348,13 @@ export type BoomParams = {
   /** 1 = very short, 5 = long tail. Kept separate from darkness so a hit can be short AND
    *  deep — the first dart wants exactly that. */
   length: number;
+  /**
+   * Multiplies the tail beyond what `length` can express. The level scale clamps at 5, and
+   * the third dart of a streak already sits there — a full turn needs to ring on longer than
+   * the sliders on /lyd can ask for, so it reaches past them rather than rescaling everything
+   * below it. Defaults to 1, so nothing that doesn't set it changes.
+   */
+  tailScale?: number;
 };
 
 /** Picked by ear on /lyd: everything at max except the tail, which is what grows per dart. */
@@ -369,7 +376,7 @@ export function playBoom(params: BoomParams = BOOM_DEFAULT) {
 
     const bodyStart = lerpLevel(params.darkness, 165, 62);
     const bodyEnd = lerpLevel(params.darkness, 62, 24);
-    const duration = lerpLevel(params.length, 0.32, 2.2);
+    const duration = lerpLevel(params.length, 0.32, 2.2) * (params.tailScale ?? 1);
     const peak = lerpLevel(params.volume, 0.25, 1.0);
     const gritAmount = (clampLevel(params.grit) - 1) / 4;
     const punchAmount = (clampLevel(params.punch) - 1) / 4;
@@ -479,7 +486,12 @@ export function playBoom(params: BoomParams = BOOM_DEFAULT) {
  * read as the same slam ringing on longer rather than as three different sounds.
  */
 export function boomForStreak(streak: 1 | 2 | 3, base: BoomParams = BOOM_DEFAULT): BoomParams {
-  return { ...base, length: Math.min(5, base.length + (streak - 1)) };
+  return {
+    ...base,
+    length: Math.min(5, base.length + (streak - 1)),
+    // Dart three is where the tail runs out of scale to grow on — see tailScale.
+    tailScale: streak === 3 ? 1.55 : 1,
+  };
 }
 
 /**

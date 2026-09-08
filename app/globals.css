@@ -794,19 +794,36 @@ button {
   70% { transform: translate(-2px, 1px); }
 }
 
+/* Three for three. Not a bigger version of the first two but a different event: it hits
+   harder and then keeps ringing, eleven decaying swings over its full length instead of one
+   slow lurch. The amplitude curve is the decay, which is why this level runs linear. */
 @keyframes hit-shake-hard-a {
   0%, 100% { transform: translate(0, 0); }
-  10% { transform: translate(-7px, 3px) rotate(-0.35deg); }
-  30% { transform: translate(7px, -3px) rotate(0.35deg); }
-  55% { transform: translate(-5px, 2px); }
-  80% { transform: translate(3px, -1px); }
+  5% { transform: translate(-12px, 5px) rotate(-0.55deg); }
+  12% { transform: translate(11px, -4px) rotate(0.5deg); }
+  20% { transform: translate(-9px, 4px) rotate(-0.45deg); }
+  29% { transform: translate(8px, -3px) rotate(0.38deg); }
+  38% { transform: translate(-7px, 3px) rotate(-0.3deg); }
+  47% { transform: translate(6px, -2px) rotate(0.24deg); }
+  57% { transform: translate(-5px, 2px) rotate(-0.18deg); }
+  67% { transform: translate(4px, -2px); }
+  77% { transform: translate(-3px, 1px); }
+  86% { transform: translate(2px, -1px); }
+  94% { transform: translate(-1px, 0); }
 }
 @keyframes hit-shake-hard-b {
   0%, 100% { transform: translate(0, 0); }
-  10% { transform: translate(-7px, 3px) rotate(-0.35deg); }
-  30% { transform: translate(7px, -3px) rotate(0.35deg); }
-  55% { transform: translate(-5px, 2px); }
-  80% { transform: translate(3px, -1px); }
+  5% { transform: translate(-12px, 5px) rotate(-0.55deg); }
+  12% { transform: translate(11px, -4px) rotate(0.5deg); }
+  20% { transform: translate(-9px, 4px) rotate(-0.45deg); }
+  29% { transform: translate(8px, -3px) rotate(0.38deg); }
+  38% { transform: translate(-7px, 3px) rotate(-0.3deg); }
+  47% { transform: translate(6px, -2px) rotate(0.24deg); }
+  57% { transform: translate(-5px, 2px) rotate(-0.18deg); }
+  67% { transform: translate(4px, -2px); }
+  77% { transform: translate(-3px, 1px); }
+  86% { transform: translate(2px, -1px); }
+  94% { transform: translate(-1px, 0); }
 }
 
 /* The flash a closing row gives off — a step reaching 3/3 used to slip by unmarked, which

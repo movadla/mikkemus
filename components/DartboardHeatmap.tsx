@@ -24,17 +24,24 @@ export function DartboardHeatmap({
   recentFrom,
 }: {
   throws: [number, number][];
-  /** Sized for the landscape side panel (~150px). The number ring is dropped there — at that
-   *  size the labels render around 4px and are illegible anyway, so they only add noise. */
+  /** Sized for the landscape side panel (~150px). Most of the number ring is dropped there —
+   *  at that size the labels render around 4px — but the four cardinals stay, because without
+   *  any of them the plot has no orientation at all and a dot can't be placed on a number. */
   compact?: boolean;
   /** Index from which throws belong to the turn in progress — those are drawn bright, the
    *  rest of the match recedes. Without it every dart looks equally current. */
   recentFrom?: number;
 }) {
-  const pad = compact ? 6 : 20;
+  const pad = compact ? 14 : 20;
   const size = (BOARD_RADIUS + pad) * 2;
   const half = BOARD_RADIUS + pad;
-  const dotRadius = compact ? 9 : 5;
+  // The triple band is 8 units wide and the double 8 — a dot has to be able to sit INSIDE one
+  // for the plot to say anything about which ring was hit. The compact dot was 9 (18 across,
+  // 25 for a highlighted one), which spanned three bands at once and made a double look like
+  // a triple. Sized to the bands instead, and legibility comes from colour, not bulk.
+  const dotRadius = compact ? 4.5 : 5;
+  // Only the cardinals: 20 up, 6 right, 3 down, 11 left.
+  const labelledIndices = compact ? [0, 5, 10, 15] : NUMBER_ORDER.map((_, i) => i);
 
   return (
     <svg viewBox={`${-half} ${-half} ${size} ${size}`} className="w-full h-auto" role="img" aria-label="Kastspredning på dartboard">
@@ -49,8 +56,15 @@ export function DartboardHeatmap({
         return (
           <g key={n}>
             <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="var(--color-border)" strokeWidth={0.75} />
-            {!compact && (
-              <text x={lx} y={ly} textAnchor="middle" dominantBaseline="middle" fontSize={13} fill="var(--color-muted)">
+            {labelledIndices.includes(i) && (
+              <text
+                x={lx}
+                y={ly}
+                textAnchor="middle"
+                dominantBaseline="middle"
+                fontSize={compact ? 22 : 13}
+                fill="var(--color-muted)"
+              >
                 {n}
               </text>
             )}
@@ -64,9 +78,11 @@ export function DartboardHeatmap({
             key={i}
             cx={x}
             cy={-y}
-            r={isRecent ? dotRadius * 1.4 : dotRadius}
+            r={isRecent ? dotRadius * 1.25 : dotRadius}
             fill={isRecent ? "var(--color-cream)" : "var(--color-teal)"}
-            opacity={isRecent ? 0.9 : 0.35}
+            opacity={isRecent ? 1 : 0.35}
+            stroke={isRecent ? "rgba(0,0,0,0.55)" : "none"}
+            strokeWidth={isRecent ? 1.5 : 0}
           />
         );
       })}
