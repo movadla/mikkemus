@@ -226,6 +226,18 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     : activePlayer
       ? botLevels[activePlayer] ?? null
       : null;
+  /**
+   * A bot is actually taking its turn right now — which is when the human's controls must be
+   * inert, so a stray tap can't score into a turn being auto-played.
+   *
+   * Not the same as "the active player is a bot". Undo with nothing pending walks back into the
+   * previous turn and makes its owner active, so undoing on your own turn right after a bot
+   * threw made the BOT active. Gating on activeBotLevel alone then killed Angre, Bekreft and
+   * the board at once, while the bot's own effect below bails out on `rewound` — nothing could
+   * advance from either side, and the game was stuck. A rewound turn is a manual edit, bot or
+   * not, so the controls have to stay live.
+   */
+  const botIsThrowing = activeBotLevel !== null && rewound === null;
 
   // Always-current mirrors of state/handlers the bot-turn effect below reads from
   // inside setTimeout callbacks, where a closure over this render's `progress`/
@@ -1264,9 +1276,9 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         closedStep={closedStep}
         perfectCloses={perfectCloses}
         onResolvePendingChoice={resolvePendingChoice}
-        onRegisterHit={activeBotLevel ? () => {} : registerHit}
-        onUndo={activeBotLevel ? () => {} : undo}
-        onConfirm={activeBotLevel ? () => {} : confirm}
+        onRegisterHit={botIsThrowing ? () => {} : registerHit}
+        onUndo={botIsThrowing ? () => {} : undo}
+        onConfirm={botIsThrowing ? () => {} : confirm}
         onAbort={abortGame}
       />
       {tripleCelebration && <TripleCelebration images={cameraImages} onDismiss={() => setTripleCelebration(false)} />}
