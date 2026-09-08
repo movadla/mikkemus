@@ -74,11 +74,18 @@ export function WinnerScreen({
   onPlayAgain?: () => void;
 }) {
   const photo = getPlayerRecord(winner)?.photo;
+  const winnerLuck = luckByPlayer[winner] ? overallSumLuck(luckByPlayer[winner]) : null;
   const confetti = useMemo(() => generateConfetti(CONFETTI_COUNT), []);
   const rain = useMemo(() => generateConfettiRain(RAIN_COUNT), []);
 
   return (
-    <div className="animate-screen-enter relative min-h-screen w-full flex items-center justify-center p-6 overflow-hidden" style={{ background: "var(--color-bg)" }}>
+    <div className="animate-winner-slam relative min-h-screen w-full flex items-center justify-center p-6 overflow-hidden" style={{ background: "var(--color-bg)" }}>
+      {/* The blown-out first frame. Above everything, pointer-transparent, gone in 620ms. */}
+      <div
+        className="animate-winner-flash absolute inset-0 pointer-events-none z-50"
+        style={{ background: "var(--color-gold)" }}
+        aria-hidden
+      />
       {/* Rain across the whole screen, behind the card — the burst above the winner card
           stays as its own accent on top of this. */}
       <div className="absolute inset-0 pointer-events-none z-0" aria-hidden>
@@ -133,28 +140,36 @@ export function WinnerScreen({
               />
             ))}
           </div>
-          <div className="relative z-30 flex justify-center" style={{ marginBottom: "-44px" }}>
-            <div
-              className="animate-winner-photo-pulse rounded-full overflow-hidden flex items-center justify-center shrink-0"
-              style={{
-                width: "88px",
-                height: "88px",
-                border: "4px solid var(--color-gold)",
-                background: "var(--color-surface)",
-                boxShadow: "0 6px 16px rgba(0,0,0,0.45)",
-              }}
-            >
-              {photo ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={photo} alt="" className="w-full h-full object-cover" />
-              ) : (
-                <span className="font-display" style={{ color: "var(--color-gold)", fontSize: "2rem" }}>
-                  {winner.charAt(0).toUpperCase()}
-                </span>
-              )}
+          {/* The winner's face is the headline, not a token next to their name — at 88px it was
+              smaller than the name under it. Its lower half overlaps the card below, so the
+              card's top padding has to clear the same 84px the negative margin pulls up. */}
+          <div className="relative z-30 flex justify-center" style={{ marginBottom: "-84px" }}>
+            <div className="relative" style={{ width: "168px", height: "168px" }}>
+              <span
+                aria-hidden
+                className="animate-winner-shockwave absolute inset-0 rounded-full pointer-events-none"
+                style={{ border: "3px solid var(--color-gold)" }}
+              />
+              <div
+                className="animate-winner-photo-pulse rounded-full overflow-hidden flex items-center justify-center w-full h-full"
+                style={{
+                  border: "5px solid var(--color-gold)",
+                  background: "var(--color-surface)",
+                  boxShadow: "0 10px 30px rgba(0,0,0,0.55), 0 0 40px rgba(201, 162, 75, 0.35)",
+                }}
+              >
+                {photo ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={photo} alt={winner} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="font-display" style={{ color: "var(--color-gold)", fontSize: "4rem" }}>
+                    {winner.charAt(0).toUpperCase()}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
-          <div className="animate-winner-pop card-gold shadow-panel relative z-20 rounded-2xl pt-14 pb-8 px-8 mb-6">
+          <div className="animate-winner-pop card-gold shadow-panel relative z-20 rounded-2xl pt-24 pb-8 px-8 mb-6">
             <p
               className="font-display"
               style={{
@@ -170,8 +185,12 @@ export function WinnerScreen({
             <h2 className="font-display" style={{ color: "var(--color-bg)", fontSize: "2.2rem" }}>
               {winner}
             </h2>
+            {/* xH belongs up here, not only in a card three scrolls down — it is the one number
+                that says whether the win was thrown or fell out of the sky. Omitted rather than
+                dashed when no dart could be judged; a "–" beside the headline reads as broken. */}
             <p className="tabular" style={{ color: "var(--color-bg)", opacity: 0.7, fontSize: "0.85rem", marginTop: "0.4rem" }}>
               {totalDarts(stats[winner])} piler brukt
+              {winnerLuck !== null && <> · xH {formatLuck(winnerLuck)} / {stats[winner]?.hits ?? 0}</>}
             </p>
           </div>
         </div>
@@ -206,9 +225,9 @@ export function WinnerScreen({
           <p className="mb-3 section-label">EXPECTED HITS (FORVENTET / FAKTISK)</p>
           {!players.some((p) => STEPS.some((s) => luckByPlayer[p]?.[s].count > 0)) ? (
             <p style={{ color: "var(--color-muted)", fontSize: "0.8rem", lineHeight: 1.45 }}>
-              Ingen piler i denne kampen kunne bedømmes. xH regnes ut fra Scolia sine
-              koordinater, så manuelt registrerte kast teller ikke — og en bots kast holdes
-              utenfor med vilje, siden de er en simulert plan og ikke et kast.
+              Ingen piler i denne kampen kunne bedømmes. xH regnes ut fra koordinatene til
+              hvert kast, så manuelt registrerte piler teller ikke — det kreves at Scolia var
+              tilkoblet.
             </p>
           ) : (
             <div className="space-y-4">

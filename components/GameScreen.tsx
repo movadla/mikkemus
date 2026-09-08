@@ -13,6 +13,7 @@ import {
   type TurnShot,
 } from "@/lib/game";
 import { isAnnouncerEnabled, setAnnouncerEnabled } from "@/lib/announcer";
+import { isShakeEnabled, setShakeEnabled } from "@/lib/screenShake";
 import { avatarAccent } from "@/lib/avatarAccent";
 import { primeAudio } from "@/lib/fanfare";
 import { startWakeLock } from "@/lib/wakeLock";
@@ -22,7 +23,7 @@ import { useCompactLandscape } from "@/lib/useCompactLandscape";
 import { LiveSidePanel } from "./LiveSidePanel";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { Mark } from "./Mark";
-import { CalibrateIcon, DartIcon, SpeakerIcon, SpeakerMuteIcon } from "./icons";
+import { CalibrateIcon, DartIcon, ShakeIcon, SpeakerIcon, SpeakerMuteIcon } from "./icons";
 
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
@@ -117,6 +118,8 @@ function ChromeControls({
   onHome,
   announcerOn,
   onToggleAnnouncer,
+  shakeOn,
+  onToggleShake,
   onCalibrate,
   calibrating,
 }: {
@@ -124,6 +127,8 @@ function ChromeControls({
   onHome: () => void;
   announcerOn: boolean;
   onToggleAnnouncer: () => void;
+  shakeOn: boolean;
+  onToggleShake: () => void;
   onCalibrate: () => void;
   calibrating: "idle" | "sending" | "sent" | "failed";
 }) {
@@ -149,6 +154,17 @@ function ChromeControls({
       >
         {announcerOn ? <SpeakerIcon className="w-4 h-4" /> : <SpeakerMuteIcon className="w-4 h-4" />}
         {stacked && <span style={{ fontSize: "0.7rem" }}>{announcerOn ? "Lyd på" : "Lyd av"}</span>}
+      </button>
+      <button
+        type="button"
+        onClick={onToggleShake}
+        aria-label={shakeOn ? "Skru av risting" : "Skru på risting"}
+        title="Risting ved treff"
+        className={icon}
+        style={{ background: "var(--color-surface)", color: shakeOn ? "var(--color-teal)" : "var(--color-muted)" }}
+      >
+        <ShakeIcon className="w-4 h-4" />
+        {stacked && <span style={{ fontSize: "0.7rem" }}>{shakeOn ? "Risting på" : "Risting av"}</span>}
       </button>
       <button
         type="button"
@@ -243,6 +259,7 @@ export function GameScreen({
   // without waiting for an effect — announce() itself reads the same localStorage value
   // directly, so this state only drives the button's own icon/label.
   const [announcerOn, setAnnouncerOn] = useState(() => isAnnouncerEnabled());
+  const [shakeOn, setShakeOn] = useState(() => isShakeEnabled());
 
   // Retriggerable "just undid a dart" window — drives Mark's slow-motion un-draw below.
   // Replaces an earlier full-panel red flash, which read as an error state rather than
@@ -264,7 +281,9 @@ export function GameScreen({
   // state on a timer. A CSS animation only restarts when its animation-name actually
   // changes, so each level has two identical keyframes and the token's parity picks between
   // them — two identical hits in a row still replay, with no state, effect or timeout here.
-  const shakeLevel = hitPulse ? Math.min(3, Math.max(1, hitPulse.streak)) : 0;
+  // Only the shake is switchable. The heat, the boom and the marks all still play with it off —
+  // this turns down the one effect that moves the whole screen, not the feedback itself.
+  const shakeLevel = hitPulse && shakeOn ? Math.min(3, Math.max(1, hitPulse.streak)) : 0;
   const shakeStep = SHAKE[shakeLevel];
   const shakeAnimation =
     hitPulse && shakeStep
@@ -354,6 +373,12 @@ export function GameScreen({
               setAnnouncerOn(next);
               setAnnouncerEnabled(next);
             }}
+            shakeOn={shakeOn}
+            onToggleShake={() => {
+              const next = !shakeOn;
+              setShakeOn(next);
+              setShakeEnabled(next);
+            }}
             onCalibrate={handleCalibrate}
             calibrating={calibrating}
           />
@@ -434,7 +459,13 @@ export function GameScreen({
                 setAnnouncerOn(next);
                 setAnnouncerEnabled(next);
               }}
-              onCalibrate={handleCalibrate}
+              shakeOn={shakeOn}
+            onToggleShake={() => {
+              const next = !shakeOn;
+              setShakeOn(next);
+              setShakeEnabled(next);
+            }}
+            onCalibrate={handleCalibrate}
               calibrating={calibrating}
             />
           </div>

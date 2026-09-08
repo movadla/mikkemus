@@ -31,7 +31,7 @@ import { clearActiveMatch, loadActiveMatch, saveActiveMatch } from "@/lib/active
 import { publishLiveMatch } from "@/lib/liveMatch";
 import { luckForThrow, sectorAt, throwAccuracy } from "@/lib/dartboard";
 import { haptics } from "@/lib/haptics";
-import { playFanfare, playHitStreakSound, primeAudio } from "@/lib/fanfare";
+import { playHitStreakSound, playWinImpact, primeAudio } from "@/lib/fanfare";
 import { classifyThrow, formatSectorLabel, parseSector } from "@/lib/scoliaMapping";
 import { botChooseThrow, botDecideRedirect, solverFor } from "@/lib/botStrategy";
 import { type BotLevel, type TeamMember } from "@/lib/botLevels";
@@ -1044,19 +1044,23 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
 
   function finalizeMatch(finalTurnLog: Record<string, TurnResult[]>, winnerName: string | null = null) {
     const stats: Record<string, TurnAggregate> = {};
-    // A bot's darts are a simulated Monte Carlo plan, not a physical throw —
-    // "luck" doesn't mean anything for one, and would just look like a bug on
-    // the winner screen ("Bot 3: +12.4"). Unlike the KASTSPREDNING heatmap
-    // (matchThrows), which is a neutral visualization of where darts landed,
-    // this panel makes a judgment call about the thrower, so bots are
-    // excluded here — team rosters and guests are real humans and stay in.
+    // Bots included. They have real coordinates, and xH asks a question the coordinates can
+    // answer on their own: given where this dart landed, how many crosses was that worth?
+    // Nothing in it depends on a human having thrown it. Leaving them out only removed the
+    // comparison that makes the number interesting in the first place — yours against theirs.
+    // (An earlier note here argued they'd "look like a bug"; that was written when this
+    // rendered as a signed delta, "+12.4", rather than today's forventet/faktisk.)
+    //
+    // Career stats are a different matter and stay bot-free — see the guard in the loop below,
+    // which is independent of this and is what actually keeps Supabase clean.
+    //
     // Broken down per section (see lib/dartboard.ts's luckForThrow) as a running
     // SUM, not a mean — a sum is what's directly comparable to the actual crosses
     // landed (an xG-style "forventet vs faktisk" read), which a per-dart average
     // can't give you.
     const luckByPlayer: Record<string, Record<Step, { sum: number; count: number }>> = {};
     players.forEach((p) => {
-      const luckByStep = botLevels[p] ? null : luckTotalsRef.current[p];
+      const luckByStep = luckTotalsRef.current[p];
       const perStep = {} as Record<Step, { sum: number; count: number }>;
       STEPS.forEach((step) => {
         const totals = luckByStep?.[step];
@@ -1179,7 +1183,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
 
     if (isFinished(effectiveProgress[activePlayer])) {
       haptics.win();
-      playFanfare();
+      playWinImpact();
       // Reaching the winner screen must never depend on stats persistence succeeding —
       // see abortGame's identical guard for why.
       let stats: Record<string, TurnAggregate> = {};
@@ -1294,9 +1298,9 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     const darts = totals.hits + totals.misses;
     const thrown = (turnCounters[activePlayer] ?? 0) * DARTS_PER_TURN + dartsThisTurn;
     const luck = luckLive[activePlayer];
-    // A bot's darts are a simulated plan rather than a throw, so an xH for one measures
-    // nothing — the same reason finalizeMatch drops bot luck before it is ever stored.
-    const judged = activeBotLevel === null && luck && luck.count > 0 ? luck : null;
+    // Bots included here too, for the same reason as finalizeMatch: the coordinates are real
+    // and the question xH asks is about the coordinates, not about who produced them.
+    const judged = luck && luck.count > 0 ? luck : null;
     return {
       hitPct: darts > 0 ? Math.round((totals.hits / darts) * 100) : null,
       expected: judged ? judged.sum : null,

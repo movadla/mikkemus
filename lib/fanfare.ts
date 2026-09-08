@@ -186,6 +186,24 @@ export function playFanfare() {
 }
 
 /**
+ * The whole win, as one sound: the deepest, longest boom the synth can make, with the fanfare
+ * riding on top of it.
+ *
+ * The fanfare alone is brass — bright, and all in the upper register. It announces a win but
+ * you don't feel it. The boom underneath is what lands in the chest, and running the two
+ * together is why this reads as an impact rather than a jingle. Nothing is layered on the same
+ * frequencies, so they don't fight: the boom owns everything under about 200Hz and the fanfare
+ * everything above.
+ *
+ * tailScale past the level scale for the same reason boomForStreak does it — the win should
+ * ring longer than any single dart ever can (see BoomParams.tailScale).
+ */
+export function playWinImpact() {
+  playBoom({ darkness: 5, volume: 5, grit: 4, punch: 5, length: 5, tailScale: 2.4 });
+  playFanfareVariant(WIN_FANFARE);
+}
+
+/**
  * The three candidate win fanfares:
  *  1. Rising bugle call into a held top note over a triad, then a closing accent.
  *  2. Classic cavalry "charge!" — repeated short notes driving up into the top note.

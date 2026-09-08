@@ -231,6 +231,17 @@ export function BullseyeIcon({ className }: IconProps) {
 
 /** A circular arrow around a bullseye centre — recalibrating is "aim the board at itself
  *  again", so it borrows BullseyeIcon's centre rather than being a generic refresh glyph. */
+/** Screen shake: a box with motion lines either side of it. */
+export function ShakeIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className={className} aria-hidden>
+      <rect x="9" y="6" width="6" height="12" rx="1.5" />
+      <path d="M5.5 9.5 4 12l1.5 2.5" />
+      <path d="M18.5 9.5 20 12l-1.5 2.5" />
+    </svg>
+  );
+}
+
 export function CalibrateIcon({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>

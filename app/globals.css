@@ -746,6 +746,56 @@ button {
   }
 }
 
+/* -- the win itself --------------------------------------------------------
+   Three layers on one beat, matched to playWinImpact's boom: the screen punches in from
+   oversize, a flash blows out the first frame, and a ring throws itself off the winner's
+   photo. The screen used to simply appear, which made the biggest moment in the game the
+   quietest thing on it. */
+
+/* Slams in from 1.5x, then rings. The zoom is over inside the first 8% — at 1200ms that is
+   under a tenth of a second, which is what makes it read as an impact rather than a
+   transition — and the rest is the board still shaking underneath it. */
+@keyframes winner-slam {
+  0% { opacity: 0; transform: scale(1.5); }
+  8% { opacity: 1; transform: scale(1.13); }
+  16% { transform: scale(0.985) translate(-10px, 4px); }
+  24% { transform: scale(1.012) translate(9px, -4px); }
+  33% { transform: scale(0.994) translate(-7px, 3px); }
+  43% { transform: scale(1.005) translate(6px, -2px); }
+  53% { transform: scale(1) translate(-5px, 2px); }
+  64% { transform: translate(4px, -2px); }
+  75% { transform: translate(-3px, 1px); }
+  85% { transform: translate(2px, -1px); }
+  93% { transform: translate(-1px, 0); }
+  100% { transform: none; }
+}
+
+.animate-winner-slam {
+  animation: winner-slam 1200ms linear both;
+}
+
+/* One blown-out frame. Gold rather than white — white reads as an error flash, and this is
+   the same colour the rest of the win is already using. */
+@keyframes winner-flash {
+  0% { opacity: 0.85; }
+  12% { opacity: 0.5; }
+  100% { opacity: 0; }
+}
+
+.animate-winner-flash {
+  animation: winner-flash 620ms var(--ease-standard) both;
+}
+
+/* A ring thrown off the photo on impact. Rides out past the card and dies. */
+@keyframes winner-shockwave {
+  0% { opacity: 0.75; transform: scale(0.55); }
+  100% { opacity: 0; transform: scale(2.6); }
+}
+
+.animate-winner-shockwave {
+  animation: winner-shockwave 900ms var(--ease-standard) both;
+}
+
 /* -- winner screen flourish -- */
 @keyframes winner-pop {
   from {
