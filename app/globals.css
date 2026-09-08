@@ -483,10 +483,17 @@ button {
    instead, so the buttons move to a column on the right and the whole board fits. Bounded by
    max-height so tablets and desktops, which have room either way, are untouched. */
 @media (orientation: landscape) and (max-height: 560px) {
+  /* Grid, not a wrapped flex row. Wrapping produced lines with no definite height, so the
+     board collapsed and the page grew past the viewport instead — an explicit two-area grid
+     over the root's own 100dvh gives the board a real height to divide among its ten rows. */
   .game-root {
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: stretch;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 9rem;
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas:
+      "header header"
+      "board actions";
+    column-gap: 0.4rem;
     padding: 0.4rem;
   }
 
@@ -497,9 +504,12 @@ button {
     --row-min: 0px;
   }
 
+  /* Each of these carries max-w-3xl and mx-auto for the portrait layout; inside a grid area
+     that would centre them in a narrower box and waste the width landscape exists to give. */
   .game-header {
-    width: 100%;
-    margin-bottom: 0.3rem;
+    grid-area: header;
+    max-width: none;
+    margin: 0 0 0.3rem 0;
   }
 
   .game-header button {
@@ -508,22 +518,28 @@ button {
   }
 
   .game-board {
-    flex: 1 1 0;
+    grid-area: board;
+    min-height: 0;
     min-width: 0;
+    max-width: none;
     margin: 0;
+    /* The panel's rounded corner and inset shadow were eating the bottom row's last pixels.
+       Ten rows sharing 390px cannot spare them. */
+    border-radius: 0.5rem;
+    box-shadow: none;
   }
 
   .action-bar {
-    width: 11rem;
-    flex: 0 0 11rem;
-    margin: 0 0 0 0.4rem;
+    grid-area: actions;
+    min-height: 0;
+    margin: 0;
     padding: 0;
     border-top: none;
     box-shadow: none;
     background: none;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-end;
     gap: 0.4rem;
   }
 
