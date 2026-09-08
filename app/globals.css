@@ -369,6 +369,40 @@ button {
   border-left: 1px solid rgba(255, 255, 255, 0.035);
 }
 
+/* The row you're actually aiming at. This was the weakest signal on the whole screen: the
+   only marker was a thin ring on one small cell, and the step label carried nothing at all
+   — at the two or three metres a phone actually sits from the oche, "which number am I on"
+   was the hardest question to answer. The band runs the full row so it's found by shape
+   rather than by reading. */
+.row-active {
+  background: linear-gradient(90deg, rgba(47, 180, 194, 0.16) 0%, rgba(47, 180, 194, 0.05) 100%);
+}
+
+/* The label end of that row, plus the caret that points from it into the board. */
+.row-active-label {
+  background: linear-gradient(90deg, rgba(47, 180, 194, 0.28) 0%, rgba(47, 180, 194, 0.12) 100%) !important;
+  color: var(--color-teal-strong) !important;
+}
+
+.row-active-label::after {
+  content: "";
+  position: absolute;
+  right: -1px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-top: 7px solid transparent;
+  border-bottom: 7px solid transparent;
+  border-right: 7px solid var(--color-teal);
+}
+
+/* Edge fade hinting that the grid scrolls sideways. Shown from five players up, which is
+   roughly where 64px-minimum columns stop fitting a phone — a heuristic rather than a
+   measured overflow, deliberately, since measuring would mean state and a resize observer
+   for a hint that only matters in the rare big-pod case. */
+.scroll-hint-right {
+  background: linear-gradient(90deg, rgba(18, 33, 26, 0) 0%, rgba(18, 33, 26, 0.9) 100%);
+}
+
 /* A wash down the active player's column — the single fastest way to answer "whose turn is
    it" from across a room, which is the actual viewing distance for a phone at the oche. */
 .column-active {

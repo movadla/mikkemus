@@ -18,7 +18,7 @@ import { primeAudio } from "@/lib/fanfare";
 import { startWakeLock } from "@/lib/wakeLock";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { Mark } from "./Mark";
-import { SpeakerIcon, SpeakerMuteIcon } from "./icons";
+import { DartIcon, SpeakerIcon, SpeakerMuteIcon } from "./icons";
 
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
@@ -211,7 +211,11 @@ export function GameScreen({
         }}
         aria-hidden
       />
-      <div className="flex items-center justify-between mb-3 max-w-3xl mx-auto w-full shrink-0">
+      {/* Chrome only: navigation and settings. The turn's own darts used to sit between these
+          two, mixing game state into a bar of controls — they've moved down next to Bekreft,
+          where the eye already is at the end of a turn and where the button that acts on them
+          lives. */}
+      <div className="flex items-center justify-between mb-2 max-w-3xl mx-auto w-full shrink-0">
         <button
           type="button"
           onClick={() => setShowHomeConfirm(true)}
@@ -220,14 +224,11 @@ export function GameScreen({
         >
           ← Hjem
         </button>
-        <div className="text-center">
-          {rewound && (
-            <p style={{ color: "var(--color-muted)", fontSize: "0.7rem", letterSpacing: "0.15em" }}>
-              REDIGERER TIDLIGERE TUR
-            </p>
-          )}
-          {!rewound && <ShotIndicator shots={turnShots} />}
-        </div>
+        {rewound && (
+          <p style={{ color: "var(--color-gold)", fontSize: "0.7rem", letterSpacing: "0.15em" }}>
+            REDIGERER TIDLIGERE TUR
+          </p>
+        )}
         <button
           type="button"
           onClick={() => {
@@ -302,6 +303,11 @@ export function GameScreen({
         className="relative flex-1 min-h-0 flex flex-col rounded-xl overflow-hidden shadow-panel max-w-3xl mx-auto w-full"
         style={{ background: "var(--color-panel)" }}
       >
+        {/* See .scroll-hint-right for why this is a player-count heuristic rather than a
+            measured overflow. */}
+        {players.length >= 5 && (
+          <div className="scroll-hint-right absolute top-0 right-0 bottom-0 w-8 z-20 pointer-events-none" aria-hidden />
+        )}
         <div className="flex-1 min-h-0 w-full overflow-x-auto overflow-y-hidden">
           <div
             className="grid h-full"
@@ -321,16 +327,19 @@ export function GameScreen({
                     borderBottom: isActive ? `2px solid ${accent}` : "2px solid var(--color-border)",
                   }}
                 >
+                  {/* A bare number in the corner meant nothing without knowing the app — the
+                      dart icon says what's being counted in less space than a word would. */}
                   <span
-                    className="absolute top-1 right-1.5 tabular px-1.5 rounded"
+                    className="absolute top-1 right-1.5 tabular px-1.5 rounded flex items-center gap-0.5"
                     style={{
                       color: "var(--color-muted)",
                       fontSize: "0.66rem",
                       background: "rgba(0,0,0,0.25)",
                       lineHeight: "1.35",
                     }}
-                    title="Piler kastet"
+                    title={`${dartsThrown[p] ?? 0} piler kastet`}
                   >
+                    <DartIcon className="w-2.5 h-2.5" />
                     {dartsThrown[p] ?? 0}
                   </span>
                   <span className="relative inline-flex max-w-full min-w-0">
@@ -378,7 +387,7 @@ export function GameScreen({
               return (
               <Fragment key={s}>
                 <div
-                  className="motion-slam grid-rule-top sticky left-0 z-10 flex items-center justify-center tabular"
+                  className={`motion-slam grid-rule-top sticky left-0 z-10 flex items-center justify-center tabular relative ${s === activeStep ? "row-active-label" : ""}`}
                   style={{
                     // A step everyone has closed is done business — it fades back rather than
                     // shouting the same as the live rows above it.
@@ -413,7 +422,7 @@ export function GameScreen({
                   return (
                     <div
                       key={p}
-                      className={`relative min-h-0 min-w-0 flex items-center justify-center p-1 grid-rule-top grid-rule-left ${isActive ? "column-active" : ""}`}
+                      className={`relative min-h-0 min-w-0 flex items-center justify-center p-1 grid-rule-top grid-rule-left ${isActive ? "column-active" : ""} ${s === activeStep ? "row-active" : ""}`}
                     >
                       {clickable && (
                         <span
@@ -449,7 +458,12 @@ export function GameScreen({
         </div>
       </div>
 
-      <div className="action-bar shrink-0 mt-3 -mx-4 px-4 pt-3 pb-1">
+      <div className="action-bar shrink-0 mt-3 -mx-4 px-4 pt-2 pb-1">
+        {!rewound && (
+          <div className="max-w-3xl mx-auto w-full mb-1">
+            <ShotIndicator shots={turnShots} />
+          </div>
+        )}
         <div className="grid gap-3 max-w-3xl mx-auto w-full" style={{ gridTemplateColumns: "0.7fr 1.3fr" }}>
           <button
             type="button"
