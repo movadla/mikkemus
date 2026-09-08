@@ -186,21 +186,20 @@ export function playFanfare() {
 }
 
 /**
- * The whole win, as one sound: the deepest, longest boom the synth can make, with the fanfare
- * riding on top of it.
+ * The hit the winning dart makes: the deepest, longest boom the synth can produce. Fired as
+ * the board slams into frame in WinDive, and its tail is still ringing through the dive into
+ * the bull — playFanfare then lands on the winner screen itself, so the two arrive as an
+ * impact followed by an announcement rather than one pile of sound.
  *
- * The fanfare alone is brass — bright, and all in the upper register. It announces a win but
- * you don't feel it. The boom underneath is what lands in the chest, and running the two
- * together is why this reads as an impact rather than a jingle. Nothing is layered on the same
- * frequencies, so they don't fight: the boom owns everything under about 200Hz and the fanfare
- * everything above.
+ * The fanfare alone is brass, all upper register: it announces a win but you don't feel it.
+ * This is the part you feel. They don't fight when they do overlap — the boom owns everything
+ * under about 200Hz, the fanfare everything above.
  *
  * tailScale past the level scale for the same reason boomForStreak does it — the win should
  * ring longer than any single dart ever can (see BoomParams.tailScale).
  */
-export function playWinImpact() {
+export function playWinBoom() {
   playBoom({ darkness: 5, volume: 5, grit: 4, punch: 5, length: 5, tailScale: 2.4 });
-  playFanfareVariant(WIN_FANFARE);
 }
 
 /**

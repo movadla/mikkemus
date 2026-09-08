@@ -31,7 +31,7 @@ import { clearActiveMatch, loadActiveMatch, saveActiveMatch } from "@/lib/active
 import { publishLiveMatch } from "@/lib/liveMatch";
 import { luckForThrow, sectorAt, throwAccuracy } from "@/lib/dartboard";
 import { haptics } from "@/lib/haptics";
-import { playHitStreakSound, playWinImpact, primeAudio } from "@/lib/fanfare";
+import { playFanfare, playHitStreakSound, playWinBoom, primeAudio } from "@/lib/fanfare";
 import { classifyThrow, formatSectorLabel, parseSector } from "@/lib/scoliaMapping";
 import { botChooseThrow, botDecideRedirect, solverFor } from "@/lib/botStrategy";
 import { type BotLevel, type TeamMember } from "@/lib/botLevels";
@@ -40,6 +40,7 @@ import { extractImageUrls } from "@/lib/extractImageUrls";
 import { SetupScreen } from "./SetupScreen";
 import { GameScreen } from "./GameScreen";
 import { WinnerScreen } from "./WinnerScreen";
+import { WinDive } from "./WinDive";
 import { ScoliaStatusBadge, summarizeScolia } from "./ScoliaStatusBadge";
 import { TripleCelebration } from "./TripleCelebration";
 import { CameraImages } from "./CameraImages";
@@ -423,6 +424,11 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     // clearing it here (rather than in an effect over there) keeps that view a pure
     // function of props with no state or timers of its own.
     setHitPulse(null);
+    // Same reasoning, and it was missing: closedStep drives the gold flash on a row's label
+    // when it reaches 3/3, but nothing ever cleared it. The last row closed kept its label
+    // gold indefinitely — and since startGame didn't reset it either, it carried into the NEXT
+    // match, where a freshly started board showed a gold 14 nobody had closed.
+    setClosedStep(null);
   }
 
   // Counts physical darts Scolia has detected this turn (registrable or not) —
@@ -465,6 +471,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   // rather than booleans so the same value twice in a row still reads as a new event.
   const [hitPulse, setHitPulse] = useState<{ token: number; streak: number } | null>(null);
   const [closedStep, setClosedStep] = useState<{ token: number; step: Step } | null>(null);
+  // True from the winning dart until WinDive lands in the bull — see the winner branch below.
+  const [diving, setDiving] = useState(false);
   const pulseTokenRef = useRef(0);
 
   // Set when a three-triple turn lands; the board photo it wants arrives a beat later (see
@@ -734,6 +742,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     setTurnCounters({});
     setTurnToken(0);
     setTurnShots(EMPTY_TURN_SHOTS);
+    setHitPulse(null);
+    setClosedStep(null);
     setMatchThrows({});
     accuracyTotalsRef.current = {};
     luckTotalsRef.current = {};
@@ -1183,7 +1193,10 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
 
     if (isFinished(effectiveProgress[activePlayer])) {
       haptics.win();
-      playWinImpact();
+      // The boom lands now, on the frame the board slams into the dive; the fanfare waits for
+      // the winner screen to burst out of the bull, so the two read as impact then announcement.
+      playWinBoom();
+      setDiving(true);
       // Reaching the winner screen must never depend on stats persistence succeeding —
       // see abortGame's identical guard for why.
       let stats: Record<string, TurnAggregate> = {};
@@ -1264,6 +1277,19 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   }
 
   if (screen === "winner" && winner) {
+    // The dive plays first and hands over when it lands in the bull. Not rendered at all on a
+    // restored match: reloading into a finished match should show the result, not replay the
+    // celebration for a win that happened before the page existed.
+    if (diving) {
+      return (
+        <WinDive
+          onDone={() => {
+            setDiving(false);
+            playFanfare();
+          }}
+        />
+      );
+    }
     return (
       <WinnerScreen
         winner={winner}

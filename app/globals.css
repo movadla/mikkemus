@@ -746,6 +746,27 @@ button {
   }
 }
 
+/* The dive into the bull. Three movements in one keyframe, and the timing between them is
+   the whole effect: a slam that overshoots and settles by 20%, a held beat to 34% where
+   nothing moves, then an accelerating rush to 40x. Ease-IN on the last leg — the camera has
+   to pick up speed as it goes, the way falling toward something does. Ease-out there would
+   drift to a halt and feel like a menu. */
+@keyframes win-dive {
+  0% { opacity: 0; transform: scale(0.35); animation-timing-function: cubic-bezier(0.1, 0.9, 0.2, 1); }
+  7% { opacity: 1; transform: scale(1.07); }
+  12% { transform: scale(0.985); }
+  16% { transform: scale(1.02); }
+  20% { transform: scale(1); animation-timing-function: linear; }
+  34% { transform: scale(1.05); animation-timing-function: cubic-bezier(0.66, 0, 0.9, 0.35); }
+  100% { transform: scale(40); }
+}
+
+.win-dive-camera {
+  animation: win-dive 1150ms both;
+  transform-origin: center center;
+  will-change: transform;
+}
+
 /* -- the win itself --------------------------------------------------------
    Three layers on one beat, matched to playWinImpact's boom: the screen punches in from
    oversize, a flash blows out the first frame, and a ring throws itself off the winner's
