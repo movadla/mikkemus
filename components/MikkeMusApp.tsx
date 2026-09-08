@@ -581,7 +581,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     }
     if (scoliaDartsRef.current >= DARTS_PER_TURN) {
       scoliaDartsRef.current = 0;
-      confirm(finalProgress, finalPendingHits);
+      finishTurn(finalProgress, finalPendingHits);
     }
   }
 
@@ -946,8 +946,10 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
    * state has not flushed, so without them the turn gets summarised without its last dart.
    * Every other caller (the Bekreft button, a takeout, the bot's own loop) runs a tick or
    * more later, with state settled, and passes nothing.
+   *
+   * Never hand this to an event handler directly — see `confirm` below.
    */
-  function confirm(progressOverride?: PlayerProgress, pendingHitsOverride?: HitRecord[]) {
+  function finishTurn(progressOverride?: PlayerProgress, pendingHitsOverride?: HitRecord[]) {
     if (!activePlayer) return;
     scoliaDartsRef.current = 0;
     const effectiveProgress = progressOverride ?? progress;
@@ -962,6 +964,18 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       return;
     }
     advanceTurn(progressOverride, pendingHitsOverride);
+  }
+
+  /**
+   * What every UI path and ref uses. Takes no arguments on purpose: GameScreen wires the
+   * Bekreft button up as `onClick={onConfirm}`, so React hands the click event to whatever
+   * sits here as the first argument. When that was finishTurn itself, the event arrived as
+   * `progressOverride` and the turn was summarised against a MouseEvent instead of the
+   * board — `effectiveProgress[activePlayer]` was undefined and Bekreft threw. TypeScript
+   * can't catch it: a `() => void` prop happily accepts a function with optional parameters.
+   */
+  function confirm() {
+    finishTurn();
   }
 
   /**

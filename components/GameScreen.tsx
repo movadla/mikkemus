@@ -18,6 +18,7 @@ import { primeAudio } from "@/lib/fanfare";
 import { startWakeLock } from "@/lib/wakeLock";
 import { requestRecalibration } from "@/lib/scoliaCommands";
 import { reportError } from "@/lib/errorReporting";
+import { useCompactLandscape } from "@/lib/useCompactLandscape";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { Mark } from "./Mark";
 import { CalibrateIcon, DartIcon, SpeakerIcon, SpeakerMuteIcon } from "./icons";
@@ -136,6 +137,8 @@ export function GameScreen({
   onConfirm,
   onAbort,
 }: Props) {
+  // Picks the wide variant of the mark glyph — see lib/useCompactLandscape.ts.
+  const compactLandscape = useCompactLandscape();
   const [showHomeConfirm, setShowHomeConfirm] = useState(false);
   // Lazy-initialized from localStorage so the button reflects whatever the host last chose,
   // without waiting for an effect — announce() itself reads the same localStorage value
@@ -515,6 +518,7 @@ export function GameScreen({
                             accent={accent}
                             slowMotion={isActive && retracting}
                             perfect={!!perfectCloses[p]?.[s]}
+                            wide={compactLandscape}
                           />
                         </div>
                       </button>

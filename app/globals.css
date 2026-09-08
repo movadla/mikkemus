@@ -502,7 +502,7 @@ button {
      row and a half of a ten-row board. */
   .game-root {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 10.5rem;
+    grid-template-columns: minmax(0, 1fr) 9.25rem;
     grid-template-rows: auto minmax(0, 1fr);
     grid-template-areas:
       "board header"
@@ -559,8 +559,10 @@ button {
   /* Cells: the mark is drawn square, so it is the ROW height that caps how big it gets.
      Reclaiming the double padding around it is most of the difference between a legible
      cross and a speck. */
+  /* The grid rules already separate the cells, so this padding bought nothing and cost
+     ~2.5px of every row — 25px of board, most of a whole row. */
   .cell-wrap {
-    padding: 0.08rem;
+    padding: 0;
   }
 
   .mark-pad {
@@ -575,7 +577,7 @@ button {
     left: auto !important;
     right: 0.3rem !important;
     transform: translateY(-50%) !important;
-    width: 9.9rem;
+    width: 8.65rem;
     text-align: center;
     font-size: 0.72rem;
     padding: 0.3rem 0.4rem;
