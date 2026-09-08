@@ -56,6 +56,14 @@ const EMPTY_TURN_SHOTS: (TurnShot | null)[] = [null, null, null];
  */
 const TURN_DISPLAY_FALLBACK_MS = 20_000;
 
+/**
+ * The live_match snapshot is one Supabase write, and it used to go out on every single state
+ * change — every dart, every tap, every pending-hit edit, hundreds of round trips a match from
+ * a phone. The storskjerm view polls on its own schedule anyway, so nothing there notices a
+ * write coalesced with the ones around it. Only the trailing state matters.
+ */
+const LIVE_PUBLISH_DEBOUNCE_MS = 700;
+
 /** Pause between a bot's simulated darts — purely cosmetic pacing, so the shot
  *  boxes/marks visibly animate in one at a time instead of all landing at once. */
 const BOT_THROW_DELAY_MS = 900;
@@ -147,6 +155,9 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   // The current turn's darts as Scolia detects them, for the shot-indicator boxes —
   // held on screen until the darts are physically taken out (see clearTurnDisplay).
   const [turnShots, setTurnShots] = useState<(TurnShot | null)[]>(EMPTY_TURN_SHOTS);
+  // Declared up here, not down with the render values, because the fallback timer below needs
+  // it in its dependency list — a const referenced before its own declaration is a TDZ error.
+  const dartsThisTurn = turnShots.filter(Boolean).length;
   // Every physical dart's landing coordinate this match, per player — shown as a
   // heatmap on the winner screen and discarded after (not persisted; see
   // lib/dartboard.ts for the coordinate system these are in).
@@ -162,6 +173,9 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   // The same totals flattened across steps, as state rather than a ref, purely so the landscape
   // side panel can show them while the match is still running.
   const [luckLive, setLuckLive] = useState<Record<string, { sum: number; count: number }>>({});
+  // Pending live_match write — see LIVE_PUBLISH_DEBOUNCE_MS.
+  const publishTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (publishTimerRef.current) clearTimeout(publishTimerRef.current); }, []);
   // Which specific number's Triple/Double physically landed this match, per player —
   // for the career "favorite triple/double" stat. Counts every ring hit as thrown,
   // regardless of how the triple/double-redirect ambiguity later got resolved.
@@ -322,6 +336,9 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     if (!hydratedFromStorage) return;
     if (screen === "setup") {
       clearActiveMatch();
+      // Not debounced: "the match is over" is the one snapshot a second screen must not be
+      // left waiting for, and it happens once.
+      if (publishTimerRef.current) clearTimeout(publishTimerRef.current);
       publishLiveMatch(null);
       return;
     }
@@ -346,16 +363,9 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       teamMemberIdx,
       guestPlayers,
     });
-    publishLiveMatch({
-      screen,
-      players,
-      progress,
-      activePlayer,
-      turnToken,
-      winner,
-      botLevels,
-      guestPlayers,
-    });
+    const snapshot = { screen, players, progress, activePlayer, turnToken, winner, botLevels, guestPlayers };
+    if (publishTimerRef.current) clearTimeout(publishTimerRef.current);
+    publishTimerRef.current = setTimeout(() => publishLiveMatch(snapshot), LIVE_PUBLISH_DEBOUNCE_MS);
   }, [
     hydratedFromStorage,
     screen,
@@ -447,6 +457,15 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
    */
   function processDart(payload: { sector: string; bounceout: boolean; coordinates: [number, number] }) {
     if (!activePlayer) return;
+    // The triple/double choice is still open. finishTurn zeroed the dart counter and returned
+    // without advancing, so anything arriving now would be scored as dart 1 of a new turn —
+    // onto the same player, wiping the shot boxes, with the unanswered choice still queued.
+    // A phantom bounce-out is enough to trigger it. Refuse the dart instead and say why; it
+    // can be tapped in by hand after the choice, which is far better than scoring it wrong.
+    if (awaitingConfirmResolutionRef.current) {
+      reportError("Velg trippel eller dobbel før neste pil — denne ble ikke registrert.", { key: "dart-during-choice" });
+      return;
+    }
     const dartIndex = scoliaDartsRef.current;
     scoliaDartsRef.current += 1;
 
@@ -725,10 +744,14 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   // takeout-finished signal (or, failing that, the next turn's first dart); this
   // only matters for fully-manual play with no Scolia board, or a relay that never
   // reports takeouts, so the display doesn't linger forever in those cases.
+  //
+  // Restarted by every dart, not just by the turn starting. Keyed to turnToken alone it fired
+  // 20s into the turn no matter what, so a turn that took longer than that — walking to the
+  // board, pulling the last player's darts — wiped the boxes with darts still to throw.
   useEffect(() => {
     const timer = setTimeout(clearTurnDisplay, TURN_DISPLAY_FALLBACK_MS);
     return () => clearTimeout(timer);
-  }, [turnToken]);
+  }, [turnToken, dartsThisTurn]);
 
   // Auto-plays a bot's whole turn — three paced, simulated darts, each scored
   // through the exact same processDart path a real Scolia throw would use.
@@ -833,6 +856,16 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     return newPendingHits;
   }
 
+  /**
+   * What the board's own taps go through. registerHit's second parameter is a cross count, so
+   * handing the function itself to a click handler would let an event arrive as one — the same
+   * shape of mistake that froze Bekreft (see finishTurn/confirm). Taking only the step here
+   * makes that impossible however the prop is wired later.
+   */
+  function registerHitFromUi(step: Step) {
+    registerHit(step);
+  }
+
   /** The board as it stands after one dart — processDart needs these by hand, because the
    *  state the same synchronous handler just set has not flushed yet. */
   type DartApplication = { hits: HitRecord[] | null; progress: PlayerProgress; pendingHits: HitRecord[] };
@@ -881,10 +914,14 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     const hits = landed.length > 0 ? asRecords(step, landed) : null;
     if (landed.length > 0) board[step] = landed[landed.length - 1].newCount;
 
-    // Counted so a later dart still sees the true number of darts on this step. The
-    // perfect-close marker itself is deliberately not awarded from this path — it belongs to
-    // three darts closing a row the ordinary way, and this one is a re-assignment.
-    dartsOnStepRef.current[step] = (dartsOnStepRef.current[step] ?? 0) + 1;
+    // Darts, not crosses — same counting rule as registerHit, and the same marker: three
+    // separate darts closing a row the hard way earns the ring-with-a-dot. This dart lands on
+    // the ring like any other, so it counts toward that too.
+    const dartsOnStep = (dartsOnStepRef.current[step] ?? 0) + 1;
+    dartsOnStepRef.current[step] = dartsOnStep;
+    if (dartsOnStep === 3 && board[step] >= 3) {
+      setPerfectCloses((prev) => ({ ...prev, [player]: { ...prev[player], [step]: true } }));
+    }
 
     const nextProgress = { ...progress, [player]: board };
     const nextPending = hits ? [...kept, ...hits] : kept;
@@ -1110,6 +1147,11 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       setPendingHits([]);
     }
 
+    // A bot never pulls its darts, so the takeout signal the shot boxes normally wait for never
+    // comes — the bot's throws sat there into the human's turn, until their first dart or the
+    // 20s fallback. Its turn ending is the equivalent moment.
+    if (activeBotLevel !== null) clearTurnDisplay();
+
     if (isFinished(effectiveProgress[activePlayer])) {
       haptics.win();
       playFanfare();
@@ -1221,16 +1263,25 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   // has no miss count until it is confirmed, so folding it in would read as a dip after every
   // first dart and recover by the third.
   const activeThrows = activePlayer ? matchThrows[activePlayer] ?? [] : [];
-  const dartsThisTurn = turnShots.filter(Boolean).length;
   const liveStats = (() => {
     if (!activePlayer) return null;
     const totals = aggregateTurns(turnLog[activePlayer] ?? []);
     const darts = totals.hits + totals.misses;
+    const thrown = (turnCounters[activePlayer] ?? 0) * DARTS_PER_TURN + dartsThisTurn;
     const luck = luckLive[activePlayer];
+    // A bot's darts are a simulated plan rather than a throw, so an xH for one measures
+    // nothing — the same reason finalizeMatch drops bot luck before it is ever stored.
+    const judged = activeBotLevel === null && luck && luck.count > 0 ? luck : null;
     return {
       hitPct: darts > 0 ? Math.round((totals.hits / darts) * 100) : null,
-      expected: luck && luck.count > 0 ? luck.sum : null,
-      actual: progress[activePlayer] ? 30 - remainingMarks(progress[activePlayer]) : 0,
+      expected: judged ? judged.sum : null,
+      // Only shown against a "faktisk" when every dart this match was judged. xH covers only
+      // the darts Scolia gave coordinates for, so in mixed manual play the ratio would put an
+      // expectation for some of the darts up against the crosses from all of them.
+      actual:
+        judged && judged.count === thrown && progress[activePlayer]
+          ? 30 - remainingMarks(progress[activePlayer])
+          : null,
     };
   })();
 
@@ -1276,7 +1327,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         closedStep={closedStep}
         perfectCloses={perfectCloses}
         onResolvePendingChoice={resolvePendingChoice}
-        onRegisterHit={botIsThrowing ? () => {} : registerHit}
+        onRegisterHit={botIsThrowing ? () => {} : registerHitFromUi}
         onUndo={botIsThrowing ? () => {} : undo}
         onConfirm={botIsThrowing ? () => {} : confirm}
         onAbort={abortGame}

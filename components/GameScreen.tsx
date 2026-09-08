@@ -85,7 +85,7 @@ type Props = {
   /** How many of those belong to the turn in progress — drawn bright, the rest recede. */
   dartsThisTurn: number;
   /** Live treff%/xH for the active player, or null when there is no active player. */
-  liveStats: { hitPct: number | null; expected: number | null; actual: number } | null;
+  liveStats: { hitPct: number | null; expected: number | null; actual: number | null } | null;
   onResolvePendingChoice: (choice: "keep" | "redirect") => void;
   onRegisterHit: (step: Step) => void;
   onUndo: () => void;

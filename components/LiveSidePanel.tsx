@@ -33,9 +33,9 @@ export function LiveSidePanel({
   hitPct: number | null;
   /** Summed expected hits, or null when no dart this match had coordinates to judge. */
   expected: number | null;
-  /** Crosses actually on the board, for the same "forventet / faktisk" reading the
-   *  winner screen uses. */
-  actual: number;
+  /** Crosses actually on the board, for the same "forventet / faktisk" reading the winner
+   *  screen uses — null when the two aren't comparable and only the expectation is shown. */
+  actual: number | null;
 }) {
   // The reactive read rather than getPlayerRecord: a photo saved mid-match should appear
   // without waiting for whatever else happens to re-render this.
@@ -82,7 +82,10 @@ export function LiveSidePanel({
       <div className="grid grid-cols-3 gap-1 w-full">
         <Stat label="Piler" value={String(darts)} />
         <Stat label="Treff" value={hitPct === null ? "–" : `${hitPct}%`} />
-        <Stat label="xH" value={expected === null ? "–" : `${expected.toFixed(1)}/${actual}`} />
+        <Stat
+          label="xH"
+          value={expected === null ? "–" : actual === null ? expected.toFixed(1) : `${expected.toFixed(1)}/${actual}`}
+        />
       </div>
     </div>
   );
