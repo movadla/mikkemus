@@ -403,7 +403,7 @@ export function GameScreen({
                   {/* A bare number in the corner meant nothing without knowing the app — the
                       dart icon says what's being counted in less space than a word would. */}
                   <span
-                    className="absolute top-1 right-1.5 tabular px-1.5 rounded flex items-center gap-0.5"
+                    className="darts-badge absolute top-1 right-1.5 tabular px-1.5 rounded flex items-center gap-0.5"
                     style={{
                       color: "var(--color-muted)",
                       fontSize: "0.66rem",
@@ -550,6 +550,15 @@ export function GameScreen({
         </div>
       </div>
 
+      {/* Landscape gives the three "what you just threw" boxes their own lane beside the board,
+          where they have the height to be read at a glance. Portrait keeps them in the action
+          bar, which is where there is room there. */}
+      {compactLandscape && !rewound && (
+        <div className="shot-rail">
+          <ShotIndicator shots={turnShots} />
+        </div>
+      )}
+
       {/* Landscape only — this fills the gap in the right-hand column. In portrait there is no
           gap to fill, and the same content would push the board off screen. */}
       {compactLandscape && activePlayer && liveStats && (
@@ -558,6 +567,7 @@ export function GameScreen({
             playerName={activePlayer}
             throws={matchThrows}
             recentFrom={Math.max(0, matchThrows.length - dartsThisTurn)}
+            darts={(dartsThrown[activePlayer] ?? 0) + dartsThisTurn}
             hitPct={liveStats.hitPct}
             expected={liveStats.expected}
             actual={liveStats.actual}
@@ -566,7 +576,7 @@ export function GameScreen({
       )}
 
       <div className="action-bar shrink-0 mt-3 -mx-4 px-4 pt-2 pb-1">
-        {!rewound && (
+        {!rewound && !compactLandscape && (
           <div className="max-w-3xl mx-auto w-full mb-1">
             <ShotIndicator shots={turnShots} />
           </div>
