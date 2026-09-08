@@ -502,24 +502,50 @@ button {
   /* Grid, not a wrapped flex row. Wrapping produced lines with no definite height, so the
      board collapsed and the page grew past the viewport instead — an explicit two-area grid
      over the root's own 100dvh gives the board a real height to divide among its ten rows. */
-  /* The board takes the full height on the left; everything that is not the board — the
-     nav/sound/calibrate buttons, the shot boxes, Angre/Bekreft — stacks in one column on the
-     right. Chrome across the top used to cost about 45px of the ~390 available, which is a
-     row and a half of a ten-row board. */
+  /* Six columns, left to right: the app's own chrome (Scolia badge, Hjem, sound, calibrate),
+     slack, the board, the shot rail, slack, and the live panel over Angre/Bekreft. Chrome
+     across the top used to cost about 45px of the ~390 available, which is a row and a half
+     of a ten-row board; sideways there is width to spare and no height to waste. */
   .game-root {
     display: grid;
     /* The board column hugs its content (max-content) instead of taking every spare pixel, and
        the two `.` columns either side absorb the slack. Without that the rows were centred
        inside a full-width board area while the shot rail sat out at its right edge — the two
        ended up nowhere near each other, which defeats putting the rail beside the board. */
-    grid-template-columns: minmax(0, 1fr) max-content 3.2rem minmax(0, 1fr) 11rem;
-    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-columns: 6.5rem minmax(0, 1fr) max-content 3.2rem minmax(0, 1fr) 11rem;
+    grid-template-rows: minmax(0, 1fr) auto;
     grid-template-areas:
-      ". board shots . header"
-      ". board shots . stats"
-      ". board shots . actions";
+      "nav . board shots . stats"
+      "nav . board shots . actions";
     column-gap: 0.4rem;
     padding: 0.3rem;
+  }
+
+  /* The status badge is fixed and lives outside this component, so it can't be a grid item —
+     it is instead pinned to the same left edge and given the same width as the nav column, so
+     the four chrome elements read as one aligned stack. Fixed min-height rather than
+     shrink-to-fit: "Scolia: Feil på brettet" wraps to two lines where "Scolia: Online" doesn't,
+     and the buttons below must not shift when the board's state changes. */
+  .scolia-badge {
+    top: 0.3rem !important;
+    left: 0.3rem !important;
+    right: auto !important;
+    width: 6.5rem;
+    min-height: 2.1rem;
+    border-radius: 0.5rem !important;
+    padding: 0.25rem 0.4rem !important;
+    gap: 0.3rem !important;
+  }
+
+  .scolia-badge > span:first-child {
+    width: 0.5rem !important;
+    height: 0.5rem !important;
+  }
+
+  .scolia-badge > span:last-child {
+    font-size: 0.54rem !important;
+    line-height: 1.15;
+    white-space: normal;
   }
 
   /* Rows must be free to compress here: a floor is what forced the scrolling. Ten of them
@@ -531,27 +557,26 @@ button {
 
   /* Each of these carries max-w-3xl and mx-auto for the portrait layout; inside a grid area
      that would centre them in a narrower box and waste the width landscape exists to give. */
+  /* Stacked under the badge, all three the full width of the column so their edges line up
+     with it and with each other. The top margin clears the badge above (0.3 + 2.1 + a gap). */
   .game-header {
-    grid-area: header;
+    grid-area: nav;
     max-width: none;
-    /* Clears the fixed "Scolia: …" badge, which is pinned to this same top-right corner and
-       otherwise sits straight on top of these buttons. Costs no board height: the board spans
-       both grid rows, so it takes whatever this column doesn't. */
-    margin: 2.2rem 0 0.3rem 0;
-    gap: 0.25rem;
+    margin: 2.75rem 0 0 0;
+    flex-direction: column;
+    align-items: stretch;
     justify-content: flex-start;
+    gap: 0.35rem;
   }
 
+  /* Sound and calibrate carry a fixed w-9/h-9 from the portrait layout, which would leave them
+     square and narrower than Hjem right above them. Everything here is one width. */
   .game-header button {
-    padding: 0.25rem 0.45rem;
-    font-size: 0.75rem;
-  }
-
-  /* The two icon buttons carry fixed w-9/h-9 — too big for a 10.5rem column beside "Hjem". */
-  .game-header button:not(:first-child) {
-    width: 1.9rem;
-    height: 1.9rem;
-    padding: 0;
+    width: 100% !important;
+    height: auto !important;
+    padding: 0.4rem 0.3rem !important;
+    font-size: 0.7rem;
+    justify-content: center;
   }
 
   /* Every pixel here is a pixel the ten rows below don't get. The name still has to be
@@ -596,15 +621,15 @@ button {
   /* Out of the board's way. The right column has dead space between the chrome at its top
      and the buttons at its bottom, which is exactly where a "who is throwing" note belongs —
      centred over the board, it sat on top of the player names. */
-  /* Tucked directly under the nav buttons rather than centred in the column: the side panel
-     now occupies that middle space. It lands on the panel's own name label, which during a bot
-     turn is saying the same thing this toast is, so nothing is actually hidden. */
+  /* Bottom of the nav column — the emptiest area on the screen, and clear of both the board
+     and the live panel. It used to sit centred in the right column, which is now the panel. */
   .turn-toast {
-    top: 4.6rem !important;
-    left: auto !important;
-    right: 0.3rem !important;
+    top: auto !important;
+    bottom: 0.4rem !important;
+    left: 0.3rem !important;
+    right: auto !important;
     transform: none !important;
-    width: 10.4rem;
+    width: 6.5rem;
     text-align: center;
     font-size: 0.72rem;
     padding: 0.3rem 0.4rem;

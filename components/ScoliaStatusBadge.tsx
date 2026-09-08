@@ -31,7 +31,7 @@ export function ScoliaStatusBadge({ state }: { state: ScoliaState }) {
 
   return (
     <div
-      className="fixed top-2 right-2 z-40 flex items-center gap-2 px-3 py-1.5 rounded-full shadow-panel"
+      className="scolia-badge fixed top-2 right-2 z-40 flex items-center gap-2 px-3 py-1.5 rounded-full shadow-panel"
       style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
     >
       <span
