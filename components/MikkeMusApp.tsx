@@ -481,12 +481,13 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         ...prev,
         { key: ++pendingAmbiguousKeyRef.current, hitRecord: created, ...classified.ambiguous! },
       ]);
-    } else if (classified.step !== null && !Number.isNaN(Number(classified.step))) {
-      // A plain hit landing on a number with an undecided redirect signals "still
-      // working this number" — resolve that ambiguity toward "keep on T/D" now,
-      // instead of waiting for Confirm to ask.
-      updatePendingAmbiguous((prev) => prev.filter((p) => p.number !== classified.step));
     }
+    // A later plain hit on the same number used to silently discard the pending choice,
+    // reading it as "still working this number, so the triple must have stayed on T". The
+    // inference runs backwards: still working the number is exactly why you'd want the
+    // triple to COMPLETE it. With 17 on 1/3 and T on 2/3, a T17 followed by a plain 17 then
+    // filled T and left 17 on 2 — the opposite of what the throw was worth, decided without
+    // asking. The choice now survives to Confirm, where it's presented with the numbers.
     const hit = hitResult !== null;
     // Escalating boom + screen shake + heat — only while every dart so far THIS turn (from
     // dart 1) has hit. hitStreakRef.current === dartIndex means the streak is still

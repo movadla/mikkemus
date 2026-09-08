@@ -291,18 +291,18 @@ export function GameScreen({
         <ConfirmDialog
           message={
             (() => {
-              const ringCount = activeProgress?.[pendingChoice.ringStep] ?? 0;
-              const numberCount = activeProgress?.[pendingChoice.number] ?? 0;
-              const ringResult = Math.min(3, ringCount + 1);
-              const numberResult = Math.min(3, numberCount + pendingChoice.multiplier);
+              // The ring cross is applied the moment the dart lands, so the counts on screen
+              // ALREADY include it. Adding one more to show the "keep" outcome counted it
+              // twice; keeping simply leaves things where they are.
+              const ringNow = activeProgress?.[pendingChoice.ringStep] ?? 0;
+              const numberNow = activeProgress?.[pendingChoice.number] ?? 0;
               return (
                 <>
                   <div>
                     Du traff {ringLabel} {STEP_LABELS[pendingChoice.number]} — hvor skal kastet telle?
                   </div>
                   <div className="mt-2 text-sm" style={{ color: "var(--color-muted)" }}>
-                    {ringLabel}: {ringCount}/3 → {ringResult}/3 · {STEP_LABELS[pendingChoice.number]}: {numberCount}/3 → {numberResult}
-                    /3{numberResult >= 3 ? " (ferdig)" : ""}
+                    Nå: {STEP_LABELS[pendingChoice.number]} på {numberNow}/3, {ringLabel} på {ringNow}/3
                   </div>
                 </>
               );
@@ -311,12 +311,18 @@ export function GameScreen({
           messageFontSize="1.05rem"
           buttons={[
             {
-              label: `Fullfør ${STEP_LABELS[pendingChoice.number]} (${pendingChoice.multiplier}x)`,
+              // Redirecting rolls the ring cross back and puts the multiplier on the number
+              // instead — so each label states where that choice actually leaves you.
+              label: (() => {
+                const numberNow = activeProgress?.[pendingChoice.number] ?? 0;
+                const after = Math.min(3, numberNow + pendingChoice.multiplier);
+                return `Fullfør ${STEP_LABELS[pendingChoice.number]} → ${after}/3${after >= 3 ? " (ferdig)" : ""}`;
+              })(),
               onClick: () => onResolvePendingChoice("redirect"),
               background: "var(--color-green)",
             },
             {
-              label: `Behold på ${ringLabel}`,
+              label: `Behold på ${ringLabel} (${activeProgress?.[pendingChoice.ringStep] ?? 0}/3)`,
               onClick: () => onResolvePendingChoice("keep"),
               background: "var(--color-teal)",
               color: "var(--color-bg)",
