@@ -12,6 +12,7 @@ import {
   isFinished,
   meaningfulPending,
   remainingMarks,
+  removeOneCross,
   STEPS,
   summarizeTurn,
   type HitRecord,
@@ -548,9 +549,13 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     const classified = classifyThrow(parsed, activeStepAtThrow, progress[activePlayer]);
     // A parked, still-undecided triple/double must not be the reason this dart finds its row
     // full — see ambiguousBlockingRing in lib/game.ts.
-    const parked = classified.step
+    const candidate = classified.step
       ? ambiguousBlockingRing(pendingAmbiguousRef.current, classified.step, progress[activePlayer])
       : null;
+    // Belt and braces on top of advanceTurn clearing these: only ever un-park a dart whose
+    // cross is still un-confirmed. Once its record has moved to history the turn log owns it,
+    // and rolling it back here would take it off the board and leave it in the stats.
+    const parked = candidate && pendingHits.includes(candidate.hitRecord) ? candidate : null;
     const applied = classified.step
       ? parked
         ? freeRingAndRegister(parked, classified.step, classified.crosses)
@@ -817,8 +822,17 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       const coordinates = botChooseThrow(level, progressRef.current, player, botLevels);
       processDartRef.current({ sector: sectorAt(coordinates), bounceout: false, coordinates });
 
-      const pending = pendingAmbiguousRef.current;
-      if (pending.length > 0) {
+      // Deferred by a tick, and that tick is load-bearing. processDart's state writes have not
+      // been applied yet at this point, so resolving here ran against the board as it was
+      // BEFORE the dart that just landed — and resolvePendingChoice writes pendingHits as a
+      // whole list, not an append, so it quietly dropped that dart's records while its cross
+      // stayed on the board. The turn log and the board then disagreed by one for the rest of
+      // the match. A human never hit this: answering the dialog is a separate click, which is
+      // already a later tick. Everything below reads refs that are current by then.
+      setTimeout(() => {
+        if (cancelled || activePlayerRef.current !== player) return;
+        const pending = pendingAmbiguousRef.current;
+        if (pending.length === 0) return;
         const item = pending[pending.length - 1];
         const progressBeforeThrow = { ...progressRef.current[player], [item.ringStep]: item.hitRecord.prevCount };
         const redirect = botDecideRedirect(
@@ -831,7 +845,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
           item.multiplier
         );
         resolvePendingChoiceRef.current(redirect ? "redirect" : "keep");
-      }
+      }, 0);
 
       if (!cancelled && scoliaDartsRef.current < DARTS_PER_TURN) {
         setTimeout(throwNext, BOT_THROW_DELAY_MS);
@@ -933,8 +947,9 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     const asRecords = (s: Step, deltas: CrossDelta[]): HitRecord[] =>
       deltas.map((d) => ({ player, step: s, prevCount: d.prevCount, newCount: d.newCount, turnIndex }));
 
-    // 1. Un-park: the ring cross goes back where it came from.
-    const board: Progress = { ...progress[player], [parked.ringStep]: parked.hitRecord.prevCount };
+    // 1. Un-park: take this dart's cross back off the ring — see removeOneCross for why that
+    //    is not the same as writing parked.hitRecord.prevCount back.
+    const board: Progress = { ...progress[player], [parked.ringStep]: removeOneCross(progress[player][parked.ringStep]) };
     let kept = pendingHits.filter((h) => h !== parked.hitRecord);
 
     // 2. The parked dart pays out on its number instead. Capped like any other hit, so it can
@@ -984,8 +999,14 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     let finalProgress = progress;
     let finalPendingHits = pendingHits;
 
-    if (choice === "redirect") {
-      const rolledBack = { ...progress[item.hitRecord.player], [item.ringStep]: item.hitRecord.prevCount };
+    // Same guard as processDart's: a redirect rolls a cross back off the board, which is only
+    // ever correct while that cross is still this turn's to move.
+    if (choice === "redirect" && pendingHits.includes(item.hitRecord)) {
+      // One cross off, not a restore of item.hitRecord.prevCount — see removeOneCross.
+      const rolledBack = {
+        ...progress[activePlayer],
+        [item.ringStep]: removeOneCross(progress[activePlayer][item.ringStep]),
+      };
       finalPendingHits = pendingHits.filter((h) => h !== item.hitRecord);
 
       // chainCrosses rather than registerHit: registerHit reads `progress` from this
@@ -1186,6 +1207,13 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       setPendingHits([]);
     }
 
+    // A parked triple/double belongs to the turn it was thrown in. Confirming the turn settles
+    // it — the cross stays where it landed, which is the "keep" outcome. Nothing cleared this
+    // before, so a leftover could still be found by a LATER turn and un-parked: its cross came
+    // off the board while its HitRecord sat safely in history, and the turn log and the board
+    // drifted apart by one. A bot-vs-bot match reproduced it within five turns.
+    updatePendingAmbiguous([]);
+
     // A bot never pulls its darts, so the takeout signal the shot boxes normally wait for never
     // comes — the bot's throws sat there into the human's turn, until their first dart or the
     // 20s fallback. Its turn ending is the equivalent moment.
@@ -1264,6 +1292,25 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     startGame(players, botLevels, teamRosters, guestPlayers);
   }
 
+  /**
+   * "That wasn't in." Puts the match back on the board with the winning dart taken off.
+   *
+   * Reuses undo, so it lands in the same rewind mode a mis-scored turn always does — the leg
+   * carries on and the turn can be re-entered correctly. Note what it can't take back: the
+   * match result was written to the career stats the moment the win was detected, and winning
+   * again records a second one. Moving that write to when the win is actually accepted is the
+   * real fix and is a change of its own.
+   */
+  function undoWin() {
+    setDiving(false);
+    setScreen("game");
+    setWinner(null);
+    setWinnerStats({});
+    setWinnerLuck({});
+    setPlacements([]);
+    undo();
+  }
+
   if (screen === "setup") {
     // Tournament matches skip SetupScreen entirely (see the restore-from-localStorage effect
     // above) — but this branch can still render for one tick before that effect's startGame call
@@ -1300,6 +1347,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         onHome={playAgain}
         homeLabel={onMatchComplete ? "Til turnering" : "Hjem"}
         onPlayAgain={onMatchComplete ? undefined : rematch}
+        onUndoWin={history.length > 0 ? undoWin : undefined}
       />
     );
   }

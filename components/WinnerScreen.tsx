@@ -55,6 +55,7 @@ export function WinnerScreen({
   onHome,
   homeLabel = "Hjem",
   onPlayAgain,
+  onUndoWin,
 }: {
   winner: string;
   players: string[];
@@ -72,6 +73,9 @@ export function WinnerScreen({
   /** Starts a fresh match with the same roster — omitted in tournament mode, where onHome/
    *  homeLabel already handles "what's next" via "Til turnering". */
   onPlayAgain?: () => void;
+  /** Takes the last cross back and returns to the board — for when Scolia read a bounce-out or a
+   *  wire as the winning dart. Omitted where there is nothing to go back to. */
+  onUndoWin?: () => void;
 }) {
   const photo = getPlayerRecord(winner)?.photo;
   const winnerLuck = luckByPlayer[winner] ? overallSumLuck(luckByPlayer[winner]) : null;
@@ -86,6 +90,26 @@ export function WinnerScreen({
         style={{ background: "var(--color-gold)" }}
         aria-hidden
       />
+
+      {/* Deliberately small and out of the way. A misread bounce-out shouldn't cost the leg,
+          but this is also the one control here that throws the celebration away — it should
+          take looking for, not sit next to "Spill igjen" where a thumb finds it by accident. */}
+      {onUndoWin && (
+        <button
+          type="button"
+          onClick={onUndoWin}
+          title="Angre siste pil og gå tilbake til brettet"
+          className={`absolute top-3 right-3 z-40 px-2.5 py-1.5 rounded-lg ${FOCUS_RING}`}
+          style={{
+            background: "var(--color-surface)",
+            border: "1px solid var(--color-border)",
+            color: "var(--color-muted)",
+            fontSize: "0.7rem",
+          }}
+        >
+          ↩ Angre
+        </button>
+      )}
       {/* Rain across the whole screen, behind the card — the burst above the winner card
           stays as its own accent on top of this. */}
       <div className="absolute inset-0 pointer-events-none z-0" aria-hidden>

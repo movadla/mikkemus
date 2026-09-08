@@ -74,6 +74,21 @@ export function meaningfulPending(pending: PendingAmbiguous[], progressForPlayer
   return pending.filter((p) => progressForPlayer[p.number] < 3);
 }
 
+/**
+ * Takes one cross back off a step.
+ *
+ * Deliberately a decrement rather than a restore of the HitRecord's own `prevCount`. Un-parking
+ * a triple/double means removing THAT dart's cross, and `prevCount` is only the same thing while
+ * nothing else has touched the row since. A later dart in the same turn landing on the same ring
+ * — or a second parked dart resolved in the other order — makes the stored number stale, and
+ * writing it back either erases a cross that is still in the turn log or restores one that
+ * isn't. Both were happening: a bot-vs-bot match drifted by one cross on the T row, in opposite
+ * directions for the two players.
+ */
+export function removeOneCross(count: number): number {
+  return Math.max(0, count - 1);
+}
+
 export type CrossDelta = { prevCount: number; newCount: number };
 
 /**

@@ -11,6 +11,7 @@ import {
   meaningfulPending,
   nextStepAfter,
   remainingMarks,
+  removeOneCross,
   STEPS,
   summarizeTurn,
   type HitRecord,
@@ -269,5 +270,25 @@ describe("ambiguousBlockingRing", () => {
 
     expect(board["17"]).toBe(3);
     expect(board.T).toBe(3);
+  });
+});
+
+describe("removeOneCross", () => {
+  it("takes exactly one cross off", () => {
+    expect(removeOneCross(3)).toBe(2);
+    expect(removeOneCross(1)).toBe(0);
+  });
+
+  it("never goes below zero", () => {
+    expect(removeOneCross(0)).toBe(0);
+  });
+
+  // The bug it exists for: a parked triple's stored prevCount goes stale the moment anything
+  // else lands on the same ring, so restoring it wipes the later dart's cross too.
+  it("is not the same as restoring a stale prevCount", () => {
+    const parkedPrevCount = 1; // ring was 1 -> 2 when the triple parked there
+    const ringNow = 3; // a later dart in the same turn took it 2 -> 3
+    expect(removeOneCross(ringNow)).toBe(2);
+    expect(parkedPrevCount).not.toBe(removeOneCross(ringNow));
   });
 });
