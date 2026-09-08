@@ -24,6 +24,19 @@ export type ActiveMatchSnapshot = {
   teamRosters: Record<string, TeamMember[]>;
   teamMemberIdx: Record<string, number>;
   guestPlayers: Record<string, true>;
+  /**
+   * The match's accumulating statistics. All optional, and all absent from snapshots saved
+   * before they were persisted at all — restore falls back to empty rather than migrating.
+   *
+   * These used to live only in refs and component state, so a reload mid-match kept the score
+   * and lost every number behind it: the heatmap went blank, xH reset, and finalizeMatch then
+   * wrote a half-length match to Supabase looking perfectly ordinary. iOS reloads a backgrounded
+   * tab on its own, so this was not hypothetical.
+   */
+  matchThrows?: Record<string, [number, number][]>;
+  luckTotals?: Record<string, Record<Step, { sum: number; count: number }>>;
+  accuracyTotals?: Record<string, { distance: number; horizontal: number; vertical: number; throws: number }>;
+  ringHits?: Record<string, { triple: Record<string, number>; double: Record<string, number> }>;
 };
 
 const STORAGE_KEY = "mikke-mus-active-match";

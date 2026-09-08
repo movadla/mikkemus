@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import {
   aggregateTurns,
   ambiguousBlockingRing,
-  applyHit,
   chainCrosses,
   currentStepFor,
   DARTS_PER_TURN,
@@ -315,6 +314,24 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       setTeamRosters(restored.teamRosters ?? {});
       setTeamMemberIdx(restored.teamMemberIdx ?? {});
       setGuestPlayers(restored.guestPlayers ?? {});
+      // The match's statistics, back into the refs they live in. Absent in older snapshots.
+      setMatchThrows(restored.matchThrows ?? {});
+      luckTotalsRef.current = restored.luckTotals ?? {};
+      accuracyTotalsRef.current = restored.accuracyTotals ?? {};
+      ringHitsRef.current = restored.ringHits ?? {};
+      // The flat per-player total the landscape panel reads, rebuilt from the per-step totals
+      // rather than stored twice — two copies of one number is a chance for them to disagree.
+      setLuckLive(
+        Object.fromEntries(
+          Object.entries(restored.luckTotals ?? {}).map(([player, byStep]) => [
+            player,
+            Object.values(byStep).reduce(
+              (acc, s) => ({ sum: acc.sum + s.sum, count: acc.count + s.count }),
+              { sum: 0, count: 0 },
+            ),
+          ]),
+        ),
+      );
     } else if (initialPlayers) {
       // Tournament mode: nothing to resume, so jump straight into the given match instead of
       // showing SetupScreen.
@@ -362,6 +379,12 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       teamRosters,
       teamMemberIdx,
       guestPlayers,
+      // Read straight off the refs. Safe because this effect already reruns on every dart —
+      // progress and matchThrows both change — so what is read here is always current.
+      matchThrows,
+      luckTotals: luckTotalsRef.current,
+      accuracyTotals: accuracyTotalsRef.current,
+      ringHits: ringHitsRef.current,
     });
     const snapshot = { screen, players, progress, activePlayer, turnToken, winner, botLevels, guestPlayers };
     if (publishTimerRef.current) clearTimeout(publishTimerRef.current);
@@ -388,6 +411,9 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     teamRosters,
     teamMemberIdx,
     guestPlayers,
+    // The stats above are read off refs, which can't trigger this. This is the one state value
+    // that changes on the same beat they do, so it stands in for all of them.
+    matchThrows,
   ]);
 
   /** Clears the shot boxes and the "just placed" mark highlight — see the call sites below for when. */
@@ -824,15 +850,15 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     if (!isRegistrable(step, activeStep, playerProgress)) return null;
 
     const turnIndex = rewound ? rewoundTurnIndex ?? 0 : turnCounters[activePlayer] ?? 0;
-    const newPendingHits: HitRecord[] = [];
-    let count = playerProgress[step];
-    for (let i = 0; i < crosses; i++) {
-      const nextCount = applyHit(count);
-      if (nextCount === count) break;
-      newPendingHits.push({ player: activePlayer, step, prevCount: count, newCount: nextCount, turnIndex });
-      count = nextCount;
-    }
+    const newPendingHits = chainCrosses(playerProgress[step], crosses).map((d) => ({
+      player: activePlayer,
+      step,
+      prevCount: d.prevCount,
+      newCount: d.newCount,
+      turnIndex,
+    }));
     if (newPendingHits.length === 0) return null;
+    const count = newPendingHits[newPendingHits.length - 1].newCount;
 
     // Darts, not crosses — one call is one dart, however many crosses it carries. That
     // distinction is the whole rule: three separate darts on the same number close it "the
@@ -952,18 +978,17 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       const rolledBack = { ...progress[item.hitRecord.player], [item.ringStep]: item.hitRecord.prevCount };
       finalPendingHits = pendingHits.filter((h) => h !== item.hitRecord);
 
-      // Mirrors registerHit's own prevCount->newCount chaining loop — duplicated
-      // rather than called, since registerHit reads `progress` from this
-      // component's state and would miss the rollback above until re-render.
+      // chainCrosses rather than registerHit: registerHit reads `progress` from this
+      // component's state and would miss the rollback above until the next render.
       const turnIndex = rewound ? rewoundTurnIndex ?? 0 : turnCounters[activePlayer] ?? 0;
-      const newHits: HitRecord[] = [];
-      let count = rolledBack[item.number];
-      for (let i = 0; i < item.multiplier; i++) {
-        const nextCount = applyHit(count);
-        if (nextCount === count) break;
-        newHits.push({ player: activePlayer, step: item.number, prevCount: count, newCount: nextCount, turnIndex });
-        count = nextCount;
-      }
+      const newHits: HitRecord[] = chainCrosses(rolledBack[item.number], item.multiplier).map((d) => ({
+        player: activePlayer,
+        step: item.number,
+        prevCount: d.prevCount,
+        newCount: d.newCount,
+        turnIndex,
+      }));
+      const count = newHits.length > 0 ? newHits[newHits.length - 1].newCount : rolledBack[item.number];
       finalProgress = { ...progress, [activePlayer]: { ...rolledBack, [item.number]: count } };
       finalPendingHits = [...finalPendingHits, ...newHits];
 

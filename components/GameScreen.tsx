@@ -102,16 +102,19 @@ function ShotIndicator({ shots }: { shots: (TurnShot | null)[] }) {
           key={i}
           className={`shot-box${shot ? " animate-shot-pop" : ""}`}
           style={{
-            width: "1.9rem",
-            height: "1.9rem",
-            borderRadius: "0.4rem",
+            // Was 1.9rem, which read as three faint specks under the buttons — the landscape
+            // rail showed how much the same boxes gain from size. The empty state gets a
+            // dashed edge as well, so "nothing thrown yet" is a state rather than an absence.
+            width: "2.4rem",
+            height: "2.4rem",
+            borderRadius: "0.5rem",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            fontSize: "0.7rem",
+            fontSize: "0.85rem",
             fontWeight: 700,
-            background: shot ? (shot.hit ? "var(--color-green)" : "var(--color-red)") : "var(--color-surface)",
-            border: shot ? "none" : "1px solid var(--color-border)",
+            background: shot ? (shot.hit ? "var(--color-green)" : "var(--color-red)") : "transparent",
+            border: shot ? "none" : "1px dashed var(--color-border)",
             color: "var(--color-cream)",
           }}
         >
@@ -379,10 +382,13 @@ export function GameScreen({
               // in a 600px-wide cell reads as a speck. The box is sized to sit just around a square
               // mark instead — near enough to the row height that the cell looks like a cell rather
               // than a stretched strip. Portrait keeps 1fr: there the cell is narrow enough already.
+              // The upper bound matters on a tablet or the storskjerm, where 1fr stretched a
+              // cell to 275px around a 40px mark. On a phone the columns are narrower than the
+              // cap anyway, so nothing changes there.
               gridTemplateColumns: compactLandscape
                 ? `48px repeat(${players.length}, minmax(0, 4.5rem))`
-                : `64px repeat(${players.length}, minmax(64px, 1fr))`,
-              justifyContent: compactLandscape ? "center" : undefined,
+                : `64px repeat(${players.length}, minmax(64px, 11rem))`,
+              justifyContent: "center",
               // A floor, not a fixed height: rows still stretch to fill a tall portrait screen, but
               // never compress below something you can actually hit with a thumb. Past that the
               // grid scrolls instead, which is what makes landscape usable at all.
@@ -504,7 +510,7 @@ export function GameScreen({
                   return (
                     <div
                       key={p}
-                      className={`cell-wrap relative min-h-0 min-w-0 flex items-center justify-center p-1 grid-rule-top grid-rule-left ${isActive ? "column-active" : ""} ${s === activeStep ? "row-active" : ""}`}
+                      className={`cell-wrap relative min-h-0 min-w-0 flex items-center justify-center p-0.5 grid-rule-top grid-rule-left ${isActive ? "column-active" : ""} ${s === activeStep ? "row-active" : ""}`}
                     >
                       {/* Only the current target breathes. It used to run on every clickable
                           cell, which meant the always-open D and T rows pulsed all match. */}
@@ -528,7 +534,11 @@ export function GameScreen({
                           transform: clickable ? "translateY(-1px)" : undefined,
                         }}
                       >
-                        <div className="mark-pad w-full h-full p-1">
+                        {/* No padding of its own: the tile around it already insets the mark,
+                            and a second layer here cost 8px of a 57px row — a mark that could
+                            have been 52px was drawn at 40, using 28% of the cell's width. The
+                            glyph's own viewBox keeps 10% margin inside this box anyway. */}
+                        <div className="mark-pad w-full h-full">
                           <Mark
                             count={count}
                             pendingCount={heldPendingCount}
