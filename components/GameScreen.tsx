@@ -213,7 +213,7 @@ export function GameScreen({
 
   return (
     <div
-      className="animate-screen-enter motion-hit relative w-full flex flex-col p-4"
+      className="game-root animate-screen-enter motion-hit relative w-full flex flex-col p-4"
       style={{ height: "100dvh", background: "var(--color-bg)", animation: shakeAnimation }}
       // Covers resuming an in-progress match after a page reload, where startGame's own
       // primeAudio() call never ran this session — the first tap anywhere on this screen
@@ -234,7 +234,7 @@ export function GameScreen({
           two, mixing game state into a bar of controls — they've moved down next to Bekreft,
           where the eye already is at the end of a turn and where the button that acts on them
           lives. */}
-      <div className="landscape-tight flex items-center gap-2 mb-2 max-w-3xl mx-auto w-full shrink-0">
+      <div className="game-header landscape-tight flex items-center gap-2 mb-2 max-w-3xl mx-auto w-full shrink-0">
         <button
           type="button"
           onClick={() => setShowHomeConfirm(true)}
@@ -349,7 +349,7 @@ export function GameScreen({
       )}
 
       <div
-        className="relative flex-1 min-h-0 flex flex-col rounded-xl overflow-hidden shadow-panel max-w-3xl mx-auto w-full"
+        className="game-board relative flex-1 min-h-0 flex flex-col rounded-xl overflow-hidden shadow-panel max-w-3xl mx-auto w-full"
         style={{ background: "var(--color-panel)" }}
       >
         {/* See .scroll-hint-right for why this is a player-count heuristic rather than a
@@ -359,13 +359,13 @@ export function GameScreen({
         )}
         <div className="flex-1 min-h-0 w-full overflow-x-auto overflow-y-auto">
           <div
-            className="grid h-full"
+            className="game-grid grid h-full"
             style={{
               gridTemplateColumns: `64px repeat(${players.length}, minmax(64px, 1fr))`,
               // A floor, not a fixed height: rows still stretch to fill a tall portrait screen, but
               // never compress below something you can actually hit with a thumb. Past that the
               // grid scrolls instead, which is what makes landscape usable at all.
-              gridTemplateRows: `auto repeat(${STEPS.length}, minmax(2.4rem, 1fr))`,
+              gridTemplateRows: `auto repeat(${STEPS.length}, minmax(var(--row-min, 2.4rem), 1fr))`,
             }}
           >
             <div className="sticky left-0 z-10" style={{ background: "var(--color-panel)" }} />
@@ -534,7 +534,7 @@ export function GameScreen({
             <ShotIndicator shots={turnShots} />
           </div>
         )}
-        <div className="grid gap-3 max-w-3xl mx-auto w-full" style={{ gridTemplateColumns: "0.7fr 1.3fr" }}>
+        <div className="action-buttons grid gap-3 max-w-3xl mx-auto w-full" style={{ gridTemplateColumns: "0.7fr 1.3fr" }}>
           <button
             type="button"
             onClick={handleUndo}

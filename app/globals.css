@@ -477,14 +477,65 @@ button {
 }
 
 /* -- landscape on a phone --
-   Turning the phone sideways leaves roughly 390px of height for a ten-row board plus its
-   chrome. Nothing here changes the layout's structure; it just reclaims the vertical space
-   the chrome takes, so more rows fit before the grid has to scroll. Bounded by max-height
-   so tablets and desktops, which have room to spare, are untouched. */
+   Sideways there is roughly 390px of height for a ten-row board, and stacking the action bar
+   underneath it left only three rows visible — you had to scroll to reach D and T, which
+   makes the orientation useless for the game it is showing. Landscape has width to spare
+   instead, so the buttons move to a column on the right and the whole board fits. Bounded by
+   max-height so tablets and desktops, which have room either way, are untouched. */
 @media (orientation: landscape) and (max-height: 560px) {
+  .game-root {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: stretch;
+    padding: 0.4rem;
+  }
+
+  /* Rows must be free to compress here: a floor is what forced the scrolling. Ten of them
+     sharing the height is tighter than portrait but still thumb-sized, and seeing the whole
+     board at once is worth more than a few extra pixels per row. */
+  .game-grid {
+    --row-min: 0px;
+  }
+
+  .game-header {
+    width: 100%;
+    margin-bottom: 0.3rem;
+  }
+
+  .game-header button {
+    padding-top: 0.2rem;
+    padding-bottom: 0.2rem;
+  }
+
+  .game-board {
+    flex: 1 1 0;
+    min-width: 0;
+    margin: 0;
+  }
+
   .action-bar {
-    padding-top: 0.25rem;
-    padding-bottom: 0;
+    width: 11rem;
+    flex: 0 0 11rem;
+    margin: 0 0 0 0.4rem;
+    padding: 0;
+    border-top: none;
+    box-shadow: none;
+    background: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.4rem;
+  }
+
+  /* Side by side has no room in an 11rem column — stack them, biggest target last. */
+  .action-buttons {
+    grid-template-columns: 1fr !important;
+    gap: 0.4rem;
+  }
+
+  .action-buttons button {
+    padding-top: 0.7rem;
+    padding-bottom: 0.7rem;
   }
 
   /* The three shot boxes shrink rather than disappear — knowing what you just threw matters
@@ -492,15 +543,6 @@ button {
   .shot-box {
     width: 1.5rem !important;
     height: 1.5rem !important;
-  }
-
-  .landscape-tight {
-    margin-bottom: 0.25rem;
-  }
-
-  .landscape-tight button {
-    padding-top: 0.25rem;
-    padding-bottom: 0.25rem;
   }
 }
 
