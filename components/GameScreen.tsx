@@ -16,9 +16,11 @@ import { isAnnouncerEnabled, setAnnouncerEnabled } from "@/lib/announcer";
 import { avatarAccent } from "@/lib/avatarAccent";
 import { primeAudio } from "@/lib/fanfare";
 import { startWakeLock } from "@/lib/wakeLock";
+import { requestRecalibration } from "@/lib/scoliaCommands";
+import { reportError } from "@/lib/errorReporting";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { Mark } from "./Mark";
-import { DartIcon, SpeakerIcon, SpeakerMuteIcon } from "./icons";
+import { CalibrateIcon, DartIcon, SpeakerIcon, SpeakerMuteIcon } from "./icons";
 
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
@@ -169,6 +171,20 @@ export function GameScreen({
     onUndo();
   }
 
+  // The board takes a few seconds to go Calibrating → Ready, and the Scolia badge already
+  // reports that, so this only has to confirm the request left the building — or say it
+  // didn't, rather than leaving someone watching a board that will never move.
+  const [calibrating, setCalibrating] = useState<"idle" | "sending" | "sent" | "failed">("idle");
+
+  async function handleCalibrate() {
+    if (calibrating !== "idle") return;
+    setCalibrating("sending");
+    const ok = await requestRecalibration();
+    setCalibrating(ok ? "sent" : "failed");
+    setTimeout(() => setCalibrating("idle"), ok ? 4000 : 5000);
+    if (!ok) reportError("Fikk ikke sendt kalibrering til brettet.", { key: "calibrate" });
+  }
+
   const activeStep = activePlayer ? currentStepFor(progress[activePlayer]) : null;
   const accent = "var(--color-teal)";
   const glowColor = "rgba(47, 180, 194, 0.35)";
@@ -215,7 +231,7 @@ export function GameScreen({
           two, mixing game state into a bar of controls — they've moved down next to Bekreft,
           where the eye already is at the end of a turn and where the button that acts on them
           lives. */}
-      <div className="flex items-center justify-between mb-2 max-w-3xl mx-auto w-full shrink-0">
+      <div className="flex items-center gap-2 mb-2 max-w-3xl mx-auto w-full shrink-0">
         <button
           type="button"
           onClick={() => setShowHomeConfirm(true)}
@@ -231,6 +247,8 @@ export function GameScreen({
             REDIGERER TIDLIGERE TUR
           </p>
         )}
+        {/* Both of these sit on the LEFT beside Hjem. They used to be pinned right, where the
+            fixed "Scolia: …" badge overlaps them the moment the screen is phone-width. */}
         <button
           type="button"
           onClick={() => {
@@ -243,6 +261,26 @@ export function GameScreen({
           style={{ background: "var(--color-surface)", color: announcerOn ? "var(--color-teal)" : "var(--color-muted)" }}
         >
           {announcerOn ? <SpeakerIcon className="w-4 h-4" /> : <SpeakerMuteIcon className="w-4 h-4" />}
+        </button>
+        <button
+          type="button"
+          onClick={handleCalibrate}
+          disabled={calibrating !== "idle"}
+          aria-label="Kalibrer brettet"
+          title="Kalibrer brettet"
+          className={`tactile w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${FOCUS_RING}`}
+          style={{
+            background: "var(--color-surface)",
+            color:
+              calibrating === "sent"
+                ? "var(--color-teal)"
+                : calibrating === "failed"
+                  ? "var(--color-red)"
+                  : "var(--color-muted)",
+            opacity: calibrating === "sending" ? 0.5 : 1,
+          }}
+        >
+          <CalibrateIcon className="w-4 h-4" />
         </button>
       </div>
 

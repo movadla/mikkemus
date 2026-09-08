@@ -228,3 +228,16 @@ export function BullseyeIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+/** A circular arrow around a bullseye centre — recalibrating is "aim the board at itself
+ *  again", so it borrows BullseyeIcon's centre rather than being a generic refresh glyph. */
+export function CalibrateIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+      <path d="M20.5 12a8.5 8.5 0 1 1-2.6-6.1" />
+      <path d="M20.7 3.4v4.2h-4.2" />
+      <circle cx="12" cy="12" r="3.2" />
+      <circle cx="12" cy="12" r="0.9" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}

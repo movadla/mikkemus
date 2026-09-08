@@ -101,6 +101,51 @@ conn.on("onCameraImages", (payload) => {
   insertEvent("CAMERA_IMAGES", payload);
 });
 
+/**
+ * Commands from the app travel the same table the events do, just the other way (see
+ * lib/scoliaCommands.ts for why there's no separate table). This polls for them.
+ *
+ * `lastCommandId` starts at whatever the newest row is RIGHT NOW, before any polling
+ * begins — without that, a relay restart would find every recalibrate ever requested still
+ * sitting in the table and run them all. That is the same trap the browser side fell into
+ * with throw events, so it is worth being explicit about here.
+ */
+const COMMAND_POLL_MS = 2_000;
+let lastCommandId: number | null = null;
+
+async function pollCommands() {
+  if (lastCommandId === null) return;
+  const { data, error } = await supabase
+    .from("scolia_events")
+    .select("id, type")
+    .gt("id", lastCommandId)
+    .like("type", "CMD_%")
+    .order("id", { ascending: true })
+    .limit(10);
+  if (error || !data) return;
+  for (const row of data as { id: number; type: string }[]) {
+    lastCommandId = Math.max(lastCommandId, row.id);
+    if (row.type === "CMD_RECALIBRATE") {
+      console.log("[command] RECALIBRATE bedt om fra appen");
+      conn.recalibrate();
+    }
+  }
+}
+
+async function initCommandBaseline() {
+  const { data } = await supabase
+    .from("scolia_events")
+    .select("id")
+    .order("id", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  lastCommandId = (data as { id: number } | null)?.id ?? 0;
+  setInterval(() => {
+    pollCommands().catch(() => {});
+  }, COMMAND_POLL_MS);
+}
+initCommandBaseline().catch((err) => console.error("Kunne ikke starte kommando-lytting:", err));
+
 // Periodic heartbeat so the browser can tell "relay is alive" from "relay has been
 // down for a while" even during long stretches with no real status change. Doubles as the
 // tick that notices a board stuck in Takeout (see STUCK_TAKEOUT_MS above) and frees it.
