@@ -431,6 +431,26 @@ export function playBoom(params: BoomParams = BOOM_DEFAULT) {
     harm.start(t);
     harm.stop(t + duration);
 
+    // A short knock in the range a phone speaker can actually move air at. At darkness 5 the
+    // body sweeps 62 Hz down to 24 Hz and the octave above it 124 Hz to 48 Hz — a phone
+    // reproduces essentially nothing below ~300 Hz, so on the device this is played on, all
+    // of the boom's tonal weight is inaudible and only the noise transient survives. This
+    // layer is what carries the hit there. It sits well below the body in level, so on a
+    // real speaker it reads as part of the attack rather than as a separate tone.
+    const knock = ctx.createOscillator();
+    knock.type = "triangle";
+    knock.frequency.setValueAtTime(420, t);
+    knock.frequency.exponentialRampToValueAtTime(190, t + 0.07);
+    const knockEnv = ctx.createGain();
+    knockEnv.gain.setValueAtTime(0.0001, t);
+    knockEnv.gain.linearRampToValueAtTime(peak * 0.32, t + 0.006);
+    knockEnv.gain.exponentialRampToValueAtTime(0.0001, t + 0.19);
+    knock.connect(knockEnv);
+    knockEnv.connect(buses.master);
+    knockEnv.connect(buses.reverb);
+    knock.start(t);
+    knock.stop(t + 0.25);
+
     const noise = gritAmount > 0 ? getNoise(ctx) : null;
     if (noise) {
       const src = ctx.createBufferSource();
