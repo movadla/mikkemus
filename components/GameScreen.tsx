@@ -364,7 +364,15 @@ export function GameScreen({
           <div
             className="game-grid grid h-full"
             style={{
-              gridTemplateColumns: `64px repeat(${players.length}, minmax(64px, 1fr))`,
+              // Landscape caps the player columns instead of stretching them. A row there is only
+              // ~34px tall, which caps how big the mark can be drawn — stretched across a 600px
+              // cell it read as a speck floating in an empty strip. Capped and centred, the box
+              // hugs the mark and the strokes carry the row. Portrait keeps 1fr: there the cell is
+              // narrow enough already, and stretching is what fills the screen.
+              gridTemplateColumns: compactLandscape
+                ? `48px repeat(${players.length}, minmax(0, 6.5rem))`
+                : `64px repeat(${players.length}, minmax(64px, 1fr))`,
+              justifyContent: compactLandscape ? "center" : undefined,
               // A floor, not a fixed height: rows still stretch to fill a tall portrait screen, but
               // never compress below something you can actually hit with a thumb. Past that the
               // grid scrolls instead, which is what makes landscape usable at all.

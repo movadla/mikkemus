@@ -15,16 +15,20 @@
  * what completing it would look like" without committing to it.
  */
 /**
- * Landscape draws the same glyph on a 2.2:1 viewBox instead of a square one. An SVG scales to
- * fit its box, so on a phone turned sideways — where a row is ~34px tall but ~300-590px wide —
- * the square version could only ever render 34px across and looked like a speck. Same shapes,
- * same proportions, just given the row's width to use: the mark comes out about 75px wide, with
- * strokes thickened to match. The closing ring becomes an ellipse for the same reason; a circle
- * is capped by the height and would have stayed small while the crosses grew.
+ * Landscape draws the same glyph on a 2.6:1 viewBox instead of a square one. An SVG scales to
+ * fit its box, so on a phone turned sideways — where a row is only ~34px tall — the square
+ * version could never render more than 34px across and looked like a speck. Same shapes, same
+ * proportions, just given width to use: the mark comes out about 88px wide, with strokes
+ * thickened to match. The ratio is picked to fill the capped 6.5rem player column GameScreen
+ * switches to in landscape, so box and glyph stay in step. The closing ring becomes an ellipse
+ * for the same reason; a circle is capped by the height and would have stayed small while the
+ * crosses grew.
  */
 const GEOMETRY = {
   narrow: { viewBox: "0 0 60 60", w: 60, cross: 7, ring: 6, inset: 6, rx: 27, ry: 27, dot: 7 },
-  wide: { viewBox: "0 0 132 60", w: 132, cross: 9, ring: 8, inset: 9, rx: 60, ry: 26, dot: 9 },
+  // `inset` keeps the X inside the ring the way the square version does (there the cross spans
+  // ~89% of the circle). Run it out to the edge and the arms poke through the ellipse.
+  wide: { viewBox: "0 0 156 60", w: 156, cross: 9, ring: 8, inset: 16, rx: 72, ry: 26, dot: 9 },
 } as const;
 
 export function Mark({
