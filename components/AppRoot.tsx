@@ -52,8 +52,8 @@ export function AppRoot() {
           <button
             type="button"
             onClick={() => setMode("single")}
-            className={`tactile w-full py-4 rounded-lg font-semibold text-lg flex items-center justify-center gap-2.5 ${FOCUS_RING}`}
-            style={{ background: "var(--color-green)", color: "var(--color-cream)" }}
+            className={`glossy w-full py-4 rounded-xl font-semibold text-lg flex items-center justify-center gap-2.5 ${FOCUS_RING}`}
+            style={{ "--btn-fill": "var(--color-green)", color: "var(--color-cream)" } as React.CSSProperties}
           >
             <DartIcon className="w-5 h-5" />
             Singelspill
@@ -61,8 +61,8 @@ export function AppRoot() {
           <button
             type="button"
             onClick={() => setMode("tournament")}
-            className={`tactile w-full py-4 rounded-lg font-semibold text-lg flex items-center justify-center gap-2.5 ${FOCUS_RING}`}
-            style={{ background: "var(--color-teal)", color: "var(--color-bg)" }}
+            className={`glossy w-full py-4 rounded-xl font-semibold text-lg flex items-center justify-center gap-2.5 ${FOCUS_RING}`}
+            style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)" } as React.CSSProperties}
           >
             <TrophyIcon className="w-5 h-5" />
             {hasActiveTournament ? "Fortsett turnering" : "Turnering"}
@@ -70,8 +70,8 @@ export function AppRoot() {
           <button
             type="button"
             onClick={() => setMode("bullduel")}
-            className={`tactile w-full py-4 rounded-lg font-semibold text-lg flex items-center justify-center gap-2.5 ${FOCUS_RING}`}
-            style={{ background: "var(--color-gold)", color: "var(--color-bg)" }}
+            className={`glossy w-full py-4 rounded-xl font-semibold text-lg flex items-center justify-center gap-2.5 ${FOCUS_RING}`}
+            style={{ "--btn-fill": "var(--color-gold)", color: "var(--color-bg)" } as React.CSSProperties}
           >
             <BullseyeIcon className="w-5 h-5" />
             Bull-duell

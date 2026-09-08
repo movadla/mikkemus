@@ -32,12 +32,27 @@
   --color-cream: #f4f0e8;
   --color-muted: #729080;
 
+  /* The heat that builds across an unbroken turn (see HEAT_GLOW in GameScreen). Tokens
+     rather than literals in the component, where they were the only two colours in the app
+     that existed nowhere in the palette. */
+  --heat-1: rgba(201, 162, 75, 0.1);
+  --heat-2: rgba(211, 132, 60, 0.2);
+  --heat-3: rgba(214, 92, 58, 0.34);
+
   --gradient-gold: linear-gradient(135deg, var(--color-gold), #a9812f);
   --glow-gold: 0 0 24px rgba(201, 162, 75, 0.35);
   --glow-gold-strong: 0 0 64px rgba(201, 162, 75, 0.5);
 
   --font-display: var(--font-fraunces), Georgia, serif;
   --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+
+  /* A type scale, because there wasn't one: an audit found 26 distinct font sizes, four
+     different sizes for the same page heading, and two for the same section label. Same
+     role, same size — that is most of what makes a set of screens read as one app. */
+  --text-page-title: 1.4rem;
+  --text-section-label: 0.8rem;
+  --text-body: 0.85rem;
+  --text-meta: 0.7rem;
 
   /* Shared motion vocabulary — every UI-driven animation (not the confetti's
      gravity-fall) pulls its easing from one of these two curves, so a press,
@@ -100,6 +115,32 @@ button {
 
 .tabular {
   font-variant-numeric: tabular-nums;
+}
+
+/* The heading above a page's content, and the small spaced label above a section. Both
+   existed on every screen already, each hand-styled a little differently. */
+.page-title {
+  font-family: var(--font-display);
+  font-size: var(--text-page-title);
+  color: var(--color-cream);
+}
+
+.section-label {
+  font-size: var(--text-section-label);
+  letter-spacing: 0.1em;
+}
+
+/* Focus for a row whose wrapper is `display: contents`. Such an element generates no box at
+   all, so an `outline` on it is never painted — the ring has to be drawn by the children.
+   Tinting the cells rather than outlining each one keeps it reading as one row instead of
+   four separate boxes. */
+.row-focus:focus-visible {
+  outline: none;
+}
+
+.row-focus:focus-visible > * {
+  background: rgba(47, 180, 194, 0.18);
+  box-shadow: inset 0 0 0 1px var(--color-teal);
 }
 
 /* Plays once when a player's turn starts — strong first pulse, a smaller

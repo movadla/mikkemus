@@ -38,9 +38,9 @@ const SLAM_MS = 560;
  *  point, mirroring how the boom's tail grows (see lib/fanfare.ts). */
 const HEAT_GLOW = [
   "none",
-  "inset 0 0 60px 6px rgba(201, 162, 75, 0.10)",
-  "inset 0 0 90px 12px rgba(211, 132, 60, 0.20)",
-  "inset 0 0 130px 20px rgba(214, 92, 58, 0.34)",
+  "inset 0 0 60px 6px var(--heat-1)",
+  "inset 0 0 90px 12px var(--heat-2)",
+  "inset 0 0 130px 20px var(--heat-3)",
 ];
 
 /** Two identical keyframes per level — see the comment where these are used for why the
@@ -224,8 +224,10 @@ export function GameScreen({
         >
           ← Hjem
         </button>
+        {/* Not gold: this is a mode warning, not something earned, and gold only means the
+            latter (see globals.css). Red is the app's "careful" colour. */}
         {rewound && (
-          <p style={{ color: "var(--color-gold)", fontSize: "0.7rem", letterSpacing: "0.15em" }}>
+          <p style={{ color: "var(--color-red)", fontSize: "var(--text-meta)", letterSpacing: "0.15em" }}>
             REDIGERER TIDLIGERE TUR
           </p>
         )}

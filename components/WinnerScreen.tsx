@@ -224,8 +224,7 @@ export function WinnerScreen({
                           return (
                             <div
                               key={s}
-                              className="rounded-md py-1.5 text-center tabular"
-                              style={{ background: "var(--color-cell)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -4px 8px rgba(0,0,0,0.18)" }}
+                              className="cell-tile rounded-md py-1.5 text-center tabular"
                             >
                               <p style={{ color: "var(--color-muted)", fontSize: "0.6rem" }}>{STEP_LABELS[s]}</p>
                               <p style={{ color: "var(--color-cream)", fontSize: "0.75rem", fontWeight: 600 }}>

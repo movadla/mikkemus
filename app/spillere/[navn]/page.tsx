@@ -25,7 +25,7 @@ const FOCUS_RING =
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg p-3 text-center" style={{ background: "var(--color-cell)" }}>
+    <div className="cell-tile rounded-lg p-3 text-center">
       <p style={{ color: "var(--color-muted)", fontSize: "0.65rem", letterSpacing: "0.05em" }}>{label}</p>
       <p className="tabular" style={{ color: "var(--color-cream)", fontSize: "1.05rem", fontWeight: 700 }}>
         {value}
@@ -110,8 +110,7 @@ export default function PlayerDetailPage() {
             {STEPS.map((s) => (
               <div
                 key={s}
-                className="rounded-md py-1.5 text-center tabular"
-                style={{ background: "var(--color-cell)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -4px 8px rgba(0,0,0,0.18)" }}
+                className="cell-tile rounded-md py-1.5 text-center tabular"
               >
                 <p style={{ color: "var(--color-muted)", fontSize: "0.6rem" }}>{STEP_LABELS[s]}</p>
                 <p style={{ color: "var(--color-cream)", fontSize: "0.75rem", fontWeight: 600 }}>{averagePct(player.steps[s])}%</p>
@@ -142,8 +141,7 @@ export default function PlayerDetailPage() {
               return (
                 <div
                   key={s}
-                  className="rounded-md py-1.5 text-center tabular"
-                  style={{ background: "var(--color-cell)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -4px 8px rgba(0,0,0,0.18)" }}
+                  className="cell-tile rounded-md py-1.5 text-center tabular"
                 >
                   <p style={{ color: "var(--color-muted)", fontSize: "0.6rem" }}>{STEP_LABELS[s]}</p>
                   <p style={{ color: "var(--color-cream)", fontSize: "0.75rem", fontWeight: 600 }}>

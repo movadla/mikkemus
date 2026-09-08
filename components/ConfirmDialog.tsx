@@ -69,7 +69,10 @@ export function ConfirmDialog({
       className="fixed inset-0 flex items-center justify-center p-6 z-50"
       style={{ background: "rgba(0,0,0,0.6)" }}
     >
-      <div className="w-full max-w-sm rounded-xl p-6" style={{ background: "var(--color-surface)" }}>
+      {/* shadow-panel matters most here of anywhere: a modal floating over a scrim is the
+          one surface that should carry the deepest elevation, and it was the only card in
+          the app without it. */}
+      <div className="shadow-panel w-full max-w-sm rounded-xl p-6" style={{ background: "var(--color-surface)" }}>
         <p id={messageId} className="text-center mb-6" style={{ color: "var(--color-cream)", fontSize: messageFontSize }}>
           {message}
         </p>

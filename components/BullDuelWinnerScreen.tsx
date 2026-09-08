@@ -145,7 +145,10 @@ export function BullDuelWinnerScreen({
                       e.preventDefault();
                       setExpanded(isExpanded ? null : p);
                     }}
-                    className={FOCUS_RING}
+                    // Not FOCUS_RING: an outline on a display:contents element is never
+                    // painted, since it generates no box. .row-focus draws the ring on the
+                    // cells instead — see globals.css.
+                    className="row-focus"
                     style={{ display: "contents", cursor: "pointer" }}
                   >
                     <span style={{ color: p === winner ? "var(--color-gold)" : "var(--color-cream)", fontWeight: p === winner ? 600 : 400 }}>

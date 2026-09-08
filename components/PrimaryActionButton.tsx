@@ -26,7 +26,7 @@ export function PrimaryActionButton({
         type="button"
         disabled={!ready}
         onClick={onClick}
-        className={`glossy w-full py-4 rounded-lg font-semibold text-lg transition-opacity ${FOCUS_RING}`}
+        className={`glossy w-full py-4 rounded-xl font-semibold text-lg transition-opacity ${FOCUS_RING}`}
         style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", opacity: ready ? 1 : 0.4 } as React.CSSProperties}
       >
         {children}
