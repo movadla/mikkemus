@@ -210,27 +210,40 @@ function valueOf(sector: string, progress: Progress): number {
  * Mirrors classifyThrow's own "is this T/D hit on my own active number"
  * condition exactly, so the two can never drift apart.
  */
-function valueWithRedirect(sector: string, activeStepAtThrow: Step | null, progress: Progress): number {
+/** What a throw is worth AND which step that worth lands on. The two have to be decided
+ *  together: priced one way and filed another, a perfect triple on your own number credits
+ *  its whole value to the T row while the crosses it actually won go to the number. */
+type ValuedStep = { value: number; step: Step | null };
+
+function valueWithRedirect(sector: string, activeStepAtThrow: Step | null, progress: Progress): ValuedStep {
   // Mirrors classifyThrow's early-bullseye house rule (see lib/scoliaMapping.ts): thrown
   // before BULL is up, the red bull scores one double, not a bull. Valuing it as a bull
   // here would price the dart at something the game never actually pays out.
   if (sector === "Bull" && activeStepAtThrow !== "BULL") {
-    return Math.min(1, Math.max(0, 3 - progress["D"]));
+    const value = Math.min(1, Math.max(0, 3 - progress["D"]));
+    return { value, step: value > 0 ? "D" : null };
   }
 
   const base = valueOf(sector, progress);
-  if (activeStepAtThrow === null || activeStepAtThrow === "D" || activeStepAtThrow === "T" || activeStepAtThrow === "BULL") return base;
+  // A landing worth nothing has no step worth filing it under — a single in an already
+  // closed number scores no more than a miss does. Those fall back to what the player was
+  // working on (see stepForTarget), which is the honest answer for a dart that only has
+  // value because of what it ALMOST was.
+  const landed = base > 0 ? stepForSector(parseSector(sector, false)).step : null;
+  if (activeStepAtThrow === null || activeStepAtThrow === "D" || activeStepAtThrow === "T" || activeStepAtThrow === "BULL") {
+    return { value: base, step: landed };
+  }
   const match = /^([TD])(\d+)$/.exec(sector);
-  if (!match || Number(match[2]) !== Number(activeStepAtThrow)) return base;
+  if (!match || Number(match[2]) !== Number(activeStepAtThrow)) return { value: base, step: landed };
   const multiplier = match[1] === "T" ? 3 : 2;
   const redirectValue = Math.min(multiplier, Math.max(0, 3 - progress[activeStepAtThrow]));
-  return Math.max(base, redirectValue);
+  // Redirecting is what the value is priced on, so it's where the value belongs.
+  return redirectValue > base ? { value: redirectValue, step: activeStepAtThrow } : { value: base, step: landed };
 }
 
-/** Which of the 10 game steps a dart's xG is attributed to — wherever it
- *  was actually judged (where it landed, or the active number for a
- *  single/miss), regardless of how a nearby boundary's value (see
- *  valueWithRedirect) affected the NUMBER. */
+/** Fallback attribution for a dart that scores nothing at all — a single on a closed number,
+ *  or a miss. There is no landing step to file it under, so it goes to whatever the player
+ *  was working on, which is what the dart was aimed at. */
 function stepForTarget(target: LuckTarget): Step {
   if (target.ring === "BULL") return "BULL";
   if (target.ring === "T" || target.ring === "D") return target.ring;
@@ -293,10 +306,13 @@ export function luckForThrow(
   const proximity = 1 - primaryNormDist;
   const nudged = angularNormDist < radial.normDist && angularNudge ? angularNudge : radialNudge;
 
-  const actualValue = valueWithRedirect(sectorAt(actual), activeStepAtThrow, progress);
-  const otherSideValue = valueWithRedirect(sectorAt(nudged), activeStepAtThrow, progress);
-  const xg = actualValue + (proximity / 2) * (otherSideValue - actualValue);
-  return { step: stepForTarget(target), xg };
+  const landed = valueWithRedirect(sectorAt(actual), activeStepAtThrow, progress);
+  const otherSide = valueWithRedirect(sectorAt(nudged), activeStepAtThrow, progress);
+  const xg = landed.value + (proximity / 2) * (otherSide.value - landed.value);
+  // File it where the value was priced, not where the dart physically landed. Those differ
+  // for exactly the shot that matters most — a triple on your own number, whose worth comes
+  // from completing that number, not from the T row it sits in.
+  return { step: landed.step ?? stepForTarget(target), xg };
 }
 
 // ---- "Expected Goals" for Bull-duell -----------------------------------

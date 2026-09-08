@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { luckForBullDuelThrow, luckForThrow, sectorAt } from "./dartboard";
-import { emptyProgress } from "./game";
+import { aimPointFor, luckForBullDuelThrow, luckForThrow, sectorAt } from "./dartboard";
+import { emptyProgress, type Step } from "./game";
 
 describe("luckForThrow", () => {
   it("gives exactly the field's own value at dead center, even on a boundary between two equally-valuable outcomes", () => {
@@ -89,12 +89,16 @@ describe("luckForThrow", () => {
     // S20 (also worth 1, number 20 untouched) looked like an inert boundary.
     // But this triple can be redirected to finish number 20 outright (worth
     // 3 crosses in one dart) — a big blend the old formula couldn't see
-    // because it never considered the redirect. Attributed to the "T"
-    // section — it's a real triple hit, redirect or not.
+    // because it never considered the redirect.
+    //
+    // Filed under "20", not "T". This assertion used to say "T", on the reasoning that a
+    // triple is a triple however it's resolved — but the value above comes entirely from
+    // completing 20, and the crosses it wins go to 20 as well. Filing the worth apart from
+    // the crosses made a flawless leg read as 0.0 expected on every number and 24.0 on T.
     const progress = emptyProgress();
     const result = luckForThrow([0, 106.9], "20", progress);
     expect(result).not.toBeNull();
-    expect(result!.step).toBe("T");
+    expect(result!.step).toBe("20");
     expect(result!.xg).toBeCloseTo(2.03, 1);
   });
 
@@ -189,5 +193,67 @@ describe("luckForBullDuelThrow", () => {
     // doesn't kick in here, so this blends the same as the uncapped case.
     const luck = luckForBullDuelThrow([0, 15.8], 9, 10);
     expect(luck).toBeCloseTo(0.51, 1);
+  });
+});
+
+describe("luckForThrow — which step the value is filed under", () => {
+  /** Dead centre of a triple ring, for the wedge the given number sits in. */
+  function tripleCentre(n: number): [number, number] {
+    return aimPointFor({ ring: "T", number: n });
+  }
+
+  it("files a triple on your own number under that number, not under T", () => {
+    // The whole worth of this dart is that it completes 20 — three crosses there, versus
+    // one if it merely counted as a triple. Filing it under T while the crosses it wins go
+    // to 20 made a perfect game read as 0.0 expected on every number and 24.0 on T.
+    const result = luckForThrow(tripleCentre(20), "20", emptyProgress());
+    expect(result).not.toBeNull();
+    expect(result!.step).toBe("20");
+    expect(result!.xg).toBeCloseTo(3, 5);
+  });
+
+  it("still files a triple on some other number under T", () => {
+    // Nothing to redirect into here — this is an ordinary pre-banked triple worth one cross.
+    const result = luckForThrow(tripleCentre(6), "20", emptyProgress());
+    expect(result!.step).toBe("T");
+    expect(result!.xg).toBeCloseTo(1, 5);
+  });
+
+  it("files an early bullseye under D, matching the house rule that scores it as a double", () => {
+    const result = luckForThrow([0, 0], "20", emptyProgress());
+    expect(result!.step).toBe("D");
+    expect(result!.xg).toBeCloseTo(1, 5);
+  });
+
+  it("files a bullseye under BULL once BULL is what you're on", () => {
+    const result = luckForThrow([0, 0], "BULL", emptyProgress());
+    expect(result!.step).toBe("BULL");
+    expect(result!.xg).toBeCloseTo(2, 5);
+  });
+
+  it("prices a flawless leg at exactly the crosses it wins, field by field", () => {
+    // Seven triples closing 20 down to 14, three triples and three doubles filling T and D,
+    // then two bullseyes. Every dart dead centre, so nothing is lucky or unlucky: expected
+    // must land on 3.0 for all ten fields, and 30 in total.
+    const progress = emptyProgress();
+    const byStep: Record<string, number> = {};
+    const record = (coords: [number, number], activeStep: Step, closes: Step, crosses: number) => {
+      const r = luckForThrow(coords, activeStep, progress);
+      byStep[r!.step] = (byStep[r!.step] ?? 0) + r!.xg;
+      progress[closes] = Math.min(3, progress[closes] + crosses);
+    };
+
+    for (const n of [20, 19, 18, 17, 16, 15, 14]) {
+      record(tripleCentre(n), String(n) as Step, String(n) as Step, 3);
+    }
+    for (let i = 0; i < 3; i++) record(tripleCentre(6), "D", "T", 1);
+    for (let i = 0; i < 3; i++) record(aimPointFor({ ring: "D", number: 6 }), "D", "D", 1);
+    record([0, 0], "BULL", "BULL", 2);
+    record([0, 0], "BULL", "BULL", 1);
+
+    for (const step of ["20", "19", "18", "17", "16", "15", "14", "D", "T", "BULL"] as Step[]) {
+      expect(byStep[step]).toBeCloseTo(3, 5);
+    }
+    expect(Object.values(byStep).reduce((a, b) => a + b, 0)).toBeCloseTo(30, 5);
   });
 });
