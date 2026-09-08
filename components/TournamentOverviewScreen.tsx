@@ -125,7 +125,7 @@ export function TournamentOverviewScreen({
           </button>
         )}
 
-        <p className="mb-2" style={{ color: "var(--color-gold)", fontSize: "0.75rem", letterSpacing: "0.1em" }}>
+        <p className="mb-2 section-label">
           GRUPPER
         </p>
         <div className="space-y-4 mb-6">
@@ -162,7 +162,7 @@ export function TournamentOverviewScreen({
             if (!preview) return null;
             return (
               <>
-                <p className="mb-2" style={{ color: "var(--color-gold)", fontSize: "0.75rem", letterSpacing: "0.1em" }}>
+                <p className="mb-2 section-label">
                   SLUTTSPILL (FORHÅNDSVISNING)
                 </p>
                 <div className="shadow-panel rounded-xl p-3 mb-3" style={{ background: "var(--color-panel)", border: "1px solid var(--color-border)" }}>
@@ -192,7 +192,7 @@ export function TournamentOverviewScreen({
 
         {bracketMatches.length > 0 && (
           <>
-            <p className="mb-2" style={{ color: "var(--color-gold)", fontSize: "0.75rem", letterSpacing: "0.1em" }}>
+            <p className="mb-2 section-label">
               SLUTTSPILL
             </p>
             <div className="space-y-4 mb-6">

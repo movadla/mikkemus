@@ -291,7 +291,7 @@ export function SetupScreen({
                 className="shadow-panel rounded-xl p-4 mb-4"
                 style={{ background: "var(--color-panel)", border: "1px solid var(--color-border)" }}
               >
-                <p className="section-label text-center mb-3" style={{ color: "var(--color-muted)" }}>
+                <p className="section-label text-center mb-3">
                   TIDLIGERE SPILLERE
                 </p>
                 <div className="flex flex-wrap justify-center gap-2">
@@ -327,7 +327,7 @@ export function SetupScreen({
             )}
 
             <div className="shadow-panel rounded-xl p-4 mb-8" style={{ background: "var(--color-panel)", border: "1px solid var(--color-border)" }}>
-              <p className="section-label text-center mb-3" style={{ color: "var(--color-gold)" }}>
+              <p className="section-label text-center mb-3">
                 MED I KAMPEN
               </p>
               <div className="space-y-2 min-h-[64px]">

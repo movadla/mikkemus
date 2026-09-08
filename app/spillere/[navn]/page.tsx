@@ -25,7 +25,7 @@ const FOCUS_RING =
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="cell-tile rounded-lg p-3 text-center">
+    <div className="cell-tile rounded-lg p-3 text-center flex flex-col justify-center" style={{ minHeight: "4.5rem" }}>
       <p style={{ color: "var(--color-muted)", fontSize: "0.65rem", letterSpacing: "0.05em" }}>{label}</p>
       <p className="tabular" style={{ color: "var(--color-cream)", fontSize: "1.05rem", fontWeight: 700 }}>
         {value}
@@ -110,8 +110,7 @@ export default function PlayerDetailPage() {
             {STEPS.map((s) => (
               <div
                 key={s}
-                className="cell-tile rounded-md py-1.5 text-center tabular"
-              >
+                className="cell-tile rounded-md py-1.5 text-center tabular section-label">
                 <p style={{ color: "var(--color-muted)", fontSize: "0.6rem" }}>{STEP_LABELS[s]}</p>
                 <p style={{ color: "var(--color-cream)", fontSize: "0.75rem", fontWeight: 600 }}>{averagePct(player.steps[s])}%</p>
               </div>
@@ -120,19 +119,19 @@ export default function PlayerDetailPage() {
         </div>
 
         <div className="grid grid-cols-2 gap-3 mb-4">
-          <StatCard label="SNITT PILER PR RUNDE" value={String(averageDartsPerWin(player) ?? "–")} />
+          <StatCard label="SNITT PILER/RUNDE" value={String(averageDartsPerWin(player) ?? "–")} />
           <StatCard label="BESTE RUNDE (PILER)" value={String(player.bestDartsToFinish ?? "–")} />
           <StatCard label="FAVORITTALL" value={favNumber ? STEP_LABELS[favNumber] : "–"} />
           <StatCard label="FAVORITT-TRIPPEL" value={favTriple !== null ? `T${favTriple}` : "–"} />
           <StatCard label="FAVORITT-DOBBEL" value={favDouble !== null ? `D${favDouble}` : "–"} />
           <StatCard label="MED / MHD / MVD" value={med === null ? "–" : `${Math.round(med)} / ${Math.round(mhd!)} / ${Math.round(mvd!)}mm`} />
-          <StatCard label="EXPECTED HITS (FORVENTET / FAKTISK)" value={luck === null ? "–" : `${luck.toFixed(1)} / ${player.overall.hits}`} />
-          <StatCard label="BULL-DUELL: KAST / POENG / TREFF%" value={player.bullDuel.throws === 0 ? "–" : `${player.bullDuel.throws} / ${player.bullDuel.points} / ${bullDuelPct}%`} />
-          <StatCard label="BULL-DUELL: EXPECTED HITS (FORVENTET / FAKTISK)" value={bullDuelLuck === null ? "–" : `${bullDuelLuck.toFixed(1)} / ${player.bullDuel.points}`} />
+          <StatCard label="EXPECTED HITS — FORV/FAKT" value={luck === null ? "–" : `${luck.toFixed(1)} / ${player.overall.hits}`} />
+          <StatCard label="BULL: KAST/POENG/%" value={player.bullDuel.throws === 0 ? "–" : `${player.bullDuel.throws} / ${player.bullDuel.points} / ${bullDuelPct}%`} />
+          <StatCard label="BULL: XH — FORV/FAKT" value={bullDuelLuck === null ? "–" : `${bullDuelLuck.toFixed(1)} / ${player.bullDuel.points}`} />
         </div>
 
         <div className="shadow-panel rounded-xl p-4 mb-4" style={{ background: "var(--color-surface)" }}>
-          <p className="mb-3" style={{ color: "var(--color-gold)", fontSize: "0.85rem", letterSpacing: "0.1em" }}>
+          <p className="mb-3 section-label">
             EXPECTED HITS PR. SEKSJON (FORVENTET/FAKTISK)
           </p>
           <div className="grid grid-cols-5 gap-1">
@@ -141,8 +140,7 @@ export default function PlayerDetailPage() {
               return (
                 <div
                   key={s}
-                  className="cell-tile rounded-md py-1.5 text-center tabular"
-                >
+                  className="cell-tile rounded-md py-1.5 text-center tabular section-label">
                   <p style={{ color: "var(--color-muted)", fontSize: "0.6rem" }}>{STEP_LABELS[s]}</p>
                   <p style={{ color: "var(--color-cream)", fontSize: "0.75rem", fontWeight: 600 }}>
                     {stepLuck === null ? "–" : `${stepLuck.toFixed(1)}/${player.steps[s].hits}`}
@@ -154,14 +152,14 @@ export default function PlayerDetailPage() {
         </div>
 
         <div className="shadow-panel rounded-xl p-4 mb-4" style={{ background: "var(--color-surface)" }}>
-          <p className="mb-3" style={{ color: "var(--color-gold)", fontSize: "0.85rem", letterSpacing: "0.1em" }}>
+          <p className="mb-3 section-label">
             TREFFPROSENT OVER TID
           </p>
           <StatsLineChart series={[{ label: "Treffprosent", color: "var(--color-teal)", points: history.map((h) => h.hitPct) }]} unit="%" />
         </div>
 
         <div className="shadow-panel rounded-xl p-4 mb-4" style={{ background: "var(--color-surface)" }}>
-          <p className="mb-3" style={{ color: "var(--color-gold)", fontSize: "0.85rem", letterSpacing: "0.1em" }}>
+          <p className="mb-3 section-label">
             PRESISJON OVER TID (MM)
           </p>
           <StatsLineChart

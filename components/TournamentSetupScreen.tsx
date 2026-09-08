@@ -99,7 +99,7 @@ export function TournamentSetupScreen({
           <div style={{ width: "72px" }} />
         </div>
 
-        <p className="mb-2" style={{ color: "var(--color-gold)", fontSize: "0.75rem", letterSpacing: "0.1em" }}>
+        <p className="mb-2 section-label">
           1. INDIVIDUELT ELLER LAG?
         </p>
         <div className="flex gap-3 mb-6">
@@ -133,7 +133,7 @@ export function TournamentSetupScreen({
 
         {mode && (
           <>
-            <p className="mb-2" style={{ color: "var(--color-gold)", fontSize: "0.75rem", letterSpacing: "0.1em" }}>
+            <p className="mb-2 section-label">
               2. DELTAKERE
             </p>
 
@@ -141,7 +141,7 @@ export function TournamentSetupScreen({
 
             {mode === "team" && people.length > 0 && (
               <>
-                <p className="mb-2" style={{ color: "var(--color-gold)", fontSize: "0.75rem", letterSpacing: "0.1em" }}>
+                <p className="mb-2 section-label">
                   3. SETT SAMMEN LAG
                 </p>
                 <TeamComposer people={people} teams={teams} onChange={setTeams} />

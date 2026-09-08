@@ -177,7 +177,7 @@ export function WinnerScreen({
         </div>
 
         <div className="shadow-panel rounded-xl p-5 mb-6" style={{ background: "var(--color-surface)" }}>
-          <p className="mb-3" style={{ color: "var(--color-gold)", fontSize: "0.85rem", letterSpacing: "0.1em" }}>
+          <p className="mb-3 section-label">
             STATISTIKK — DENNE KAMPEN
           </p>
           <div className="space-y-2">
@@ -200,7 +200,7 @@ export function WinnerScreen({
 
         {players.some((p) => STEPS.some((s) => luckByPlayer[p]?.[s].count > 0)) && (
           <div className="shadow-panel rounded-xl p-5 mb-6" style={{ background: "var(--color-surface)" }}>
-            <p className="mb-3" style={{ color: "var(--color-gold)", fontSize: "0.85rem", letterSpacing: "0.1em" }}>
+            <p className="mb-3 section-label">
               EXPECTED HITS (FORVENTET / FAKTISK)
             </p>
             <div className="space-y-4">
@@ -224,8 +224,7 @@ export function WinnerScreen({
                           return (
                             <div
                               key={s}
-                              className="cell-tile rounded-md py-1.5 text-center tabular"
-                            >
+                              className="cell-tile rounded-md py-1.5 text-center tabular section-label">
                               <p style={{ color: "var(--color-muted)", fontSize: "0.6rem" }}>{STEP_LABELS[s]}</p>
                               <p style={{ color: "var(--color-cream)", fontSize: "0.75rem", fontWeight: 600 }}>
                                 {luckByStep[s].count === 0 ? "–" : `${formatLuck(luckByStep[s].sum)}/${actualStep}`}
@@ -243,7 +242,7 @@ export function WinnerScreen({
 
         {players.some((p) => (throwsByPlayer[p]?.length ?? 0) > 0) && (
           <div className="shadow-panel rounded-xl p-5 mb-6" style={{ background: "var(--color-surface)" }}>
-            <p className="mb-3" style={{ color: "var(--color-gold)", fontSize: "0.85rem", letterSpacing: "0.1em" }}>
+            <p className="mb-3 section-label">
               KASTSPREDNING
             </p>
             <div className="space-y-4">

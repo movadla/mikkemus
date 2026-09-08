@@ -83,7 +83,7 @@ export function NightDetail({ night, otherDates }: { night: NightSummary | null;
 
         {otherDates.length > 0 && (
           <>
-            <p className="mb-2" style={{ color: "var(--color-gold)", fontSize: "0.75rem", letterSpacing: "0.1em" }}>
+            <p className="mb-2 section-label">
               ANDRE KVELDER
             </p>
             <div className="flex flex-wrap gap-2">

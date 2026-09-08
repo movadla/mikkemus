@@ -57,7 +57,7 @@ export default function HallOfFamePage() {
           </p>
         ) : (
           <>
-            <p className="mb-2" style={{ color: "var(--color-gold)", fontSize: "0.75rem", letterSpacing: "0.1em" }}>
+            <p className="mb-2 section-label">
               ALLE TIDER
             </p>
             <div className="space-y-2 mb-8">
@@ -105,7 +105,7 @@ export default function HallOfFamePage() {
               })}
             </div>
 
-            <p className="mb-2" style={{ color: "var(--color-gold)", fontSize: "0.75rem", letterSpacing: "0.1em" }}>
+            <p className="mb-2 section-label">
               KVELDER
             </p>
             <div className="space-y-3">

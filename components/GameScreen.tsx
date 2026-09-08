@@ -418,15 +418,26 @@ export function GameScreen({
                   // the darts come out — accent then means exactly one thing, "not locked in
                   // yet", and what you just threw is still readable in the ShotIndicator up top.
                   const heldPendingCount = isActive ? pendingByStep[s] ?? 0 : 0;
-                  // Ring state is one choice, not three stacked ones: playable outranks the
-                  // would-open-next preview, and a settled cell carries neither.
-                  const tileState = clickable ? "cell-tile--active" : previewOpening ? "cell-tile--preview" : "";
+                  // Ring state is one choice, not several stacked. The full ring is reserved
+                  // for the cell on the player's current step; D/T are clickable at all times
+                  // (pre-banking) and take the quiet ring, so they read as available without
+                  // competing with the actual target.
+                  const isTarget = clickable && s === activeStep;
+                  const tileState = isTarget
+                    ? "cell-tile--active"
+                    : clickable
+                      ? "cell-tile--open"
+                      : previewOpening
+                        ? "cell-tile--preview"
+                        : "";
                   return (
                     <div
                       key={p}
                       className={`relative min-h-0 min-w-0 flex items-center justify-center p-1 grid-rule-top grid-rule-left ${isActive ? "column-active" : ""} ${s === activeStep ? "row-active" : ""}`}
                     >
-                      {clickable && (
+                      {/* Only the current target breathes. It used to run on every clickable
+                          cell, which meant the always-open D and T rows pulsed all match. */}
+                      {isTarget && (
                         <span
                           aria-hidden
                           className="animate-idle-glow absolute inset-1.5 rounded-md pointer-events-none"

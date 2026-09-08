@@ -39,7 +39,7 @@ export function BullDuelTargetScreen({ onNext, onBack }: { onNext: (target: numb
           <div style={{ width: "72px" }} />
         </div>
 
-        <p className="mb-3 text-center" style={{ color: "var(--color-gold)", fontSize: "0.75rem", letterSpacing: "0.1em" }}>
+        <p className="mb-3 text-center section-label">
           HVOR MANGE POENG FOR Å VINNE?
         </p>
         <p className="mb-8 text-center" style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>

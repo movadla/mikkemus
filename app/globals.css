@@ -31,6 +31,9 @@
 
   --color-cream: #f4f0e8;
   --color-muted: #729080;
+  /* Section headings — brighter than muted, which is tuned for de-emphasised body text and
+     sits too close to the panel behind it for small letterspaced caps. */
+  --color-label: #93b0a0;
 
   /* The heat that builds across an unbroken turn (see HEAT_GLOW in GameScreen). Tokens
      rather than literals in the component, where they were the only two colours in the app
@@ -125,9 +128,14 @@ button {
   color: var(--color-cream);
 }
 
+/* Section headings are NOT gold. They were, in about 25 places, which left gold meaning
+   "heading" far more often than "earned" — and a closed number's gold cell can't read as a
+   payoff when the same colour labels every panel on every screen. The colour lives here so
+   the whole app changes on one line if that call ever gets revisited. */
 .section-label {
   font-size: var(--text-section-label);
   letter-spacing: 0.1em;
+  color: var(--color-label);
 }
 
 /* Focus for a row whose wrapper is `display: contents`. Such an element generates no box at
@@ -380,14 +388,23 @@ button {
     0 0 16px rgba(201, 162, 75, 0.14);
 }
 
-/* Playable right now. A box-shadow ring instead of `outline`, which follows the border
-   radius properly and composites with the tile's own inset shading rather than replacing
-   it — an outline sat on top as a hard rectangle and read as a debug box. */
+/* The cell you're actually on: full ring plus bloom. D and T are pre-bankable at any time,
+   so they are ALSO always clickable — before this split, three rows wore the identical ring
+   at once and "what am I aiming at" drowned in it. Only the current target gets this. */
 .cell-tile--active {
   box-shadow:
     0 0 0 2px var(--color-teal),
     0 0 20px rgba(47, 180, 194, 0.4),
     inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -6px 10px rgba(0, 0, 0, 0.22);
+}
+
+/* Clickable, but not what you're on — the always-open D/T rows. Same colour so the meaning
+   is shared ("you may hit this"), a quarter of the weight so it never competes. */
+.cell-tile--open {
+  box-shadow:
+    0 0 0 1px rgba(47, 180, 194, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
     inset 0 -6px 10px rgba(0, 0, 0, 0.22);
 }
 

@@ -106,7 +106,7 @@ export function BullDuelWinnerScreen({
         </div>
 
         <div className="shadow-panel rounded-xl p-5 mb-6" style={{ background: "var(--color-surface)" }}>
-          <p className="mb-3" style={{ color: "var(--color-gold)", fontSize: "0.85rem", letterSpacing: "0.1em" }}>
+          <p className="mb-3 section-label">
             BULL-DUELL — DENNE KAMPEN
           </p>
           <div

@@ -79,7 +79,7 @@ export function TournamentGroupSetupScreen({
 
         {mode === "individual" && (
           <>
-            <p className="mb-2 text-center" style={{ color: "var(--color-gold)", fontSize: "0.75rem", letterSpacing: "0.1em" }}>
+            <p className="mb-2 text-center section-label">
               HVOR MANGE SPILLER SAMTIDIG?
             </p>
             <div className="flex gap-3 mb-6">
@@ -133,7 +133,7 @@ export function TournamentGroupSetupScreen({
         <div className="space-y-3 mb-6">
           {groups.map((group, gi) => (
             <div key={gi} className="shadow-panel rounded-xl p-3" style={{ background: "var(--color-panel)", border: "1px solid var(--color-border)" }}>
-              <p className="mb-2" style={{ color: "var(--color-gold)", fontSize: "0.75rem", letterSpacing: "0.1em" }}>
+              <p className="mb-2 section-label">
                 GRUPPE {gi + 1}
               </p>
               <div className="space-y-1.5">

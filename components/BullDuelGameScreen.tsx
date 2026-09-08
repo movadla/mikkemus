@@ -68,7 +68,7 @@ export function BullDuelGameScreen({
         >
           ← Hjem
         </button>
-        <p style={{ color: "var(--color-gold)", fontSize: "0.75rem", letterSpacing: "0.1em" }}>BULL-DUELL</p>
+        <p >BULL-DUELL</p>
         <div style={{ width: "72px" }} />
       </div>
 
