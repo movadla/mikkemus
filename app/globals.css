@@ -502,10 +502,11 @@ button {
      row and a half of a ten-row board. */
   .game-root {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 9.25rem;
-    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) 11rem;
+    grid-template-rows: auto minmax(0, 1fr) auto;
     grid-template-areas:
       "board header"
+      "board stats"
       "board actions";
     column-gap: 0.4rem;
     padding: 0.3rem;
@@ -551,9 +552,17 @@ button {
     gap: 0.1rem;
   }
 
+  /* The name pill carries px-3 and `truncate`, which in a capped column turned "Dave (3) 🤖"
+     into "Da…6" — a column you can no longer tell apart from its neighbour. Landscape drops
+     most of that padding and lets the name wrap instead of clipping, so long bot names stay
+     readable. Costs one extra line of header height, once, and only when a name needs it. */
   .player-head > span > span > span,
   .player-head > span > span {
-    font-size: 0.78rem !important;
+    font-size: 0.66rem !important;
+    padding-inline: 0.25rem !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+    line-height: 1.15;
   }
 
   /* Cells: the mark is drawn square, so it is the ROW height that caps how big it gets.
@@ -572,12 +581,15 @@ button {
   /* Out of the board's way. The right column has dead space between the chrome at its top
      and the buttons at its bottom, which is exactly where a "who is throwing" note belongs —
      centred over the board, it sat on top of the player names. */
+  /* Tucked directly under the nav buttons rather than centred in the column: the side panel
+     now occupies that middle space. It lands on the panel's own name label, which during a bot
+     turn is saying the same thing this toast is, so nothing is actually hidden. */
   .turn-toast {
-    top: 50% !important;
+    top: 4.6rem !important;
     left: auto !important;
     right: 0.3rem !important;
-    transform: translateY(-50%) !important;
-    width: 8.65rem;
+    transform: none !important;
+    width: 10.4rem;
     text-align: center;
     font-size: 0.72rem;
     padding: 0.3rem 0.4rem;
@@ -593,6 +605,16 @@ button {
        Ten rows sharing 390px cannot spare them. */
     border-radius: 0.5rem;
     box-shadow: none;
+  }
+
+  /* Takes whatever the header and the buttons leave — the board glyph inside is square and
+     sized off this height, so it shrinks rather than pushing the buttons off screen. */
+  .live-side {
+    grid-area: stats;
+    min-height: 0;
+    min-width: 0;
+    overflow: hidden;
+    padding: 0.2rem 0 0.35rem;
   }
 
   .action-bar {

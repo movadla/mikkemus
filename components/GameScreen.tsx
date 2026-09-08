@@ -19,6 +19,7 @@ import { startWakeLock } from "@/lib/wakeLock";
 import { requestRecalibration } from "@/lib/scoliaCommands";
 import { reportError } from "@/lib/errorReporting";
 import { useCompactLandscape } from "@/lib/useCompactLandscape";
+import { LiveSidePanel } from "./LiveSidePanel";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { Mark } from "./Mark";
 import { CalibrateIcon, DartIcon, SpeakerIcon, SpeakerMuteIcon } from "./icons";
@@ -79,6 +80,12 @@ type Props = {
   closedStep: { token: number; step: Step } | null;
   /** Per player, the steps closed by three separate darts in one turn — see Mark's `perfect`. */
   perfectCloses: Record<string, Partial<Record<Step, true>>>;
+  /** The active player's dart coordinates this match, for the landscape side panel's board. */
+  matchThrows: [number, number][];
+  /** How many of those belong to the turn in progress — drawn bright, the rest recede. */
+  dartsThisTurn: number;
+  /** Live treff%/xH for the active player, or null when there is no active player. */
+  liveStats: { hitPct: number | null; expected: number | null; actual: number } | null;
   onResolvePendingChoice: (choice: "keep" | "redirect") => void;
   onRegisterHit: (step: Step) => void;
   onUndo: () => void;
@@ -133,6 +140,9 @@ export function GameScreen({
   perfectCloses,
   onResolvePendingChoice,
   onRegisterHit,
+  matchThrows,
+  dartsThisTurn,
+  liveStats,
   onUndo,
   onConfirm,
   onAbort,
@@ -370,7 +380,7 @@ export function GameScreen({
               // mark instead — near enough to the row height that the cell looks like a cell rather
               // than a stretched strip. Portrait keeps 1fr: there the cell is narrow enough already.
               gridTemplateColumns: compactLandscape
-                ? `48px repeat(${players.length}, minmax(0, 3.5rem))`
+                ? `48px repeat(${players.length}, minmax(0, 4.5rem))`
                 : `64px repeat(${players.length}, minmax(64px, 1fr))`,
               justifyContent: compactLandscape ? "center" : undefined,
               // A floor, not a fixed height: rows still stretch to fill a tall portrait screen, but
@@ -539,6 +549,21 @@ export function GameScreen({
           </div>
         </div>
       </div>
+
+      {/* Landscape only — this fills the gap in the right-hand column. In portrait there is no
+          gap to fill, and the same content would push the board off screen. */}
+      {compactLandscape && activePlayer && liveStats && (
+        <div className="live-side">
+          <LiveSidePanel
+            playerName={activePlayer}
+            throws={matchThrows}
+            recentFrom={Math.max(0, matchThrows.length - dartsThisTurn)}
+            hitPct={liveStats.hitPct}
+            expected={liveStats.expected}
+            actual={liveStats.actual}
+          />
+        </div>
+      )}
 
       <div className="action-bar shrink-0 mt-3 -mx-4 px-4 pt-2 pb-1">
         {!rewound && (

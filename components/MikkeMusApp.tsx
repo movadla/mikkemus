@@ -159,6 +159,9 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   // Scolia darts with an inferrable target contribute (see lib/dartboard.ts:
   // luckForThrow).
   const luckTotalsRef = useRef<Record<string, Record<Step, { sum: number; count: number }>>>({});
+  // The same totals flattened across steps, as state rather than a ref, purely so the landscape
+  // side panel can show them while the match is still running.
+  const [luckLive, setLuckLive] = useState<Record<string, { sum: number; count: number }>>({});
   // Which specific number's Triple/Double physically landed this match, per player —
   // for the career "favorite triple/double" stat. Counts every ring hit as thrown,
   // regardless of how the triple/double-redirect ambiguity later got resolved.
@@ -553,6 +556,13 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     if (luck !== null) {
       const luckByStep = luckTotalsRef.current[activePlayer] ?? emptyLuckByStep();
       const stepTotals = luckByStep[luck.step];
+      // Mirrored into state as a flat total as well: the landscape side panel shows this live,
+      // and a ref alone would leave it stale — refs don't re-render, and reading one during
+      // render is exactly what the React Compiler is free to memoize away.
+      setLuckLive((prev) => {
+        const running = prev[activePlayer] ?? { sum: 0, count: 0 };
+        return { ...prev, [activePlayer]: { sum: running.sum + luck.xg, count: running.count + 1 } };
+      });
       luckTotalsRef.current = {
         ...luckTotalsRef.current,
         [activePlayer]: { ...luckByStep, [luck.step]: { sum: stepTotals.sum + luck.xg, count: stepTotals.count + 1 } },
@@ -670,6 +680,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     setMatchThrows({});
     accuracyTotalsRef.current = {};
     luckTotalsRef.current = {};
+    setLuckLive({});
     ringHitsRef.current = {};
     updatePendingAmbiguous([]);
     updateAwaitingConfirmResolution(false);
@@ -1194,6 +1205,23 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     pendingByStep[h.step] = (pendingByStep[h.step] ?? 0) + 1;
   });
 
+  // Feeds the landscape side panel. Treff% is over COMPLETED turns only — the turn in progress
+  // has no miss count until it is confirmed, so folding it in would read as a dip after every
+  // first dart and recover by the third.
+  const activeThrows = activePlayer ? matchThrows[activePlayer] ?? [] : [];
+  const dartsThisTurn = turnShots.filter(Boolean).length;
+  const liveStats = (() => {
+    if (!activePlayer) return null;
+    const totals = aggregateTurns(turnLog[activePlayer] ?? []);
+    const darts = totals.hits + totals.misses;
+    const luck = luckLive[activePlayer];
+    return {
+      hitPct: darts > 0 ? Math.round((totals.hits / darts) * 100) : null,
+      expected: luck && luck.count > 0 ? luck.sum : null,
+      actual: progress[activePlayer] ? 30 - remainingMarks(progress[activePlayer]) : 0,
+    };
+  })();
+
   return (
     <>
       {scoliaEnabled && <ScoliaStatusBadge state={scolia.state} />}
@@ -1222,6 +1250,9 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         activePlayer={activePlayer}
         turnToken={turnToken}
         dartsThrown={dartsThrown}
+        matchThrows={activeThrows}
+        dartsThisTurn={dartsThisTurn}
+        liveStats={liveStats}
         pendingByStep={pendingByStep}
         turnShots={rewound === null ? turnShots : EMPTY_TURN_SHOTS}
         rewound={rewound !== null}

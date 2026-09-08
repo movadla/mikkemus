@@ -18,10 +18,23 @@ function pointAt(radius: number, index: number): [number, number] {
 }
 
 /** A single player's thrown-dart coordinates plotted over a dartboard outline — a quick, per-match spread visual, not a precision analysis tool. */
-export function DartboardHeatmap({ throws }: { throws: [number, number][] }) {
-  const pad = 20;
+export function DartboardHeatmap({
+  throws,
+  compact = false,
+  recentFrom,
+}: {
+  throws: [number, number][];
+  /** Sized for the landscape side panel (~150px). The number ring is dropped there — at that
+   *  size the labels render around 4px and are illegible anyway, so they only add noise. */
+  compact?: boolean;
+  /** Index from which throws belong to the turn in progress — those are drawn bright, the
+   *  rest of the match recedes. Without it every dart looks equally current. */
+  recentFrom?: number;
+}) {
+  const pad = compact ? 6 : 20;
   const size = (BOARD_RADIUS + pad) * 2;
   const half = BOARD_RADIUS + pad;
+  const dotRadius = compact ? 9 : 5;
 
   return (
     <svg viewBox={`${-half} ${-half} ${size} ${size}`} className="w-full h-auto" role="img" aria-label="Kastspredning på dartboard">
@@ -36,15 +49,27 @@ export function DartboardHeatmap({ throws }: { throws: [number, number][] }) {
         return (
           <g key={n}>
             <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="var(--color-border)" strokeWidth={0.75} />
-            <text x={lx} y={ly} textAnchor="middle" dominantBaseline="middle" fontSize={13} fill="var(--color-muted)">
-              {n}
-            </text>
+            {!compact && (
+              <text x={lx} y={ly} textAnchor="middle" dominantBaseline="middle" fontSize={13} fill="var(--color-muted)">
+                {n}
+              </text>
+            )}
           </g>
         );
       })}
-      {throws.map(([x, y], i) => (
-        <circle key={i} cx={x} cy={-y} r={5} fill="var(--color-teal)" opacity={0.35} />
-      ))}
+      {throws.map(([x, y], i) => {
+        const isRecent = recentFrom !== undefined && i >= recentFrom;
+        return (
+          <circle
+            key={i}
+            cx={x}
+            cy={-y}
+            r={isRecent ? dotRadius * 1.4 : dotRadius}
+            fill={isRecent ? "var(--color-cream)" : "var(--color-teal)"}
+            opacity={isRecent ? 0.9 : 0.35}
+          />
+        );
+      })}
     </svg>
   );
 }
