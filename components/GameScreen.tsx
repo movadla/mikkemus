@@ -76,6 +76,8 @@ type Props = {
   hitPulse: { token: number; streak: number } | null;
   /** Retriggerable "this row just reached 3/3" signal, for the closing slam. */
   closedStep: { token: number; step: Step } | null;
+  /** Per player, the steps closed by three separate darts in one turn — see Mark's `perfect`. */
+  perfectCloses: Record<string, Partial<Record<Step, true>>>;
   onResolvePendingChoice: (choice: "keep" | "redirect") => void;
   onRegisterHit: (step: Step) => void;
   onUndo: () => void;
@@ -90,7 +92,7 @@ function ShotIndicator({ shots }: { shots: (TurnShot | null)[] }) {
       {shots.map((shot, i) => (
         <div
           key={i}
-          className={shot ? "animate-shot-pop" : undefined}
+          className={`shot-box${shot ? " animate-shot-pop" : ""}`}
           style={{
             width: "1.9rem",
             height: "1.9rem",
@@ -127,6 +129,7 @@ export function GameScreen({
   awaitingConfirmResolution,
   hitPulse,
   closedStep,
+  perfectCloses,
   onResolvePendingChoice,
   onRegisterHit,
   onUndo,
@@ -231,7 +234,7 @@ export function GameScreen({
           two, mixing game state into a bar of controls — they've moved down next to Bekreft,
           where the eye already is at the end of a turn and where the button that acts on them
           lives. */}
-      <div className="flex items-center gap-2 mb-2 max-w-3xl mx-auto w-full shrink-0">
+      <div className="landscape-tight flex items-center gap-2 mb-2 max-w-3xl mx-auto w-full shrink-0">
         <button
           type="button"
           onClick={() => setShowHomeConfirm(true)}
@@ -348,12 +351,15 @@ export function GameScreen({
         {players.length >= 5 && (
           <div className="scroll-hint-right absolute top-0 right-0 bottom-0 w-8 z-20 pointer-events-none" aria-hidden />
         )}
-        <div className="flex-1 min-h-0 w-full overflow-x-auto overflow-y-hidden">
+        <div className="flex-1 min-h-0 w-full overflow-x-auto overflow-y-auto">
           <div
             className="grid h-full"
             style={{
               gridTemplateColumns: `64px repeat(${players.length}, minmax(64px, 1fr))`,
-              gridTemplateRows: `auto repeat(${STEPS.length}, minmax(0, 1fr))`,
+              // A floor, not a fixed height: rows still stretch to fill a tall portrait screen, but
+              // never compress below something you can actually hit with a thumb. Past that the
+              // grid scrolls instead, which is what makes landscape usable at all.
+              gridTemplateRows: `auto repeat(${STEPS.length}, minmax(2.4rem, 1fr))`,
             }}
           >
             <div className="sticky left-0 z-10" style={{ background: "var(--color-panel)" }} />
@@ -496,7 +502,14 @@ export function GameScreen({
                         }}
                       >
                         <div className="w-full h-full p-1">
-                          <Mark count={count} pendingCount={heldPendingCount} ghostCount={ghostCount} accent={accent} slowMotion={isActive && retracting} />
+                          <Mark
+                            count={count}
+                            pendingCount={heldPendingCount}
+                            ghostCount={ghostCount}
+                            accent={accent}
+                            slowMotion={isActive && retracting}
+                            perfect={!!perfectCloses[p]?.[s]}
+                          />
                         </div>
                       </button>
                     </div>

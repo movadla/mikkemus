@@ -211,6 +211,13 @@ function valueOf(sector: string, progress: Progress): number {
  * condition exactly, so the two can never drift apart.
  */
 function valueWithRedirect(sector: string, activeStepAtThrow: Step | null, progress: Progress): number {
+  // Mirrors classifyThrow's early-bullseye house rule (see lib/scoliaMapping.ts): thrown
+  // before BULL is up, the red bull scores one double, not a bull. Valuing it as a bull
+  // here would price the dart at something the game never actually pays out.
+  if (sector === "Bull" && activeStepAtThrow !== "BULL") {
+    return Math.min(1, Math.max(0, 3 - progress["D"]));
+  }
+
   const base = valueOf(sector, progress);
   if (activeStepAtThrow === null || activeStepAtThrow === "D" || activeStepAtThrow === "T" || activeStepAtThrow === "BULL") return base;
   const match = /^([TD])(\d+)$/.exec(sector);

@@ -386,6 +386,26 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   // the achievement is hitting the triple you were aiming at, whatever it ends up scoring as.
   const activeTriplesRef = useRef(0);
 
+  // Darts (not crosses) that have landed on each step during the current turn — see
+  // registerHit for why the distinction matters. Reset when the turn ends.
+  const dartsOnStepRef = useRef<Partial<Record<Step, number>>>({});
+
+  // Steps closed by three separate darts inside one turn, per player. Rendered as a ring
+  // with a dot instead of the ordinary crosses-and-circle (see Mark.tsx). Kept in state
+  // rather than derived from `history`, because a redirected triple writes the same three
+  // HitRecords a three-dart close does and the two would be indistinguishable afterwards.
+  const [perfectCloses, setPerfectCloses] = useState<Record<string, Partial<Record<Step, true>>>>({});
+
+  /** Drops the three-dart marker for a step an undo has just pulled back below 3/3. */
+  function clearPerfectClose(player: string, step: Step) {
+    setPerfectCloses((prev) => {
+      if (!prev[player]?.[step]) return prev;
+      const forPlayer = { ...prev[player] };
+      delete forPlayer[step];
+      return { ...prev, [player]: forPlayer };
+    });
+  }
+
   // Retriggerable signals for GameScreen's shake/heat and the closing-row slam. Tokens
   // rather than booleans so the same value twice in a row still reads as a new event.
   const [hitPulse, setHitPulse] = useState<{ token: number; streak: number } | null>(null);
@@ -746,6 +766,19 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     }
     if (newPendingHits.length === 0) return null;
 
+    // Darts, not crosses — one call is one dart, however many crosses it carries. That
+    // distinction is the whole rule: three separate darts on the same number close it "the
+    // hard way", while a single triple closing it in one throw does not (see
+    // isPerfectClose's marker in Mark.tsx). Counting HitRecords instead would make the two
+    // indistinguishable, since a redirected triple also writes three of them.
+    const dartsOnStep = (dartsOnStepRef.current[step] ?? 0) + 1;
+    dartsOnStepRef.current[step] = dartsOnStep;
+    // Three darts each worth one cross, ending on 3, can only have started from 0.
+    if (dartsOnStep === 3 && count >= 3) {
+      const player = activePlayer;
+      setPerfectCloses((prev) => ({ ...prev, [player]: { ...prev[player], [step]: true } }));
+    }
+
     haptics.hit();
     setProgress((prev) => ({
       ...prev,
@@ -822,6 +855,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         [last.player]: { ...prev[last.player], [last.step]: last.prevCount },
       }));
       setPendingHits((prev) => prev.slice(0, -1));
+      clearPerfectClose(last.player, last.step);
       // If the undone dart was still awaiting a T/D-or-number choice, that choice is moot now.
       updatePendingAmbiguous((prev) => prev.filter((p) => p.hitRecord !== last));
       return;
@@ -833,6 +867,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         [last.player]: { ...prev[last.player], [last.step]: last.prevCount },
       }));
       setHistory((prev) => prev.slice(0, -1));
+      clearPerfectClose(last.player, last.step);
       setRewound(last.player);
       setRewoundTurnIndex(last.turnIndex);
     }
@@ -918,6 +953,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
    */
   function advanceTurn(progressOverride?: PlayerProgress, pendingHitsOverride?: HitRecord[]) {
     if (!activePlayer) return;
+    dartsOnStepRef.current = {};
     const effectiveProgress = progressOverride ?? progress;
     const effectivePendingHits = pendingHitsOverride ?? pendingHits;
     const activeStepNow = currentStepFor(effectiveProgress[activePlayer]);
@@ -1087,6 +1123,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         awaitingConfirmResolution={awaitingConfirmResolution}
         hitPulse={hitPulse}
         closedStep={closedStep}
+        perfectCloses={perfectCloses}
         onResolvePendingChoice={resolvePendingChoice}
         onRegisterHit={activeBotLevel ? () => {} : registerHit}
         onUndo={activeBotLevel ? () => {} : undo}

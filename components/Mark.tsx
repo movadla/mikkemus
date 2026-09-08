@@ -20,11 +20,17 @@ export function Mark({
   ghostCount = 0,
   accent = "var(--color-teal)",
   slowMotion = false,
+  perfect = false,
 }: {
   count: number;
   pendingCount?: number;
   ghostCount?: number;
   accent?: string;
+  /** Closed by three separate darts inside one turn — drawn as a ring with a dot instead of
+   *  the ordinary two crosses and a circle, so the hard way of closing a number is visible
+   *  on the board for the rest of the match. A single triple closing it does not qualify:
+   *  that is one dart, not three (see registerHit in MikkeMusApp). */
+  perfect?: boolean;
   /** True for a brief window right after Angre — stretches the stroke transition below so
    *  whichever cross just got undone is unmistakable as it un-draws, instead of a global
    *  red flash (the previous way of signaling an undo happened). */
@@ -33,10 +39,35 @@ export function Mark({
   const confirmedCount = count - pendingCount;
   const previewedCount = count + ghostCount;
   const strokeMs = slowMotion ? 650 : 190;
+  // Only once it's actually closed — mid-turn the crosses still draw one by one, so the
+  // player watches the number fill the normal way and the ring is the reward at the end.
+  const showPerfect = perfect && count >= 3;
 
   function ghostStrokeProps(threshold: number) {
     const isGhost = threshold > count && threshold <= previewedCount;
     return { stroke: accent, opacity: isGhost ? 0.45 : 0, strokeDasharray: "5 4" };
+  }
+
+  if (showPerfect) {
+    return (
+      <svg viewBox="0 0 60 60" className="w-full h-full" aria-hidden>
+        <circle
+          cx="30"
+          cy="30"
+          r="21"
+          pathLength={1}
+          fill="none"
+          stroke="var(--color-cream)"
+          strokeWidth={6}
+          style={{
+            strokeDasharray: 1,
+            strokeDashoffset: 0,
+            transition: `stroke-dashoffset ${strokeMs}ms ease-out`,
+          }}
+        />
+        <circle cx="30" cy="30" r="7" fill="var(--color-cream)" />
+      </svg>
+    );
   }
 
   return (

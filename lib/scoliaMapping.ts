@@ -76,6 +76,15 @@ export type ClassifiedThrow = {
 export function classifyThrow(parsed: ParsedSector, activeStep: Step | null, progress: Progress): ClassifiedThrow {
   const { step, crosses } = stepForSector(parsed);
 
+  // House rule: a bullseye thrown before BULL is the active step counts as one double
+  // rather than being wasted. It is, after all, the hardest double on the board — landing
+  // it early shouldn't score less than clipping D20. Only the red inner bull earns this;
+  // outer bull (25) is an ordinary miss when BULL isn't up yet. Whether the D row actually
+  // has room is left to isRegistrable, exactly as for any other double.
+  if (parsed.kind === "bull" && parsed.ring === "inner" && activeStep !== "BULL") {
+    return { step: "D", crosses: 1, ambiguous: null };
+  }
+
   if (
     parsed.kind === "number" &&
     (parsed.ring === "D" || parsed.ring === "T") &&

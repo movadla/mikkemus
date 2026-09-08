@@ -476,6 +476,34 @@ button {
   box-shadow: 0 -10px 24px rgba(0, 0, 0, 0.35);
 }
 
+/* -- landscape on a phone --
+   Turning the phone sideways leaves roughly 390px of height for a ten-row board plus its
+   chrome. Nothing here changes the layout's structure; it just reclaims the vertical space
+   the chrome takes, so more rows fit before the grid has to scroll. Bounded by max-height
+   so tablets and desktops, which have room to spare, are untouched. */
+@media (orientation: landscape) and (max-height: 560px) {
+  .action-bar {
+    padding-top: 0.25rem;
+    padding-bottom: 0;
+  }
+
+  /* The three shot boxes shrink rather than disappear — knowing what you just threw matters
+     more in the cramped layout, not less. */
+  .shot-box {
+    width: 1.5rem !important;
+    height: 1.5rem !important;
+  }
+
+  .landscape-tight {
+    margin-bottom: 0.25rem;
+  }
+
+  .landscape-tight button {
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
+  }
+}
+
 /* -- winner screen flourish -- */
 @keyframes winner-pop {
   from {
