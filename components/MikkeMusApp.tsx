@@ -544,20 +544,30 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       };
     }
 
+    // registerHit's setProgress/setPendingHits have not flushed to a render yet inside this
+    // same synchronous call, so `progress` and `pendingHits` still describe the board as it
+    // was BEFORE this dart. Every path below that ends the turn has to be handed these
+    // by-hand values instead — the same pattern resolvePendingChoice already uses.
+    //
+    // Getting this wrong is not cosmetic: the third dart of a turn is the one that triggers
+    // the auto-confirm just below, so a bare confirm() summarised the turn from a pendingHits
+    // that was missing that very dart. Every full turn silently lost its last cross from
+    // turnLog — and therefore from hit percentage, per-step stats and the career totals in
+    // Supabase, while `progress` (and so the game itself) stayed correct. A 30-dart clean
+    // sweep reported 21 crosses and 70%.
+    const lastHit = hitResult?.[hitResult.length - 1];
+    const finalProgress = lastHit
+      ? { ...progress, [activePlayer]: { ...progress[activePlayer], [lastHit.step]: lastHit.newCount } }
+      : progress;
+    const finalPendingHits = hitResult ? [...pendingHits, ...hitResult] : pendingHits;
+
     // Won the leg on this exact dart — end the turn right now instead of waiting for
     // the rest of this turn's physical darts (or a takeout) to trickle in. Mirrors how
     // the bot's own throwNext loop above already stops early on a mid-turn finish.
-    // finalProgress/finalPendingHits mirror resolvePendingChoice's own pattern below:
-    // registerHit's setProgress/setPendingHits haven't flushed to a render yet within
-    // this same synchronous call, so `progress`/`pendingHits` state is applied by hand.
-    if (hitResult && pendingAmbiguousRef.current.length === 0) {
-      const lastHit = hitResult[hitResult.length - 1];
-      const finalProgress = { ...progress, [activePlayer]: { ...progress[activePlayer], [lastHit.step]: lastHit.newCount } };
-      if (isFinished(finalProgress[activePlayer])) {
-        scoliaDartsRef.current = 0;
-        advanceTurn(finalProgress, [...pendingHits, ...hitResult]);
-        return;
-      }
+    if (hitResult && pendingAmbiguousRef.current.length === 0 && isFinished(finalProgress[activePlayer])) {
+      scoliaDartsRef.current = 0;
+      advanceTurn(finalProgress, finalPendingHits);
+      return;
     }
 
     if (dartIndex < DARTS_PER_TURN) {
@@ -570,7 +580,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     }
     if (scoliaDartsRef.current >= DARTS_PER_TURN) {
       scoliaDartsRef.current = 0;
-      confirm();
+      confirm(finalProgress, finalPendingHits);
     }
   }
 
@@ -929,18 +939,28 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     return { stats, luckByPlayer };
   }
 
-  function confirm() {
+  /**
+   * The overrides exist for one caller: the auto-confirm fired by a turn's third dart, from
+   * inside the very handler that registered it. At that moment `progress`/`pendingHits`
+   * state has not flushed, so without them the turn gets summarised without its last dart.
+   * Every other caller (the Bekreft button, a takeout, the bot's own loop) runs a tick or
+   * more later, with state settled, and passes nothing.
+   */
+  function confirm(progressOverride?: PlayerProgress, pendingHitsOverride?: HitRecord[]) {
     if (!activePlayer) return;
     scoliaDartsRef.current = 0;
+    const effectiveProgress = progressOverride ?? progress;
     // Reads the ref, not the pendingAmbiguous state — see pendingAmbiguousRef's
     // comment above for why the state can be stale right here.
-    const pending = meaningfulPending(pendingAmbiguousRef.current, progress[activePlayer]);
+    const pending = meaningfulPending(pendingAmbiguousRef.current, effectiveProgress[activePlayer]);
     if (pending.length !== pendingAmbiguousRef.current.length) updatePendingAmbiguous(pending);
     if (pending.length > 0) {
+      // Handing off to the choice dialog. By the time resolvePendingChoice runs, state has
+      // settled, so it reads pendingHits itself rather than needing these passed along.
       updateAwaitingConfirmResolution(true);
       return;
     }
-    advanceTurn();
+    advanceTurn(progressOverride, pendingHitsOverride);
   }
 
   /**
