@@ -910,7 +910,15 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       // Confirming on the third dart instead closed the turn before the player could see what
       // the board made of it. Without a board to report the takeout (manual play, a bot, the
       // board offline) there is nothing to wait for, so the turn ends here as before.
-      if (expectsTakeout()) return;
+      if (expectsTakeout()) {
+        // The triple/double question, though, is asked now — the player is standing there
+        // looking at the dart, not at the takeout. Answering it does not end the turn (see
+        // resolvePendingChoice); the takeout still does.
+        const pending = meaningfulPending(pendingAmbiguousRef.current, finalProgress[activePlayer]);
+        if (pending.length !== pendingAmbiguousRef.current.length) updatePendingAmbiguous(pending);
+        if (pending.length > 0) updateAwaitingConfirmResolution(true);
+        return;
+      }
       scoliaDartsRef.current = 0;
       finishTurn(finalProgress, finalPendingHits, dartIndex + 1);
     }
@@ -1560,6 +1568,10 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
 
     if (remaining.length === 0 && awaitingConfirmResolutionRef.current) {
       updateAwaitingConfirmResolution(false);
+      // Asked by the third dart rather than by Bekreft/takeout (which zero the dart counter
+      // before asking): the turn stays open for the takeout to confirm, so the answer can still
+      // be undone or a box corrected. The board and records were written above already.
+      if (scoliaDartsRef.current >= DARTS_PER_TURN) return;
       advanceTurn(finalProgress, finalPendingHits);
     }
   }
