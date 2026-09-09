@@ -68,7 +68,7 @@ export function DartboardHeatmap({
   // for the plot to say anything about which ring was hit. The compact dot was 9 (18 across,
   // 25 for a highlighted one), which spanned three bands at once and made a double look like
   // a triple. Sized to the bands instead, and legibility comes from colour, not bulk.
-  const dotRadius = compact ? 4.5 : 5;
+  const dotRadius = compact ? 4.5 : 5.5;
   // Twenty labels share a rim of ~1490 units, 74 each; at 19 units a two-digit label is ~21
   // wide, so they sit clear of one another and still read at the panel's size.
   const labelledIndices = NUMBER_ORDER.map((_, i) => i);
@@ -134,8 +134,10 @@ export function DartboardHeatmap({
           so the eye is led to exactly where the dart went in. Earlier darts recede in grey. Every
           dot has a dark outline so it reads on cream and black alike. */}
       {throws.map(([x, y], i) => {
-        const isRecent = recentFrom !== undefined && i >= recentFrom;
-        const isLatest = isRecent && i === throws.length - 1;
+        // Without a turn in progress (the winner screen) every dart is drawn in full — grey dots
+        // on a black bed were next to invisible there.
+        const isRecent = recentFrom === undefined || i >= recentFrom;
+        const isLatest = recentFrom !== undefined && isRecent && i === throws.length - 1;
         return (
           <circle
             key={i}
