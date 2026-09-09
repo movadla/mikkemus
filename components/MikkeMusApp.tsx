@@ -2033,6 +2033,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         luckByPlayer={winnerLuck}
         preBankedByPlayer={preBanked}
         throwsByPlayer={matchThrows}
+        turnLogByPlayer={turnLog}
         onHome={playAgain}
         homeLabel={onMatchComplete ? "Til turnering" : "Hjem"}
         onPlayAgain={onMatchComplete ? undefined : rematch}

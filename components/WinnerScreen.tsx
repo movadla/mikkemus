@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo } from "react";
-import { STEPS, STEP_LABELS, type Step, type TurnAggregate } from "@/lib/game";
+import { STEPS, STEP_LABELS, totalMarks, type Step, type TurnAggregate, type TurnResult } from "@/lib/game";
 import { getRules } from "@/lib/rules";
+import { RaceChart } from "./RaceChart";
 import { getPlayerRecord } from "@/lib/storage";
 import { generateConfetti, generateConfettiRain } from "@/lib/confetti";
 import { DartboardHeatmap } from "./DartboardHeatmap";
@@ -59,6 +60,7 @@ export function WinnerScreen({
   homeLabel = "Hjem",
   onPlayAgain,
   onUndoWin,
+  turnLogByPlayer,
 }: {
   winner: string;
   players: string[];
@@ -77,6 +79,8 @@ export function WinnerScreen({
    * more triple once they got there, and that is what 2,4 is compared against.
    */
   preBankedByPlayer: Record<string, { D: number; T: number }>;
+  /** Every confirmed turn per player, in order — the race chart is drawn from these. */
+  turnLogByPlayer: Record<string, TurnResult[]>;
   onHome: () => void;
   /** Overridden by tournament mode to "Til turnering" — see MikkeMusApp's onMatchComplete prop. */
   homeLabel?: string;
@@ -251,6 +255,12 @@ export function WinnerScreen({
               </div>
             ))}
           </div>
+        </div>
+
+        {/* The match as a race — who led when, and by how much. */}
+        <div className="shadow-panel rounded-xl p-5 mb-6" style={{ background: "var(--color-surface)" }}>
+          <p className="mb-3 section-label">LEDELSE RUNDE FOR RUNDE</p>
+          <RaceChart players={players} turnLog={turnLogByPlayer} winner={winner} total={totalMarks()} />
         </div>
 
         {/* Always rendered, even with nothing to show. Hiding it outright meant a match that
