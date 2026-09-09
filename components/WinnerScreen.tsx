@@ -20,10 +20,11 @@ function treffPct(stat?: TurnAggregate): number {
   return total === 0 ? 0 : Math.round((stat.hits / total) * 100);
 }
 
-/** Every turn is 3 darts, so total darts = hits + misses across all turns. */
+/** Darts actually thrown. Not hits + misses: hits counts crosses, so a triple inflated that by
+ *  two throws that never happened, and a leg won on the first dart of a turn still billed three. */
 function totalDarts(stat?: TurnAggregate): number {
   if (!stat) return 0;
-  return stat.hits + stat.misses;
+  return stat.darts;
 }
 
 // xG is an expected-crosses value (0-3, same unit the game scores in, like
@@ -213,7 +214,8 @@ export function WinnerScreen({
                 that says whether the win was thrown or fell out of the sky. Omitted rather than
                 dashed when no dart could be judged; a "–" beside the headline reads as broken. */}
             <p className="tabular" style={{ color: "var(--color-bg)", opacity: 0.7, fontSize: "0.85rem", marginTop: "0.4rem" }}>
-              {totalDarts(stats[winner])} piler brukt
+              {/* Singular is reachable now that a leg won on the first dart of a turn counts one. */}
+              {totalDarts(stats[winner])} {totalDarts(stats[winner]) === 1 ? "pil" : "piler"} brukt
               {winnerLuck !== null && <> · xH {formatLuck(winnerLuck)} / {stats[winner]?.hits ?? 0}</>}
             </p>
           </div>

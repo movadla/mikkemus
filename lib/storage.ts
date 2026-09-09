@@ -409,7 +409,8 @@ export function recordMatchResult(name: string, aggregate: TurnAggregate, won: b
     };
   });
 
-  const dartsUsed = aggregate.hits + aggregate.misses;
+  // Darts actually thrown — hits counts crosses, so a triple would add two darts nobody threw.
+  const dartsUsed = aggregate.darts;
   const record: PlayerRecord = {
     ...existing,
     matchesPlayed: existing.matchesPlayed + 1,

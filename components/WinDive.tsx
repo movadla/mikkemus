@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useRef } from "react";
+
 // Same layout and radii as lib/dartboard.ts, in the same units, so the bull this dives into
 // sits exactly where a real bull would.
 const NUMBER_ORDER = [20, 1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16, 8, 11, 14, 9, 12, 5];
@@ -10,6 +12,9 @@ const TRIPLE_OUTER = 107;
 const TRIPLE_INNER = 99;
 const BULL_OUTER = 15.9;
 const BULL_INNER = 6.35;
+
+/** Must match the win-dive animation in globals.css — the fallback timer below keys off it. */
+const DIVE_MS = 1150;
 
 function spoke(index: number): { x1: number; y1: number; x2: number; y2: number } {
   const a = ((index - 0.5) * 18 * Math.PI) / 180;
@@ -35,9 +40,27 @@ function spoke(index: number): { x1: number; y1: number; x2: number; y2: number 
  * never runs, the callback follows it exactly.
  */
 export function WinDive({ onDone }: { onDone: () => void }) {
+  // Whichever comes first, and only once. The animation's own end is the accurate signal, but
+  // it is not a guaranteed one: with animations disabled — the browser's reduced-motion
+  // setting, or a tab throttled while backgrounded — `animationend` may never arrive, and
+  // this screen is the only thing between the winning dart and the result. Being stuck on a
+  // dartboard with no way forward is a far worse failure than a transition that cuts early.
+  const doneRef = useRef(false);
+  const finish = () => {
+    if (doneRef.current) return;
+    doneRef.current = true;
+    onDone();
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(finish, DIVE_MS + 350);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one shot on mount; finish guards itself
+  }, []);
+
   return (
     <div className="win-dive fixed inset-0 z-[60] overflow-hidden" style={{ background: "var(--color-bg)" }} aria-hidden>
-      <div className="win-dive-camera absolute inset-0 flex items-center justify-center" onAnimationEnd={onDone}>
+      <div className="win-dive-camera absolute inset-0 flex items-center justify-center" onAnimationEnd={finish}>
         <svg viewBox="-240 -240 480 480" className="w-full h-full" style={{ maxWidth: "min(92vw, 92vh)", maxHeight: "min(92vw, 92vh)" }}>
           <circle r={BOARD_RADIUS} fill="var(--color-panel)" stroke="var(--color-gold)" strokeWidth={3} />
           {[DOUBLE_OUTER, DOUBLE_INNER, TRIPLE_OUTER, TRIPLE_INNER].map((r) => (

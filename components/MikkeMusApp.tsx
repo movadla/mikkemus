@@ -275,6 +275,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   const processDartRef = useRef(processDart);
   const resolvePendingChoiceRef = useRef(resolvePendingChoice);
   const confirmRef = useRef(confirm);
+  const flushMatchResultsRef = useRef(flushMatchResults);
   /**
    * Every write to the board and to this turn's records goes through these two, and they
    * update the ref BEFORE the setState. That ordering is the point.
@@ -303,6 +304,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     processDartRef.current = processDart;
     resolvePendingChoiceRef.current = resolvePendingChoice;
     confirmRef.current = confirm;
+    flushMatchResultsRef.current = flushMatchResults;
   });
 
   // Resume an in-progress match after a reload instead of dropping back to setup.
@@ -499,6 +501,11 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   const [diving, setDiving] = useState(false);
   // One drift report per match — see the check in advanceTurn.
   const mismatchReportedRef = useRef(false);
+  // Manual registrations this turn — the only dart-ish count available off Scolia. Reset per
+  // turn in advanceTurn; see the dart count there for the narrow case it is used in.
+  const manualTapsRef = useRef(0);
+  // The finished match, waiting to be accepted — see flushMatchResults.
+  const pendingResultRef = useRef<{ turnLog: Record<string, TurnResult[]>; winnerName: string | null } | null>(null);
   const pulseTokenRef = useRef(0);
 
   // Set when a three-triple turn lands; the board photo it wants arrives a beat later (see
@@ -683,7 +690,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     // the bot's own throwNext loop above already stops early on a mid-turn finish.
     if (hitResult && pendingAmbiguousRef.current.length === 0 && isFinished(finalProgress[activePlayer])) {
       scoliaDartsRef.current = 0;
-      advanceTurn(finalProgress, finalPendingHits);
+      advanceTurn(finalProgress, finalPendingHits, dartIndex + 1);
       return;
     }
 
@@ -697,7 +704,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     }
     if (scoliaDartsRef.current >= DARTS_PER_TURN) {
       scoliaDartsRef.current = 0;
-      finishTurn(finalProgress, finalPendingHits);
+      finishTurn(finalProgress, finalPendingHits, dartIndex + 1);
     }
   }
 
@@ -938,6 +945,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
    * makes that impossible however the prop is wired later.
    */
   function registerHitFromUi(step: Step) {
+    manualTapsRef.current += 1;
     registerHit(step);
   }
 
@@ -1097,7 +1105,9 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     }
   }
 
-  function finalizeMatch(finalTurnLog: Record<string, TurnResult[]>, winnerName: string | null = null) {
+  /** Computes what the winner screen shows. Writing any of it to the players' career records is
+   *  persistMatchResults' job, and happens later — see flushMatchResults. */
+  function finalizeMatch(finalTurnLog: Record<string, TurnResult[]>) {
     const stats: Record<string, TurnAggregate> = {};
     // Bots included. They have real coordinates, and xH asks a question the coordinates can
     // answer on their own: given where this dart landed, how many crosses was that worth?
@@ -1124,14 +1134,24 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       luckByPlayer[p] = perStep;
     });
     players.forEach((p) => {
+      stats[p] = aggregateTurns(finalTurnLog[p] ?? []);
+    });
+    return { stats, luckByPlayer };
+  }
+
+  /**
+   * Writes the match into the players' career records. Split out from finalizeMatch and held
+   * back until the win is ACCEPTED — see flushMatchResults.
+   */
+  function persistMatchResults(finalTurnLog: Record<string, TurnResult[]>, winnerName: string | null) {
+    players.forEach((p) => {
       const aggregate = aggregateTurns(finalTurnLog[p] ?? []);
-      stats[p] = aggregate;
       // A bot's darts aren't real play — never let them land in a human player's career stats
       // (bots are never ensurePlayer'd into the roster to begin with), a team's name has no
       // individual Supabase player record either, and a guest was never ensurePlayer'd either
       // (see SetupScreen's addPlayer) — so results only ever count for a real, saved individual.
       if (botLevels[p] || teamRosters[p] || guestPlayers[p]) return;
-      const dartsUsed = aggregate.hits + aggregate.misses;
+      const dartsUsed = aggregate.darts;
       // A match aborted before this player ever threw a dart isn't a match they played — without
       // this guard, quitting instantly (or a tournament match started and immediately abandoned)
       // still counted as a full "kamp" in their career matchesPlayed, with nothing to show for it.
@@ -1154,8 +1174,33 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         mvd: accuracy && accuracy.throws > 0 ? accuracy.vertical / accuracy.throws : null,
       });
     });
-    return { stats, luckByPlayer };
   }
+
+  /**
+   * Career stats are written when the win is accepted, not when it is detected.
+   *
+   * The winner screen has an Angre for a misread bounce-out, and writing on detection made that
+   * button a half-truth: the match was already in the records, and winning again added a second
+   * one. "Accepted" means leaving the winner screen — or leaving the app while it is up, which
+   * the pagehide listener below covers, so a real win is never lost to a closed tab.
+   *
+   * Idempotent: whichever of those happens first clears the pending result.
+   */
+  function flushMatchResults() {
+    const pending = pendingResultRef.current;
+    if (!pending) return;
+    pendingResultRef.current = null;
+    persistMatchResults(pending.turnLog, pending.winnerName);
+  }
+
+  // Leaving the app counts as accepting the win. `pagehide` rather than `beforeunload`: iOS
+  // Safari doesn't fire the latter, and backgrounding the tab is how a match on a phone
+  // usually ends. Registered for the component's whole life so it can't miss the window.
+  useEffect(() => {
+    const flush = () => flushMatchResultsRef.current();
+    window.addEventListener("pagehide", flush);
+    return () => window.removeEventListener("pagehide", flush);
+  }, []);
 
   /**
    * The overrides exist for one caller: the auto-confirm fired by a turn's third dart, from
@@ -1166,7 +1211,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
    *
    * Never hand this to an event handler directly — see `confirm` below.
    */
-  function finishTurn(progressOverride?: PlayerProgress, pendingHitsOverride?: HitRecord[]) {
+  function finishTurn(progressOverride?: PlayerProgress, pendingHitsOverride?: HitRecord[], dartsOverride?: number) {
     if (!activePlayer) return;
     scoliaDartsRef.current = 0;
     const effectiveProgress = progressOverride ?? progress;
@@ -1180,7 +1225,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       updateAwaitingConfirmResolution(true);
       return;
     }
-    advanceTurn(progressOverride, pendingHitsOverride);
+    advanceTurn(progressOverride, pendingHitsOverride, dartsOverride);
   }
 
   /**
@@ -1203,13 +1248,27 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
    * render — reading `progress`/`pendingHits` here directly would still be the
    * pre-redirect snapshot at that point.
    */
-  function advanceTurn(progressOverride?: PlayerProgress, pendingHitsOverride?: HitRecord[]) {
+  function advanceTurn(progressOverride?: PlayerProgress, pendingHitsOverride?: HitRecord[], dartsOverride?: number) {
     if (!activePlayer) return;
     dartsOnStepRef.current = {};
+    // Read before it is cleared for the next turn — the dart count below still needs it.
+    const manualTapsThisTurn = manualTapsRef.current;
+    manualTapsRef.current = 0;
     const effectiveProgress = progressOverride ?? progress;
     const effectivePendingHits = pendingHitsOverride ?? pendingHits;
     const activeStepNow = currentStepFor(effectiveProgress[activePlayer]);
-    const turn = summarizeTurn(effectivePendingHits, activeStepNow);
+    // Scolia fills turnShots per dart, so counting them gives the real length of the turn.
+    //
+    // Manual play has no such signal, and a turn is three darts by house rule — a player who
+    // throws three and taps one mark did throw three. The one exception is the turn that wins
+    // the leg: it demonstrably ended early, and billing three there is the case this exists to
+    // fix. Their taps are the closest thing to a dart count we have, so that is what it uses,
+    // with the honest caveat that it under-counts a winning turn that opened with misses.
+    const finishedNow = isFinished(effectiveProgress[activePlayer]);
+    const scoliaDarts = turnShots.filter(Boolean).length;
+    const dartsForTurn =
+      dartsOverride ?? (scoliaDarts || (finishedNow ? Math.max(1, manualTapsThisTurn) : DARTS_PER_TURN));
+    const turn = summarizeTurn(effectivePendingHits, activeStepNow, dartsForTurn);
     const turnIndex = rewound ? rewoundTurnIndex ?? 0 : turnCounters[activePlayer] ?? 0;
     const nextTurnLog = {
       ...turnLog,
@@ -1268,10 +1327,12 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       let stats: Record<string, TurnAggregate> = {};
       let luckByPlayer: Record<string, Record<Step, { sum: number; count: number }>> = {};
       try {
-        ({ stats, luckByPlayer } = finalizeMatch(nextTurnLog, activePlayer));
+        ({ stats, luckByPlayer } = finalizeMatch(nextTurnLog));
+        // Held, not written. flushMatchResults decides when — see there.
+        pendingResultRef.current = { turnLog: nextTurnLog, winnerName: activePlayer };
       } catch (err) {
-        console.error("Klarte ikke å lagre statistikk ved kampslutt:", err);
-        reportError("Kunne ikke lagre kampresultatet.", { key: "finalize-match" });
+        console.error("Klarte ikke å regne ut kampstatistikken:", err);
+        reportError("Kunne ikke regne ut kampresultatet.", { key: "finalize-match" });
       }
       setWinnerStats(stats);
       setWinnerLuck(luckByPlayer);
@@ -1314,6 +1375,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
 
   function playAgain() {
     if (onMatchComplete && winner) {
+    flushMatchResults();
       onMatchComplete({ winner, placements, stats: winnerStats });
       return;
     }
@@ -1328,6 +1390,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
    *  WinnerScreen call site below). */
   function rematch() {
     startGame(players, botLevels, teamRosters, guestPlayers);
+    flushMatchResults();
   }
 
   /**
@@ -1342,6 +1405,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   function undoWin() {
     setDiving(false);
     setScreen("game");
+    // The whole point of the button: the win was never accepted, so it is never recorded.
+    pendingResultRef.current = null;
     setWinner(null);
     setWinnerStats({});
     setWinnerLuck({});
@@ -1390,9 +1455,11 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     );
   }
 
+  // Summed from the turns actually played rather than turns x 3 — a leg-winning or
+  // taken-out turn is shorter, and now says so.
   const dartsThrown: Record<string, number> = {};
   players.forEach((p) => {
-    dartsThrown[p] = (turnCounters[p] ?? 0) * DARTS_PER_TURN;
+    dartsThrown[p] = aggregateTurns(turnLog[p] ?? []).darts;
   });
 
   const pendingByStep: Partial<Record<Step, number>> = {};

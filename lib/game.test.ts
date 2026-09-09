@@ -128,7 +128,27 @@ describe("summarizeTurn", () => {
 
   it("is 3 bom on the active step when nothing was registered", () => {
     const result = summarizeTurn([], "20");
-    expect(result).toEqual({ hitsByStep: {}, missStep: "20", misses: 3 });
+    expect(result).toEqual({ hitsByStep: {}, missStep: "20", misses: 3, darts: 3 });
+  });
+
+  it("measures a short turn against the darts it actually lasted", () => {
+    // Won the leg on the first dart of the turn: one cross, nothing missed. This used to
+    // record two misses and two darts that were never thrown.
+    const winning = summarizeTurn([hit("BULL", 2, 3)], "BULL", 1);
+    expect(winning).toEqual({ hitsByStep: { BULL: 1 }, missStep: "BULL", misses: 0, darts: 1 });
+  });
+
+  it("still counts a short turn's actual miss", () => {
+    const pulled = summarizeTurn([], "20", 1);
+    expect(pulled.misses).toBe(1);
+    expect(pulled.darts).toBe(1);
+  });
+
+  it("counts a triple as three treff from one dart, without inflating the dart count", () => {
+    const tripled = summarizeTurn([hit("20", 0, 1), hit("20", 1, 2), hit("20", 2, 3)], "20", 1);
+    expect(tripled.hitsByStep["20"]).toBe(3);
+    expect(tripled.misses).toBe(0);
+    expect(tripled.darts).toBe(1);
   });
 
   it("counts a triple's 3 crosses as 3 treff from a single dart", () => {

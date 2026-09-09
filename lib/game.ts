@@ -150,6 +150,13 @@ export type TurnResult = {
   /** Step the leftover (unregistered) darts this turn are attributed to as misses. */
   missStep: Step | null;
   misses: number;
+  /**
+   * Darts actually thrown this turn. Usually three, but a turn that wins the leg — or that
+   * ends with an early takeout — is shorter, and used to be recorded as three anyway: winning
+   * on your first dart cost you two phantom misses and two darts you never threw. Absent on
+   * turns logged before this was tracked, hence optional.
+   */
+  darts?: number;
 };
 
 export function emptyProgress(): Progress {
@@ -208,7 +215,11 @@ export function remainingMarks(progress: Progress): number {
  * the house rule that treff/bom is measured in crosses, not darts thrown.
  * An empty batch (nothing registered before Confirm) is 3 bom.
  */
-export function summarizeTurn(hits: HitRecord[], activeStepIfEmpty: Step | null): TurnResult {
+export function summarizeTurn(
+  hits: HitRecord[],
+  activeStepIfEmpty: Step | null,
+  dartsThrown: number = DARTS_PER_TURN,
+): TurnResult {
   const hitsByStep: Partial<Record<Step, number>> = {};
   let totalHits = 0;
   for (const h of hits) {
@@ -216,9 +227,12 @@ export function summarizeTurn(hits: HitRecord[], activeStepIfEmpty: Step | null)
     hitsByStep[h.step] = (hitsByStep[h.step] ?? 0) + delta;
     totalHits += delta;
   }
-  const misses = Math.max(0, DARTS_PER_TURN - totalHits);
+  // Measured against the darts this turn actually lasted, not a flat three. Crosses still
+  // count rather than darts — a triple is three treff from one throw, which is the house rule
+  // — so a short turn can end on zero misses, and should: nothing was missed.
+  const misses = Math.max(0, dartsThrown - totalHits);
   const missStep = hits.length > 0 ? hits[hits.length - 1].step : activeStepIfEmpty;
-  return { hitsByStep, missStep, misses };
+  return { hitsByStep, missStep, misses, darts: dartsThrown };
 }
 
 /**
@@ -255,6 +269,9 @@ export type TurnAggregate = {
   missesByStep: Partial<Record<Step, number>>;
   hits: number;
   misses: number;
+  /** Darts actually thrown across these turns — the honest "piler brukt". Not hits + misses:
+   *  hits counts crosses, so a triple would inflate it by two darts that were never thrown. */
+  darts: number;
 };
 
 /** Sums a player's full turn-by-turn log (already de-duplicated by turn index) into totals. */
@@ -263,6 +280,7 @@ export function aggregateTurns(turns: TurnResult[]): TurnAggregate {
   const missesByStep: Partial<Record<Step, number>> = {};
   let hits = 0;
   let misses = 0;
+  let darts = 0;
   for (const turn of turns) {
     // A gap in the array (e.g. an edited/rewound turn whose slot was never filled)
     // surfaces as `undefined` here — for...of walks sparse-array holes, unlike
@@ -276,6 +294,9 @@ export function aggregateTurns(turns: TurnResult[]): TurnAggregate {
       missesByStep[turn.missStep] = (missesByStep[turn.missStep] ?? 0) + turn.misses;
     }
     misses += turn.misses;
+    // Turns logged before darts were tracked fall back to the old flat assumption, which is
+    // what they were recorded under — better than counting them as zero.
+    darts += turn.darts ?? DARTS_PER_TURN;
   }
-  return { hitsByStep, missesByStep, hits, misses };
+  return { hitsByStep, missesByStep, hits, misses, darts };
 }
