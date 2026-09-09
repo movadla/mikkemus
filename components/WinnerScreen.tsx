@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { STEPS, STEP_LABELS, type Step, type TurnAggregate } from "@/lib/game";
+import { getRules } from "@/lib/rules";
 import { getPlayerRecord } from "@/lib/storage";
 import { generateConfetti, generateConfettiRain } from "@/lib/confetti";
 import { DartboardHeatmap } from "./DartboardHeatmap";
@@ -288,7 +289,7 @@ export function WinnerScreen({
                           // denominator shrinks to match — "/1" when the player arrived needing one.
                           const pre = s === "D" || s === "T" ? (preBankedByPlayer[p]?.[s] ?? 0) : 0;
                           const phaseGained = (stats[p]?.hitsByStep[s] ?? 0) - pre;
-                          const needed = 3 - pre;
+                          const needed = getRules().target - pre;
                           return (
                             <div
                               key={s}
@@ -302,7 +303,7 @@ export function WinnerScreen({
                                 {luckByStep[s].count === 0
                                   ? "–"
                                   : phaseGained >= needed
-                                    ? needed === 3
+                                    ? needed === getRules().target
                                       ? formatLuck(luckByStep[s].sum)
                                       : `${formatLuck(luckByStep[s].sum)}/${needed}`
                                     : `${formatLuck(luckByStep[s].sum)}/${phaseGained}`}

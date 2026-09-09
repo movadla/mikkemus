@@ -3,6 +3,7 @@ import { reportError } from "./errorReporting";
 import { supabase } from "./supabaseClient";
 import type { PlayerProgress } from "./game";
 import type { BotLevel } from "./botLevels";
+import type { GameVariant } from "./rules";
 
 /**
  * A deliberately small broadcast of "what a spectator watching this match right now would want
@@ -19,6 +20,9 @@ export type LiveMatchState = {
   winner: string | null;
   botLevels: Record<string, BotLevel>;
   guestPlayers: Record<string, true>;
+  /** Which game is being played — the spectator view draws a row as closed at this variant's
+   *  target. Absent from snapshots published before variants existed: standard. */
+  variant?: GameVariant;
 };
 
 type LiveMatchRow = { id: string; state: LiveMatchState | null; updated_at: string };

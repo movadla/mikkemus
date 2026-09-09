@@ -1,3 +1,5 @@
+import { getRules } from "./rules";
+
 export const STEPS = [
   "20",
   "19",
@@ -76,7 +78,7 @@ export type PendingAmbiguous = {
  * caps at 3), silently costing a cross.
  */
 export function meaningfulPending(pending: PendingAmbiguous[], progressForPlayer: Progress): PendingAmbiguous[] {
-  return pending.filter((p) => progressForPlayer[p.number] < 3);
+  return pending.filter((p) => progressForPlayer[p.number] < getRules().target);
 }
 
 /**
@@ -140,7 +142,7 @@ export function ambiguousBlockingRing(
   progressForPlayer: Progress,
 ): PendingAmbiguous | null {
   if (step !== "D" && step !== "T") return null;
-  if (progressForPlayer[step] < 3) return null;
+  if (progressForPlayer[step] < getRules().target) return null;
   // Most recent first: the freshest parked dart is the one whose ring cross is least likely
   // to be the one the player was consciously banking.
   for (let i = pending.length - 1; i >= 0; i--) {
@@ -170,10 +172,12 @@ export function emptyProgress(): Progress {
   return p;
 }
 
-/** The step a player is actively working on: first step with < 3 crosses. Null if all done. */
+/** The step a player is actively working on: the first row still short of the variant's target
+ *  (three crosses in Standard, one in 1 treff — see lib/rules.ts). Null if all done. */
 export function currentStepFor(progress: Progress): Step | null {
+  const target = getRules().target;
   for (const s of STEPS) {
-    if (progress[s] < 3) return s;
+    if (progress[s] < target) return s;
   }
   return null;
 }
@@ -192,26 +196,33 @@ export function nextStepAfter(step: Step): Step | null {
  */
 export function isRegistrable(step: Step, activeStep: Step | null, progress: Progress): boolean {
   if (activeStep === null) return false;
-  if (progress[step] >= 3) return false;
+  if (progress[step] >= getRules().target) return false;
 
   if (step === "T" || step === "D") return true;
   return step === activeStep;
 }
 
-/** Every registered hit is worth exactly 1 cross, capped at 3. */
+/** Every registered hit is worth exactly 1 cross, capped at the variant's target. */
 export function applyHit(prevCount: number): number {
-  return Math.min(3, prevCount + 1);
+  return Math.min(getRules().target, prevCount + 1);
 }
 
 export function isFinished(progress: Progress): boolean {
-  return STEPS.every((s) => progress[s] >= 3);
+  const target = getRules().target;
+  return STEPS.every((s) => progress[s] >= target);
 }
 
-/** How many crosses (out of the max 30 across all 10 targets) a player still needs — used to
+/** Crosses a fresh board needs in total — 30 in Standard, 10 in 1 treff. */
+export function totalMarks(): number {
+  return STEPS.length * getRules().target;
+}
+
+/** How many crosses (out of totalMarks across all 10 targets) a player still needs — used to
  *  rank who was "closest to finishing" when a match needs more than a single winner/loser (see
  *  MikkeMusApp's placements-at-match-end for tournament group pods with 3+ players). */
 export function remainingMarks(progress: Progress): number {
-  return STEPS.reduce((sum, s) => sum + (3 - Math.min(3, progress[s])), 0);
+  const target = getRules().target;
+  return STEPS.reduce((sum, s) => sum + (target - Math.min(target, progress[s])), 0);
 }
 
 /**

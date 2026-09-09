@@ -20,6 +20,8 @@
  * it (GameScreen caps the player columns in landscape), plus a slightly heavier stroke to hold
  * up at ~33px.
  */
+import { getRules } from "@/lib/rules";
+
 const GEOMETRY = {
   normal: { cross: 7, ring: 6 },
   compact: { cross: 8, ring: 7 },
@@ -31,18 +33,24 @@ const RADIUS = 27;
 const INSET = 6;
 
 export function Mark({
-  count,
+  count: rawCount,
   pendingCount = 0,
   ghostCount = 0,
   accent = "var(--color-teal)",
   slowMotion = false,
   perfect = false,
   compact = false,
+  target = getRules().target,
 }: {
   count: number;
   pendingCount?: number;
   ghostCount?: number;
   accent?: string;
+  /** Crosses that close a row in the game being drawn. The glyph has three stages; in a variant
+   *  where one cross closes the row, that one cross draws as the full closed glyph — a lone
+   *  slash would read as a third of the way there. Defaults to the current match's rules; the
+   *  spectator page passes it in from the published snapshot. */
+  target?: number;
   /** Landscape, where the mark is only ~33px — heavier strokes. See GEOMETRY above. */
   compact?: boolean;
   /** Closed by three separate darts inside one turn — drawn as a ring with a dot instead of
@@ -55,8 +63,12 @@ export function Mark({
    *  red flash (the previous way of signaling an undo happened). */
   slowMotion?: boolean;
 }) {
-  const confirmedCount = count - pendingCount;
-  const previewedCount = count + ghostCount;
+  // Everything below is drawn in glyph stages (0–3). A count at or past the target is the
+  // closed glyph whatever the target is; below it, stages map one to one.
+  const stage = (n: number) => (n >= target ? 3 : n);
+  const count = stage(rawCount);
+  const confirmedCount = stage(rawCount - pendingCount);
+  const previewedCount = stage(rawCount + ghostCount);
   const strokeMs = slowMotion ? 650 : 190;
   const g = compact ? GEOMETRY.compact : GEOMETRY.normal;
   const cx = CENTRE;

@@ -21,6 +21,7 @@ import {
 } from "@/lib/tournamentStorage";
 import { loadActiveMatch } from "@/lib/activeMatch";
 import type { BotLevel, TeamMember } from "@/lib/botLevels";
+import type { GameVariant } from "@/lib/rules";
 import { DartboardGlyph } from "./DartboardGlyph";
 import { MikkeMusApp } from "./MikkeMusApp";
 import { TournamentSetupScreen } from "./TournamentSetupScreen";
@@ -49,6 +50,7 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [pendingMode, setPendingMode] = useState<TournamentMode | null>(null);
   const [pendingParticipants, setPendingParticipants] = useState<Participant[] | null>(null);
+  const [pendingVariant, setPendingVariant] = useState<GameVariant>("standard");
   const [currentMatch, setCurrentMatch] = useState<TournamentMatch | null>(null);
   // Guards "Generer turnering" and the cancel-tournament confirm button against a double-tap
   // firing a second Supabase write while the first is still in flight.
@@ -89,9 +91,10 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  function handleSetupNext(mode: TournamentMode, participants: Participant[]) {
+  function handleSetupNext(mode: TournamentMode, participants: Participant[], variant: GameVariant) {
     setPendingMode(mode);
     setPendingParticipants(participants);
+    setPendingVariant(variant);
     setScreen("group-setup");
   }
 
@@ -101,7 +104,7 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
     const id = newTournamentId();
     // Playing several at once is an individual-mode-only setting — a team match is always 1 team
     // vs 1 team, regardless of whatever the (hidden, for team mode) matchSize toggle last held.
-    const created = createTournament(pendingMode, pendingParticipants, groups, id, new Date().toISOString(), pendingMode === "team" ? 2 : matchSize);
+    const created = createTournament(pendingMode, pendingParticipants, groups, id, new Date().toISOString(), pendingMode === "team" ? 2 : matchSize, pendingVariant);
     setTournament(created);
     saveActiveTournamentId(id);
     setScreen("overview");
@@ -164,6 +167,7 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
         onNext={handleSetupNext}
         initialMode={pendingMode}
         initialParticipants={pendingParticipants}
+        initialVariant={pendingVariant}
       />
     );
   }
@@ -192,6 +196,7 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
         initialPlayers={matchParticipants(currentMatch)}
         initialBotLevels={botLevels}
         initialTeamRosters={teamRosters}
+        initialVariant={tournament.variant ?? "standard"}
         onMatchComplete={handleMatchComplete}
         onExitToHome={handleMatchAbort}
       />

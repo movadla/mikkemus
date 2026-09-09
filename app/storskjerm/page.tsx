@@ -4,6 +4,7 @@ import { Fragment } from "react";
 import Link from "next/link";
 import { STEPS, STEP_LABELS } from "@/lib/game";
 import { useLiveMatch } from "@/lib/liveMatch";
+import { RULES } from "@/lib/rules";
 import { avatarAccent } from "@/lib/avatarAccent";
 import { DartboardGlyph } from "@/components/DartboardGlyph";
 import { Mark } from "@/components/Mark";
@@ -45,6 +46,9 @@ function HomeLink() {
  */
 export default function StorskjermPage() {
   const live = useLiveMatch();
+  // This page is not the one playing the match, so it reads the variant off the snapshot rather
+  // than from the module-wide rules (which are whatever this browser last set — nothing).
+  const target = RULES[live?.variant ?? "standard"].target;
 
   if (!live || live.screen === "setup" || live.players.length === 0) {
     return (
@@ -166,7 +170,7 @@ export default function StorskjermPage() {
               {live.players.map((p) => {
                 const count = live.progress[p]?.[s] ?? 0;
                 const isActive = p === live.activePlayer;
-                const isDone = count >= 3;
+                const isDone = count >= target;
                 return (
                   <div key={`${s}-${p}`} className="flex items-center justify-center p-2">
                     <div
@@ -181,7 +185,7 @@ export default function StorskjermPage() {
                       }}
                     >
                       <div className="w-full h-full p-2">
-                        <Mark count={count} accent={isActive ? "var(--color-teal)" : "var(--color-muted)"} />
+                        <Mark count={count} target={target} accent={isActive ? "var(--color-teal)" : "var(--color-muted)"} />
                       </div>
                     </div>
                   </div>

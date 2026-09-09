@@ -13,6 +13,10 @@ type TournamentRow = {
   status: string;
   winner: string | null;
   match_size: number;
+  /** Game variant (see lib/rules.ts). Nullable column, added after the table: run
+   *    alter table tournaments add column if not exists variant text;
+   *  in Supabase before the first "1 treff" tournament — see tournamentToRow. */
+  variant?: string | null;
 };
 
 function rowToTournament(row: TournamentRow): Tournament {
@@ -28,6 +32,7 @@ function rowToTournament(row: TournamentRow): Tournament {
     completedAt: row.completed_at ?? undefined,
     // Older tournaments (before match_size existed) default to the normal 1-vs-1 behavior.
     matchSize: row.match_size ?? 2,
+    variant: row.variant === "onehit" ? "onehit" : "standard",
   };
 }
 
@@ -43,6 +48,9 @@ function tournamentToRow(t: Tournament): TournamentRow {
     status: t.status,
     winner: t.winner ?? null,
     match_size: t.matchSize,
+    // Only written when it says something. A standard tournament never touches the column, so
+    // saving one keeps working on a database where the column has not been added yet.
+    ...(t.variant && t.variant !== "standard" ? { variant: t.variant } : {}),
   };
 }
 

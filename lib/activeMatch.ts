@@ -1,9 +1,12 @@
 import type { HitRecord, PlayerProgress, Step, TurnAggregate, TurnResult } from "./game";
 import type { BotLevel, TeamMember } from "./botLevels";
+import type { GameVariant } from "./rules";
 import type { TurnAction, TurnStart } from "./turnResolution";
 
 export type ActiveMatchSnapshot = {
   screen: "game" | "winner";
+  /** Which game this is — see lib/rules.ts. Absent in snapshots from before variants: standard. */
+  variant?: GameVariant;
   players: string[];
   progress: PlayerProgress;
   currentIdx: number;

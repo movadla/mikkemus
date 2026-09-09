@@ -16,6 +16,7 @@ import {
   removeOneCross,
   STEPS,
   summarizeTurn,
+  totalMarks,
   type HitRecord,
   type PlayerProgress,
   type Progress,
@@ -31,6 +32,7 @@ import { reportError } from "@/lib/errorReporting";
 import { clearActiveMatch, loadActiveMatch, saveActiveMatch } from "@/lib/activeMatch";
 import { publishLiveMatch } from "@/lib/liveMatch";
 import { coordinatesForSector, luckForThrow, sectorAt, throwAccuracy } from "@/lib/dartboard";
+import { getRules, setGameVariant, type GameVariant } from "@/lib/rules";
 import { haptics } from "@/lib/haptics";
 import { playFanfare, playHitStreakSound, playWinBoom, primeAudio } from "@/lib/fanfare";
 import { classifyThrow, formatSectorLabel, parseSector } from "@/lib/scoliaMapping";
@@ -140,6 +142,8 @@ type MikkeMusAppProps = {
   /** Per-team roster (name + bot status per member) for any of `initialPlayers` that's a team —
    *  lets the engine know who's physically up next within that team's turn (see teamMemberIdx). */
   initialTeamRosters?: Record<string, TeamMember[]>;
+  /** Which game the tournament plays — see lib/rules.ts. Standard when absent. */
+  initialVariant?: GameVariant;
   /** When set, the winner screen's home button reports the result here instead of resetting to
    *  SetupScreen — the caller (tournament mode) decides what happens next. */
   onMatchComplete?: (result: { winner: string; placements: string[]; stats: Record<string, TurnAggregate> }) => void;
@@ -149,8 +153,11 @@ type MikkeMusAppProps = {
   onExitToHome?: () => void;
 };
 
-export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRosters, onMatchComplete, onExitToHome }: MikkeMusAppProps = {}) {
+export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRosters, initialVariant, onMatchComplete, onExitToHome }: MikkeMusAppProps = {}) {
   const [screen, setScreen] = useState<Screen>("setup");
+  // Which game this match is (see lib/rules.ts). The module-wide rules are set alongside it in
+  // startGame and on restore; this copy is what gets saved, published and shown.
+  const [variant, setVariant] = useState<GameVariant>("standard");
   const [players, setPlayers] = useState<string[]>([]);
   const [progress, setProgress] = useState<PlayerProgress>({});
   const [currentIdx, setCurrentIdx] = useState(0);
@@ -412,6 +419,9 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     const restoredMatchesRequested =
       !initialPlayers || (restored && restored.players.length === initialPlayers.length && initialPlayers.every((p) => restored.players.includes(p)));
     if (restored && restoredMatchesRequested) {
+      // Before the board is put back: every rule the render below reads comes from this.
+      setGameVariant(restored.variant);
+      setVariant(restored.variant ?? "standard");
       setScreen(restored.screen);
       setPlayers(restored.players);
       writeProgress(restored.progress);
@@ -461,7 +471,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     } else if (initialPlayers) {
       // Tournament mode: nothing to resume, so jump straight into the given match instead of
       // showing SetupScreen.
-      startGame(initialPlayers, initialBotLevels ?? {}, initialTeamRosters ?? {});
+      startGame(initialPlayers, initialBotLevels ?? {}, initialTeamRosters ?? {}, {}, initialVariant ?? "standard");
     }
     setHydratedFromStorage(true);
     // initialPlayers/initialBotLevels are only meant to apply once, on the very first mount of a
@@ -503,6 +513,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     }
     saveActiveMatch({
       screen,
+      variant,
       players,
       progress,
       currentIdx,
@@ -537,12 +548,13 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
           : a,
       ),
     });
-    const snapshot = { screen, players, progress, activePlayer, turnToken, winner, botLevels, guestPlayers };
+    const snapshot = { screen, players, progress, activePlayer, turnToken, winner, botLevels, guestPlayers, variant };
     if (publishTimerRef.current) clearTimeout(publishTimerRef.current);
     publishTimerRef.current = setTimeout(() => publishLiveMatch(snapshot), LIVE_PUBLISH_DEBOUNCE_MS);
   }, [
     hydratedFromStorage,
     screen,
+    variant,
     players,
     progress,
     currentIdx,
@@ -804,7 +816,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     }
 
     // A row reaching 3/3 gets its own slam — see the step-slam animation in globals.css.
-    const closed = hitResult?.find((h) => h.newCount >= 3 && h.prevCount < 3);
+    const closed = hitResult?.find((h) => h.newCount >= getRules().target && h.prevCount < getRules().target);
     if (closed && !replayingRef.current) setClosedStep({ token: ++pulseTokenRef.current, step: closed.step });
 
     // Three triples on the active number, in one turn.
@@ -1000,8 +1012,13 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     startPlayers: string[],
     startBotLevels: Record<string, BotLevel> = {},
     startTeamRosters: Record<string, TeamMember[]> = {},
-    startGuestPlayers: Record<string, true> = {}
+    startGuestPlayers: Record<string, true> = {},
+    startVariant: GameVariant = "standard"
   ) {
+    // First, before anything reads a rule: the target, the active step and what a throw means
+    // all come from here for the rest of the match.
+    setGameVariant(startVariant);
+    setVariant(startVariant);
     // Called synchronously from a real button tap (SetupScreen/tournament) — the
     // narrow window where the browser actually allows unlocking audio playback, well
     // before a win-fanfare or hit-streak sound needs to fire from a Scolia/Supabase
@@ -1666,6 +1683,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
    * back until the win is ACCEPTED — see flushMatchResults.
    */
   function persistMatchResults(finalTurnLog: Record<string, TurnResult[]>, winnerName: string | null) {
+    // 1 treff is a different game; its matches stay out of the career records entirely.
+    if (!getRules().countsForStats) return;
     players.forEach((p) => {
       const aggregate = aggregateTurns(finalTurnLog[p] ?? []);
       // A bot's darts aren't real play — never let them land in a human player's career stats
@@ -1931,7 +1950,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
    *  "Til turnering" flow via playAgain/onMatchComplete, so this is never offered there (see the
    *  WinnerScreen call site below). */
   function rematch() {
-    startGame(players, botLevels, teamRosters, guestPlayers);
+    startGame(players, botLevels, teamRosters, guestPlayers, variant);
     flushMatchResults();
   }
 
@@ -2032,7 +2051,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       actual:
         judged && judged.count === thrown && progress[activePlayer]
           // Crosses won while on the row they sit in — slengere on D/T are luck, not attempts.
-        ? 30 - remainingMarks(progress[activePlayer]) - (preBanked[activePlayer]?.D ?? 0) - (preBanked[activePlayer]?.T ?? 0)
+        ? totalMarks() - remainingMarks(progress[activePlayer]) - (preBanked[activePlayer]?.D ?? 0) - (preBanked[activePlayer]?.T ?? 0)
           : null,
     };
   })();

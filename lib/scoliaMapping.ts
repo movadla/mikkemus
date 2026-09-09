@@ -1,5 +1,7 @@
 import type { Progress, Step } from "./game";
 
+import { getRules } from "./rules";
+
 export type ParsedSector =
   | { kind: "miss" }
   | { kind: "bull"; ring: "outer" | "inner" }
@@ -97,7 +99,11 @@ export function classifyThrow(parsed: ParsedSector, activeStep: Step | null, pro
   ) {
     const ringStep = parsed.ring;
     const numberStep = activeStep;
-    const ringFull = progress[ringStep] >= 3;
+    const rules = getRules();
+    // 1 treff: a T20 while on 20 is a triple and nothing else — the ring banks, the number
+    // waits for a single. No question to ask.
+    if (!rules.ringOnOwnNumberIsChoice) return { step: ringStep, crosses, ambiguous: null };
+    const ringFull = progress[ringStep] >= rules.target;
     const multiplier: 2 | 3 = ringStep === "T" ? 3 : 2;
     if (ringFull) {
       return { step: numberStep, crosses: multiplier, ambiguous: null };

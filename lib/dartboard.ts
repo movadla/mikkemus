@@ -1,4 +1,5 @@
 import type { Progress, Step } from "./game";
+import { getRules } from "./rules";
 import { parseSector } from "./scoliaMapping";
 
 // Standard dartboard number layout, clockwise starting from straight up (12 o'clock).
@@ -206,7 +207,7 @@ function radialProximity(r: number, band: RadialBand): { normDist: number; nudge
  */
 function valueForTarget(sector: string, target: LuckTarget, progress: Progress): number {
   const parsed = parseSector(sector, false);
-  const room = (step: Step) => Math.max(0, 3 - progress[step]);
+  const room = (step: Step) => Math.max(0, getRules().target - progress[step]);
 
   if (target.ring === "BULL") {
     if (parsed.kind !== "bull") return 0;

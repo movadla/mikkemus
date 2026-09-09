@@ -198,7 +198,7 @@ export function BullDuelApp({ onExitToHome }: { onExitToHome: () => void }) {
   return (
     <>
       {scoliaEnabled && <ScoliaStatusBadge state={scolia.state} />}
-      {screen === "setup" && <SetupScreen onStart={handleStart} onHome={onExitToHome} title="Bull-duell" />}
+      {screen === "setup" && <SetupScreen onStart={handleStart} onHome={onExitToHome} title="Bull-duell" variantSelectable={false} />}
       {screen === "target" && <BullDuelTargetScreen onNext={handleTargetChosen} onBack={() => setScreen("setup")} />}
       {screen === "game" && duel && (
         <BullDuelGameScreen

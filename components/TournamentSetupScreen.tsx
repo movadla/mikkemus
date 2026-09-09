@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { Participant, TournamentMode } from "@/lib/tournament";
 import type { TeamMember } from "@/lib/botLevels";
+import { RULES, VARIANT_ORDER, type GameVariant } from "@/lib/rules";
 import { HeroMascot } from "./HeroMascot";
 import { PeopleIcon, PersonIcon } from "./icons";
 import { PeoplePicker, type Person } from "./PeoplePicker";
@@ -40,15 +41,18 @@ export function TournamentSetupScreen({
   onNext,
   initialMode = null,
   initialParticipants = null,
+  initialVariant = "standard",
 }: {
   onBack: () => void;
-  onNext: (mode: TournamentMode, participants: Participant[]) => void;
+  onNext: (mode: TournamentMode, participants: Participant[], variant: GameVariant) => void;
   /** Seeds mode/people/teams from a previous submission — lets "Tilbake" from group-setup restore
    *  what was already entered instead of remounting this screen back to a blank slate. */
   initialMode?: TournamentMode | null;
   initialParticipants?: Participant[] | null;
+  initialVariant?: GameVariant;
 }) {
   const [mode, setMode] = useState<TournamentMode | null>(initialMode);
+  const [variant, setVariant] = useState<GameVariant>(initialVariant);
   const [people, setPeople] = useState<Person[]>(() =>
     initialMode && initialParticipants ? peopleFromParticipants(initialMode, initialParticipants) : []
   );
@@ -73,7 +77,7 @@ export function TournamentSetupScreen({
   function handleNext() {
     if (mode === "individual") {
       const participants: Participant[] = people.map((p) => ({ name: p.name, isBot: p.isBot, botLevel: p.botLevel }));
-      onNext("individual", participants);
+      onNext("individual", participants, variant);
     } else if (mode === "team") {
       const participants: Participant[] = teams.map((t) => ({
         name: t.name,
@@ -83,7 +87,7 @@ export function TournamentSetupScreen({
           return { name: person.name, isBot: person.isBot, botLevel: person.botLevel };
         }),
       }));
-      onNext("team", participants);
+      onNext("team", participants, variant);
     }
   }
 
@@ -131,6 +135,26 @@ export function TournamentSetupScreen({
             <PeopleIcon className="w-4 h-4" />
             Lag
           </button>
+        </div>
+
+        {/* Which game every match is played as — same small pair as SetupScreen's. */}
+        <div className="flex gap-2 -mt-3 mb-6">
+          {VARIANT_ORDER.map((v) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => setVariant(v)}
+              aria-pressed={variant === v}
+              className={`tactile flex-1 py-1.5 rounded-lg text-sm font-medium ${FOCUS_RING}`}
+              style={{
+                background: variant === v ? "rgba(47, 180, 194, 0.18)" : "var(--color-surface)",
+                color: variant === v ? "var(--color-teal)" : "var(--color-muted)",
+                border: variant === v ? "1px solid var(--color-teal)" : "1px solid var(--color-border)",
+              }}
+            >
+              {RULES[v].label}
+            </button>
+          ))}
         </div>
 
         {mode && (

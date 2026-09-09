@@ -5,6 +5,7 @@ import { ensurePlayer, getPlayerRecord, setPlayerPhoto, setPlayerSound, useRoste
 import { reportError } from "@/lib/errorReporting";
 import { BOT_LEVELS, BOT_LEVEL_PICKABLE, botDisplayName, botLevelBadge, type BotLevel, type TeamMember } from "@/lib/botLevels";
 import { avatarAccent } from "@/lib/avatarAccent";
+import { RULES, VARIANT_ORDER, type GameVariant } from "@/lib/rules";
 import { CameraIcon, GuestIcon, MicIcon, PeopleIcon, PersonIcon } from "./icons";
 import { HeroMascot } from "./HeroMascot";
 import { PeoplePicker, type Person } from "./PeoplePicker";
@@ -20,18 +21,23 @@ export function SetupScreen({
   onStart,
   onHome,
   title = "Mikke Mus",
+  variantSelectable = true,
 }: {
   onStart: (
     players: string[],
     botLevels: Record<string, BotLevel>,
     teamRosters?: Record<string, TeamMember[]>,
-    guestPlayers?: Record<string, true>
+    guestPlayers?: Record<string, true>,
+    variant?: GameVariant
   ) => void;
   onHome?: () => void;
   /** Overridden by other modes (e.g. Bull-duell) that reuse this same player picker. */
   title?: React.ReactNode;
+  /** Whether the Standard / 1 treff choice is offered — Bull-duell has its own game and hides it. */
+  variantSelectable?: boolean;
 }) {
   const [mode, setMode] = useState<"individual" | "team">("individual");
+  const [variant, setVariant] = useState<GameVariant>("standard");
 
   const [nameInput, setNameInput] = useState("");
   const [players, setPlayers] = useState<string[]>([]);
@@ -83,7 +89,9 @@ export function SetupScreen({
     onStart(
       teams.map((t) => t.name),
       {},
-      teamRosters
+      teamRosters,
+      undefined,
+      variant
     );
   }
 
@@ -316,6 +324,29 @@ export function SetupScreen({
             Lag
           </button>
         </div>
+
+        {/* Which game. Smaller than the mode toggle above on purpose — it is the second
+            question, not the first — and shared by both modes. */}
+        {variantSelectable && (
+          <div className="flex gap-2 -mt-3 mb-6">
+            {VARIANT_ORDER.map((v) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setVariant(v)}
+                aria-pressed={variant === v}
+                className={`tactile flex-1 py-1.5 rounded-lg text-sm font-medium ${FOCUS_RING}`}
+                style={{
+                  background: variant === v ? "rgba(47, 180, 194, 0.18)" : "var(--color-surface)",
+                  color: variant === v ? "var(--color-teal)" : "var(--color-muted)",
+                  border: variant === v ? "1px solid var(--color-teal)" : "1px solid var(--color-border)",
+                }}
+              >
+                {RULES[v].label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {mode === "individual" && (
           <>
@@ -592,7 +623,7 @@ export function SetupScreen({
             </div>
 
             <PrimaryActionButton
-              onClick={() => onStart(players, botLevels, undefined, guestPlayers)}
+              onClick={() => onStart(players, botLevels, undefined, guestPlayers, variant)}
               ready={players.length >= 1}
             >
               Start spill

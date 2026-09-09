@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useEffect, useRef, useState } from "react";
+import { getRules } from "@/lib/rules";
 import {
   STEPS,
   STEP_LABELS,
@@ -494,6 +495,8 @@ export function GameScreen({
   }
 
   const activeStep = activePlayer ? currentStepFor(progress[activePlayer]) : null;
+  // Crosses that close a row in this match — 3 in Standard, 1 in 1 treff (see lib/rules.ts).
+  const target = getRules().target;
   const accent = "var(--color-teal)";
   const glowColor = "rgba(47, 180, 194, 0.35)";
 
@@ -504,8 +507,8 @@ export function GameScreen({
   const pendingPreview = pendingChoice
     ? (() => {
         const current = activeProgress?.[pendingChoice.number] ?? 0;
-        const simulated = Math.min(3, current + pendingChoice.multiplier);
-        const wouldComplete = simulated >= 3;
+        const simulated = Math.min(target, current + pendingChoice.multiplier);
+        const wouldComplete = simulated >= target;
         return { number: pendingChoice.number, ghostCount: simulated - current, opensNext: wouldComplete ? nextStepAfter(pendingChoice.number) : null };
       })()
     : null;
@@ -525,7 +528,7 @@ export function GameScreen({
   /** 20-14 are the ordered run; D/T/BULL are a different kind of target and are set apart. */
   const isNumberStep = (s: Step) => !Number.isNaN(Number(s));
   /** Every player has finished this row, so it's settled history rather than live board. */
-  const allClosed = (s: Step) => players.length > 0 && players.every((p) => (progress[p]?.[s] ?? 0) >= 3);
+  const allClosed = (s: Step) => players.length > 0 && players.every((p) => (progress[p]?.[s] ?? 0) >= target);
 
   return (
     <div
@@ -883,7 +886,7 @@ export function GameScreen({
                           }
                           if (clickable) onRegisterHit(s);
                         }}
-                        className={`cell-tile ${count >= 3 ? "cell-tile--done" : ""} ${tileState} relative w-full h-full min-h-0 min-w-0 max-w-full max-h-full rounded-md flex items-center justify-center ${FOCUS_RING}`}
+                        className={`cell-tile ${count >= target ? "cell-tile--done" : ""} ${tileState} relative w-full h-full min-h-0 min-w-0 max-w-full max-h-full rounded-md flex items-center justify-center ${FOCUS_RING}`}
                         style={{
                           cursor: clickable || choiceRole ? "pointer" : "default",
                           // Untouched, unreachable cells recede rather than disappear — still

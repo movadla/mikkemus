@@ -8,6 +8,7 @@ import {
   type Progress,
   type Step,
 } from "./game";
+import { getRules } from "./rules";
 import { parseSector } from "./scoliaMapping";
 
 /** One cross landing, before it is turned into a HitRecord (which needs a player and a turn). */
@@ -110,7 +111,7 @@ export type TurnStart = {
 export function boardAssumingRedirects(board: Progress, parked: readonly PendingAmbiguous[]): Progress {
   const next: Progress = { ...board };
   for (const p of parked) {
-    if (next[p.number] >= 3) continue;
+    if (next[p.number] >= getRules().target) continue;
     next[p.ringStep] = removeOneCross(next[p.ringStep]);
     for (const d of chainCrosses(next[p.number], p.multiplier)) next[p.number] = d.newCount;
   }
@@ -167,7 +168,7 @@ export function replayDiscardedSingles(board: Progress, darts: readonly TurnDart
       // number still has room — meaningfulPending would drop it otherwise anyway.
       reopened.push({ dartIndex: dart.dartIndex, ring: parsed.ring, multiplier: parsed.ring === "T" ? 3 : 2 });
     }
-    if (next[active] >= 3) break;
+    if (next[active] >= getRules().target) break;
   }
   return { board: next, added, reopened };
 }

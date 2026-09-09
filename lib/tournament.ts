@@ -1,5 +1,6 @@
 import type { TurnAggregate } from "./game";
 import type { BotLevel, TeamMember } from "./botLevels";
+import type { GameVariant } from "./rules";
 
 export type TournamentMode = "individual" | "team";
 
@@ -58,6 +59,9 @@ export type Tournament = {
    *  into fixed pods of that size (see createTournament). The playoff is always 1-vs-1 regardless.
    *  Only ever >2 for "individual" mode. */
   matchSize: number;
+  /** Which game every match in the tournament is played as — see lib/rules.ts. Absent on
+   *  tournaments from before variants existed: standard. */
+  variant?: GameVariant;
 };
 
 /** Every real name in a match, whether it's a normal/bracket match (participantA/B) or a
@@ -369,7 +373,8 @@ export function createTournament(
   groups: string[][],
   id: string,
   createdAt: string,
-  matchSize = 2
+  matchSize = 2,
+  variant: GameVariant = "standard"
 ): Tournament {
   const matches: TournamentMatch[] = [];
   groups.forEach((group, groupIndex) => {
@@ -386,7 +391,7 @@ export function createTournament(
       });
     }
   });
-  return { id, mode, participants, groups, matches, status: "group", createdAt, matchSize };
+  return { id, mode, participants, groups, matches, status: "group", createdAt, matchSize, variant };
 }
 
 /** Pure reducer: records one match's result and advances the tournament to its next stage

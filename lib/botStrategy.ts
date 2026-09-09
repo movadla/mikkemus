@@ -2,6 +2,7 @@ import { aimPointFor, sectorAt } from "./dartboard";
 import { STEPS, type PlayerProgress, type Progress, type Step } from "./game";
 import { parseSector } from "./scoliaMapping";
 import { BOT_LEVELS, type BotLevel } from "./botLevels";
+import { getRules } from "./rules";
 
 // The seven numbers this game's number-phase steps track, in the order the
 // player must clear them — mirrors STEPS' own 20..14 prefix (see lib/game.ts).
@@ -26,32 +27,38 @@ type BotState = {
 
 /** Exported for calibration/scenario checks. */
 export function progressToBotState(progress: Progress): BotState {
+  const target = getRules().target;
   let numberIndex = 0;
-  while (numberIndex < NUMBERS.length && progress[NUMBERS[numberIndex]] >= 3) numberIndex++;
+  while (numberIndex < NUMBERS.length && progress[NUMBERS[numberIndex]] >= target) numberIndex++;
   const numberCross = numberIndex < NUMBERS.length ? progress[NUMBERS[numberIndex]] : 0;
   return { numberIndex, numberCross, dCross: progress.D, tCross: progress.T, bullCross: progress.BULL };
 }
 
+/** Rows close at the variant's target (see lib/rules.ts) — the whole model is built against it. */
 function isTerminal(s: BotState): boolean {
-  return s.numberIndex === NUMBERS.length && s.dCross === 3 && s.tCross === 3 && s.bullCross === 3;
+  const target = getRules().target;
+  return s.numberIndex === NUMBERS.length && s.dCross === target && s.tCross === target && s.bullCross === target;
 }
 
 function stateKey(s: BotState): string {
   return `${s.numberIndex}|${s.numberCross}|${s.dCross}|${s.tCross}|${s.bullCross}`;
 }
 
-/** Every valid (non-terminal) state, enumerated once and shared across every level's solver —
- *  the state space itself doesn't depend on skill, only the transition probabilities do. */
-let cachedAllStates: BotState[] | null = null;
+/** Every valid (non-terminal) state, enumerated once per variant and shared across every level's
+ *  solver — the state space depends on how many crosses close a row, not on skill; only the
+ *  transition probabilities do. */
+const cachedAllStates = new Map<number, BotState[]>();
 function allStates(): BotState[] {
-  if (cachedAllStates) return cachedAllStates;
+  const target = getRules().target;
+  const cached = cachedAllStates.get(target);
+  if (cached) return cached;
   const states: BotState[] = [];
   for (let numberIndex = 0; numberIndex <= NUMBERS.length; numberIndex++) {
-    const numberCrossMax = numberIndex < NUMBERS.length ? 2 : 0;
+    const numberCrossMax = numberIndex < NUMBERS.length ? target - 1 : 0;
     for (let numberCross = 0; numberCross <= numberCrossMax; numberCross++) {
-      for (let dCross = 0; dCross <= 3; dCross++) {
-        for (let tCross = 0; tCross <= 3; tCross++) {
-          for (let bullCross = 0; bullCross <= 3; bullCross++) {
+      for (let dCross = 0; dCross <= target; dCross++) {
+        for (let tCross = 0; tCross <= target; tCross++) {
+          for (let bullCross = 0; bullCross <= target; bullCross++) {
             const s = { numberIndex, numberCross, dCross, tCross, bullCross };
             if (!isTerminal(s)) states.push(s);
           }
@@ -59,7 +66,7 @@ function allStates(): BotState[] {
       }
     }
   }
-  cachedAllStates = states;
+  cachedAllStates.set(target, states);
   return states;
 }
 
@@ -192,36 +199,39 @@ type Solver = {
   shouldRedirectUnderBudget(state: BotState, ring: "D" | "T", multiplier: 2 | 3, budget: number): boolean;
 };
 
-const solverCache = new Map<BotLevel, Solver>();
+const solverCache = new Map<string, Solver>();
 
 function buildSolver(profiles: LevelProfiles): Solver {
   const memo = new Map<string, number>();
   const actionMemo = new Map<string, BotAction>();
+  // Frozen at build time: a solver is cached per level AND variant (see solverFor), so the
+  // rules it was built against never change under it.
+  const { target: T, ringOnOwnNumberIsChoice: ringChoice } = getRules();
 
   function withNumberCross(s: BotState, add: number): BotState {
     let numberCross = s.numberCross + add;
     let numberIndex = s.numberIndex;
-    if (numberCross >= 3) {
+    if (numberCross >= T) {
       numberIndex += 1;
       numberCross = 0;
     }
     return { ...s, numberIndex, numberCross };
   }
-  const withD = (s: BotState, add: number): BotState => ({ ...s, dCross: Math.min(3, s.dCross + add) });
-  const withT = (s: BotState, add: number): BotState => ({ ...s, tCross: Math.min(3, s.tCross + add) });
-  const withBull = (s: BotState, add: number): BotState => ({ ...s, bullCross: Math.min(3, s.bullCross + add) });
+  const withD = (s: BotState, add: number): BotState => ({ ...s, dCross: Math.min(T, s.dCross + add) });
+  const withT = (s: BotState, add: number): BotState => ({ ...s, tCross: Math.min(T, s.tCross + add) });
+  const withBull = (s: BotState, add: number): BotState => ({ ...s, bullCross: Math.min(T, s.bullCross + add) });
 
   function legalActions(s: BotState): BotAction[] {
     if (s.numberIndex < NUMBERS.length) {
       const actions: BotAction[] = ["NUMBER", "TRIPLE_ACTIVE", "DOUBLE_ACTIVE"];
-      if (s.tCross < 3) actions.push("TRIPLE_OTHER");
-      if (s.dCross < 3) actions.push("DOUBLE_OTHER");
+      if (s.tCross < T) actions.push("TRIPLE_OTHER");
+      if (s.dCross < T) actions.push("DOUBLE_OTHER");
       return actions;
     }
-    if (s.dCross < 3 || s.tCross < 3) {
+    if (s.dCross < T || s.tCross < T) {
       const actions: BotAction[] = [];
-      if (s.tCross < 3) actions.push("TRIPLE_OTHER");
-      if (s.dCross < 3) actions.push("DOUBLE_OTHER");
+      if (s.tCross < T) actions.push("TRIPLE_OTHER");
+      if (s.dCross < T) actions.push("DOUBLE_OTHER");
       return actions;
     }
     return ["BULL"];
@@ -249,17 +259,28 @@ function buildSolver(profiles: LevelProfiles): Solver {
   function ambiguousValue(s: BotState, ring: "D" | "T", multiplier: number): number {
     const ringCross = ring === "D" ? s.dCross : s.tCross;
     const numberBranch = evaluate(withNumberCross(s, multiplier));
-    if (ringCross >= 3) return numberBranch; // ring already full — redirect is forced, matches classifyThrow
+    if (ringCross >= T) return numberBranch; // ring already full — redirect is forced, matches classifyThrow
     const ringBranch = evaluate(ring === "D" ? withD(s, 1) : withT(s, 1));
     return Math.min(numberBranch, ringBranch);
   }
 
   function ambiguousRedirects(s: BotState, ring: "D" | "T", multiplier: number): boolean {
     const ringCross = ring === "D" ? s.dCross : s.tCross;
-    if (ringCross >= 3) return true;
+    if (ringCross >= T) return true;
     const numberBranch = evaluate(withNumberCross(s, multiplier));
     const ringBranch = evaluate(ring === "D" ? withD(s, 1) : withT(s, 1));
     return numberBranch <= ringBranch;
+  }
+
+  /**
+   * How a dart's ring outcomes on the ACTIVE number are read. Standard: a choice, valued by
+   * ambiguousValue. 1 treff: the same as a ring hit on any other number — the ring banks if it
+   * has room, otherwise the dart did nothing — so the "same" ring mass is simply folded into
+   * the "other" ring mass before the arithmetic below.
+   */
+  function foldOwnRing(p: OutcomeProbs): OutcomeProbs {
+    if (ringChoice) return p;
+    return { ...p, sameD: 0, sameT: 0, otherD: p.otherD + p.sameD, otherT: p.otherT + p.sameT };
   }
 
   /**
@@ -271,14 +292,16 @@ function buildSolver(profiles: LevelProfiles): Solver {
    */
   function evalAction(s: BotState, action: BotAction): number {
     if (action === "NUMBER" || action === "TRIPLE_ACTIVE" || action === "DOUBLE_ACTIVE") {
-      const p = action === "NUMBER" ? profiles.S : action === "TRIPLE_ACTIVE" ? profiles.T : profiles.D;
+      const p = foldOwnRing(action === "NUMBER" ? profiles.S : action === "TRIPLE_ACTIVE" ? profiles.T : profiles.D);
       let selfLoop = p.otherS + p.bullOuter + p.bullInner + p.miss;
-      let sum = p.sameS * evaluate(withNumberCross(s, 1)) + p.sameD * ambiguousValue(s, "D", 2) + p.sameT * ambiguousValue(s, "T", 3);
+      let sum = p.sameS * evaluate(withNumberCross(s, 1));
+      if (p.sameD > 0) sum += p.sameD * ambiguousValue(s, "D", 2);
+      if (p.sameT > 0) sum += p.sameT * ambiguousValue(s, "T", 3);
       // otherD/otherT drift onto a ring that's already capped changes nothing —
       // that probability mass is a self-loop too, not a (no-op) "transition".
-      if (s.dCross < 3) sum += p.otherD * evaluate(withD(s, 1));
+      if (s.dCross < T) sum += p.otherD * evaluate(withD(s, 1));
       else selfLoop += p.otherD;
-      if (s.tCross < 3) sum += p.otherT * evaluate(withT(s, 1));
+      if (s.tCross < T) sum += p.otherT * evaluate(withT(s, 1));
       else selfLoop += p.otherT;
       return (1 + sum) / (1 - selfLoop);
     }
@@ -288,13 +311,13 @@ function buildSolver(profiles: LevelProfiles): Solver {
       const pD = p.sameD + p.otherD;
       let selfLoop = 1 - pT - pD;
       let sum = 0;
-      if (s.tCross < 3) sum += pT * evaluate(withT(s, 1));
+      if (s.tCross < T) sum += pT * evaluate(withT(s, 1));
       else selfLoop += pT;
-      if (s.dCross < 3) sum += pD * evaluate(withD(s, 1));
+      if (s.dCross < T) sum += pD * evaluate(withD(s, 1));
       else selfLoop += pD;
       return (1 + sum) / (1 - selfLoop);
     }
-    // BULL — bullCross is always < 3 here (legalActions only offers BULL once
+    // BULL — bullCross is always < T here (legalActions only offers BULL once
     // numberIndex/D/T are all done and the state isn't already terminal).
     const p = profiles.BULL;
     const selfLoop = 1 - p.bullInner - p.bullOuter;
@@ -335,7 +358,7 @@ function buildSolver(profiles: LevelProfiles): Solver {
     const ringCross = ring === "D" ? s.dCross : s.tCross;
     const numberNext = withNumberCross(s, multiplier);
     const numberProb = isTerminal(numberNext) ? 1 : V(numberNext);
-    if (ringCross >= 3) return numberProb; // forced redirect, matches ambiguousValue/classifyThrow
+    if (ringCross >= T) return numberProb; // forced redirect, matches ambiguousValue/classifyThrow
     const ringNext = ring === "D" ? withD(s, 1) : withT(s, 1);
     const ringProb = isTerminal(ringNext) ? 1 : V(ringNext);
     return Math.max(numberProb, ringProb);
@@ -343,18 +366,18 @@ function buildSolver(profiles: LevelProfiles): Solver {
 
   function actionFinishProb(s: BotState, action: BotAction, V: (s: BotState) => number): number {
     if (action === "NUMBER" || action === "TRIPLE_ACTIVE" || action === "DOUBLE_ACTIVE") {
-      const p = action === "NUMBER" ? profiles.S : action === "TRIPLE_ACTIVE" ? profiles.T : profiles.D;
+      const p = foldOwnRing(action === "NUMBER" ? profiles.S : action === "TRIPLE_ACTIVE" ? profiles.T : profiles.D);
       const sameSNext = withNumberCross(s, 1);
       let total = p.sameS * (isTerminal(sameSNext) ? 1 : V(sameSNext));
-      total += p.sameD * ambiguousProb(s, "D", 2, V);
-      total += p.sameT * ambiguousProb(s, "T", 3, V);
-      if (s.dCross < 3) {
+      if (p.sameD > 0) total += p.sameD * ambiguousProb(s, "D", 2, V);
+      if (p.sameT > 0) total += p.sameT * ambiguousProb(s, "T", 3, V);
+      if (s.dCross < T) {
         const n = withD(s, 1);
         total += p.otherD * (isTerminal(n) ? 1 : V(n));
       } else {
         total += p.otherD * V(s);
       }
-      if (s.tCross < 3) {
+      if (s.tCross < T) {
         const n = withT(s, 1);
         total += p.otherT * (isTerminal(n) ? 1 : V(n));
       } else {
@@ -368,13 +391,13 @@ function buildSolver(profiles: LevelProfiles): Solver {
       const pT = p.sameT + p.otherT;
       const pD = p.sameD + p.otherD;
       let total = 0;
-      if (s.tCross < 3) {
+      if (s.tCross < T) {
         const n = withT(s, 1);
         total += pT * (isTerminal(n) ? 1 : V(n));
       } else {
         total += pT * V(s);
       }
-      if (s.dCross < 3) {
+      if (s.dCross < T) {
         const n = withD(s, 1);
         total += pD * (isTerminal(n) ? 1 : V(n));
       } else {
@@ -430,7 +453,7 @@ function buildSolver(profiles: LevelProfiles): Solver {
 
   function shouldRedirectUnderBudget(s: BotState, ring: "D" | "T", multiplier: number, budget: number): boolean {
     const ringCross = ring === "D" ? s.dCross : s.tCross;
-    if (ringCross >= 3) return true;
+    if (ringCross >= T) return true;
     const V = (s2: BotState) => probFinishWithin(s2, budget - 1);
     const numberNext = withNumberCross(s, multiplier);
     const numberProb = isTerminal(numberNext) ? 1 : V(numberNext);
@@ -466,10 +489,13 @@ function buildSolver(profiles: LevelProfiles): Solver {
  *  match start (see startGame) — normal gameplay itself goes through botChooseThrow/
  *  botDecideRedirect instead, which call this internally. */
 export function solverFor(level: BotLevel): Solver {
-  const cached = solverCache.get(level);
+  // Per level and variant: the whole model — states, transitions, what a ring hit on the own
+  // number means — is different under 1 treff.
+  const key = `${level}|${getRules().variant}`;
+  const cached = solverCache.get(key);
   if (cached) return cached;
   const solver = buildSolver(profilesFor(level));
-  solverCache.set(level, solver);
+  solverCache.set(key, solver);
   return solver;
 }
 
