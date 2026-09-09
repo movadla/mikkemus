@@ -11,6 +11,7 @@ import {
   isRegistrable,
   isFinished,
   meaningfulPending,
+  progressLogMismatch,
   remainingMarks,
   removeOneCross,
   STEPS,
@@ -268,13 +269,35 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   // render is itself unsafe — hoisting makes referencing these functions here
   // valid even though they're declared further down in this component.
   const progressRef = useRef(progress);
+  const pendingHitsRef = useRef(pendingHits);
   const activePlayerRef = useRef(activePlayer);
   const screenRef = useRef(screen);
   const processDartRef = useRef(processDart);
   const resolvePendingChoiceRef = useRef(resolvePendingChoice);
   const confirmRef = useRef(confirm);
+  /**
+   * Every write to the board and to this turn's records goes through these two, and they
+   * update the ref BEFORE the setState. That ordering is the point.
+   *
+   * Both values are read back inside the same synchronous handler that just wrote them — the
+   * bot throws and resolves a triple/double in one tick, a dart's third throw auto-confirms
+   * from inside its own handler. React state is a render behind at those moments, and two of
+   * these functions write the whole list rather than appending to it, so a stale read didn't
+   * just miss an update, it erased one. That is what drove the board and the turn log apart.
+   * Reading progressRef/pendingHitsRef instead makes the staleness impossible rather than
+   * something each call site has to remember.
+   */
+  function writeProgress(next: PlayerProgress) {
+    progressRef.current = next;
+    setProgress(next);
+  }
+
+  function writePendingHits(next: HitRecord[]) {
+    pendingHitsRef.current = next;
+    setPendingHits(next);
+  }
+
   useEffect(() => {
-    progressRef.current = progress;
     activePlayerRef.current = activePlayer;
     screenRef.current = screen;
     processDartRef.current = processDart;
@@ -299,9 +322,9 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     if (restored && restoredMatchesRequested) {
       setScreen(restored.screen);
       setPlayers(restored.players);
-      setProgress(restored.progress);
+      writeProgress(restored.progress);
       setCurrentIdx(restored.currentIdx);
-      setPendingHits(restored.pendingHits);
+      writePendingHits(restored.pendingHits);
       setHistory(restored.history);
       setRewound(restored.rewound);
       setRewoundTurnIndex(restored.rewoundTurnIndex);
@@ -474,6 +497,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   const [closedStep, setClosedStep] = useState<{ token: number; step: Step } | null>(null);
   // True from the winning dart until WinDive lands in the bull — see the winner branch below.
   const [diving, setDiving] = useState(false);
+  // One drift report per match — see the check in advanceTurn.
+  const mismatchReportedRef = useRef(false);
   const pulseTokenRef = useRef(0);
 
   // Set when a three-triple turn lands; the board photo it wants arrives a beat later (see
@@ -555,7 +580,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     // Belt and braces on top of advanceTurn clearing these: only ever un-park a dart whose
     // cross is still un-confirmed. Once its record has moved to history the turn log owns it,
     // and rolling it back here would take it off the board and leave it in the stats.
-    const parked = candidate && pendingHits.includes(candidate.hitRecord) ? candidate : null;
+    const parked = candidate && pendingHitsRef.current.includes(candidate.hitRecord) ? candidate : null;
     const applied = classified.step
       ? parked
         ? freeRingAndRegister(parked, classified.step, classified.crosses)
@@ -734,10 +759,10 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     const prog: PlayerProgress = {};
     startPlayers.forEach((p) => (prog[p] = emptyProgress()));
     setPlayers(startPlayers);
-    setProgress(prog);
+    writeProgress(prog);
     setCurrentIdx(0);
     setCameraImages([]);
-    setPendingHits([]);
+    writePendingHits([]);
     setHistory([]);
     setRewound(null);
     setRewoundTurnIndex(null);
@@ -898,11 +923,11 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     }
 
     haptics.hit();
-    setProgress((prev) => ({
-      ...prev,
-      [activePlayer]: { ...prev[activePlayer], [step]: count },
-    }));
-    setPendingHits((prev) => [...prev, ...newPendingHits]);
+    writeProgress({
+      ...progressRef.current,
+      [activePlayer]: { ...progressRef.current[activePlayer], [step]: count },
+    });
+    writePendingHits([...pendingHitsRef.current, ...newPendingHits]);
     return newPendingHits;
   }
 
@@ -922,15 +947,9 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
 
   function applyPlainHit(step: Step, crosses: number): DartApplication {
     const hits = registerHit(step, crosses);
-    const last = hits?.[hits.length - 1];
-    return {
-      hits,
-      progress:
-        last && activePlayer
-          ? { ...progress, [activePlayer]: { ...progress[activePlayer], [last.step]: last.newCount } }
-          : progress,
-      pendingHits: hits ? [...pendingHits, ...hits] : pendingHits,
-    };
+    // registerHit writes both refs before it returns, so these are already the board and the
+    // records as they stand after this dart — no reconstruction needed.
+    return { hits, progress: progressRef.current, pendingHits: pendingHitsRef.current };
   }
 
   /**
@@ -941,7 +960,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
    * happens inside one handler, where `progress` still describes the board before the dart.
    */
   function freeRingAndRegister(parked: PendingAmbiguous, step: Step, crosses: number): DartApplication {
-    if (!activePlayer) return { hits: null, progress, pendingHits };
+    if (!activePlayer) return { hits: null, progress: progressRef.current, pendingHits: pendingHitsRef.current };
     const player = activePlayer;
     const turnIndex = rewound ? rewoundTurnIndex ?? 0 : turnCounters[player] ?? 0;
     const asRecords = (s: Step, deltas: CrossDelta[]): HitRecord[] =>
@@ -949,8 +968,11 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
 
     // 1. Un-park: take this dart's cross back off the ring — see removeOneCross for why that
     //    is not the same as writing parked.hitRecord.prevCount back.
-    const board: Progress = { ...progress[player], [parked.ringStep]: removeOneCross(progress[player][parked.ringStep]) };
-    let kept = pendingHits.filter((h) => h !== parked.hitRecord);
+    const board: Progress = {
+      ...progressRef.current[player],
+      [parked.ringStep]: removeOneCross(progressRef.current[player][parked.ringStep]),
+    };
+    let kept = pendingHitsRef.current.filter((h) => h !== parked.hitRecord);
 
     // 2. The parked dart pays out on its number instead. Capped like any other hit, so it can
     //    come to nothing when the number is full too — that is still no worse than before.
@@ -974,10 +996,10 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       setPerfectCloses((prev) => ({ ...prev, [player]: { ...prev[player], [step]: true } }));
     }
 
-    const nextProgress = { ...progress, [player]: board };
+    const nextProgress = { ...progressRef.current, [player]: board };
     const nextPending = hits ? [...kept, ...hits] : kept;
-    setProgress(nextProgress);
-    setPendingHits(nextPending);
+    writeProgress(nextProgress);
+    writePendingHits(nextPending);
     updatePendingAmbiguous(pendingAmbiguousRef.current.filter((p) => p.key !== parked.key));
     if (hits) haptics.hit();
     return { hits, progress: nextProgress, pendingHits: nextPending };
@@ -996,18 +1018,18 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     const item = pendingAmbiguousRef.current[pendingAmbiguousRef.current.length - 1];
     if (!item || !activePlayer) return;
 
-    let finalProgress = progress;
-    let finalPendingHits = pendingHits;
+    let finalProgress = progressRef.current;
+    let finalPendingHits = pendingHitsRef.current;
 
     // Same guard as processDart's: a redirect rolls a cross back off the board, which is only
     // ever correct while that cross is still this turn's to move.
-    if (choice === "redirect" && pendingHits.includes(item.hitRecord)) {
+    if (choice === "redirect" && pendingHitsRef.current.includes(item.hitRecord)) {
       // One cross off, not a restore of item.hitRecord.prevCount — see removeOneCross.
       const rolledBack = {
-        ...progress[activePlayer],
-        [item.ringStep]: removeOneCross(progress[activePlayer][item.ringStep]),
+        ...progressRef.current[activePlayer],
+        [item.ringStep]: removeOneCross(progressRef.current[activePlayer][item.ringStep]),
       };
-      finalPendingHits = pendingHits.filter((h) => h !== item.hitRecord);
+      finalPendingHits = pendingHitsRef.current.filter((h) => h !== item.hitRecord);
 
       // chainCrosses rather than registerHit: registerHit reads `progress` from this
       // component's state and would miss the rollback above until the next render.
@@ -1020,12 +1042,12 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         turnIndex,
       }));
       const count = newHits.length > 0 ? newHits[newHits.length - 1].newCount : rolledBack[item.number];
-      finalProgress = { ...progress, [activePlayer]: { ...rolledBack, [item.number]: count } };
+      finalProgress = { ...progressRef.current, [activePlayer]: { ...rolledBack, [item.number]: count } };
       finalPendingHits = [...finalPendingHits, ...newHits];
 
       haptics.hit();
-      setProgress(finalProgress);
-      setPendingHits(finalPendingHits);
+      writeProgress(finalProgress);
+      writePendingHits(finalPendingHits);
     }
 
     // Filtered against finalProgress, not `progress` — this same choice may have just
@@ -1048,13 +1070,15 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     // Any held "just placed" highlight can go stale the instant progress is rewound
     // (most obviously on a second, cascading undo) — simplest correct move is to
     // always drop it here rather than try to reconcile it with the rollback below.
-    if (pendingHits.length > 0) {
-      const last = pendingHits[pendingHits.length - 1];
-      setProgress((prev) => ({
-        ...prev,
-        [last.player]: { ...prev[last.player], [last.step]: last.prevCount },
-      }));
-      setPendingHits((prev) => prev.slice(0, -1));
+    if (pendingHitsRef.current.length > 0) {
+      const last = pendingHitsRef.current[pendingHitsRef.current.length - 1];
+      // prevCount is right here, unlike in the redirect path: this is the most recent record,
+      // so by definition nothing has touched the step since it was written.
+      writeProgress({
+        ...progressRef.current,
+        [last.player]: { ...progressRef.current[last.player], [last.step]: last.prevCount },
+      });
+      writePendingHits(pendingHitsRef.current.slice(0, -1));
       clearPerfectClose(last.player, last.step);
       // If the undone dart was still awaiting a T/D-or-number choice, that choice is moot now.
       updatePendingAmbiguous((prev) => prev.filter((p) => p.hitRecord !== last));
@@ -1062,10 +1086,10 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     }
     if (history.length > 0) {
       const last = history[history.length - 1];
-      setProgress((prev) => ({
-        ...prev,
-        [last.player]: { ...prev[last.player], [last.step]: last.prevCount },
-      }));
+      writeProgress({
+        ...progressRef.current,
+        [last.player]: { ...progressRef.current[last.player], [last.step]: last.prevCount },
+      });
       setHistory((prev) => prev.slice(0, -1));
       clearPerfectClose(last.player, last.step);
       setRewound(last.player);
@@ -1204,7 +1228,21 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
 
     if (effectivePendingHits.length > 0) {
       setHistory((prev) => [...prev, ...effectivePendingHits]);
-      setPendingHits([]);
+      writePendingHits([]);
+    }
+
+    // The board and the log are now both settled for this turn — check they agree. Reported
+    // once per match so a real drift is visible without turning into a stream of toasts, and
+    // the numbers go in the message: which row, and which way it went.
+    if (!mismatchReportedRef.current) {
+      const drift = progressLogMismatch(effectiveProgress[activePlayer], nextTurnLog[activePlayer] ?? [], []);
+      if (drift.length > 0) {
+        mismatchReportedRef.current = true;
+        reportError(
+          `Statistikken kom i utakt med brettet (${drift.map((d) => `${d.step}: brett ${d.board}, logg ${d.log}`).join(", ")}). Spillet er riktig, tallene kan være det ikke.`,
+          { key: "progress-log-drift" },
+        );
+      }
     }
 
     // A parked triple/double belongs to the turn it was thrown in. Confirming the turn settles

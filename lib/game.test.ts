@@ -10,11 +10,13 @@ import {
   isRegistrable,
   meaningfulPending,
   nextStepAfter,
+  progressLogMismatch,
   remainingMarks,
   removeOneCross,
   STEPS,
   summarizeTurn,
   type HitRecord,
+  type TurnResult,
   type PendingAmbiguous,
 } from "./game";
 
@@ -290,5 +292,40 @@ describe("removeOneCross", () => {
     const ringNow = 3; // a later dart in the same turn took it 2 -> 3
     expect(removeOneCross(ringNow)).toBe(2);
     expect(parkedPrevCount).not.toBe(removeOneCross(ringNow));
+  });
+});
+
+describe("progressLogMismatch", () => {
+  const turn = (hitsByStep: Record<string, number>): TurnResult => ({
+    hitsByStep: hitsByStep as TurnResult["hitsByStep"],
+    missStep: null,
+    misses: 0,
+  });
+
+  it("is silent when the board and the log agree", () => {
+    const progress = { ...emptyProgress(), "20": 3, T: 1 };
+    expect(progressLogMismatch(progress, [turn({ "20": 3 }), turn({ T: 1 })], [])).toEqual([]);
+  });
+
+  it("counts this turn's unconfirmed records, which aren't in the log yet", () => {
+    const progress = { ...emptyProgress(), "20": 2 };
+    const unconfirmed = [{ player: "A", step: "20" as const, prevCount: 1, newCount: 2, turnIndex: 1 }];
+    expect(progressLogMismatch(progress, [turn({ "20": 1 })], unconfirmed)).toEqual([]);
+  });
+
+  it("catches a cross on the board that never reached the log", () => {
+    const progress = { ...emptyProgress(), D: 2 };
+    expect(progressLogMismatch(progress, [turn({ D: 1 })], [])).toEqual([{ step: "D", board: 2, log: 1 }]);
+  });
+
+  it("catches a cross in the log that is no longer on the board", () => {
+    const progress = { ...emptyProgress(), T: 1 };
+    expect(progressLogMismatch(progress, [turn({ T: 2 })], [])).toEqual([{ step: "T", board: 1, log: 2 }]);
+  });
+
+  it("walks holes in the turn array, as left by a rewound turn", () => {
+    const progress = { ...emptyProgress(), "19": 1 };
+    const sparse = [turn({ "19": 1 }), undefined, undefined] as unknown as TurnResult[];
+    expect(progressLogMismatch(progress, sparse, [])).toEqual([]);
   });
 });

@@ -221,6 +221,35 @@ export function summarizeTurn(hits: HitRecord[], activeStepIfEmpty: Step | null)
   return { hitsByStep, missStep, misses };
 }
 
+/**
+ * Steps where the board and the turn log disagree about how many crosses a player has.
+ *
+ * These are two records of the same thing kept in two places, and they drifted apart for a
+ * long time without anyone noticing: the board stayed right, so the game played correctly
+ * while every number derived from the log — hit percentage, xH's denominator, the career
+ * stats — was quietly wrong. Three separate causes, all found only because one printed figure
+ * looked odd. Cheap to check, so it is checked, and the mismatch is reported rather than left
+ * to be spotted by eye.
+ */
+export function progressLogMismatch(
+  progressForPlayer: Progress,
+  turns: TurnResult[],
+  unconfirmed: HitRecord[],
+): Array<{ step: Step; board: number; log: number }> {
+  const log = {} as Record<Step, number>;
+  STEPS.forEach((s) => (log[s] = 0));
+  for (const turn of turns) {
+    if (!turn) continue;
+    for (const [step, count] of Object.entries(turn.hitsByStep) as [Step, number][]) log[step] += count;
+  }
+  for (const h of unconfirmed) log[h.step] += h.newCount - h.prevCount;
+  return STEPS.filter((s) => progressForPlayer[s] !== log[s]).map((s) => ({
+    step: s,
+    board: progressForPlayer[s],
+    log: log[s],
+  }));
+}
+
 export type TurnAggregate = {
   hitsByStep: Partial<Record<Step, number>>;
   missesByStep: Partial<Record<Step, number>>;
