@@ -74,6 +74,11 @@ const BOT_THROW_DELAY_MS = 900;
  *  Longer than a bot throw interval, so the next thrower is what replaces it, not a timer. */
 const BOT_DISPLAY_HOLD_MS = 1600;
 
+/** Longest a bot will wait for your darts to come out of the board before throwing anyway.
+ *  Generous enough to walk to the board and back; short enough that a lost takeout event is
+ *  an annoyance rather than a stopped match. */
+const TAKEOUT_WAIT_MAX_MS = 12_000;
+
 function setTurnAt(turns: TurnResult[], index: number, turn: TurnResult): TurnResult[] {
   const next = turns.slice();
   next[index] = turn;
@@ -535,6 +540,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   // True between a human confirming their turn and their darts actually leaving the board.
   // A bot holds off while it is set — see the takeout handler and the bot effect.
   const [awaitingTakeout, setAwaitingTakeout] = useState(false);
+  const takeoutWaitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Manual registrations this turn — the only dart-ish count available off Scolia. Reset per
   // turn in advanceTurn; see the dart count there for the narrow case it is used in.
   const manualTapsRef = useRef(0);
@@ -765,13 +771,15 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       }
     },
     onTakeoutFinished: (payload) => {
+      // Released BEFORE the bot guard below, and that order is the whole point: by the time
+      // your darts come out it is already the bot's turn, so a guard that bails on an active
+      // bot would never clear the very gate it is waiting on. That deadlocked the match.
+      if (!payload.falseTakeout) setAwaitingTakeout(false);
       if (activeBotLevel !== null) return;
       // The real signal the shot boxes/highlight are held for: darts are physically
       // out of the board now. A "false" takeout means nothing was actually pulled.
       if (!payload.falseTakeout) {
         clearTurnDisplay();
-        // Your darts are out of the board — a bot waiting on that can go. See awaitingTakeout.
-        setAwaitingTakeout(false);
       }
     },
     onCameraImages: (payload) => {
@@ -885,6 +893,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     // the board. Wait for the takeout. Only ever set when Scolia is actually live, so manual
     // play — where that signal never comes — is not gated on something that will never arrive.
     if (awaitingTakeout) return;
+    // Nothing about waiting for a takeout is worth a stalled match. If the signal never turns
+    // up — a missed event, a relay hiccup, darts left in the board — the bot goes anyway.
     // Reassigned to a non-nullable local: activeBotLevel is `BotLevel | null` at the type level,
     // and TS doesn't carry the null-check narrowing above into the nested throwNext() closure.
     const level: BotLevel = activeBotLevel;
@@ -1408,10 +1418,16 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     // holds until they are pulled — a bot firing off its whole turn while you are still
     // walking to the board is the opposite of how the game is played.
     //
-    // Only when the board is actually live: off Scolia the takeout signal never arrives, and
-    // gating on something that will never happen would stop the match dead.
-    if (activeBotLevel === null && scoliaEnabled && scolia.state.relay === "live") {
+    // Only when the BOARD is ready, not merely when the relay is answering. Those are not the
+    // same thing — the relay can be live while the board is offline, which is exactly the state
+    // the status badge reads as "Scolia: Offline". Gating on the relay meant waiting for a
+    // takeout from a board that wasn't there, and the bot just sat still.
+    if (activeBotLevel === null && scoliaEnabled && scolia.state.boardStatus === "Ready") {
       setAwaitingTakeout(true);
+      // Released by the takeout signal, or by this, whichever comes first — a missed event
+      // must never be able to leave a bot sitting there doing nothing.
+      if (takeoutWaitTimerRef.current) clearTimeout(takeoutWaitTimerRef.current);
+      takeoutWaitTimerRef.current = setTimeout(() => setAwaitingTakeout(false), TAKEOUT_WAIT_MAX_MS);
     }
 
     if (isFinished(effectiveProgress[activePlayer])) {
