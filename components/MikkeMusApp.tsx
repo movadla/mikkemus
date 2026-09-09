@@ -69,6 +69,11 @@ const LIVE_PUBLISH_DEBOUNCE_MS = 700;
  *  boxes/marks visibly animate in one at a time instead of all landing at once. */
 const BOT_THROW_DELAY_MS = 900;
 
+/** How long a finished bot turn stays on screen. Its third dart ends the turn in the same tick
+ *  it lands, so without a hold that dart is never drawn at all — see scheduleBotDisplayClear.
+ *  Longer than a bot throw interval, so the next thrower is what replaces it, not a timer. */
+const BOT_DISPLAY_HOLD_MS = 1600;
+
 function setTurnAt(turns: TurnResult[], index: number, turn: TurnResult): TurnResult[] {
   const next = turns.slice();
   next[index] = turn;
@@ -444,6 +449,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
 
   /** Clears the shot boxes and the "just placed" mark highlight — see the call sites below for when. */
   function clearTurnDisplay() {
+    cancelBotDisplayClear();
     setTurnShots(EMPTY_TURN_SHOTS);
     // Clears the heat GameScreen derives from this — the build belongs to one turn, and
     // clearing it here (rather than in an effect over there) keeps that view a pure
@@ -454,6 +460,30 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     // gold indefinitely — and since startGame didn't reset it either, it carried into the NEXT
     // match, where a freshly started board showed a gold 14 nobody had closed.
     setClosedStep(null);
+  }
+
+  /**
+   * Leaves a finished bot turn on screen just long enough to read its last dart, then clears.
+   *
+   * Cancelled by clearTurnDisplay, which every new turn's first dart calls — so if the next
+   * player throws before this fires, their display replaces the bot's rather than being wiped
+   * by a timer left over from it.
+   */
+  function scheduleBotDisplayClear() {
+    cancelBotDisplayClear();
+    botDisplayTimerRef.current = setTimeout(() => {
+      botDisplayTimerRef.current = null;
+      setTurnShots(EMPTY_TURN_SHOTS);
+      setHitPulse(null);
+      setClosedStep(null);
+    }, BOT_DISPLAY_HOLD_MS);
+  }
+
+  function cancelBotDisplayClear() {
+    if (botDisplayTimerRef.current) {
+      clearTimeout(botDisplayTimerRef.current);
+      botDisplayTimerRef.current = null;
+    }
   }
 
   // Counts physical darts Scolia has detected this turn (registrable or not) —
@@ -500,6 +530,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   const [diving, setDiving] = useState(false);
   // One drift report per match — see the check in advanceTurn.
   const mismatchReportedRef = useRef(false);
+  const botDisplayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Manual registrations this turn — the only dart-ish count available off Scolia. Reset per
   // turn in advanceTurn; see the dart count there for the narrow case it is used in.
   const manualTapsRef = useRef(0);
@@ -568,14 +599,11 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       };
     }
 
-    // A physical triple or bullseye is dramatic regardless of whether the game currently
-    // needed it — announce it the moment it lands, independent of how classifyThrow below
-    // ends up scoring it.
-    if (parsed.kind === "number" && parsed.ring === "T") {
-      announce(`Trippel ${parsed.number}!`);
-    } else if (parsed.kind === "bull" && parsed.ring === "inner") {
-      announce("Bullseye!");
-    }
+    // No spoken call-out for a triple or a bullseye. The synthesized voice reading "trippel
+    // femten" over the boom was worse than the boom alone — the throw already announces itself
+    // with the escalating hit sound, the shot box and the mark going down. Speech is kept for
+    // the board dropping out and coming back (see the relay watcher below), which is the one
+    // thing you need to hear when you are not looking at the phone.
 
     const classified = classifyThrow(parsed, activeStepAtThrow, progress[activePlayer]);
     // A parked, still-undecided triple/double must not be the reason this dart finds its row
@@ -823,6 +851,9 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   useEffect(() => {
     const timer = setTimeout(clearTurnDisplay, TURN_DISPLAY_FALLBACK_MS);
     return () => clearTimeout(timer);
+    // clearTurnDisplay is a fresh closure every render; listing it would restart this timer on
+    // every one of them, which is the opposite of a 20-second fallback.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [turnToken, dartsThisTurn]);
 
   // Auto-plays a bot's whole turn — three paced, simulated darts, each scored
@@ -1346,9 +1377,11 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     updatePendingAmbiguous([]);
 
     // A bot never pulls its darts, so the takeout signal the shot boxes normally wait for never
-    // comes — the bot's throws sat there into the human's turn, until their first dart or the
-    // 20s fallback. Its turn ending is the equivalent moment.
-    if (activeBotLevel !== null) clearTurnDisplay();
+    // comes — its turn ending is the equivalent moment. But not this instant: the third dart
+    // registers and finishes the turn inside one tick, so clearing here wiped that dart's shot
+    // box and its hitPulse before either had been drawn. The bot's last throw simply vanished,
+    // boom and all. Held for a beat instead, and cancelled the moment a new dart arrives.
+    if (activeBotLevel !== null) scheduleBotDisplayClear();
 
     if (isFinished(effectiveProgress[activePlayer])) {
       haptics.win();
