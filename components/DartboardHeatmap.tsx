@@ -24,9 +24,9 @@ export function DartboardHeatmap({
   recentFrom,
 }: {
   throws: [number, number][];
-  /** Sized for the landscape side panel (~150px). Most of the number ring is dropped there —
-   *  at that size the labels render around 4px — but the four cardinals stay, because without
-   *  any of them the plot has no orientation at all and a dot can't be placed on a number. */
+  /** Sized for the landscape side panel (~190px). The full number ring stays — all twenty, so a
+   *  dot can be placed on its number without counting wedges from the cardinals — in a type
+   *  size that just fits twenty labels around the rim. */
   compact?: boolean;
   /** Index from which throws belong to the turn in progress — those are drawn bright, the
    *  rest of the match recedes. Without it every dart looks equally current. */
@@ -42,8 +42,10 @@ export function DartboardHeatmap({
   // 25 for a highlighted one), which spanned three bands at once and made a double look like
   // a triple. Sized to the bands instead, and legibility comes from colour, not bulk.
   const dotRadius = compact ? 4.5 : 5;
-  // Only the cardinals: 20 up, 6 right, 3 down, 11 left.
-  const labelledIndices = compact ? [0, 5, 10, 15] : NUMBER_ORDER.map((_, i) => i);
+  // Twenty labels share a rim of ~1490 units, 74 each; at 19 units a two-digit label is ~21
+  // wide, so they sit clear of one another and still read at the panel's size.
+  const labelledIndices = NUMBER_ORDER.map((_, i) => i);
+  const labelSize = compact ? 19 : 13;
 
   return (
     // Compact fills the box it is given in BOTH directions and lets preserveAspectRatio keep it
@@ -72,7 +74,7 @@ export function DartboardHeatmap({
                 y={ly}
                 textAnchor="middle"
                 dominantBaseline="middle"
-                fontSize={compact ? 22 : 13}
+                fontSize={labelSize}
                 fill="var(--color-muted)"
               >
                 {n}
