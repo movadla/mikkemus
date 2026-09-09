@@ -1,5 +1,5 @@
 import type { Progress, Step } from "./game";
-import { parseSector, stepForSector } from "./scoliaMapping";
+import { parseSector } from "./scoliaMapping";
 
 // Standard dartboard number layout, clockwise starting from straight up (12 o'clock).
 const NUMBER_ORDER = [20, 1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16, 8, 11, 14, 9, 12, 5];
@@ -125,13 +125,12 @@ type LuckTarget = { ring: "BULL" } | { ring: "S" | "D" | "T"; number: number };
  * simplification this stat is explicitly built around.
  */
 function inferLuckTarget(actual: [number, number], activeStepAtThrow: Step | null): LuckTarget | null {
-  const sector = sectorAt(actual);
-  if (sector === "Bull" || sector === "25") return { ring: "BULL" };
-  const tripleMatch = /^T(\d+)$/.exec(sector);
-  if (tripleMatch) return { ring: "T", number: Number(tripleMatch[1]) };
-  const doubleMatch = /^D(\d+)$/.exec(sector);
-  if (doubleMatch) return { ring: "D", number: Number(doubleMatch[1]) };
-
+  // The target is the active step, full stop. This used to trust the ring a dart landed in —
+  // a triple anywhere was "aimed at T" — which had two bad effects: the T and D rows only ever
+  // collected the darts that happened to hit them (so their xH sat at ~3 forever and said
+  // nothing), and every lucky slenger was booked as a deliberate attempt. Now a pre-banked
+  // triple on 6 while you are on 20 is judged as a miss at 20; the T cross it wins is luck,
+  // outside the accounting. T and D only start collecting darts once you are actually on them.
   if (activeStepAtThrow === null) return null;
   if (activeStepAtThrow === "BULL") return { ring: "BULL" };
   if (activeStepAtThrow === "D" || activeStepAtThrow === "T") {
@@ -180,70 +179,39 @@ function radialProximity(r: number, band: RadialBand): { normDist: number; nudge
   };
 }
 
-/** How many crosses this sector is worth right now, capped by however much
- *  room is left in the relevant step (0 once that step is already full, or
- *  if the sector can't score at all). Reuses the exact same scoring
- *  pipeline (parseSector → stepForSector) a real Scolia throw goes
- *  through, so "value" can never diverge from how a dart is actually
- *  judged by the rest of the app. */
-function valueOf(sector: string, progress: Progress): number {
-  const { step, crosses } = stepForSector(parseSector(sector, false));
-  if (!step) return 0;
-  return Math.min(crosses, Math.max(0, 3 - progress[step]));
-}
-
 /**
- * A triple/double landing on the player's OWN active number can end up two
- * ways (see classifyThrow in lib/scoliaMapping.ts and PendingAmbiguous in
- * lib/game.ts): staying on T/D as a normal ring cross, or being redirected
- * to finish the number instead (worth 3x/2x crosses there) — either
- * because that's the only sensible outcome once the ring is already full,
- * or because the player later chooses the redirect at Confirm.
+ * How many crosses a landing is worth FOR THE TARGET — not what the game happens to pay out.
  *
- * Takes a raw sector string rather than the already-resolved `target` so it
- * can be applied uniformly to BOTH sides of a luckForThrow comparison — the
- * dart's actual landing AND the coordinate nudged across the nearest
- * boundary. A single near a double/triple ring's inner edge has its
- * "other side" resolve to that T/D sector; without this, the comparison
- * would undervalue how much a real double/triple there could have been
- * worth, since only a DIRECT T/D hit got the redirect consideration before.
- * Mirrors classifyThrow's own "is this T/D hit on my own active number"
- * condition exactly, so the two can never drift apart.
+ * On a number, a single is one, a double two, a triple three (the redirect values), each capped
+ * by what the number still needs; anything in another wedge is zero for it, whatever ring it
+ * fell in. On D, any double — or the red bull, per the house rule — is one; on T, any triple.
+ * A triple on 6 while you are on 20 is therefore worth nothing here even though it banks a T
+ * cross: that cross was luck, and luck is exactly what xH is trying to separate out.
+ *
+ * Priced this way, the edge blend in luckForThrow gives the feel that was asked for: a single
+ * 20 sitting right against D20 reads as 1.5 — you got one, and were a hair from two.
  */
-/** What a throw is worth AND which step that worth lands on. The two have to be decided
- *  together: priced one way and filed another, a perfect triple on your own number credits
- *  its whole value to the T row while the crosses it actually won go to the number. */
-type ValuedStep = { value: number; step: Step | null };
+function valueForTarget(sector: string, target: LuckTarget, progress: Progress): number {
+  const parsed = parseSector(sector, false);
+  const room = (step: Step) => Math.max(0, 3 - progress[step]);
 
-function valueWithRedirect(sector: string, activeStepAtThrow: Step | null, progress: Progress): ValuedStep {
-  // Mirrors classifyThrow's early-bullseye house rule (see lib/scoliaMapping.ts): thrown
-  // before BULL is up, the red bull scores one double, not a bull. Valuing it as a bull
-  // here would price the dart at something the game never actually pays out.
-  if (sector === "Bull" && activeStepAtThrow !== "BULL") {
-    const value = Math.min(1, Math.max(0, 3 - progress["D"]));
-    return { value, step: value > 0 ? "D" : null };
+  if (target.ring === "BULL") {
+    if (parsed.kind !== "bull") return 0;
+    return Math.min(parsed.ring === "inner" ? 2 : 1, room("BULL"));
   }
-
-  const base = valueOf(sector, progress);
-  // A landing worth nothing has no step worth filing it under — a single in an already
-  // closed number scores no more than a miss does. Those fall back to what the player was
-  // working on (see stepForTarget), which is the honest answer for a dart that only has
-  // value because of what it ALMOST was.
-  const landed = base > 0 ? stepForSector(parseSector(sector, false)).step : null;
-  if (activeStepAtThrow === null || activeStepAtThrow === "D" || activeStepAtThrow === "T" || activeStepAtThrow === "BULL") {
-    return { value: base, step: landed };
+  if (target.ring === "D") {
+    const isDouble = (parsed.kind === "number" && parsed.ring === "D") || (parsed.kind === "bull" && parsed.ring === "inner");
+    return isDouble ? Math.min(1, room("D")) : 0;
   }
-  const match = /^([TD])(\d+)$/.exec(sector);
-  if (!match || Number(match[2]) !== Number(activeStepAtThrow)) return { value: base, step: landed };
-  const multiplier = match[1] === "T" ? 3 : 2;
-  const redirectValue = Math.min(multiplier, Math.max(0, 3 - progress[activeStepAtThrow]));
-  // Redirecting is what the value is priced on, so it's where the value belongs.
-  return redirectValue > base ? { value: redirectValue, step: activeStepAtThrow } : { value: base, step: landed };
+  if (target.ring === "T") {
+    return parsed.kind === "number" && parsed.ring === "T" ? Math.min(1, room("T")) : 0;
+  }
+  // A number.
+  if (parsed.kind !== "number" || parsed.number !== target.number) return 0;
+  const multiplier = parsed.ring === "T" ? 3 : parsed.ring === "D" ? 2 : 1;
+  return Math.min(multiplier, room(String(target.number) as Step));
 }
 
-/** Fallback attribution for a dart that scores nothing at all — a single on a closed number,
- *  or a miss. There is no landing step to file it under, so it goes to whatever the player
- *  was working on, which is what the dart was aimed at. */
 function stepForTarget(target: LuckTarget): Step {
   if (target.ring === "BULL") return "BULL";
   if (target.ring === "T" || target.ring === "D") return target.ring;
@@ -306,13 +274,12 @@ export function luckForThrow(
   const proximity = 1 - primaryNormDist;
   const nudged = angularNormDist < radial.normDist && angularNudge ? angularNudge : radialNudge;
 
-  const landed = valueWithRedirect(sectorAt(actual), activeStepAtThrow, progress);
-  const otherSide = valueWithRedirect(sectorAt(nudged), activeStepAtThrow, progress);
-  const xg = landed.value + (proximity / 2) * (otherSide.value - landed.value);
-  // File it where the value was priced, not where the dart physically landed. Those differ
-  // for exactly the shot that matters most — a triple on your own number, whose worth comes
-  // from completing that number, not from the T row it sits in.
-  return { step: landed.step ?? stepForTarget(target), xg };
+  // Both sides priced against the TARGET, and the result filed under the target — the dart is
+  // judged as the attempt it was, not as whatever it happened to hit. See valueForTarget.
+  const landed = valueForTarget(sectorAt(actual), target, progress);
+  const otherSide = valueForTarget(sectorAt(nudged), target, progress);
+  const xg = landed + (proximity / 2) * (otherSide - landed);
+  return { step: stepForTarget(target), xg };
 }
 
 // ---- "Expected Goals" for Bull-duell -----------------------------------

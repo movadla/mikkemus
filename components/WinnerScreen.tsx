@@ -53,6 +53,7 @@ export function WinnerScreen({
   stats,
   luckByPlayer,
   throwsByPlayer,
+  preBankedByPlayer,
   onHome,
   homeLabel = "Hjem",
   onPlayAgain,
@@ -68,6 +69,13 @@ export function WinnerScreen({
   luckByPlayer: Record<string, LuckByStep>;
   /** Every physical dart landed this match, per player — only populated when Scolia detected real throws. */
   throwsByPlayer: Record<string, [number, number][]>;
+  /**
+   * D/T crosses each player banked as slengere, i.e. while a number was the active step. xH
+   * judges every dart against the active step, so those crosses fall outside its accounting
+   * and the faktisk side leaves them out too: "xH 2,4 / 1" on T means the player needed one
+   * more triple once they got there, and that is what 2,4 is compared against.
+   */
+  preBankedByPlayer: Record<string, { D: number; T: number }>;
   onHome: () => void;
   /** Overridden by tournament mode to "Til turnering" — see MikkeMusApp's onMatchComplete prop. */
   homeLabel?: string;
@@ -216,7 +224,8 @@ export function WinnerScreen({
             <p className="tabular" style={{ color: "var(--color-bg)", opacity: 0.7, fontSize: "0.85rem", marginTop: "0.4rem" }}>
               {/* Singular is reachable now that a leg won on the first dart of a turn counts one. */}
               {totalDarts(stats[winner])} {totalDarts(stats[winner]) === 1 ? "pil" : "piler"} brukt
-              {winnerLuck !== null && <> · xH {formatLuck(winnerLuck)} / {stats[winner]?.hits ?? 0}</>}
+              {winnerLuck !== null && <> · xH {formatLuck(winnerLuck)} /{" "}
+            {(stats[winner]?.hits ?? 0) - (preBankedByPlayer[winner]?.D ?? 0) - (preBankedByPlayer[winner]?.T ?? 0)}</>}
             </p>
           </div>
         </div>
@@ -262,7 +271,8 @@ export function WinnerScreen({
                 .map((p) => {
                   const luckByStep = luckByPlayer[p];
                   const overall = overallSumLuck(luckByStep);
-                  const actualTotal = stats[p]?.hits ?? 0;
+                  const actualTotal =
+                    (stats[p]?.hits ?? 0) - (preBankedByPlayer[p]?.D ?? 0) - (preBankedByPlayer[p]?.T ?? 0);
                   return (
                     <div key={p}>
                       <div className="flex justify-between items-center mb-1.5">
@@ -273,7 +283,12 @@ export function WinnerScreen({
                       </div>
                       <div className="grid grid-cols-5 gap-1">
                         {STEPS.map((s) => {
-                          const actualStep = stats[p]?.hitsByStep[s] ?? 0;
+                          // What the row compares against: crosses won while ON this step. For D
+                          // and T that is the total minus the slengere banked beforehand, and the
+                          // denominator shrinks to match — "/1" when the player arrived needing one.
+                          const pre = s === "D" || s === "T" ? (preBankedByPlayer[p]?.[s] ?? 0) : 0;
+                          const phaseGained = (stats[p]?.hitsByStep[s] ?? 0) - pre;
+                          const needed = 3 - pre;
                           return (
                             <div
                               key={s}
@@ -286,9 +301,11 @@ export function WinnerScreen({
                                     fields still show theirs, where the number says something. */}
                                 {luckByStep[s].count === 0
                                   ? "–"
-                                  : actualStep === 3
-                                    ? formatLuck(luckByStep[s].sum)
-                                    : `${formatLuck(luckByStep[s].sum)}/${actualStep}`}
+                                  : phaseGained >= needed
+                                    ? needed === 3
+                                      ? formatLuck(luckByStep[s].sum)
+                                      : `${formatLuck(luckByStep[s].sum)}/${needed}`
+                                    : `${formatLuck(luckByStep[s].sum)}/${phaseGained}`}
                               </p>
                             </div>
                           );

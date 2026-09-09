@@ -37,6 +37,8 @@ export type ActiveMatchSnapshot = {
   luckTotals?: Record<string, Record<Step, { sum: number; count: number }>>;
   accuracyTotals?: Record<string, { distance: number; horizontal: number; vertical: number; throws: number }>;
   ringHits?: Record<string, { triple: Record<string, number>; double: Record<string, number> }>;
+  /** D/T crosses banked while the player was NOT on that row — see MikkeMusApp's preBanked. */
+  preBanked?: Record<string, { D: number; T: number }>;
 };
 
 const STORAGE_KEY = "mikke-mus-active-match";

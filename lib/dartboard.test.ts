@@ -10,7 +10,7 @@ describe("luckForThrow", () => {
     // side of that boundary are both still worth exactly 1 cross — proximity
     // is 0 (dead center) AND the two sides agree anyway, doubly confirming xG is 1.
     const progress = emptyProgress();
-    const result = luckForThrow([0, 103], null, progress);
+    const result = luckForThrow([0, 103], "T", progress);
     expect(result).not.toBeNull();
     expect(result!.step).toBe("T");
     expect(result!.xg).toBeCloseTo(1, 5);
@@ -21,7 +21,7 @@ describe("luckForThrow", () => {
     progress["20"] = 3; // number 20 already closed -> landing in S20 would score nothing
     // r=106.9, 0.1mm inside the 107mm outer triple edge - nearly on the boundary,
     // so xG blends close to the average of T20's value (1) and S20's value (0).
-    const result = luckForThrow([0, 106.9], null, progress);
+    const result = luckForThrow([0, 106.9], "T", progress);
     expect(result).not.toBeNull();
     expect(result!.step).toBe("T");
     expect(result!.xg).toBeCloseTo(0.51, 1);
@@ -37,14 +37,12 @@ describe("luckForThrow", () => {
     expect(result!.xg).toBeCloseTo(0.5, 1);
   });
 
-  it("treats a direct triple/double/bull hit as the intended target even with no known active step", () => {
+  it("has nothing to judge against when there is no active step, even on a direct triple", () => {
+    // The target is always the active step. A dart is judged as the attempt it was, never as
+    // whatever ring it happened to land in — so with no active step there is no attempt.
     const progress = emptyProgress();
     progress["20"] = 3;
-    // Same shot as the blended case above, but activeStepAtThrow is null —
-    // must still resolve via the direct T20 sector match, not bail out to null.
-    const result = luckForThrow([0, 106.9], null, progress);
-    expect(result).not.toBeNull();
-    expect(result!.xg).toBeCloseTo(0.51, 1);
+    expect(luckForThrow([0, 106.9], null, progress)).toBeNull();
   });
 
   it("judges a bull throw against its own edge correctly (regression: inner-disk proximity was inverted)", () => {
@@ -68,13 +66,16 @@ describe("luckForThrow", () => {
     expect(nearEdge!.xg).toBeLessThan(nearCenter!.xg);
   });
 
-  it("gives the shared value once both sides of the nearest boundary are already full (nothing left to distinguish)", () => {
+  it("gives the shared value once both sides of the nearest boundary are worthless for the target (nothing left to distinguish)", () => {
     const progress = emptyProgress();
     progress["20"] = 3;
     progress.T = 3;
-    // Same near-edge triple shot as before, but now T is also full - crossing
-    // either way scores nothing, so the boundary is inert and xG is just 0.
-    expect(luckForThrow([0, 106.9], null, progress)!.xg).toBeCloseTo(0, 5);
+    // Same near-edge triple shot as before, but the player is on 14: neither side of the
+    // T20/S20 boundary is worth anything for that target, so the boundary is inert and xH
+    // is just 0 - filed under the number being worked on.
+    const result = luckForThrow([0, 106.9], "14", progress);
+    expect(result!.step).toBe("14");
+    expect(result!.xg).toBeCloseTo(0, 5);
   });
 
   it("returns null when no target can be inferred (a clean miss with no active step)", () => {
@@ -212,16 +213,33 @@ describe("luckForThrow — which step the value is filed under", () => {
     expect(result!.xg).toBeCloseTo(3, 5);
   });
 
-  it("still files a triple on some other number under T", () => {
-    // Nothing to redirect into here — this is an ordinary pre-banked triple worth one cross.
+  it("judges a triple on some other number as a miss at the number you were on", () => {
+    // It banks a T cross — but you were throwing at 20, and for 20 it did nothing. That cross
+    // is luck, and stays outside xH; the T row only collects darts thrown while ON T.
     const result = luckForThrow(tripleCentre(6), "20", emptyProgress());
-    expect(result!.step).toBe("T");
-    expect(result!.xg).toBeCloseTo(1, 5);
+    expect(result!.step).toBe("20");
+    expect(result!.xg).toBeCloseTo(0, 1);
   });
 
-  it("files an early bullseye under D, matching the house rule that scores it as a double", () => {
+  it("judges an early bullseye the same way: a miss at the number, its D cross being luck", () => {
     const result = luckForThrow([0, 0], "20", emptyProgress());
-    expect(result!.step).toBe("D");
+    expect(result!.step).toBe("20");
+    expect(result!.xg).toBeCloseTo(0, 5);
+  });
+
+  it("prices a single 20 sitting right against D20 as one-and-a-half — one banked, a hair from two", () => {
+    // Just inside the double ring's inner edge, dead on the 20 wedge: landed value 1 (a single),
+    // the nudge across the edge lands in D20 worth 2 on the number, proximity ~1 → 1 + ½·(2−1).
+    const result = luckForThrow([0, 161.9], "20", emptyProgress());
+    expect(result!.step).toBe("20");
+    expect(result!.xg).toBeCloseTo(1.5, 1);
+  });
+
+  it("collects on T only once T is the active step — and fills it from there", () => {
+    const progress = emptyProgress();
+    progress.T = 1; // one pre-banked triple from earlier, thrown while on a number
+    const result = luckForThrow(tripleCentre(6), "T", progress);
+    expect(result!.step).toBe("T");
     expect(result!.xg).toBeCloseTo(1, 5);
   });
 
@@ -246,8 +264,9 @@ describe("luckForThrow — which step the value is filed under", () => {
     for (const n of [20, 19, 18, 17, 16, 15, 14]) {
       record(tripleCentre(n), String(n) as Step, String(n) as Step, 3);
     }
-    for (let i = 0; i < 3; i++) record(tripleCentre(6), "D", "T", 1);
+    // D and T each filled while ON them — a row only collects the darts thrown at it.
     for (let i = 0; i < 3; i++) record(aimPointFor({ ring: "D", number: 6 }), "D", "D", 1);
+    for (let i = 0; i < 3; i++) record(tripleCentre(6), "T", "T", 1);
     record([0, 0], "BULL", "BULL", 2);
     record([0, 0], "BULL", "BULL", 1);
 

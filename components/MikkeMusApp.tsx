@@ -184,6 +184,30 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   // The same totals flattened across steps, as state rather than a ref, purely so the landscape
   // side panel can show them while the match is still running.
   const [luckLive, setLuckLive] = useState<Record<string, { sum: number; count: number }>>({});
+  /**
+   * D and T crosses banked while the player was NOT on that row — slengere, in other words.
+   *
+   * xH judges every dart as an attempt at the active step, so a pre-banked triple is a miss at
+   * the number, and its T cross is luck outside the accounting. For the "forventet / faktisk"
+   * reading to stay honest, the faktisk side has to leave those same crosses out: what the T row
+   * compares against is the crosses won while ON T, i.e. total minus pre-banked. Numbers and
+   * BULL can only ever score while active, so they need no such correction.
+   *
+   * Ref mirrored synchronously, same reasoning as progressRef: it is adjusted inside the same
+   * handlers that create and roll back the records it counts.
+   */
+  const preBankedRef = useRef<Record<string, { D: number; T: number }>>({});
+  const [preBanked, setPreBanked] = useState<Record<string, { D: number; T: number }>>({});
+  function bumpPreBanked(player: string, ring: "D" | "T", delta: number) {
+    const cur = preBankedRef.current[player] ?? { D: 0, T: 0 };
+    const next = { ...preBankedRef.current, [player]: { ...cur, [ring]: Math.max(0, cur[ring] + delta) } };
+    preBankedRef.current = next;
+    setPreBanked(next);
+  }
+  /** A D/T record counts as pre-banked when that row was not the active step at the time. */
+  function isPreBank(step: Step, activeBefore: Step | null): step is "D" | "T" {
+    return (step === "D" || step === "T") && activeBefore !== step;
+  }
   // Pending live_match write — see LIVE_PUBLISH_DEBOUNCE_MS.
   const publishTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (publishTimerRef.current) clearTimeout(publishTimerRef.current); }, []);
@@ -353,6 +377,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       // The match's statistics, back into the refs they live in. Absent in older snapshots.
       setMatchThrows(restored.matchThrows ?? {});
       luckTotalsRef.current = restored.luckTotals ?? {};
+    preBankedRef.current = restored.preBanked ?? {};
+    setPreBanked(preBankedRef.current);
       accuracyTotalsRef.current = restored.accuracyTotals ?? {};
       ringHitsRef.current = restored.ringHits ?? {};
       // The flat per-player total the landscape panel reads, rebuilt from the per-step totals
@@ -419,6 +445,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       // progress and matchThrows both change — so what is read here is always current.
       matchThrows,
       luckTotals: luckTotalsRef.current,
+      preBanked: preBankedRef.current,
       accuracyTotals: accuracyTotalsRef.current,
       ringHits: ringHitsRef.current,
     });
@@ -837,6 +864,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     accuracyTotalsRef.current = {};
     luckTotalsRef.current = {};
     setLuckLive({});
+    preBankedRef.current = {};
+    setPreBanked({});
     ringHitsRef.current = {};
     updatePendingAmbiguous([]);
     updateAwaitingConfirmResolution(false);
@@ -975,6 +1004,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       turnIndex,
     }));
     if (newPendingHits.length === 0) return null;
+    // A double or triple banked while working on a number is a slenger — see preBanked.
+    if (isPreBank(step, activeStep)) bumpPreBanked(activePlayer, step, newPendingHits.length);
     const count = newPendingHits[newPendingHits.length - 1].newCount;
 
     // Darts, not crosses — one call is one dart, however many crosses it carries. That
@@ -1047,6 +1078,9 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       },
     });
     writePendingHits(records.filter((_, i) => i !== idx));
+    if (isPreBank(removed.step, currentStepFor({ ...progressRef.current[activePlayer], [removed.step]: removed.prevCount }))) {
+      bumpPreBanked(activePlayer, removed.step, -1);
+    }
     clearPerfectClose(activePlayer, step);
     // A choice attached to the dart that just went away has nothing left to decide.
     updatePendingAmbiguous(pendingAmbiguousRef.current.filter((p) => p.hitRecord !== removed));
@@ -1090,6 +1124,12 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     // This dart's own crosses, as distinct from the parked one's payout — the caller uses these
     // for the streak sound and the closing slam, which belong to the throw that just happened.
     const hits = records.filter((r) => r.step === step);
+    // The parked dart was by definition a slenger (a triple/double on the active NUMBER, banked
+    // on the ring); moving it off the ring un-banks it. This dart's own ring crosses take its
+    // place there, and count as pre-banked for the same reason it did.
+    bumpPreBanked(player, parked.ringStep, -1);
+    const activeBefore = currentStepFor(progressRef.current[player]);
+    if (isPreBank(step, activeBefore)) bumpPreBanked(player, step, hits.length);
 
     // Darts, not crosses — same counting rule as registerHit, and the same marker: three
     // separate darts closing a row the hard way earns the ring-with-a-dot. This dart lands on
@@ -1134,6 +1174,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         [item.ringStep]: removeOneCross(progressRef.current[activePlayer][item.ringStep]),
       };
       finalPendingHits = pendingHitsRef.current.filter((h) => h !== item.hitRecord);
+      // Off the ring and onto the number: it was a slenger on the ring, and now it isn't.
+      bumpPreBanked(activePlayer, item.ringStep, -1);
 
       // chainCrosses rather than registerHit: registerHit reads `progress` from this
       // component's state and would miss the rollback above until the next render.
@@ -1183,6 +1225,11 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         [last.player]: { ...progressRef.current[last.player], [last.step]: last.prevCount },
       });
       writePendingHits(pendingHitsRef.current.slice(0, -1));
+      // Was this record a slenger when it was banked? Judged against the board as it stood
+      // before it — a D/T cross made while some number was active.
+      if (isPreBank(last.step, currentStepFor({ ...progressRef.current[last.player], [last.step]: last.prevCount }))) {
+        bumpPreBanked(last.player, last.step, -1);
+      }
       clearPerfectClose(last.player, last.step);
       // If the undone dart was still awaiting a T/D-or-number choice, that choice is moot now.
       updatePendingAmbiguous((prev) => prev.filter((p) => p.hitRecord !== last));
@@ -1196,6 +1243,9 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       });
       setHistory((prev) => prev.slice(0, -1));
       clearPerfectClose(last.player, last.step);
+      if (isPreBank(last.step, currentStepFor({ ...progressRef.current[last.player], [last.step]: last.prevCount }))) {
+        bumpPreBanked(last.player, last.step, -1);
+      }
       setRewound(last.player);
       setRewoundTurnIndex(last.turnIndex);
     }
@@ -1560,6 +1610,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         players={players}
         stats={winnerStats}
         luckByPlayer={winnerLuck}
+        preBankedByPlayer={preBanked}
         throwsByPlayer={matchThrows}
         onHome={playAgain}
         homeLabel={onMatchComplete ? "Til turnering" : "Hjem"}
@@ -1602,7 +1653,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       // expectation for some of the darts up against the crosses from all of them.
       actual:
         judged && judged.count === thrown && progress[activePlayer]
-          ? 30 - remainingMarks(progress[activePlayer])
+          // Crosses won while on the row they sit in — slengere on D/T are luck, not attempts.
+        ? 30 - remainingMarks(progress[activePlayer]) - (preBanked[activePlayer]?.D ?? 0) - (preBanked[activePlayer]?.T ?? 0)
           : null,
     };
   })();
