@@ -490,10 +490,9 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   // distinct from pendingHits, which only holds darts that actually scored a cross.
   const scoliaDartsRef = useRef(0);
 
-  // How many darts in a row, counting from the FIRST dart of this turn, have all hit —
-  // drives the escalating boom (see lib/fanfare.ts) and the matching screen shake/heat.
-  // Reset to 0 at the start of each turn; the first miss freezes it below the current dart
-  // index, which is what silences the sound for the rest of the turn (see processDart).
+  // Consecutive scoring darts, right now — drives how big the boom is (see lib/fanfare.ts)
+  // and the matching shake and heat. Reset at the start of a turn and by any miss, but a miss
+  // no longer silences what follows: the next hit sounds again from level one.
   const hitStreakRef = useRef(0);
 
   // Physical triples landing on whatever number was active at the time, this turn. Three of
@@ -528,9 +527,14 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   const [closedStep, setClosedStep] = useState<{ token: number; step: Step } | null>(null);
   // True from the winning dart until WinDive lands in the bull — see the winner branch below.
   const [diving, setDiving] = useState(false);
+  // Same animation at the other end of a match: the intro when a game starts.
+  const [introDiving, setIntroDiving] = useState(false);
   // One drift report per match — see the check in advanceTurn.
   const mismatchReportedRef = useRef(false);
   const botDisplayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // True between a human confirming their turn and their darts actually leaving the board.
+  // A bot holds off while it is set — see the takeout handler and the bot effect.
+  const [awaitingTakeout, setAwaitingTakeout] = useState(false);
   // Manual registrations this turn — the only dart-ish count available off Scolia. Reset per
   // turn in advanceTurn; see the dart count there for the narrow case it is used in.
   const manualTapsRef = useRef(0);
@@ -635,17 +639,21 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     // filled T and left 17 on 2 — the opposite of what the throw was worth, decided without
     // asking. The choice now survives to Confirm, where it's presented with the numbers.
     const hit = hitResult !== null;
-    // Escalating boom + screen shake + heat — only while every dart so far THIS turn (from
-    // dart 1) has hit. hitStreakRef.current === dartIndex means the streak is still
-    // unbroken going into this dart; any miss (here or earlier) permanently desyncs the
-    // two for the rest of the turn, which is exactly what silences dart 2/3 after a miss.
-    if (hit && hitStreakRef.current === dartIndex) {
+    // Every hit gets a boom. What the streak changes is how big it is.
+    //
+    // This used to go silent for the rest of the turn after a single miss — the streak had to
+    // be unbroken from dart one, so a miss then two hits made no sound at all. A dart that
+    // scores should always be heard; the escalation is the reward for stringing them together,
+    // and three in a row is the one that really lands (see BOT_DISPLAY_HOLD_MS's neighbour,
+    // boomForStreak, and the 1300ms tremor in GameScreen).
+    if (hit) {
       hitStreakRef.current += 1;
-      if (hitStreakRef.current <= 3) {
-        const streak = hitStreakRef.current as 1 | 2 | 3;
-        playHitStreakSound(streak);
-        setHitPulse({ token: ++pulseTokenRef.current, streak });
-      }
+      const streak = Math.min(3, hitStreakRef.current) as 1 | 2 | 3;
+      playHitStreakSound(streak);
+      setHitPulse({ token: ++pulseTokenRef.current, streak });
+    } else {
+      // A miss breaks the run, but only the run — the next hit still sounds, from the bottom.
+      hitStreakRef.current = 0;
     }
 
     // A row reaching 3/3 gets its own slam — see the step-slam animation in globals.css.
@@ -760,7 +768,11 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       if (activeBotLevel !== null) return;
       // The real signal the shot boxes/highlight are held for: darts are physically
       // out of the board now. A "false" takeout means nothing was actually pulled.
-      if (!payload.falseTakeout) clearTurnDisplay();
+      if (!payload.falseTakeout) {
+        clearTurnDisplay();
+        // Your darts are out of the board — a bot waiting on that can go. See awaitingTakeout.
+        setAwaitingTakeout(false);
+      }
     },
     onCameraImages: (payload) => {
       setCameraImages(extractImageUrls(payload));
@@ -790,6 +802,11 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     // before a win-fanfare or hit-streak sound needs to fire from a Scolia/Supabase
     // event later. See lib/fanfare.ts's primeAudio for why this matters.
     primeAudio();
+    // Same dive as the win, as an intro. Doubles as an audio check you get for free: it plays
+    // straight off the tap that unlocked the context, so if you hear the boom here the sound
+    // is working for the rest of the match — including, on AirPlay, whether it went to the TV.
+    playWinBoom();
+    setIntroDiving(true);
     const prog: PlayerProgress = {};
     startPlayers.forEach((p) => (prog[p] = emptyProgress()));
     setPlayers(startPlayers);
@@ -864,6 +881,10 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   // needed here rather than the closed-over `player`/`screen` values going stale).
   useEffect(() => {
     if (screen !== "game" || rewound || !activePlayer || !activeBotLevel) return;
+    // A bot used to start throwing the instant a human confirmed, with their darts still in
+    // the board. Wait for the takeout. Only ever set when Scolia is actually live, so manual
+    // play — where that signal never comes — is not gated on something that will never arrive.
+    if (awaitingTakeout) return;
     // Reassigned to a non-nullable local: activeBotLevel is `BotLevel | null` at the type level,
     // and TS doesn't carry the null-check narrowing above into the nested throwNext() closure.
     const level: BotLevel = activeBotLevel;
@@ -919,7 +940,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [screen, activePlayer, turnToken, botLevels, rewound, activeBotLevel]);
+  }, [screen, activePlayer, turnToken, botLevels, rewound, activeBotLevel, awaitingTakeout]);
 
   /**
    * Registers `crosses` marks on `step` (crosses > 1 for a Scolia-detected inner bull).
@@ -1383,6 +1404,16 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     // boom and all. Held for a beat instead, and cancelled the moment a new dart arrives.
     if (activeBotLevel !== null) scheduleBotDisplayClear();
 
+    // A human just finished, with three darts still in the board. Any bot that is up next
+    // holds until they are pulled — a bot firing off its whole turn while you are still
+    // walking to the board is the opposite of how the game is played.
+    //
+    // Only when the board is actually live: off Scolia the takeout signal never arrives, and
+    // gating on something that will never happen would stop the match dead.
+    if (activeBotLevel === null && scoliaEnabled && scolia.state.relay === "live") {
+      setAwaitingTakeout(true);
+    }
+
     if (isFinished(effectiveProgress[activePlayer])) {
       haptics.win();
       // The boom lands now, on the frame the board slams into the dive; the fanfare waits for
@@ -1559,6 +1590,12 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
           : null,
     };
   })();
+
+  // The intro. Covers the board while it plays, then hands over to the game underneath —
+  // the same component as the win, so the two moments are unmistakably the same gesture.
+  if (introDiving) {
+    return <WinDive onDone={() => setIntroDiving(false)} />;
+  }
 
   return (
     <>

@@ -15,7 +15,7 @@ import {
 import { isAnnouncerEnabled, setAnnouncerEnabled } from "@/lib/announcer";
 import { isShakeEnabled, setShakeEnabled } from "@/lib/screenShake";
 import { avatarAccent } from "@/lib/avatarAccent";
-import { primeAudio } from "@/lib/fanfare";
+import { primeAudio, restartAudio } from "@/lib/fanfare";
 import { startWakeLock } from "@/lib/wakeLock";
 import { requestRecalibration } from "@/lib/scoliaCommands";
 import { reportError } from "@/lib/errorReporting";
@@ -172,6 +172,21 @@ function ChromeControls({
         <ShakeIcon className="w-4 h-4" />
         {stacked && <span style={{ fontSize: "0.7rem" }}>{shakeOn ? "Risting på" : "Risting av"}</span>}
       </button>
+      {/* AirPlay: an audio context created before mirroring started keeps the sound on the
+          phone. Only offered inside the panel — it is a recovery action, not something you
+          reach for mid-turn. */}
+      {stacked && (
+        <button
+          type="button"
+          onClick={restartAudio}
+          title="Bind lyden til nåværende lydutgang på nytt"
+          className={icon}
+          style={{ background: "var(--color-surface)", color: "var(--color-muted)" }}
+        >
+          <SpeakerIcon className="w-4 h-4" />
+          <span style={{ fontSize: "0.7rem" }}>Start lyd på nytt</span>
+        </button>
+      )}
       <button
         type="button"
         onClick={onCalibrate}

@@ -110,6 +110,29 @@ function getBuses(ctx: AudioContext): Buses | null {
  * priming here is what makes the sounds audible rather than silently blocked. Building the
  * impulse response here too keeps its one-off cost off the first note.
  */
+/**
+ * Throws the audio engine away and builds a fresh one, bound to whatever the output device is
+ * NOW.
+ *
+ * For AirPlay. An AudioContext gets attached to the output route in force when it is created,
+ * and starting screen mirroring afterwards does not necessarily move it — the picture goes to
+ * the TV while the sound stays on the phone. Reloading the page fixes it because that makes a
+ * new context; this does the same thing without losing the match.
+ *
+ * Everything cached off the old context (buses, reverb, the brass wave) belongs to it and has
+ * to go with it, or the new context is handed nodes from a closed one.
+ */
+export function restartAudio() {
+  const old = sharedContext;
+  sharedContext = null;
+  masterBus = null;
+  reverbBus = null;
+  brassWave = null;
+  noiseBuffer = null;
+  if (old) old.close().catch(() => {});
+  primeAudio();
+}
+
 export function primeAudio() {
   const ctx = getContext();
   if (!ctx) return;
@@ -161,6 +184,14 @@ function brassNote(ctx: AudioContext, buses: Buses, freq: number, start: number,
 }
 
 // Note frequencies (equal temperament).
+// The low octaves the dark fanfare lives in — everything above was written for a trumpet call.
+const C2 = 65.41;
+const G2 = 98.0;
+const C3 = 130.81;
+const Eb3 = 155.56;
+const G3 = 196.0;
+const Bb3 = 233.08;
+const Eb4 = 311.13;
 const C4 = 261.63;
 const G4 = 392.0;
 const C5 = 523.25;
@@ -171,14 +202,14 @@ const C6 = 1046.5;
 const E6 = 1318.51;
 const G6 = 1568.0;
 
-export type FanfareVariant = 1 | 2 | 3;
+export type FanfareVariant = 1 | 2 | 3 | 4;
 
 /**
  * Which variant the real win actually plays. There's no way to judge a synthesized fanfare
- * from the code, so /lyd plays all three side by side and this is the one line that changes
+ * from the code, so /lyd plays them side by side and this is the one line that changes
  * once a favourite is picked.
  */
-const WIN_FANFARE: FanfareVariant = 1;
+const WIN_FANFARE: FanfareVariant = 4;
 
 /** Match won. See WIN_FANFARE — /lyd is where these get compared. */
 export function playFanfare() {
@@ -240,6 +271,22 @@ export function playFanfareVariant(variant: FanfareVariant) {
       brassNote(ctx, buses, G5, t + 0.72, 1.5, 0.12);
       brassNote(ctx, buses, C6, t + 0.82, 1.4, 0.11);
       brassNote(ctx, buses, E6, t + 0.92, 1.3, 0.08);
+      return;
+    }
+
+    if (variant === 4) {
+      // Dark. Not a brighter trumpet call but a different instrument entirely: low horns
+      // swelling into a held minor chord, two octaves under the others and left to ring on the
+      // reverb. The minor third is what stops it sounding triumphant-cheerful — this is meant
+      // to land like a verdict rather than a party horn.
+      brassNote(ctx, buses, C2, t, 2.6, 0.22);
+      brassNote(ctx, buses, C3, t + 0.05, 2.5, 0.18);
+      brassNote(ctx, buses, G2, t + 0.3, 2.2, 0.15);
+      brassNote(ctx, buses, Eb3, t + 0.55, 2.0, 0.14);
+      brassNote(ctx, buses, G3, t + 0.8, 1.8, 0.12);
+      brassNote(ctx, buses, Bb3, t + 1.05, 1.6, 0.1);
+      // One voice up top so the whole thing isn't only rumble — still inside the minor chord.
+      brassNote(ctx, buses, Eb4, t + 1.3, 1.5, 0.08);
       return;
     }
 

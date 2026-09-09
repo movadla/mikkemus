@@ -287,6 +287,9 @@ export default function LydPage() {
             <PlayButton onClick={() => playFanfareVariant(3)} accent="var(--color-gold)">
               ▶ Fanfare 3 — bred og pompøs
             </PlayButton>
+            <PlayButton onClick={() => playFanfareVariant(4)} accent="var(--color-gold)">
+              ▶ Fanfare 4 — mørk (brukes ved seier)
+            </PlayButton>
             <PlayButton onClick={() => playPerfectRoundVariant(1)} accent="var(--color-teal)">
               ▶ Perfekt runde 1
             </PlayButton>
