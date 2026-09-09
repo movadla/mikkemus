@@ -1,5 +1,6 @@
 import type { HitRecord, PlayerProgress, Step, TurnAggregate, TurnResult } from "./game";
 import type { BotLevel, TeamMember } from "./botLevels";
+import type { TurnAction, TurnStart } from "./turnResolution";
 
 export type ActiveMatchSnapshot = {
   screen: "game" | "winner";
@@ -39,6 +40,16 @@ export type ActiveMatchSnapshot = {
   ringHits?: Record<string, { triple: Record<string, number>; double: Record<string, number> }>;
   /** D/T crosses banked while the player was NOT on that row — see MikkeMusApp's preBanked. */
   preBanked?: Record<string, { D: number; T: number }>;
+  /** Rows closed by three separate darts in one turn, per player — see Mark's `perfect`. */
+  perfectCloses?: Record<string, Partial<Record<Step, true>>>;
+  /**
+   * The turn in progress, if a reload lands mid-turn: where it started and what has happened
+   * since. Restore rewinds to the start and plays the actions back, which rebuilds the dart
+   * counter, the shot boxes and any open triple/double choice — none of which are stored on
+   * their own. Absent (or empty) between turns.
+   */
+  turnStart?: TurnStart | null;
+  turnActions?: TurnAction[];
 };
 
 const STORAGE_KEY = "mikke-mus-active-match";

@@ -3,6 +3,7 @@ import {
   currentStepFor,
   removeOneCross,
   type CrossDelta,
+  type HitRecord,
   type PendingAmbiguous,
   type Progress,
   type Step,
@@ -70,10 +71,63 @@ export type TurnDart = {
   scored: boolean;
 };
 
+/**
+ * Everything that happened in the current turn, in order — what "Angre" and "correct that
+ * dart" replay. A dart is what Scolia (or the bot, or a by-hand correction) reported; a tap and
+ * an untap are the board's own cells being pressed and long-pressed. Serialisable on purpose,
+ * so a turn in progress survives a reload: the snapshot carries the turn's starting point and
+ * this list, and the turn is rebuilt by playing it back.
+ */
+export type DartAction = TurnDart & { kind: "dart"; coordinates: [number, number] };
+export type TapAction = { kind: "tap" | "untap"; step: Step };
+export type TurnAction = DartAction | TapAction;
+
+/**
+ * The state a turn started from — enough to rewind to it and play the turn's actions again.
+ * The per-match maps are stored whole rather than per player: they are small, and it keeps
+ * the rewind a plain assignment instead of a merge that could miss a field.
+ */
+export type TurnStart = {
+  player: string;
+  progress: Progress;
+  pendingHits: HitRecord[];
+  preBanked: Record<string, { D: number; T: number }>;
+  luckTotals: Record<string, Record<Step, { sum: number; count: number }>>;
+  accuracyTotals: Record<string, { distance: number; horizontal: number; vertical: number; throws: number }>;
+  ringHits: Record<string, { triple: Record<string, number>; double: Record<string, number> }>;
+  dartsOnStep: Partial<Record<Step, number>>;
+  perfectCloses: Partial<Record<Step, true>>;
+  manualTaps: number;
+};
+
+/**
+ * The board as it will most likely stand once the parked triples/doubles are answered: each one
+ * redirected onto its number. xH judges a dart against the active step, and a second T17 thrown
+ * while the first is still parked should not be priced as if 17 were still wide open — the
+ * first one is going to fill it. Without this, three T17s in one turn read as xH 9 against a
+ * board that can pay out five crosses at most.
+ */
+export function boardAssumingRedirects(board: Progress, parked: readonly PendingAmbiguous[]): Progress {
+  const next: Progress = { ...board };
+  for (const p of parked) {
+    if (next[p.number] >= 3) continue;
+    next[p.ringStep] = removeOneCross(next[p.ringStep]);
+    for (const d of chainCrosses(next[p.number], p.multiplier)) next[p.number] = d.newCount;
+  }
+  return next;
+}
+
 export type Replay = {
   board: Progress;
   /** Crosses gained, each tagged with the dart that (belatedly) earned it. */
   added: (CrossLanding & { dartIndex: number })[];
+  /**
+   * Doubles/triples on the newly active number, banked on their ring as slengere when they
+   * landed. Now that the number is active they are the ordinary "complete the number or keep
+   * the ring cross" question, and the caller should park them as such. Nothing is moved here:
+   * the cross stays on the ring until the player answers.
+   */
+  reopened: { dartIndex: number; ring: "D" | "T"; multiplier: 2 | 3 }[];
 };
 
 /**
@@ -92,19 +146,28 @@ export type Replay = {
 export function replayDiscardedSingles(board: Progress, darts: readonly TurnDart[], afterDartIndex: number): Replay {
   const next: Progress = { ...board };
   const added: Replay["added"] = [];
+  const reopened: Replay["reopened"] = [];
   const active = currentStepFor(next);
   // Only a number can be entered this way — D, T and BULL cannot have singles waiting for them.
-  if (active === null || Number.isNaN(Number(active))) return { board: next, added };
+  if (active === null || Number.isNaN(Number(active))) return { board: next, added, reopened };
 
   for (const dart of darts) {
-    if (dart.dartIndex <= afterDartIndex || dart.scored) continue;
+    if (dart.dartIndex <= afterDartIndex) continue;
     const parsed = parseSector(dart.sector, dart.bounceout);
-    if (parsed.kind !== "number" || parsed.ring !== "S" || String(parsed.number) !== active) continue;
-    for (const d of chainCrosses(next[active], 1)) {
-      next[active] = d.newCount;
-      added.push({ ...d, step: active, dartIndex: dart.dartIndex });
+    if (parsed.kind !== "number" || String(parsed.number) !== active) continue;
+    if (parsed.ring === "S") {
+      if (dart.scored) continue;
+      for (const d of chainCrosses(next[active], 1)) {
+        next[active] = d.newCount;
+        added.push({ ...d, step: active, dartIndex: dart.dartIndex });
+      }
+    } else if (dart.scored) {
+      // A D16/T16 thrown while 17 was active went on the ring. With 16 active it is the same
+      // dart as a D16 thrown now: a choice, not a settled cross. Only worth asking while the
+      // number still has room — meaningfulPending would drop it otherwise anyway.
+      reopened.push({ dartIndex: dart.dartIndex, ring: parsed.ring, multiplier: parsed.ring === "T" ? 3 : 2 });
     }
     if (next[active] >= 3) break;
   }
-  return { board: next, added };
+  return { board: next, added, reopened };
 }

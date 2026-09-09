@@ -112,6 +112,11 @@ type Props = {
   onUndo: () => void;
   onConfirm: () => void;
   onAbort: () => void;
+  /** Whether the shot boxes can be tapped to correct a misread dart — only while the turn they
+   *  belong to is still open, and never during a bot's turn. */
+  shotsEditable: boolean;
+  /** "Dart number `index` was actually `sector`" — the turn is rebuilt around the correction. */
+  onEditShot: (index: number, sector: string) => void;
 };
 
 /**
@@ -212,34 +217,132 @@ function ChromeControls({
   );
 }
 
-/** The three per-dart boxes under the active player's name — green on a scored cross, red otherwise. */
-function ShotIndicator({ shots }: { shots: (TurnShot | null)[] }) {
+/** The three per-dart boxes under the active player's name — green on a scored cross, red otherwise.
+ *  With `onEdit`, a filled box is a button: tap it to say what that dart actually was. */
+function ShotIndicator({ shots, onEdit }: { shots: (TurnShot | null)[]; onEdit?: (index: number) => void }) {
   return (
     <div className="flex items-center justify-center gap-1.5 mt-1.5" aria-hidden={shots.every((s) => s === null)}>
-      {shots.map((shot, i) => (
-        <div
-          key={i}
-          className={`shot-box${shot ? " animate-shot-pop" : ""}`}
-          style={{
-            // Was 1.9rem, which read as three faint specks under the buttons — the landscape
-            // rail showed how much the same boxes gain from size. The empty state gets a
-            // dashed edge as well, so "nothing thrown yet" is a state rather than an absence.
-            width: "2.4rem",
-            height: "2.4rem",
-            borderRadius: "0.5rem",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: "0.85rem",
-            fontWeight: 700,
-            background: shot ? (shot.hit ? "var(--color-green)" : "var(--color-red)") : "transparent",
-            border: shot ? "none" : "1px dashed var(--color-border)",
-            color: "var(--color-cream)",
-          }}
-        >
-          {shot?.label ?? ""}
+      {shots.map((shot, i) => {
+        const editable = !!shot && !!onEdit;
+        const Tag = editable ? "button" : "div";
+        return (
+          <Tag
+            key={i}
+            {...(editable ? { type: "button" as const, onClick: () => onEdit!(i), "aria-label": `Pil ${i + 1}: ${shot!.label} — trykk for å rette` } : {})}
+            className={`shot-box${shot ? " animate-shot-pop" : ""}${editable ? ` ${FOCUS_RING}` : ""}`}
+            style={{
+              // Was 1.9rem, which read as three faint specks under the buttons — the landscape
+              // rail showed how much the same boxes gain from size. The empty state gets a
+              // dashed edge as well, so "nothing thrown yet" is a state rather than an absence.
+              width: "2.4rem",
+              height: "2.4rem",
+              borderRadius: "0.5rem",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "0.85rem",
+              fontWeight: 700,
+              background: shot ? (shot.hit ? "var(--color-green)" : "var(--color-red)") : "transparent",
+              border: shot ? "none" : "1px dashed var(--color-border)",
+              color: "var(--color-cream)",
+              padding: 0,
+              cursor: editable ? "pointer" : "default",
+            }}
+          >
+            {shot?.label ?? ""}
+          </Tag>
+        );
+      })}
+    </div>
+  );
+}
+
+const PICKER_RINGS: { key: "S" | "D" | "T"; label: string }[] = [
+  { key: "S", label: "Enkel" },
+  { key: "D", label: "Dobbel" },
+  { key: "T", label: "Trippel" },
+];
+const PICKER_NUMBERS = Array.from({ length: 20 }, (_, i) => i + 1);
+
+/** What a shot-box label came from, so the picker opens on the ring the board already thought it was. */
+function ringOfLabel(label: string): "S" | "D" | "T" {
+  return label.startsWith("T") ? "T" : label.startsWith("D") ? "D" : "S";
+}
+
+/**
+ * "What did dart N actually hit?" — the correction for a misread dart. Ring first, then the
+ * number; the bull, the 25 and a plain miss are one tap. Picking a number closes the picker
+ * straight away, so the common fix ("that was T20, not 5") is two taps.
+ */
+function DartPicker({
+  index,
+  current,
+  onPick,
+  onClose,
+}: {
+  index: number;
+  current: TurnShot;
+  onPick: (sector: string) => void;
+  onClose: () => void;
+}) {
+  const [ring, setRing] = useState<"S" | "D" | "T">(() => ringOfLabel(current.label));
+  const chip = (selected: boolean): React.CSSProperties => ({
+    "--btn-fill": selected ? "var(--color-teal)" : "var(--color-surface-2, rgba(255,255,255,0.06))",
+    color: selected ? "var(--color-bg)" : "var(--color-cream)",
+    border: selected ? "none" : "1px solid var(--color-border)",
+  }) as React.CSSProperties;
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Rett pil ${index + 1}`}
+      className="fixed inset-0 flex items-center justify-center p-4 z-50"
+      style={{ background: "rgba(0,0,0,0.6)" }}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") onClose();
+      }}
+    >
+      <div className="shadow-panel w-full max-w-sm rounded-xl p-4" style={{ background: "var(--color-surface)" }}>
+        <p className="text-center mb-3" style={{ color: "var(--color-cream)", fontSize: "1rem" }}>
+          Pil {index + 1} ble lest som <strong>{current.label}</strong>. Hva var det egentlig?
+        </p>
+        <div className="grid grid-cols-3 gap-2 mb-2">
+          {PICKER_RINGS.map((r) => (
+            <button key={r.key} type="button" onClick={() => setRing(r.key)} className={`glossy py-2 rounded-lg font-medium ${FOCUS_RING}`} style={chip(ring === r.key)}>
+              {r.label}
+            </button>
+          ))}
         </div>
-      ))}
+        <div className="grid grid-cols-5 gap-1.5 mb-3">
+          {PICKER_NUMBERS.map((n) => (
+            <button
+              key={n}
+              type="button"
+              onClick={() => onPick(`${ring}${n}`)}
+              className={`glossy py-2 rounded-lg tabular font-semibold ${FOCUS_RING}`}
+              style={chip(false)}
+              aria-label={`${PICKER_RINGS.find((r) => r.key === ring)!.label} ${n}`}
+            >
+              {ring === "S" ? n : `${ring}${n}`}
+            </button>
+          ))}
+        </div>
+        <div className="grid grid-cols-3 gap-2 mb-3">
+          <button type="button" onClick={() => onPick("Bull")} className={`glossy py-2 rounded-lg font-medium ${FOCUS_RING}`} style={chip(false)}>
+            Bull
+          </button>
+          <button type="button" onClick={() => onPick("25")} className={`glossy py-2 rounded-lg font-medium ${FOCUS_RING}`} style={chip(false)}>
+            25
+          </button>
+          <button type="button" onClick={() => onPick("None")} className={`glossy py-2 rounded-lg font-medium ${FOCUS_RING}`} style={chip(false)}>
+            Bom
+          </button>
+        </div>
+        <button type="button" onClick={onClose} className={`glossy w-full py-2.5 rounded-lg font-medium ${FOCUS_RING}`} style={{ "--btn-fill": "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" } as React.CSSProperties}>
+          Avbryt
+        </button>
+      </div>
     </div>
   );
 }
@@ -270,6 +373,8 @@ export function GameScreen({
   onUndo,
   onConfirm,
   onAbort,
+  shotsEditable,
+  onEditShot,
 }: Props) {
   // Picks the wide variant of the mark glyph — see lib/useCompactLandscape.ts.
   const compactLandscape = useCompactLandscape();
@@ -302,6 +407,8 @@ export function GameScreen({
 
   useEffect(() => cancelHold, []);
   const [showHomeConfirm, setShowHomeConfirm] = useState(false);
+  // Which shot box is being corrected (its dart index), or null — see DartPicker.
+  const [editingShot, setEditingShot] = useState<number | null>(null);
   // Lazy-initialized from localStorage so the button reflects whatever the host last chose,
   // without waiting for an effect — announce() itself reads the same localStorage value
   // directly, so this state only drives the button's own icon/label.
@@ -563,6 +670,17 @@ export function GameScreen({
         />
       )}
 
+      {editingShot !== null && turnShots[editingShot] && (
+        <DartPicker
+          index={editingShot}
+          current={turnShots[editingShot]!}
+          onPick={(sector) => {
+            setEditingShot(null);
+            onEditShot(editingShot, sector);
+          }}
+          onClose={() => setEditingShot(null)}
+        />
+      )}
       {showHomeConfirm && (
         <ConfirmDialog
           message="Avslutte kampen?"
@@ -797,7 +915,7 @@ export function GameScreen({
           bar, which is where there is room there. */}
       {compactLandscape && !rewound && (
         <div className="shot-rail">
-          <ShotIndicator shots={turnShots} />
+          <ShotIndicator shots={turnShots} onEdit={shotsEditable ? setEditingShot : undefined} />
         </div>
       )}
 
@@ -820,7 +938,7 @@ export function GameScreen({
       <div className="action-bar shrink-0 mt-3 -mx-4 px-4 pt-2 pb-1">
         {!rewound && !compactLandscape && (
           <div className="max-w-3xl mx-auto w-full mb-1">
-            <ShotIndicator shots={turnShots} />
+            <ShotIndicator shots={turnShots} onEdit={shotsEditable ? setEditingShot : undefined} />
           </div>
         )}
         <div className="action-buttons grid gap-3 max-w-3xl mx-auto w-full" style={{ gridTemplateColumns: "0.7fr 1.3fr" }}>

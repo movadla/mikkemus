@@ -30,11 +30,25 @@ import { announce } from "@/lib/announcer";
 import { reportError } from "@/lib/errorReporting";
 import { clearActiveMatch, loadActiveMatch, saveActiveMatch } from "@/lib/activeMatch";
 import { publishLiveMatch } from "@/lib/liveMatch";
-import { luckForThrow, sectorAt, throwAccuracy } from "@/lib/dartboard";
+import { coordinatesForSector, luckForThrow, sectorAt, throwAccuracy } from "@/lib/dartboard";
 import { haptics } from "@/lib/haptics";
 import { playFanfare, playHitStreakSound, playWinBoom, primeAudio } from "@/lib/fanfare";
 import { classifyThrow, formatSectorLabel, parseSector } from "@/lib/scoliaMapping";
-import { applyDartToBoard, replayDiscardedSingles, type TurnDart } from "@/lib/turnResolution";
+import {
+  applyDartToBoard,
+  boardAssumingRedirects,
+  replayDiscardedSingles,
+  type DartAction,
+  type TapAction,
+  type TurnAction,
+  type TurnStart,
+} from "@/lib/turnResolution";
+
+/** A dart in the running turn, with what the component needs on top of the serialisable action:
+ *  the records it created (for re-parking a ring dart — see replayAfterRedirect) and what xH made
+ *  of it (to take back if it turns out to have been aimed elsewhere). */
+type LiveDart = DartAction & { luck: { step: Step; xg: number } | null; records: HitRecord[] };
+type LiveAction = LiveDart | TapAction;
 import { botChooseThrow, botDecideRedirect, solverFor } from "@/lib/botStrategy";
 import { type BotLevel, type TeamMember } from "@/lib/botLevels";
 import { useScolia } from "@/lib/useScolia";
@@ -198,13 +212,26 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
    * handlers that create and roll back the records it counts.
    */
   /**
-   * Every dart of the current turn, in order, with its landing and what xH made of it. Kept so a
-   * redirect at Confirm can re-read the darts thrown after the parked one — see
-   * replayDiscardedSingles. Reset when a new turn's first dart lands and when the turn ends.
+   * Everything that has happened in the current turn, in order (see TurnAction). This is what
+   * Angre and "correct that dart" operate on: rewind to turnStartRef, play the list back minus
+   * the last action (or with one dart swapped). Darts carry two live extras — the records they
+   * created and what xH made of them — for the redirect replay (replayAfterRedirect). Reset when
+   * the turn ends. Mirrored into state as a count, so the buttons that depend on "is there a
+   * turn to edit" re-render when it changes.
    */
-  const turnDartsRef = useRef<
-    (TurnDart & { coordinates: [number, number]; luck: { step: Step; xg: number } | null })[]
-  >([]);
+  const turnActionsRef = useRef<LiveAction[]>([]);
+  const [turnActionCount, setTurnActionCount] = useState(0);
+  function writeTurnActions(next: LiveAction[]) {
+    turnActionsRef.current = next;
+    setTurnActionCount(next.length);
+  }
+  const turnDarts = () => turnActionsRef.current.filter((a): a is LiveDart => a.kind === "dart");
+  /** Where the current turn started from — set by the turn's first action, cleared when it ends. */
+  const turnStartRef = useRef<TurnStart | null>(null);
+  /** True while actions are being played back: the darts are real, the fanfare is not. */
+  const replayingRef = useRef(false);
+  /** A turn found mid-way in the restored snapshot, waiting for the player to be mounted. */
+  const pendingReplayRef = useRef<{ start: TurnStart; actions: TurnAction[] } | null>(null);
   const preBankedRef = useRef<Record<string, { D: number; T: number }>>({});
   const [preBanked, setPreBanked] = useState<Record<string, { D: number; T: number }>>({});
   function bumpPreBanked(player: string, ring: "D" | "T", delta: number) {
@@ -348,8 +375,12 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     // board or a row in scolia_events — which is shared with the real board, so a test dart put
     // there would land in whatever match is being played on it.
     if (process.env.NODE_ENV === "development") {
-      (window as unknown as { __mikkeDart?: unknown }).__mikkeDart = (sector: string, coordinates: [number, number] = [0, 0]) =>
+      const dev = window as unknown as { __mikkeDart?: unknown; __mikkeCoords?: unknown };
+      // Coordinates default to the middle of the sector's bed, so xH and the heatmap see a
+      // plausible dart rather than one at the bull.
+      dev.__mikkeDart = (sector: string, coordinates: [number, number] = coordinatesForSector(sector)) =>
         processDart({ sector, bounceout: sector === "None", coordinates });
+      dev.__mikkeCoords = coordinatesForSector;
     }
     resolvePendingChoiceRef.current = resolvePendingChoice;
     confirmRef.current = confirm;
@@ -397,6 +428,13 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     setPreBanked(preBankedRef.current);
       accuracyTotalsRef.current = restored.accuracyTotals ?? {};
       ringHitsRef.current = restored.ringHits ?? {};
+      writePerfectCloses(restored.perfectCloses ?? {});
+      // A turn caught mid-way. It cannot be replayed here — the player it belongs to is not
+      // mounted until the state above has rendered — so it is parked for the effect below.
+      // A bot's half-turn is dropped instead: the bot effect starts its turn over anyway.
+      if (restored.turnStart && restored.turnActions && restored.turnActions.length > 0 && !(restored.botLevels ?? {})[restored.turnStart.player]) {
+        pendingReplayRef.current = { start: restored.turnStart, actions: restored.turnActions };
+      }
       // The flat per-player total the landscape panel reads, rebuilt from the per-step totals
       // rather than stored twice — two copies of one number is a chance for them to disagree.
       setLuckLive(
@@ -421,6 +459,22 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     // would restart a match that's already in progress.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // The second half of the restore above: once the mid-turn player is the active one, put the
+  // board back to where their turn started and play the turn's actions through the ordinary
+  // paths. That rebuilds the dart counter, the shot boxes and any open triple/double choice —
+  // the things a reload used to lose, leaving a parked cross on the ring with no question and a
+  // turn that ended a dart early. (Still inside the set-state-in-effect exemption opened above.)
+  useEffect(() => {
+    const job = pendingReplayRef.current;
+    if (!job || screen !== "game" || activePlayer !== job.start.player) return;
+    pendingReplayRef.current = null;
+    turnStartRef.current = job.start;
+    // Placeholders so rewindTurn knows how many darts to take back off the heatmap.
+    writeTurnActions(job.actions.map((a): LiveAction => (a.kind === "dart" ? { ...a, luck: null, records: [] } : a)));
+    if (rewindTurn()) replayActions(job.actions);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the handlers it calls are re-created every render; only the gate matters
+  }, [screen, activePlayer]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   // Persists the in-progress match on every change, and clears it once the match
@@ -464,6 +518,14 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       preBanked: preBankedRef.current,
       accuracyTotals: accuracyTotalsRef.current,
       ringHits: ringHitsRef.current,
+      perfectCloses: perfectClosesRef.current,
+      // The turn in progress, without its live extras (records are identities, rebuilt by replay).
+      turnStart: turnStartRef.current,
+      turnActions: turnActionsRef.current.map((a): TurnAction =>
+        a.kind === "dart"
+          ? { kind: "dart", dartIndex: a.dartIndex, sector: a.sector, bounceout: a.bounceout, scored: a.scored, coordinates: a.coordinates }
+          : a,
+      ),
     });
     const snapshot = { screen, players, progress, activePlayer, turnToken, winner, botLevels, guestPlayers };
     if (publishTimerRef.current) clearTimeout(publishTimerRef.current);
@@ -558,15 +620,24 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   // rather than derived from `history`, because a redirected triple writes the same three
   // HitRecords a three-dart close does and the two would be indistinguishable afterwards.
   const [perfectCloses, setPerfectCloses] = useState<Record<string, Partial<Record<Step, true>>>>({});
+  // Mirrored synchronously, like progressRef: the turn-start snapshot reads it in the same
+  // handler that is about to change it.
+  const perfectClosesRef = useRef<Record<string, Partial<Record<Step, true>>>>({});
+  function writePerfectCloses(next: Record<string, Partial<Record<Step, true>>>) {
+    perfectClosesRef.current = next;
+    setPerfectCloses(next);
+  }
+  function markPerfectClose(player: string, step: Step) {
+    writePerfectCloses({ ...perfectClosesRef.current, [player]: { ...perfectClosesRef.current[player], [step]: true } });
+  }
 
   /** Drops the three-dart marker for a step an undo has just pulled back below 3/3. */
   function clearPerfectClose(player: string, step: Step) {
-    setPerfectCloses((prev) => {
-      if (!prev[player]?.[step]) return prev;
-      const forPlayer = { ...prev[player] };
-      delete forPlayer[step];
-      return { ...prev, [player]: forPlayer };
-    });
+    const prev = perfectClosesRef.current;
+    if (!prev[player]?.[step]) return;
+    const forPlayer = { ...prev[player] };
+    delete forPlayer[step];
+    writePerfectCloses({ ...prev, [player]: forPlayer });
   }
 
   // Retriggerable signals for GameScreen's shake/heat and the closing-row slam. Tokens
@@ -616,6 +687,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       reportError("Velg trippel eller dobbel før neste pil — denne ble ikke registrert.", { key: "dart-during-choice" });
       return;
     }
+    ensureTurnStart();
     const dartIndex = scoliaDartsRef.current;
     scoliaDartsRef.current += 1;
 
@@ -627,14 +699,17 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       clearTurnDisplay();
       hitStreakRef.current = 0;
       activeTriplesRef.current = 0;
-      turnDartsRef.current = [];
     }
 
-    // What the player was working on right before this dart lands — used both to
-    // resolve the throw itself and, below, as the MED/MHD/MVD target (see
-    // lib/dartboard.ts: for a miss, this is still the meaningful "how far off
-    // from what you were aiming at" reference, not just a no-op).
-    const activeStepAtThrow = currentStepFor(progress[activePlayer]);
+    // The board right before this dart — from the ref, not the `progress` state, because a
+    // replayed turn (see replayActions) runs its darts back to back in one tick and each must
+    // see the one before it. What the player was working on is used both to resolve the throw
+    // and, below, as the MED/MHD/MVD target (see lib/dartboard.ts: for a miss, this is still
+    // the meaningful "how far off from what you were aiming at" reference, not just a no-op).
+    const boardBefore = progressRef.current[activePlayer];
+    const activeStepAtThrow = currentStepFor(boardBefore);
+    // Triples/doubles still parked from earlier in this turn — see boardAssumingRedirects.
+    const parkedBefore = pendingAmbiguousRef.current.filter((p) => pendingHitsRef.current.includes(p.hitRecord));
 
     const parsed = parseSector(payload.sector, payload.bounceout);
 
@@ -659,12 +734,10 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     // the board dropping out and coming back (see the relay watcher below), which is the one
     // thing you need to hear when you are not looking at the phone.
 
-    const classified = classifyThrow(parsed, activeStepAtThrow, progress[activePlayer]);
+    const classified = classifyThrow(parsed, activeStepAtThrow, boardBefore);
     // A parked, still-undecided triple/double must not be the reason this dart finds its row
     // full — see ambiguousBlockingRing in lib/game.ts.
-    const candidate = classified.step
-      ? ambiguousBlockingRing(pendingAmbiguousRef.current, classified.step, progress[activePlayer])
-      : null;
+    const candidate = classified.step ? ambiguousBlockingRing(pendingAmbiguousRef.current, classified.step, boardBefore) : null;
     // Belt and braces on top of advanceTurn clearing these: only ever un-park a dart whose
     // cross is still un-confirmed. Once its record has moved to history the turn log owns it,
     // and rolling it back here would take it off the board and leave it in the stats.
@@ -699,8 +772,11 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     if (hit) {
       hitStreakRef.current += 1;
       const streak = Math.min(3, hitStreakRef.current) as 1 | 2 | 3;
-      playHitStreakSound(streak);
-      setHitPulse({ token: ++pulseTokenRef.current, streak });
+      // A replayed dart already had its boom the first time round.
+      if (!replayingRef.current) {
+        playHitStreakSound(streak);
+        setHitPulse({ token: ++pulseTokenRef.current, streak });
+      }
     } else {
       // A miss breaks the run, but only the run — the next hit still sounds, from the bottom.
       hitStreakRef.current = 0;
@@ -708,7 +784,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
 
     // A row reaching 3/3 gets its own slam — see the step-slam animation in globals.css.
     const closed = hitResult?.find((h) => h.newCount >= 3 && h.prevCount < 3);
-    if (closed) setClosedStep({ token: ++pulseTokenRef.current, step: closed.step });
+    if (closed && !replayingRef.current) setClosedStep({ token: ++pulseTokenRef.current, step: closed.step });
 
     // Three triples on the active number, in one turn.
     if (
@@ -719,7 +795,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       parsed.number === Number(activeStepAtThrow)
     ) {
       activeTriplesRef.current += 1;
-      if (activeTriplesRef.current === 3) setTripleCelebration(true);
+      if (activeTriplesRef.current === 3 && !replayingRef.current) setTripleCelebration(true);
     }
 
     setMatchThrows((prev) => ({
@@ -739,7 +815,12 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         },
       };
     }
-    const luck = luckForThrow(payload.coordinates, activeStepAtThrow, progress[activePlayer]);
+    // Judged against the board with the turn's parked redirects assumed taken, not the board as
+    // it literally stands: a second T17 thrown while the first is still an open question is a
+    // dart at whatever comes after 17, not another shot at a wide-open 17. See
+    // boardAssumingRedirects for the numbers this fixes.
+    const luckBoard = boardAssumingRedirects(boardBefore, parkedBefore);
+    const luck = luckForThrow(payload.coordinates, currentStepFor(luckBoard), luckBoard);
     if (luck !== null) {
       const luckByStep = luckTotalsRef.current[activePlayer] ?? emptyLuckByStep();
       const stepTotals = luckByStep[luck.step];
@@ -756,14 +837,19 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       };
     }
 
-    turnDartsRef.current.push({
-      dartIndex,
-      sector: payload.sector,
-      bounceout: payload.bounceout,
-      coordinates: payload.coordinates,
-      scored: hit,
-      luck,
-    });
+    writeTurnActions([
+      ...turnActionsRef.current,
+      {
+        kind: "dart",
+        dartIndex,
+        sector: payload.sector,
+        bounceout: payload.bounceout,
+        coordinates: payload.coordinates,
+        scored: hit,
+        luck,
+        records: hitResult ?? [],
+      },
+    ]);
 
     // registerHit's setProgress/setPendingHits have not flushed to a render yet inside this
     // same synchronous call, so `progress` and `pendingHits` still describe the board as it
@@ -776,8 +862,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     // turnLog — and therefore from hit percentage, per-step stats and the career totals in
     // Supabase, while `progress` (and so the game itself) stayed correct. A 30-dart clean
     // sweep reported 21 crosses and 70%.
-    const finalProgress = applied?.progress ?? progress;
-    const finalPendingHits = applied?.pendingHits ?? pendingHits;
+    const finalProgress = applied?.progress ?? progressRef.current;
+    const finalPendingHits = applied?.pendingHits ?? pendingHitsRef.current;
 
     // Won the leg on this exact dart — end the turn right now instead of waiting for
     // the rest of this turn's physical darts (or a takeout) to trickle in. Mirrors how
@@ -892,6 +978,11 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     setLuckLive({});
     preBankedRef.current = {};
     setPreBanked({});
+    // Never reset before, so a row closed the hard way kept its ring-with-a-dot into the next match.
+    writePerfectCloses({});
+    writeTurnActions([]);
+    turnStartRef.current = null;
+    pendingReplayRef.current = null;
     ringHitsRef.current = {};
     updatePendingAmbiguous([]);
     updateAwaitingConfirmResolution(false);
@@ -1017,7 +1108,9 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   /** Returns the HitRecord(s) this dart created, or null if nothing registered (also used by GameScreen's manual taps, which ignore the return value). */
   function registerHit(step: Step, crosses: number = 1): HitRecord[] | null {
     if (!activePlayer) return null;
-    const playerProgress = progress[activePlayer];
+    // The ref, not the state: a replayed turn registers several hits in one tick, and each has
+    // to see the one before it.
+    const playerProgress = progressRef.current[activePlayer];
     const activeStep = currentStepFor(playerProgress);
     if (!isRegistrable(step, activeStep, playerProgress)) return null;
 
@@ -1042,12 +1135,9 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     const dartsOnStep = (dartsOnStepRef.current[step] ?? 0) + 1;
     dartsOnStepRef.current[step] = dartsOnStep;
     // Three darts each worth one cross, ending on 3, can only have started from 0.
-    if (dartsOnStep === 3 && count >= 3) {
-      const player = activePlayer;
-      setPerfectCloses((prev) => ({ ...prev, [player]: { ...prev[player], [step]: true } }));
-    }
+    if (dartsOnStep === 3 && count >= 3) markPerfectClose(activePlayer, step);
 
-    haptics.hit();
+    if (!replayingRef.current) haptics.hit();
     writeProgress({
       ...progressRef.current,
       [activePlayer]: { ...progressRef.current[activePlayer], [step]: count },
@@ -1063,8 +1153,10 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
    * makes that impossible however the prop is wired later.
    */
   function registerHitFromUi(step: Step) {
+    ensureTurnStart();
     manualTapsRef.current += 1;
     registerHit(step);
+    writeTurnActions([...turnActionsRef.current, { kind: "tap", step }]);
   }
 
   /**
@@ -1081,6 +1173,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
    */
   function removeHitFromUi(step: Step) {
     if (!activePlayer) return;
+    ensureTurnStart();
     const records = pendingHitsRef.current;
     let idx = -1;
     for (let i = records.length - 1; i >= 0; i--) {
@@ -1110,7 +1203,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     clearPerfectClose(activePlayer, step);
     // A choice attached to the dart that just went away has nothing left to decide.
     updatePendingAmbiguous(pendingAmbiguousRef.current.filter((p) => p.hitRecord !== removed));
-    haptics.undo();
+    writeTurnActions([...turnActionsRef.current, { kind: "untap", step }]);
+    if (!replayingRef.current) haptics.undo();
   }
 
   /** The board as it stands after one dart — processDart needs these by hand, because the
@@ -1137,10 +1231,11 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     board: Progress,
     afterDartIndex: number | undefined,
     turnIndex: number,
-  ): { board: Progress; records: HitRecord[] } {
-    if (afterDartIndex === undefined) return { board, records: [] };
-    const replay = replayDiscardedSingles(board, turnDartsRef.current, afterDartIndex);
-    if (replay.added.length === 0) return { board, records: [] };
+  ): { board: Progress; records: HitRecord[]; pending: PendingAmbiguous[] } {
+    if (afterDartIndex === undefined) return { board, records: [], pending: [] };
+    const darts = turnDarts();
+    const replay = replayDiscardedSingles(board, darts, afterDartIndex);
+    if (replay.added.length === 0 && replay.reopened.length === 0) return { board, records: [], pending: [] };
 
     const records: HitRecord[] = replay.added.map((d) => ({
       player,
@@ -1150,8 +1245,19 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       turnIndex,
     }));
 
+    // Doubles/triples on the number that just became active: their ring cross stays put, but
+    // the player now gets the same question a D16 thrown on 16 would have asked.
+    const active = currentStepFor(board);
+    const pending: PendingAmbiguous[] = [];
+    for (const r of replay.reopened) {
+      const dart = darts.find((t) => t.dartIndex === r.dartIndex);
+      const record = dart?.records.find((h) => h.step === r.ring);
+      if (!active || !record || !pendingHitsRef.current.includes(record)) continue;
+      pending.push({ key: ++pendingAmbiguousKeyRef.current, hitRecord: record, ringStep: r.ring, number: active, multiplier: r.multiplier, dartIndex: r.dartIndex });
+    }
+
     for (const d of replay.added) {
-      const dart = turnDartsRef.current.find((t) => t.dartIndex === d.dartIndex);
+      const dart = darts.find((t) => t.dartIndex === d.dartIndex);
       if (!dart) continue;
       dart.scored = true;
       setTurnShots((prev) => {
@@ -1161,9 +1267,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         return next;
       });
       dartsOnStepRef.current[d.step] = (dartsOnStepRef.current[d.step] ?? 0) + 1;
-      if (dartsOnStepRef.current[d.step] === 3 && d.newCount >= 3) {
-        setPerfectCloses((prev) => ({ ...prev, [player]: { ...prev[player], [d.step]: true } }));
-      }
+      if (dartsOnStepRef.current[d.step] === 3 && d.newCount >= 3) markPerfectClose(player, d.step);
 
       // It was judged as a miss at the old number; judge it again as what it was — a dart at
       // the number it hit, on the board as it stood right before it.
@@ -1189,7 +1293,105 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       dart.luck = rejudged;
     }
 
-    return { board: replay.board, records };
+    return { board: replay.board, records, pending };
+  }
+
+  /**
+   * Snapshots where this turn starts from, the first time anything happens in it. Everything
+   * Angre and editDart do is "back to here, then play the actions again" — see rewindTurn.
+   */
+  function ensureTurnStart() {
+    if (!activePlayer || turnActionsRef.current.length > 0) return;
+    turnStartRef.current = {
+      player: activePlayer,
+      progress: progressRef.current[activePlayer],
+      pendingHits: pendingHitsRef.current,
+      preBanked: preBankedRef.current,
+      luckTotals: luckTotalsRef.current,
+      accuracyTotals: accuracyTotalsRef.current,
+      ringHits: ringHitsRef.current,
+      dartsOnStep: { ...dartsOnStepRef.current },
+      perfectCloses: { ...(perfectClosesRef.current[activePlayer] ?? {}) },
+      manualTaps: manualTapsRef.current,
+    };
+  }
+
+  /**
+   * Puts the board and every running total back to where this turn started, and empties the
+   * turn: no darts counted, no shot boxes, no open choice. The caller then replays whatever
+   * part of the turn should stand. Returns false if there is nothing to rewind to.
+   *
+   * Angre used to take one cross off the board and nothing else. A dart the board had invented
+   * kept its place in the dart count, its shot box, its xH and its spot on the heatmap — so the
+   * turn ended after two real darts and the third landed on the opponent. Rebuilding the turn
+   * from its start is the only way every one of those stays in step, and it means a bounce-out
+   * the board made up can be undone too, which no cross-based undo could offer.
+   */
+  function rewindTurn(): boolean {
+    const start = turnStartRef.current;
+    if (!start || !activePlayer || start.player !== activePlayer) return false;
+    const player = start.player;
+    const dartCount = turnDarts().length;
+
+    writeProgress({ ...progressRef.current, [player]: start.progress });
+    writePendingHits(start.pendingHits);
+    preBankedRef.current = start.preBanked;
+    setPreBanked(start.preBanked);
+    luckTotalsRef.current = start.luckTotals;
+    setLuckLive(
+      Object.fromEntries(
+        Object.entries(start.luckTotals).map(([p, byStep]) => [
+          p,
+          Object.values(byStep).reduce((acc, s) => ({ sum: acc.sum + s.sum, count: acc.count + s.count }), { sum: 0, count: 0 }),
+        ]),
+      ),
+    );
+    accuracyTotalsRef.current = start.accuracyTotals;
+    ringHitsRef.current = start.ringHits;
+    if (dartCount > 0) {
+      setMatchThrows((prev) => ({ ...prev, [player]: (prev[player] ?? []).slice(0, Math.max(0, (prev[player] ?? []).length - dartCount)) }));
+    }
+    dartsOnStepRef.current = { ...start.dartsOnStep };
+    writePerfectCloses({ ...perfectClosesRef.current, [player]: start.perfectCloses });
+    manualTapsRef.current = start.manualTaps;
+    hitStreakRef.current = 0;
+    activeTriplesRef.current = 0;
+    updatePendingAmbiguous([]);
+    updateAwaitingConfirmResolution(false);
+    scoliaDartsRef.current = 0;
+    clearTurnDisplay();
+    writeTurnActions([]);
+    return true;
+  }
+
+  /** Plays actions back through the same paths they first took, minus the noise. */
+  function replayActions(actions: readonly TurnAction[]) {
+    replayingRef.current = true;
+    try {
+      for (const a of actions) {
+        if (a.kind === "dart") processDart({ sector: a.sector, bounceout: a.bounceout, coordinates: a.coordinates });
+        else if (a.kind === "tap") registerHitFromUi(a.step);
+        else removeHitFromUi(a.step);
+      }
+    } finally {
+      replayingRef.current = false;
+    }
+  }
+
+  /**
+   * "That first dart was not a 5, it was T20": swaps one dart of the turn for what it actually
+   * was and rebuilds the turn around it — the crosses, the choice it may now pose, the dart
+   * count, the shot box, xH. The corrected dart gets the middle of its bed as its coordinate.
+   */
+  function editDart(dartIndex: number, sector: string) {
+    const actions = turnActionsRef.current.map((a) =>
+      a.kind === "dart" && a.dartIndex === dartIndex
+        ? { ...a, sector, bounceout: sector === "None", coordinates: coordinatesForSector(sector) }
+        : a,
+    );
+    if (!rewindTurn()) return;
+    haptics.undo();
+    replayActions(actions);
   }
 
   /**
@@ -1230,9 +1432,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     // the ring like any other, so it counts toward that too.
     const dartsOnStep = (dartsOnStepRef.current[step] ?? 0) + 1;
     dartsOnStepRef.current[step] = dartsOnStep;
-    if (dartsOnStep === 3 && board[step] >= 3) {
-      setPerfectCloses((prev) => ({ ...prev, [player]: { ...prev[player], [step]: true } }));
-    }
+    if (dartsOnStep === 3 && board[step] >= 3) markPerfectClose(player, step);
 
     // Un-parking redirected the parked dart onto its number; if that filled it, the darts thrown
     // between it and this one may have been singles on the number that just became active.
@@ -1241,8 +1441,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     const nextPending = [...kept, ...records, ...replay.records];
     writeProgress(nextProgress);
     writePendingHits(nextPending);
-    updatePendingAmbiguous(pendingAmbiguousRef.current.filter((p) => p.key !== parked.key));
-    if (records.length > 0) haptics.hit();
+    updatePendingAmbiguous([...pendingAmbiguousRef.current.filter((p) => p.key !== parked.key), ...replay.pending]);
+    if (records.length > 0 && !replayingRef.current) haptics.hit();
     return { hits: hits.length > 0 ? hits : null, progress: nextProgress, pendingHits: nextPending };
   }
 
@@ -1261,6 +1461,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
 
     let finalProgress = progressRef.current;
     let finalPendingHits = pendingHitsRef.current;
+    // Ring darts on the number this redirect may have just opened — see replayAfterRedirect.
+    let reopened: PendingAmbiguous[] = [];
 
     // Same guard as processDart's: a redirect rolls a cross back off the board, which is only
     // ever correct while that cross is still this turn's to move.
@@ -1290,6 +1492,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       const replay = replayAfterRedirect(activePlayer, { ...rolledBack, [item.number]: count }, item.dartIndex, turnIndex);
       finalProgress = { ...progressRef.current, [activePlayer]: replay.board };
       finalPendingHits = [...finalPendingHits, ...newHits, ...replay.records];
+      reopened = replay.pending;
 
       haptics.hit();
       writeProgress(finalProgress);
@@ -1300,7 +1503,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     // filled the number, which is exactly what makes a sibling choice on that number moot
     // (see meaningfulPending), and the state won't reflect it until the next render.
     const remaining = meaningfulPending(
-      pendingAmbiguousRef.current.filter((p) => p.key !== item.key),
+      [...pendingAmbiguousRef.current.filter((p) => p.key !== item.key), ...reopened],
       finalProgress[activePlayer]
     );
     updatePendingAmbiguous(remaining);
@@ -1313,9 +1516,20 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
 
   function undo() {
     haptics.undo();
+    // This turn: the last ACTION goes — a whole dart with everything it brought, or a tap. See
+    // rewindTurn for why it is rebuilt from the start rather than patched.
+    if (turnActionsRef.current.length > 0) {
+      const actions = turnActionsRef.current;
+      if (rewindTurn()) {
+        replayActions(actions.slice(0, -1));
+        return;
+      }
+    }
     // Any held "just placed" highlight can go stale the instant progress is rewound
     // (most obviously on a second, cascading undo) — simplest correct move is to
     // always drop it here rather than try to reconcile it with the rollback below.
+    // Cross-based fallback for records without a turn behind them (a snapshot from before
+    // turns were recorded).
     if (pendingHitsRef.current.length > 0) {
       const last = pendingHitsRef.current[pendingHitsRef.current.length - 1];
       // prevCount is right here, unlike in the redirect path: this is the most recent record,
@@ -1497,7 +1711,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   function advanceTurn(progressOverride?: PlayerProgress, pendingHitsOverride?: HitRecord[], dartsOverride?: number) {
     if (!activePlayer) return;
     dartsOnStepRef.current = {};
-    turnDartsRef.current = [];
+    writeTurnActions([]);
+    turnStartRef.current = null;
     // Read before it is cleared for the next turn — the dart count below still needs it.
     const manualTapsThisTurn = manualTapsRef.current;
     manualTapsRef.current = 0;
@@ -1802,7 +2017,9 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         turnShots={rewound === null ? turnShots : EMPTY_TURN_SHOTS}
         rewound={rewound !== null}
         pendingCount={pendingHits.length}
-        canUndo={pendingHits.length > 0 || history.length > 0}
+        canUndo={turnActionCount > 0 || pendingHits.length > 0 || history.length > 0}
+        shotsEditable={turnActionCount > 0 && !botIsThrowing}
+        onEditShot={editDart}
         pendingChoice={rewound === null ? pendingAmbiguous[pendingAmbiguous.length - 1] ?? null : null}
         awaitingConfirmResolution={awaitingConfirmResolution}
         hitPulse={hitPulse}

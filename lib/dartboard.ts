@@ -74,6 +74,19 @@ export function aimPointFor(target: AimTarget): [number, number] {
 }
 
 /**
+ * A representative landing point for a Scolia sector string — the middle of that bed. For a
+ * dart the board misread and the player corrected by hand, this stands in for the coordinate
+ * the real landing would have had: good enough for the heatmap and for xH, which then reads
+ * the dart as a clean hit on what it was corrected to. "None" lands well off the board.
+ */
+export function coordinatesForSector(sector: string): [number, number] {
+  const parsed = parseSector(sector, sector === "None");
+  if (parsed.kind === "miss") return [0, DOUBLE_OUTER_RADIUS + 30];
+  if (parsed.kind === "bull") return parsed.ring === "inner" ? [0, 0] : pointAt((BULL_INNER_RADIUS + BULL_OUTER_RADIUS) / 2, 0);
+  return aimPointFor({ ring: parsed.ring, number: parsed.number });
+}
+
+/**
  * Inverse of the coordinate system above: classifies a physical landing point into
  * the same Scolia sector-string format parseSector() expects ("T20", "D5", "S17",
  * "25", "Bull", "None") — used by the bot to score its own simulated throws through

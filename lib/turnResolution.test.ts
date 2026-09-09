@@ -132,15 +132,32 @@ describe("replayDiscardedSingles — darts thrown at a number that only became a
     expect(result.added).toEqual([]);
   });
 
-  it("skips darts that already scored and darts on other numbers or rings", () => {
+  it("skips darts that already scored on the number and darts on other numbers", () => {
     const afterRedirect = board({ "20": 3, "19": 3, "18": 3, "17": 3 });
     const darts = [
       dart(0, "T17", true),
-      dart(1, "T16", true), // banked on T when it landed — not a discarded dart
-      dart(2, "S15", false), // wrong number
+      dart(1, "S15", false), // wrong number
+      dart(2, "D5", false), // wrong number, and a double at that
     ];
     const result = replayDiscardedSingles(afterRedirect, darts, 0);
     expect(result.added).toEqual([]);
+    expect(result.reopened).toEqual([]);
+  });
+
+  it("reopens a double or triple on the newly active number as a choice instead of leaving it on the ring", () => {
+    const afterRedirect = board({ "20": 3, "19": 3, "18": 3, "17": 3, D: 1 });
+    const result = replayDiscardedSingles(afterRedirect, [dart(0, "T17", true), dart(1, "D16", true)], 0);
+    // Nothing moves yet — the cross stays on D until the player answers.
+    expect(result.board["16"]).toBe(0);
+    expect(result.board.D).toBe(1);
+    expect(result.reopened).toEqual([{ dartIndex: 1, ring: "D", multiplier: 2 }]);
+  });
+
+  it("does not reopen a ring dart once the singles before it have filled the number", () => {
+    const afterRedirect = board({ "20": 3, "19": 3, "18": 3, "17": 3, "16": 2, T: 1 });
+    const result = replayDiscardedSingles(afterRedirect, [dart(0, "T17", true), dart(1, "S16", false), dart(2, "T16", true)], 0);
+    expect(result.board["16"]).toBe(3);
+    expect(result.reopened).toEqual([]);
   });
 
   it("ignores bounce-outs and misses even when their sector string says the right number", () => {
