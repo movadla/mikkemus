@@ -59,6 +59,11 @@ export type PendingAmbiguous = {
   ringStep: "D" | "T";
   number: Step;
   multiplier: 2 | 3;
+  /** Which dart of the turn this was (0-based). Redirecting it can make the NEXT number active
+   *  retroactively, and the darts thrown after it are the ones that has to be re-read — see
+   *  replayDiscardedSingles in lib/turnResolution.ts. Absent for choices created before this
+   *  existed (a resumed match), which simply get no replay. */
+  dartIndex?: number;
 };
 
 /**

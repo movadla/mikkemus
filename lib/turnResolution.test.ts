@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { emptyProgress, type PendingAmbiguous, type Progress, type Step } from "./game";
-import { applyDartToBoard } from "./turnResolution";
+import { applyDartToBoard, replayDiscardedSingles, type TurnDart } from "./turnResolution";
 
 function board(overrides: Partial<Record<Step, number>>): Progress {
   return { ...emptyProgress(), ...overrides };
@@ -100,6 +100,72 @@ describe("applyDartToBoard — freeing a parked triple/double", () => {
     const before = board({ "17": 2, T: 3 });
     const snapshot = { ...before };
     applyDartToBoard(before, "T", 1, parkedOn("T", "17", 2));
+    expect(before).toEqual(snapshot);
+  });
+});
+
+function dart(dartIndex: number, sector: string, scored: boolean, bounceout = false): TurnDart {
+  return { dartIndex, sector, bounceout, scored };
+}
+
+describe("replayDiscardedSingles — darts thrown at a number that only became active afterwards", () => {
+  it("pays out the single on the next number thrown after the parked dart (the 17/16 case)", () => {
+    // On 17: T17 parked at dart 0, S16 thrown away at dart 1, redirect fills 17 at Confirm.
+    const afterRedirect = board({ "20": 3, "19": 3, "18": 3, "17": 3 });
+    const result = replayDiscardedSingles(afterRedirect, [dart(0, "T17", true), dart(1, "S16", false)], 0);
+    expect(result.board["16"]).toBe(1);
+    expect(result.added).toEqual([{ step: "16", prevCount: 0, newCount: 1, dartIndex: 1 }]);
+  });
+
+  it("leaves darts thrown BEFORE the parked one alone — 17 really was active then", () => {
+    const afterRedirect = board({ "20": 3, "19": 3, "18": 3, "17": 3 });
+    const result = replayDiscardedSingles(afterRedirect, [dart(0, "S16", false), dart(1, "T17", true)], 1);
+    expect(result.board["16"]).toBe(0);
+    expect(result.added).toEqual([]);
+  });
+
+  it("does nothing when the redirect did not finish the number", () => {
+    // D17 from 0/3 leaves 17 on 2 — still the active number, nothing has changed for later darts.
+    const afterRedirect = board({ "20": 3, "19": 3, "18": 3, "17": 2 });
+    const result = replayDiscardedSingles(afterRedirect, [dart(0, "D17", true), dart(1, "S16", false)], 0);
+    expect(result.board["16"]).toBe(0);
+    expect(result.added).toEqual([]);
+  });
+
+  it("skips darts that already scored and darts on other numbers or rings", () => {
+    const afterRedirect = board({ "20": 3, "19": 3, "18": 3, "17": 3 });
+    const darts = [
+      dart(0, "T17", true),
+      dart(1, "T16", true), // banked on T when it landed — not a discarded dart
+      dart(2, "S15", false), // wrong number
+    ];
+    const result = replayDiscardedSingles(afterRedirect, darts, 0);
+    expect(result.added).toEqual([]);
+  });
+
+  it("ignores bounce-outs and misses even when their sector string says the right number", () => {
+    const afterRedirect = board({ "20": 3, "19": 3, "18": 3, "17": 3 });
+    const result = replayDiscardedSingles(afterRedirect, [dart(0, "T17", true), dart(1, "S16", false, true)], 0);
+    expect(result.added).toEqual([]);
+  });
+
+  it("caps at 3/3 on the newly active number", () => {
+    const afterRedirect = board({ "20": 3, "19": 3, "18": 3, "17": 3, "16": 2 });
+    const result = replayDiscardedSingles(afterRedirect, [dart(0, "T17", true), dart(1, "S16", false), dart(2, "s16", false)], 0);
+    expect(result.board["16"]).toBe(3);
+    expect(result.added).toHaveLength(1);
+  });
+
+  it("does not replay into D, T or BULL — only a number can be entered this way", () => {
+    const afterRedirect = board({ "20": 3, "19": 3, "18": 3, "17": 3, "16": 3, "15": 3, "14": 3 });
+    const result = replayDiscardedSingles(afterRedirect, [dart(0, "T14", true), dart(1, "D5", false)], 0);
+    expect(result.added).toEqual([]);
+  });
+
+  it("never mutates the board it was given", () => {
+    const before = board({ "20": 3, "19": 3, "18": 3, "17": 3 });
+    const snapshot = { ...before };
+    replayDiscardedSingles(before, [dart(0, "T17", true), dart(1, "S16", false)], 0);
     expect(before).toEqual(snapshot);
   });
 });
