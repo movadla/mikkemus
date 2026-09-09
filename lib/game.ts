@@ -39,6 +39,10 @@ export type HitRecord = {
   /** Which of this player's turns (0-indexed) the hit belongs to — lets a rewound
    *  correction overwrite that turn's stats instead of appending a duplicate. */
   turnIndex: number;
+  /** A double/triple that landed on the player's OWN active number and stayed on the ring.
+   *  Unlike a ring hit on some other number (a slenger), this counts as a real attempt at the
+   *  ring for the expected-hits accounting — see MikkeMusApp's preBanked. */
+  ownNumberRing?: true;
 };
 
 /** Darts thrown per turn. A turn's treff/bom is always measured against this. */

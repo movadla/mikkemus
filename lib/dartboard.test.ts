@@ -24,7 +24,9 @@ describe("luckForThrow", () => {
     const result = luckForThrow([0, 106.9], "T", progress);
     expect(result).not.toBeNull();
     expect(result!.step).toBe("T");
-    expect(result!.xg).toBeCloseTo(0.51, 1);
+    // On the wire: about half the disc is triple (1), half single (0).
+    expect(result!.xg).toBeGreaterThan(0.4);
+    expect(result!.xg).toBeLessThan(0.65);
   });
 
   it("blends the mirror-image dart just outside the triple ring the same way, from the other side", () => {
@@ -34,7 +36,8 @@ describe("luckForThrow", () => {
     const result = luckForThrow([0, 107.1], "T", progress);
     expect(result).not.toBeNull();
     expect(result!.step).toBe("T");
-    expect(result!.xg).toBeCloseTo(0.5, 1);
+    expect(result!.xg).toBeGreaterThan(0.35);
+    expect(result!.xg).toBeLessThan(0.6);
   });
 
   it("has nothing to judge against when there is no active step, even on a direct triple", () => {
@@ -58,8 +61,10 @@ describe("luckForThrow", () => {
     expect(nearEdge).not.toBeNull();
     expect(nearCenter).not.toBeNull();
     expect(nearEdge!.step).toBe("BULL");
-    expect(nearEdge!.xg).toBeCloseTo(1.53, 1);
-    expect(nearCenter!.xg).toBeCloseTo(1.99, 1);
+    // On the wire: about half the disc is inner bull (2), half outer (1).
+    expect(nearEdge!.xg).toBeGreaterThan(1.3);
+    expect(nearEdge!.xg).toBeLessThan(1.7);
+    expect(nearCenter!.xg).toBeCloseTo(2, 1);
     // The core regression check: near the edge, xG must blend noticeably
     // toward the neighbor (lower) — not stay near the full value like the
     // (safe) center does. Inverted proximity would swap these two.
@@ -100,7 +105,9 @@ describe("luckForThrow", () => {
     const result = luckForThrow([0, 106.9], "20", progress);
     expect(result).not.toBeNull();
     expect(result!.step).toBe("20");
-    expect(result!.xg).toBeCloseTo(2.03, 1);
+    // On the wire between T20 (3 for the number) and S20 (1): about the average.
+    expect(result!.xg).toBeGreaterThan(1.8);
+    expect(result!.xg).toBeLessThan(2.2);
   });
 
   it("regression: same redirect value applies when the triple ring is already full (auto-redirect, not a live choice)", () => {
@@ -112,7 +119,8 @@ describe("luckForThrow", () => {
     progress.T = 3;
     const result = luckForThrow([0, 106.9], "20", progress);
     expect(result).not.toBeNull();
-    expect(result!.xg).toBeCloseTo(2.03, 1);
+    expect(result!.xg).toBeGreaterThan(1.8);
+    expect(result!.xg).toBeLessThan(2.2);
   });
 
   it("caps the redirect bonus by how much the number actually still needs, so a near-finished number gets no inflated bonus", () => {
@@ -137,14 +145,16 @@ describe("luckForThrow", () => {
     const result = luckForThrow([0, 161.9], "20", progress);
     expect(result).not.toBeNull();
     expect(result!.step).toBe("20"); // attributed to the number worked on, not "D" - it landed as a single
-    expect(result!.xg).toBeCloseTo(1.5, 1);
+    // On the wire between S20 (1) and D20 (2 for the number): about the average.
+    expect(result!.xg).toBeGreaterThan(1.35);
+    expect(result!.xg).toBeLessThan(1.65);
     expect(result!.xg).toBeGreaterThan(1); // the actual bug fix: no longer stuck at the inert 1.0
 
     // The redirect's value doesn't depend on whether D itself happens to be
     // full — redirecting always targets the NUMBER step, not D.
     const progressDFull = emptyProgress();
     progressDFull.D = 3;
-    expect(luckForThrow([0, 161.9], "20", progressDFull)!.xg).toBeCloseTo(1.5, 1);
+    expect(luckForThrow([0, 161.9], "20", progressDFull)!.xg).toBeGreaterThan(1.35);
   });
 });
 
@@ -232,7 +242,8 @@ describe("luckForThrow — which step the value is filed under", () => {
     // the nudge across the edge lands in D20 worth 2 on the number, proximity ~1 → 1 + ½·(2−1).
     const result = luckForThrow([0, 161.9], "20", emptyProgress());
     expect(result!.step).toBe("20");
-    expect(result!.xg).toBeCloseTo(1.5, 1);
+    expect(result!.xg).toBeGreaterThan(1.35);
+    expect(result!.xg).toBeLessThan(1.65);
   });
 
   it("collects on T only once T is the active step — and fills it from there", () => {

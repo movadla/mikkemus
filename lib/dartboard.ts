@@ -153,22 +153,8 @@ function inferLuckTarget(actual: [number, number], activeStepAtThrow: Step | nul
   return { ring: "S", number: Number(activeStepAtThrow) };
 }
 
+/** A radial band and its two edges — Bull-duell's proximity (below) is judged against these. */
 type RadialBand = { inner: number; outer: number };
-
-/** Which radial band a distance-from-center falls in, and its two edges.
- *  The band beyond the board ("miss") is given the double ring's own width
- *  so a throw drifting further and further out fades smoothly to "not
- *  close to anything" instead of dividing by a near-zero width. */
-function radialBandFor(r: number): RadialBand {
-  if (r <= BULL_INNER_RADIUS) return { inner: 0, outer: BULL_INNER_RADIUS };
-  if (r <= BULL_OUTER_RADIUS) return { inner: BULL_INNER_RADIUS, outer: BULL_OUTER_RADIUS };
-  if (r < TRIPLE_INNER_RADIUS) return { inner: BULL_OUTER_RADIUS, outer: TRIPLE_INNER_RADIUS };
-  if (r <= TRIPLE_OUTER_RADIUS) return { inner: TRIPLE_INNER_RADIUS, outer: TRIPLE_OUTER_RADIUS };
-  if (r < DOUBLE_INNER_RADIUS) return { inner: TRIPLE_OUTER_RADIUS, outer: DOUBLE_INNER_RADIUS };
-  if (r <= DOUBLE_OUTER_RADIUS) return { inner: DOUBLE_INNER_RADIUS, outer: DOUBLE_OUTER_RADIUS };
-  const missBandWidth = DOUBLE_OUTER_RADIUS - DOUBLE_INNER_RADIUS;
-  return { inner: DOUBLE_OUTER_RADIUS, outer: DOUBLE_OUTER_RADIUS + missBandWidth };
-}
 
 /** Normalized distance from r to the nearest edge of its radial band (0 =
  *  on the edge, 1 = as far as possible from it), plus the radius to nudge
@@ -233,30 +219,47 @@ function stepForTarget(target: LuckTarget): Step {
 }
 
 /**
- * "Expected Goals" for a single dart, expressed directly in crosses (0–3) —
- * the same unit the game itself scores in. Dead center of whatever the dart
- * is judged against is worth exactly that field's value; a dart sitting
- * exactly on a boundary is worth the AVERAGE of the two neighboring values
- * (it could just as easily have landed on either side); everything in
- * between is a linear blend based on `proximity` (0 = center, 1 = boundary):
+ * How far "a hair from" reaches: the value is averaged over a disc of this radius around the
+ * landing. Half a triple band — a dart in the middle of the triple is priced at the triple's
+ * full worth, one on the wire at the average of the two sides, one 4mm out at nothing.
+ */
+const LUCK_RADIUS_MM = 4;
+const LUCK_GRID_MM = 0.5;
+
+/** Mean of `f` over the disc around `centre`, on a 1mm grid — deterministic, so the same dart
+ *  is always worth the same, and even in every direction. */
+function discAverage(centre: [number, number], f: (p: [number, number]) => number): number {
+  let sum = 0;
+  let n = 0;
+  for (let dx = -LUCK_RADIUS_MM; dx <= LUCK_RADIUS_MM; dx += LUCK_GRID_MM) {
+    for (let dy = -LUCK_RADIUS_MM; dy <= LUCK_RADIUS_MM; dy += LUCK_GRID_MM) {
+      if (dx * dx + dy * dy > LUCK_RADIUS_MM * LUCK_RADIUS_MM) continue;
+      sum += f([centre[0] + dx, centre[1] + dy]);
+      n++;
+    }
+  }
+  return n > 0 ? sum / n : 0;
+}
+
+/**
+ * "Expected hits" for a single dart, in crosses — the same unit the game scores in: the value
+ * FOR THE TARGET (see valueForTarget) averaged over a small disc around where the dart landed.
+ * Dead centre of the field you were after is worth exactly that field's value; a dart on a
+ * boundary is worth the average of the two sides; a dart 4mm past the wire is worth exactly what
+ * it hit, no more. A single 20 right against D20 comes out at 1.5.
  *
- *   xG = actualValue + (proximity / 2) × (otherSideValue − actualValue)
+ * Why an average over a disc, and not a blend toward the nearest boundary: the blend this used
+ * to do faded over HALF THE BAND the dart sat in, so a single 30mm from the triple ring still
+ * collected credit for the triple (the single bed is 55mm wide), while a triple 3mm inside its
+ * own 8mm ring lost value fast. Summed over a match that inflated the D, T and BULL rows by
+ * 40–100% against the crosses actually won, and it never evened out — thin targets always had
+ * far more "nearly" mass outside them than inside. A fixed radius has no such asymmetry:
+ * averaged over a match, expected and actual land on the same number.
  *
- * ~ the field's own exact value when nothing was close (dead center), and
- * blends toward the neighbor's value near a boundary — even when that
- * neighbor is worth the same (e.g. between two still-needed triples, see
- * valueOf), in which case the blend is a no-op and xG just stays at that
- * shared value. `valueWithRedirect` is applied to BOTH sides of that blend
- * (not just the actual landing), so a single sitting right next to a
- * double/triple ring on the player's own active number correctly reflects
- * how much that double/triple could have been worth, not just its plain
- * ring value.
- *
- * Returns null when no target could be inferred at all (see
- * inferLuckTarget) — callers should exclude these from any average rather
- * than treating a null as a neutral 0. Otherwise returns which of the 10
- * steps this dart belongs to alongside its xG, so callers can track
- * "Expected Goals" broken down per section rather than one overall mean.
+ * Returns null when no target could be inferred at all (see inferLuckTarget) — callers should
+ * exclude these from any average rather than treating a null as a neutral 0. Otherwise returns
+ * which of the 10 steps this dart belongs to alongside its value, so callers can track expected
+ * hits broken down per section rather than one overall mean.
  */
 export function luckForThrow(
   actual: [number, number],
@@ -265,34 +268,9 @@ export function luckForThrow(
 ): { step: Step; xg: number } | null {
   const target = inferLuckTarget(actual, activeStepAtThrow);
   if (!target) return null;
-
-  const r = Math.hypot(actual[0], actual[1]);
-  const theta = angleOf(actual);
-  const band = radialBandFor(r);
-  const radial = radialProximity(r, band);
-  const radialNudge: [number, number] = pointAt(radial.nudgedR, theta);
-
-  let angularNormDist = Infinity;
-  let angularNudge: [number, number] | null = null;
-  if (target.ring !== "BULL") {
-    const center = angleForNumber(target.number);
-    let diff = theta - center;
-    while (diff > Math.PI) diff -= 2 * Math.PI;
-    while (diff < -Math.PI) diff += 2 * Math.PI;
-    angularNormDist = Math.abs(Math.abs(diff) - WEDGE_HALF_ANGLE) / WEDGE_HALF_ANGLE;
-    const edgeAngle = diff >= 0 ? center + WEDGE_HALF_ANGLE : center - WEDGE_HALF_ANGLE;
-    angularNudge = pointAt(r, diff >= 0 ? edgeAngle + 0.01 : edgeAngle - 0.01);
-  }
-
-  const primaryNormDist = Math.min(1, Math.min(radial.normDist, angularNormDist));
-  const proximity = 1 - primaryNormDist;
-  const nudged = angularNormDist < radial.normDist && angularNudge ? angularNudge : radialNudge;
-
-  // Both sides priced against the TARGET, and the result filed under the target — the dart is
-  // judged as the attempt it was, not as whatever it happened to hit. See valueForTarget.
-  const landed = valueForTarget(sectorAt(actual), target, progress);
-  const otherSide = valueForTarget(sectorAt(nudged), target, progress);
-  const xg = landed + (proximity / 2) * (otherSide - landed);
+  // Priced against the TARGET and filed under the target — the dart is judged as the attempt it
+  // was, not as whatever it happened to hit. See valueForTarget.
+  const xg = discAverage(actual, (p) => valueForTarget(sectorAt(p), target, progress));
   return { step: stepForTarget(target), xg };
 }
 

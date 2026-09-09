@@ -101,22 +101,6 @@ export type TurnStart = {
   manualTaps: number;
 };
 
-/**
- * The board as it will most likely stand once the parked triples/doubles are answered: each one
- * redirected onto its number. xH judges a dart against the active step, and a second T17 thrown
- * while the first is still parked should not be priced as if 17 were still wide open — the
- * first one is going to fill it. Without this, three T17s in one turn read as xH 9 against a
- * board that can pay out five crosses at most.
- */
-export function boardAssumingRedirects(board: Progress, parked: readonly PendingAmbiguous[]): Progress {
-  const next: Progress = { ...board };
-  for (const p of parked) {
-    if (next[p.number] >= getRules().target) continue;
-    next[p.ringStep] = removeOneCross(next[p.ringStep]);
-    for (const d of chainCrosses(next[p.number], p.multiplier)) next[p.number] = d.newCount;
-  }
-  return next;
-}
 
 export type Replay = {
   board: Progress;

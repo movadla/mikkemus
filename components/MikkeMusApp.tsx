@@ -38,7 +38,6 @@ import { playFanfare, playHitStreakSound, playWinBoom, primeAudio } from "@/lib/
 import { classifyThrow, formatSectorLabel, parseSector } from "@/lib/scoliaMapping";
 import {
   applyDartToBoard,
-  boardAssumingRedirects,
   replayDiscardedSingles,
   type DartAction,
   type TapAction,
@@ -207,13 +206,15 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   // side panel can show them while the match is still running.
   const [luckLive, setLuckLive] = useState<Record<string, { sum: number; count: number }>>({});
   /**
-   * D and T crosses banked while the player was NOT on that row — slengere, in other words.
+   * D and T crosses banked while the player was on a DIFFERENT number — slengere, in other words.
    *
-   * xH judges every dart as an attempt at the active step, so a pre-banked triple is a miss at
-   * the number, and its T cross is luck outside the accounting. For the "forventet / faktisk"
-   * reading to stay honest, the faktisk side has to leave those same crosses out: what the T row
-   * compares against is the crosses won while ON T, i.e. total minus pre-banked. Numbers and
-   * BULL can only ever score while active, so they need no such correction.
+   * xH judges every dart as an attempt at the active step, so a pre-banked triple on 6 while on
+   * 20 is a miss at 20, and its T cross is luck outside the accounting. For the "forventet /
+   * faktisk" reading to stay honest, the faktisk side has to leave those same crosses out: what
+   * the T row compares against is the crosses won as attempts at T, i.e. total minus pre-banked.
+   * A triple on the player's OWN number that stays on the ring is not a slenger: it is booked as
+   * an attempt at T, judged as one (worth 1), and counts (see HitRecord.ownNumberRing). Numbers
+   * and BULL can only ever score while active, so they need no such correction.
    *
    * Ref mirrored synchronously, same reasoning as progressRef: it is adjusted inside the same
    * handlers that create and roll back the records it counts.
@@ -741,8 +742,6 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     // the meaningful "how far off from what you were aiming at" reference, not just a no-op).
     const boardBefore = progressRef.current[activePlayer];
     const activeStepAtThrow = currentStepFor(boardBefore);
-    // Triples/doubles still parked from earlier in this turn — see boardAssumingRedirects.
-    const parkedBefore = pendingAmbiguousRef.current.filter((p) => pendingHitsRef.current.includes(p.hitRecord));
 
     const parsed = parseSector(payload.sector, payload.bounceout);
 
@@ -775,10 +774,18 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     // cross is still un-confirmed. Once its record has moved to history the turn log owns it,
     // and rolling it back here would take it off the board and leave it in the stats.
     const parked = candidate && pendingHitsRef.current.includes(candidate.hitRecord) ? candidate : null;
+    // A double/triple on the player's own active number that stays on the ring — parked as a
+    // choice, or kept outright by the one-cross-left rule. Judged and booked as an attempt at
+    // the ring, not as a slenger; if it is redirected later, resolvePendingChoice re-judges it.
+    const ownNumberRing =
+      parsed.kind === "number" &&
+      (parsed.ring === "D" || parsed.ring === "T") &&
+      String(parsed.number) === activeStepAtThrow &&
+      classified.step === parsed.ring;
     const applied = classified.step
       ? parked
         ? freeRingAndRegister(parked, classified.step, classified.crosses)
-        : applyPlainHit(classified.step, classified.crosses)
+        : applyPlainHit(classified.step, classified.crosses, ownNumberRing)
       : null;
     const hitResult: HitRecord[] | null = applied?.hits ?? null;
     if (classified.ambiguous && hitResult) {
@@ -848,12 +855,11 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         },
       };
     }
-    // Judged against the board with the turn's parked redirects assumed taken, not the board as
-    // it literally stands: a second T17 thrown while the first is still an open question is a
-    // dart at whatever comes after 17, not another shot at a wide-open 17. See
-    // boardAssumingRedirects for the numbers this fixes.
-    const luckBoard = boardAssumingRedirects(boardBefore, parkedBefore);
-    const luck = luckForThrow(payload.coordinates, currentStepFor(luckBoard), luckBoard);
+    // A ring hit on the own number is judged as the ring attempt it is booked as (worth one
+    // cross there); everything else against the active step. Redirecting it later re-judges it
+    // against the number — so three T17s in a turn read as 1+1+1 until one becomes 17×3, and
+    // the sum always matches the crosses they actually brought.
+    const luck = luckForThrow(payload.coordinates, ownNumberRing ? (parsed.ring as Step) : activeStepAtThrow, boardBefore);
     if (luck !== null) {
       const luckByStep = luckTotalsRef.current[activePlayer] ?? emptyLuckByStep();
       const stepTotals = luckByStep[luck.step];
@@ -1181,7 +1187,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
    * reflect the first call's setProgress until the next render.
    */
   /** Returns the HitRecord(s) this dart created, or null if nothing registered (also used by GameScreen's manual taps, which ignore the return value). */
-  function registerHit(step: Step, crosses: number = 1): HitRecord[] | null {
+  function registerHit(step: Step, crosses: number = 1, ownNumberRing = false): HitRecord[] | null {
     if (!activePlayer) return null;
     // The ref, not the state: a replayed turn registers several hits in one tick, and each has
     // to see the one before it.
@@ -1190,16 +1196,19 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     if (!isRegistrable(step, activeStep, playerProgress)) return null;
 
     const turnIndex = rewound ? rewoundTurnIndex ?? 0 : turnCounters[activePlayer] ?? 0;
-    const newPendingHits = chainCrosses(playerProgress[step], crosses).map((d) => ({
+    const newPendingHits: HitRecord[] = chainCrosses(playerProgress[step], crosses).map((d) => ({
       player: activePlayer,
       step,
       prevCount: d.prevCount,
       newCount: d.newCount,
       turnIndex,
+      ...(ownNumberRing ? { ownNumberRing: true as const } : {}),
     }));
     if (newPendingHits.length === 0) return null;
-    // A double or triple banked while working on a number is a slenger — see preBanked.
-    if (isPreBank(step, activeStep)) bumpPreBanked(activePlayer, step, newPendingHits.length);
+    // A double or triple banked while working on a number is a slenger — see preBanked. The
+    // exception is a ring hit on the number itself that stays on the ring: that is the player's
+    // own call (or the one-cross-left rule) and counts as a real attempt at the ring.
+    if (isPreBank(step, activeStep) && !ownNumberRing) bumpPreBanked(activePlayer, step, newPendingHits.length);
     const count = newPendingHits[newPendingHits.length - 1].newCount;
 
     // Darts, not crosses — one call is one dart, however many crosses it carries. That
@@ -1272,7 +1281,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       },
     });
     writePendingHits(records.filter((_, i) => i !== idx));
-    if (isPreBank(removed.step, currentStepFor({ ...progressRef.current[activePlayer], [removed.step]: removed.prevCount }))) {
+    if (!removed.ownNumberRing && isPreBank(removed.step, currentStepFor({ ...progressRef.current[activePlayer], [removed.step]: removed.prevCount }))) {
       bumpPreBanked(activePlayer, removed.step, -1);
     }
     clearPerfectClose(activePlayer, step);
@@ -1286,8 +1295,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
    *  state the same synchronous handler just set has not flushed yet. */
   type DartApplication = { hits: HitRecord[] | null; progress: PlayerProgress; pendingHits: HitRecord[] };
 
-  function applyPlainHit(step: Step, crosses: number): DartApplication {
-    const hits = registerHit(step, crosses);
+  function applyPlainHit(step: Step, crosses: number, ownNumberRing = false): DartApplication {
+    const hits = registerHit(step, crosses, ownNumberRing);
     // registerHit writes both refs before it returns, so these are already the board and the
     // records as they stand after this dart — no reconstruction needed.
     return { hits, progress: progressRef.current, pendingHits: pendingHitsRef.current };
@@ -1346,29 +1355,38 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
 
       // It was judged as a miss at the old number; judge it again as what it was — a dart at
       // the number it hit, on the board as it stood right before it.
-      const rejudged = luckForThrow(dart.coordinates, d.step, { ...replay.board, [d.step]: d.prevCount });
-      const old = dart.luck;
-      const luckByStep = luckTotalsRef.current[player] ?? emptyLuckByStep();
-      const adjusted = { ...luckByStep };
-      if (old) adjusted[old.step] = { sum: adjusted[old.step].sum - old.xg, count: adjusted[old.step].count - 1 };
-      if (rejudged) {
-        adjusted[rejudged.step] = { sum: adjusted[rejudged.step].sum + rejudged.xg, count: adjusted[rejudged.step].count + 1 };
-      }
-      luckTotalsRef.current = { ...luckTotalsRef.current, [player]: adjusted };
-      setLuckLive((prev) => {
-        const running = prev[player] ?? { sum: 0, count: 0 };
-        return {
-          ...prev,
-          [player]: {
-            sum: running.sum - (old?.xg ?? 0) + (rejudged?.xg ?? 0),
-            count: running.count - (old ? 1 : 0) + (rejudged ? 1 : 0),
-          },
-        };
-      });
-      dart.luck = rejudged;
+      rejudgeDart(player, dart, d.step, { ...replay.board, [d.step]: d.prevCount });
     }
 
     return { board: replay.board, records, pending };
+  }
+
+  /**
+   * Replaces what xH made of a dart. Used when a dart turns out to have been a different attempt
+   * than it was booked as at the time: a single on the number that only became active
+   * afterwards, or a ring hit on the own number that the player redirects onto the number.
+   */
+  function rejudgeDart(player: string, dart: LiveDart, activeStep: Step, board: Progress) {
+    const rejudged = luckForThrow(dart.coordinates, activeStep, board);
+    const old = dart.luck;
+    const luckByStep = luckTotalsRef.current[player] ?? emptyLuckByStep();
+    const adjusted = { ...luckByStep };
+    if (old) adjusted[old.step] = { sum: adjusted[old.step].sum - old.xg, count: adjusted[old.step].count - 1 };
+    if (rejudged) {
+      adjusted[rejudged.step] = { sum: adjusted[rejudged.step].sum + rejudged.xg, count: adjusted[rejudged.step].count + 1 };
+    }
+    luckTotalsRef.current = { ...luckTotalsRef.current, [player]: adjusted };
+    setLuckLive((prev) => {
+      const running = prev[player] ?? { sum: 0, count: 0 };
+      return {
+        ...prev,
+        [player]: {
+          sum: running.sum - (old?.xg ?? 0) + (rejudged?.xg ?? 0),
+          count: running.count - (old ? 1 : 0) + (rejudged ? 1 : 0),
+        },
+      };
+    });
+    dart.luck = rejudged;
   }
 
   /**
@@ -1495,10 +1513,12 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     // This dart's own crosses, as distinct from the parked one's payout — the caller uses these
     // for the streak sound and the closing slam, which belong to the throw that just happened.
     const hits = records.filter((r) => r.step === step);
-    // The parked dart was by definition a slenger (a triple/double on the active NUMBER, banked
-    // on the ring); moving it off the ring un-banks it. This dart's own ring crosses take its
-    // place there, and count as pre-banked for the same reason it did.
-    bumpPreBanked(player, parked.ringStep, -1);
+    // The parked dart moves onto its number: un-bank it if it was a pre-banked slenger (a
+    // reopened one — see replayAfterRedirect), and re-judge it as the attempt at the number it
+    // now is. This dart's own ring crosses take its place on the ring, as a slenger.
+    if (!parked.hitRecord.ownNumberRing) bumpPreBanked(player, parked.ringStep, -1);
+    const parkedDart = parked.dartIndex === undefined ? undefined : turnDarts().find((t) => t.dartIndex === parked.dartIndex);
+    if (parkedDart) rejudgeDart(player, parkedDart, parked.number, progressRef.current[player]);
     const activeBefore = currentStepFor(progressRef.current[player]);
     if (isPreBank(step, activeBefore)) bumpPreBanked(player, step, hits.length);
 
@@ -1548,8 +1568,12 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         [item.ringStep]: removeOneCross(progressRef.current[activePlayer][item.ringStep]),
       };
       finalPendingHits = pendingHitsRef.current.filter((h) => h !== item.hitRecord);
-      // Off the ring and onto the number: it was a slenger on the ring, and now it isn't.
-      bumpPreBanked(activePlayer, item.ringStep, -1);
+      // Off the ring and onto the number. A reopened slenger (see replayAfterRedirect) was
+      // pre-banked and now isn't; a ring hit on the own number never was. Either way the dart
+      // is now an attempt at the number, and xH re-judges it as such.
+      if (!item.hitRecord.ownNumberRing) bumpPreBanked(activePlayer, item.ringStep, -1);
+      const redirectedDart = item.dartIndex === undefined ? undefined : turnDarts().find((t) => t.dartIndex === item.dartIndex);
+      if (redirectedDart) rejudgeDart(activePlayer, redirectedDart, item.number, rolledBack);
 
       // chainCrosses rather than registerHit: registerHit reads `progress` from this
       // component's state and would miss the rollback above until the next render.
@@ -1619,8 +1643,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       });
       writePendingHits(pendingHitsRef.current.slice(0, -1));
       // Was this record a slenger when it was banked? Judged against the board as it stood
-      // before it — a D/T cross made while some number was active.
-      if (isPreBank(last.step, currentStepFor({ ...progressRef.current[last.player], [last.step]: last.prevCount }))) {
+      // before it — a D/T cross made while some number was active, and not on that number.
+      if (!last.ownNumberRing && isPreBank(last.step, currentStepFor({ ...progressRef.current[last.player], [last.step]: last.prevCount }))) {
         bumpPreBanked(last.player, last.step, -1);
       }
       clearPerfectClose(last.player, last.step);
@@ -1636,7 +1660,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       });
       setHistory((prev) => prev.slice(0, -1));
       clearPerfectClose(last.player, last.step);
-      if (isPreBank(last.step, currentStepFor({ ...progressRef.current[last.player], [last.step]: last.prevCount }))) {
+      if (!last.ownNumberRing && isPreBank(last.step, currentStepFor({ ...progressRef.current[last.player], [last.step]: last.prevCount }))) {
         bumpPreBanked(last.player, last.step, -1);
       }
       setRewound(last.player);
