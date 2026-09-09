@@ -638,7 +638,8 @@ export function GameScreen({
               return (
                 <>
                   <div>
-                    Du traff {ringLabel} {STEP_LABELS[pendingChoice.number]} — hvor skal kastet telle?
+                    {pendingChoice.ringStep}
+                    {STEP_LABELS[pendingChoice.number]} – Hva setter du den på?
                   </div>
                   <div className="mt-2 text-sm" style={{ color: "var(--color-muted)" }}>
                     Nå: {STEP_LABELS[pendingChoice.number]} på {numberNow}/3, {ringLabel} på {ringNow}/3
@@ -651,17 +652,14 @@ export function GameScreen({
           buttons={[
             {
               // Redirecting rolls the ring cross back and puts the multiplier on the number
-              // instead — so each label states where that choice actually leaves you.
-              label: (() => {
-                const numberNow = activeProgress?.[pendingChoice.number] ?? 0;
-                const after = Math.min(3, numberNow + pendingChoice.multiplier);
-                return `Fullfør ${STEP_LABELS[pendingChoice.number]} → ${after}/3${after >= 3 ? " (ferdig)" : ""}`;
-              })(),
+              // instead. Labelled as what the dart IS on each row — "17×3" or "Trippel" — the
+              // way a player would say it; the "Nå:" line above carries the counts.
+              label: `${STEP_LABELS[pendingChoice.number]}×${pendingChoice.multiplier}`,
               onClick: () => onResolvePendingChoice("redirect"),
               background: "var(--color-green)",
             },
             {
-              label: `Behold på ${ringLabel} (${activeProgress?.[pendingChoice.ringStep] ?? 0}/3)`,
+              label: ringLabel,
               onClick: () => onResolvePendingChoice("keep"),
               background: "var(--color-teal)",
               color: "var(--color-bg)",
