@@ -108,6 +108,11 @@ export function classifyThrow(parsed: ParsedSector, activeStep: Step | null, pro
     if (ringFull) {
       return { step: numberStep, crosses: multiplier, ambiguous: null };
     }
+    // One cross left on the number: redirecting pays the same single cross the ring does, and
+    // the ring is the harder one to hit — nobody would choose the number. Not worth asking.
+    if (rules.target - progress[numberStep] <= 1) {
+      return { step: ringStep, crosses, ambiguous: null };
+    }
     return { step: ringStep, crosses, ambiguous: { ringStep, number: numberStep, multiplier } };
   }
 

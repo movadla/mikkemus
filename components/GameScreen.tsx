@@ -383,7 +383,6 @@ export function GameScreen({
   pendingCount,
   canUndo,
   pendingChoice,
-  awaitingConfirmResolution,
   hitPulse,
   closedStep,
   perfectCloses,
@@ -518,9 +517,9 @@ export function GameScreen({
   // is the answer. Several undecided darts queue behind the live one and are answered in turn.
   const shotHighlight = (i: number): "active" | "queued" | null =>
     pendingChoice?.dartIndex === i ? "active" : pendingChoices.some((c) => c.dartIndex === i) ? "queued" : null;
-  const choicePrompt = pendingChoice
-    ? `${pendingChoice.ringStep}${STEP_LABELS[pendingChoice.number]} – hvor vil du sette den? Trykk ${STEP_LABELS[pendingChoice.number]} eller ${ringLabel} i tabellen${awaitingConfirmResolution ? " for å bekrefte turen" : ""}.`
-    : null;
+  // Short on purpose: the two gold cells say where it can go, the sentence only says that a
+  // choice is waiting.
+  const choicePrompt = pendingChoice ? `Velg hvor du skal sette ${pendingChoice.ringStep}${STEP_LABELS[pendingChoice.number]}` : null;
   /** Which answer tapping this cell gives, if the cell is one of the live question's two rows. */
   const choiceRoleFor = (s: Step, isActive: boolean): "redirect" | "keep" | null =>
     isActive && pendingChoice ? (s === pendingChoice.number ? "redirect" : s === pendingChoice.ringStep ? "keep" : null) : null;
@@ -929,22 +928,22 @@ export function GameScreen({
           <ShotIndicator shots={turnShots} onEdit={shotsEditable ? setEditingShot : undefined} highlight={shotHighlight} />
         </div>
       )}
-      {/* Landscape has no room under the rail for a sentence, so the question floats over the
-          top of the board instead — the gold matches the boxes and cells it refers to. */}
-      {compactLandscape && choicePrompt && (
-        <p
-          role="status"
-          className="fixed top-2 left-1/2 -translate-x-1/2 z-40 px-3 py-1 rounded-full text-center"
-          style={{ background: "var(--color-surface)", border: "1px solid var(--color-gold)", color: "var(--color-gold-strong)", fontSize: "0.72rem", maxWidth: "70vw" }}
-        >
-          {choicePrompt}
-        </p>
-      )}
 
       {/* Landscape only — this fills the gap in the right-hand column. In portrait there is no
           gap to fill, and the same content would push the board off screen. */}
       {compactLandscape && activePlayer && liveStats && (
         <div className="live-side">
+          {/* The question lives in this column in landscape. It floated over the top of the board
+              before, which covered the 20 row — the very cell a T20 would need tapped. */}
+          {choicePrompt && (
+            <p
+              role="status"
+              className="text-center mb-1 px-2 py-1 rounded-lg shrink-0"
+              style={{ background: "rgba(201, 162, 75, 0.12)", border: "1px solid var(--color-gold)", color: "var(--color-gold-strong)", fontSize: "0.7rem", fontWeight: 600 }}
+            >
+              {choicePrompt}
+            </p>
+          )}
           <LiveSidePanel
             playerName={activePlayer}
             throws={matchThrows}

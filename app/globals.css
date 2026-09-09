@@ -700,6 +700,9 @@ button {
     min-width: 0;
     overflow: hidden;
     padding: 0.2rem 0 0.35rem;
+    /* A column, so the triple/double prompt can sit above the panel and the panel takes the rest. */
+    display: flex;
+    flex-direction: column;
   }
 
   .action-bar {

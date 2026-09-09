@@ -18,6 +18,24 @@ describe("rules — standard is the default", () => {
   });
 });
 
+describe("standard — when the triple/double question is not worth asking", () => {
+  it("keeps a T17 on the ring silently when 17 needs just one more cross", () => {
+    // Redirecting would pay one cross on 17; the ring pays one cross on T. Same count, and the
+    // ring is the harder one, so the choice is made for the player.
+    expect(classifyThrow(parseSector("T17", false), "17", board({ "17": 2 }))).toEqual({ step: "T", crosses: 1, ambiguous: null });
+    expect(classifyThrow(parseSector("D17", false), "17", board({ "17": 2 }))).toEqual({ step: "D", crosses: 1, ambiguous: null });
+  });
+
+  it("still asks when the number has room for more than one", () => {
+    expect(classifyThrow(parseSector("T17", false), "17", board({ "17": 1 })).ambiguous).toEqual({ ringStep: "T", number: "17", multiplier: 3 });
+    expect(classifyThrow(parseSector("D17", false), "17", board({ "17": 0 })).ambiguous).toEqual({ ringStep: "D", number: "17", multiplier: 2 });
+  });
+
+  it("a full ring still forces the redirect, even with one cross left", () => {
+    expect(classifyThrow(parseSector("T17", false), "17", board({ "17": 2, T: 3 }))).toEqual({ step: "17", crosses: 3, ambiguous: null });
+  });
+});
+
 describe("1 treff", () => {
   beforeEach(() => setGameVariant("onehit"));
   afterEach(() => setGameVariant("standard"));

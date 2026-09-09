@@ -256,17 +256,24 @@ function buildSolver(profiles: LevelProfiles): Solver {
   /** Expected value of an ambiguous triple/double hit on the active number — the bot
    *  always resolves it toward whichever branch leaves fewer expected darts, matching
    *  a player who's allowed to choose after seeing the throw land (see resolvePendingChoice). */
+  /** classifyThrow's second silent case: one cross left on the number, so the ring keeps the
+   *  dart and no question is asked. Mirrored here so the plan never counts on a redirect the
+   *  game will not offer. */
+  const oneLeftOnNumber = (s: BotState) => T - s.numberCross <= 1;
+
   function ambiguousValue(s: BotState, ring: "D" | "T", multiplier: number): number {
     const ringCross = ring === "D" ? s.dCross : s.tCross;
     const numberBranch = evaluate(withNumberCross(s, multiplier));
     if (ringCross >= T) return numberBranch; // ring already full — redirect is forced, matches classifyThrow
     const ringBranch = evaluate(ring === "D" ? withD(s, 1) : withT(s, 1));
+    if (oneLeftOnNumber(s)) return ringBranch;
     return Math.min(numberBranch, ringBranch);
   }
 
   function ambiguousRedirects(s: BotState, ring: "D" | "T", multiplier: number): boolean {
     const ringCross = ring === "D" ? s.dCross : s.tCross;
     if (ringCross >= T) return true;
+    if (oneLeftOnNumber(s)) return false;
     const numberBranch = evaluate(withNumberCross(s, multiplier));
     const ringBranch = evaluate(ring === "D" ? withD(s, 1) : withT(s, 1));
     return numberBranch <= ringBranch;
@@ -361,6 +368,7 @@ function buildSolver(profiles: LevelProfiles): Solver {
     if (ringCross >= T) return numberProb; // forced redirect, matches ambiguousValue/classifyThrow
     const ringNext = ring === "D" ? withD(s, 1) : withT(s, 1);
     const ringProb = isTerminal(ringNext) ? 1 : V(ringNext);
+    if (oneLeftOnNumber(s)) return ringProb;
     return Math.max(numberProb, ringProb);
   }
 
@@ -454,6 +462,7 @@ function buildSolver(profiles: LevelProfiles): Solver {
   function shouldRedirectUnderBudget(s: BotState, ring: "D" | "T", multiplier: number, budget: number): boolean {
     const ringCross = ring === "D" ? s.dCross : s.tCross;
     if (ringCross >= T) return true;
+    if (oneLeftOnNumber(s)) return false;
     const V = (s2: BotState) => probFinishWithin(s2, budget - 1);
     const numberNext = withNumberCross(s, multiplier);
     const numberProb = isTerminal(numberNext) ? 1 : V(numberNext);

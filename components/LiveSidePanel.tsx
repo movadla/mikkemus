@@ -43,7 +43,7 @@ export function LiveSidePanel({
   const photo = roster.find((r) => r.name.trim().toLowerCase() === playerName.trim().toLowerCase())?.photo;
 
   return (
-    <div className="live-panel flex flex-col h-full min-h-0 items-center gap-1.5">
+    <div className="live-panel flex flex-col flex-1 min-h-0 w-full items-center gap-1.5">
       <div
         className="rounded-full overflow-hidden flex items-center justify-center shrink-0"
         style={{
