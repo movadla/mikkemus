@@ -12,6 +12,20 @@ export type BotLevelConfig = {
 
 export const BOT_LEVEL_ORDER: BotLevel[] = ["1", "2", "3", "4", "5", "6"];
 
+/** The levels offered in the pickers. 4–6 still exist for matches that already have them, but
+ *  nobody chose them: three tiers, medal-ranked, is the whole menu. */
+export const BOT_LEVEL_PICKABLE: BotLevel[] = ["1", "2", "3"];
+
+/** The level as a medal — gold is the strongest, as with the players it is named after. */
+export function botLevelBadge(level: BotLevel): string {
+  return level === "1" ? "🥇" : level === "2" ? "🥈" : level === "3" ? "🥉" : `(${level})`;
+}
+
+/** The name a bot plays under: "Littler 🥇 🤖". The robot marks it as a bot wherever names are listed. */
+export function botDisplayName(level: BotLevel): string {
+  return `${BOT_LEVELS[level].name} ${botLevelBadge(level)} 🤖`;
+}
+
 /** One entrant in a shared-board team — a real person or a bot, mixed freely. The game engine
  *  uses this to know who's physically up next within a team's turn (see MikkeMusApp.tsx). */
 export type TeamMember = { name: string; isBot: boolean; botLevel?: BotLevel };

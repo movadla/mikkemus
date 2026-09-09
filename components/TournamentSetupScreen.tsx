@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { Participant, TournamentMode } from "@/lib/tournament";
 import type { TeamMember } from "@/lib/botLevels";
+import { HeroMascot } from "./HeroMascot";
 import { PeopleIcon, PersonIcon } from "./icons";
 import { PeoplePicker, type Person } from "./PeoplePicker";
 import { PrimaryActionButton } from "./PrimaryActionButton";
@@ -89,6 +90,7 @@ export function TournamentSetupScreen({
   return (
     <div className="animate-screen-enter min-h-screen w-full flex items-center justify-center p-6" style={{ background: "var(--color-bg)" }}>
       <div className="w-full max-w-md">
+        <HeroMascot small />
         <div className="flex items-center justify-between mb-6">
           <button type="button" onClick={onBack} className={`tactile px-3 py-2 rounded-lg text-sm ${FOCUS_RING}`} style={{ background: "var(--color-surface)", color: "var(--color-cream)" }}>
             ← Hjem

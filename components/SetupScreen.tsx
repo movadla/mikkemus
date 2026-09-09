@@ -1,13 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { useRef, useState } from "react";
 import { ensurePlayer, getPlayerRecord, setPlayerPhoto, setPlayerSound, useRosterNames } from "@/lib/storage";
 import { reportError } from "@/lib/errorReporting";
-import { BOT_LEVELS, BOT_LEVEL_ORDER, type BotLevel, type TeamMember } from "@/lib/botLevels";
+import { BOT_LEVELS, BOT_LEVEL_PICKABLE, botDisplayName, botLevelBadge, type BotLevel, type TeamMember } from "@/lib/botLevels";
 import { avatarAccent } from "@/lib/avatarAccent";
 import { CameraIcon, GuestIcon, MicIcon, PeopleIcon, PersonIcon } from "./icons";
-import { DartboardGlyph } from "./DartboardGlyph";
+import { HeroMascot } from "./HeroMascot";
 import { PeoplePicker, type Person } from "./PeoplePicker";
 import { PrimaryActionButton } from "./PrimaryActionButton";
 import { TeamComposer, isTeamSetupReady, type Team } from "./TeamComposer";
@@ -141,7 +140,7 @@ export function SetupScreen({
 
   /** Bots are never ensurePlayer'd — they're a virtual opponent, not a roster entry. */
   function addBot(level: BotLevel) {
-    const base = `${BOT_LEVELS[level].name} (${level}) 🤖`;
+    const base = botDisplayName(level);
     let name = base;
     let suffix = 2;
     while (players.some((p) => p.toLowerCase() === name.toLowerCase())) {
@@ -212,6 +211,51 @@ export function SetupScreen({
     }
   }
 
+  /** The name field with its Legg til/Avbryt — shown in the Spillere box for a new roster
+   *  player and in Med i kampen for a guest, so it is one piece of UI in two places. */
+  function renderNameInput() {
+    return (
+      <div className="flex gap-2">
+        <input
+          autoFocus
+          value={nameInput}
+          onChange={(e) => {
+            setNameInput(e.target.value);
+            setError("");
+          }}
+          onKeyDown={(e) => e.key === "Enter" && addPlayer(nameInput, addingAsGuest)}
+          placeholder={addingAsGuest ? "Gjestens navn" : "Spillernavn"}
+          className={`flex-1 min-w-0 px-4 py-3 rounded-lg ${FOCUS_RING}`}
+          style={{
+            background: "var(--color-surface)",
+            color: "var(--color-cream)",
+            border: "1px solid var(--color-border)",
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => addPlayer(nameInput, addingAsGuest)}
+          className={`glossy px-5 py-3 rounded-lg font-medium ${FOCUS_RING}`}
+          style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)" } as React.CSSProperties}
+        >
+          Legg til
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setAddingPlayer(false);
+            setError("");
+          }}
+          aria-label="Avbryt"
+          className={`tactile px-4 py-3 rounded-lg text-sm ${FOCUS_RING}`}
+          style={{ background: "var(--color-surface)", color: "var(--color-muted)", border: "1px solid var(--color-border)" }}
+        >
+          Avbryt
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div
       className="animate-screen-enter min-h-screen w-full flex items-center justify-center p-6"
@@ -232,7 +276,7 @@ export function SetupScreen({
           impossible to use. Without it the OS shows its normal sheet, which has both. */}
       <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={onPhotoSelected} />
       <div className="w-full max-w-md">
-        <DartboardGlyph className="w-14 h-14 mx-auto mb-2 block" />
+        <HeroMascot small />
         <h1
           className="text-center mb-6 font-display"
           style={{ color: "var(--color-cream)", fontSize: "2.5rem", letterSpacing: "0.02em" }}
@@ -279,13 +323,15 @@ export function SetupScreen({
                 frame and no label — a free-floating row of pills that read as debris rather
                 than as a step. Boxed and titled, the screen now reads top to bottom as one
                 sequence: pick from before, see who's in, start. */}
-            {availableRoster.length > 0 && (
-              <div
-                className="shadow-panel rounded-xl p-4 mb-4"
-                style={{ background: "var(--color-panel)", border: "1px solid var(--color-border)" }}
-              >
+            {/* Always shown: besides everyone on the roster it holds the "Ny spiller" chip, so
+                adding someone new is the same gesture as picking someone known — one row of
+                people, tap to put them in the match. */}
+            <div
+              className="shadow-panel rounded-xl p-4 mb-4"
+              style={{ background: "var(--color-panel)", border: "1px solid var(--color-border)" }}
+            >
                 <p className="section-label text-center mb-3">
-                  TIDLIGERE SPILLERE
+                  SPILLERE
                 </p>
                 <div className="flex flex-wrap justify-center gap-2">
                 {availableRoster.map((n) => {
@@ -315,9 +361,25 @@ export function SetupScreen({
                     </button>
                   );
                 })}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAddingAsGuest(false);
+                    setAddingPlayer(true);
+                    setShowAddMenu(false);
+                    setError("");
+                  }}
+                  className={`tactile flex items-center gap-1.5 px-3 py-1.5 rounded-full ${FOCUS_RING}`}
+                  style={{ background: "var(--color-surface)", border: "1.5px dashed var(--color-teal)", color: "var(--color-teal)" }}
+                >
+                  <span aria-hidden style={{ fontSize: "1rem", lineHeight: 1, fontWeight: 700 }}>
+                    +
+                  </span>
+                  <span style={{ fontSize: "0.9rem" }}>Ny spiller</span>
+                </button>
                 </div>
-              </div>
-            )}
+                {addingPlayer && !addingAsGuest && <div className="mt-3">{renderNameInput()}</div>}
+            </div>
 
             <div className="shadow-panel rounded-xl p-4 mb-8" style={{ background: "var(--color-panel)", border: "1px solid var(--color-border)" }}>
               <p className="section-label text-center mb-3">
@@ -450,62 +512,15 @@ export function SetupScreen({
                   </div>
                 );
               })}
-              {addingPlayer ? (
-                <div className="flex gap-2">
-                  <input
-                    autoFocus
-                    value={nameInput}
-                    onChange={(e) => {
-                      setNameInput(e.target.value);
-                      setError("");
-                    }}
-                    onKeyDown={(e) => e.key === "Enter" && addPlayer(nameInput, addingAsGuest)}
-                    placeholder={addingAsGuest ? "Gjestens navn" : "Spillernavn"}
-                    className={`flex-1 px-4 py-3 rounded-lg ${FOCUS_RING}`}
-                    style={{
-                      background: "var(--color-surface)",
-                      color: "var(--color-cream)",
-                      border: "1px solid var(--color-border)",
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => addPlayer(nameInput, addingAsGuest)}
-                    className={`glossy px-5 py-3 rounded-lg font-medium ${FOCUS_RING}`}
-                    style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)" } as React.CSSProperties}
-                  >
-                    Legg til
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAddingPlayer(false);
-                      setError("");
-                    }}
-                    aria-label="Avbryt"
-                    className={`tactile px-4 py-3 rounded-lg text-sm ${FOCUS_RING}`}
-                    style={{ background: "var(--color-surface)", color: "var(--color-muted)", border: "1px solid var(--color-border)" }}
-                  >
-                    Avbryt
-                  </button>
-                </div>
+              {addingPlayer && addingAsGuest ? (
+                renderNameInput()
               ) : showAddMenu ? (
+                // New roster players are added up in the Spillere box; this menu is for the two
+                // kinds that never join the roster.
                 <div
                   className="flex items-center justify-center flex-wrap gap-2 px-4 py-3 rounded-lg"
                   style={{ background: "var(--color-surface)", border: "1.5px dashed var(--color-border)" }}
                 >
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAddingAsGuest(false);
-                      setAddingPlayer(true);
-                    }}
-                    className={`tactile px-3 py-1.5 rounded-lg text-sm flex items-center gap-1.5 ${FOCUS_RING}`}
-                    style={{ background: "var(--color-cell)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
-                  >
-                    <PersonIcon className="w-3.5 h-3.5" />
-                    Ny spiller
-                  </button>
                   <button
                     type="button"
                     onClick={() => {
@@ -555,7 +570,7 @@ export function SetupScreen({
               )}
               {showAddMenu && showBotPicker && (
                 <div className="flex flex-wrap justify-center gap-2">
-                  {BOT_LEVEL_ORDER.map((level) => (
+                  {BOT_LEVEL_PICKABLE.map((level) => (
                     <button
                       key={level}
                       type="button"
@@ -563,7 +578,7 @@ export function SetupScreen({
                       className={`tactile px-3 py-1.5 rounded-full text-sm ${FOCUS_RING}`}
                       style={{ background: "var(--color-cell)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
                     >
-                      {BOT_LEVELS[level].name} ({level})
+                      {BOT_LEVELS[level].name} {botLevelBadge(level)}
                     </button>
                   ))}
                 </div>
@@ -579,7 +594,6 @@ export function SetupScreen({
             <PrimaryActionButton
               onClick={() => onStart(players, botLevels, undefined, guestPlayers)}
               ready={players.length >= 1}
-              hint="Velg minst en spiller over for å starte"
             >
               Start spill
             </PrimaryActionButton>
@@ -602,22 +616,6 @@ export function SetupScreen({
           </>
         )}
 
-        <p className="text-center mt-8 flex justify-center gap-4">
-          <Link
-            href="/spillere"
-            className={`font-display text-sm underline ${FOCUS_RING}`}
-            style={{ color: "var(--color-muted)", fontStyle: "italic" }}
-          >
-            Se spillerstatistikk
-          </Link>
-          <Link
-            href="/hall-of-fame"
-            className={`font-display text-sm underline ${FOCUS_RING}`}
-            style={{ color: "var(--color-muted)", fontStyle: "italic" }}
-          >
-            Hall of Fame
-          </Link>
-        </p>
       </div>
     </div>
   );

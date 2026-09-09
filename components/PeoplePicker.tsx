@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ensurePlayer, useRosterNames } from "@/lib/storage";
-import { BOT_LEVEL_ORDER, BOT_LEVELS, type BotLevel } from "@/lib/botLevels";
+import { BOT_LEVEL_PICKABLE, BOT_LEVELS, botDisplayName, botLevelBadge, type BotLevel } from "@/lib/botLevels";
 
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
@@ -37,7 +37,7 @@ export function PeoplePicker({ people, onChange }: { people: Person[]; onChange:
   }
 
   function addBot(level: BotLevel) {
-    const base = `${BOT_LEVELS[level].name} (${level}) 🤖`;
+    const base = botDisplayName(level);
     let name = base;
     let suffix = 2;
     while (people.some((p) => p.name.toLowerCase() === name.toLowerCase())) {
@@ -101,9 +101,9 @@ export function PeoplePicker({ people, onChange }: { people: Person[]; onChange:
         )}
         {showBotPicker && (
           <div className="flex flex-wrap gap-2 mt-3">
-            {BOT_LEVEL_ORDER.map((level) => (
+            {BOT_LEVEL_PICKABLE.map((level) => (
               <button key={level} type="button" onClick={() => addBot(level)} className={`tactile px-3 py-1.5 rounded-full text-sm ${FOCUS_RING}`} style={{ background: "var(--color-cell)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}>
-                {BOT_LEVELS[level].name} ({level})
+                {BOT_LEVELS[level].name} {botLevelBadge(level)}
               </button>
             ))}
           </div>

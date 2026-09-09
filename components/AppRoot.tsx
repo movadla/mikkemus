@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { loadActiveTournamentId } from "@/lib/tournamentStorage";
 import { useScolia } from "@/lib/useScolia";
 import { BullDuelApp } from "./BullDuelApp";
+import { HeroMascot } from "./HeroMascot";
 import { BullseyeIcon, DartIcon, TrophyIcon, TvIcon } from "./icons";
 import { MikkeMusApp } from "./MikkeMusApp";
 import { ScoliaStatusBadge } from "./ScoliaStatusBadge";
@@ -43,13 +44,9 @@ export function AppRoot() {
     <div className="animate-screen-enter min-h-screen w-full flex items-center justify-center p-6" style={{ background: "var(--color-bg)" }}>
       <ScoliaStatusBadge state={scolia.state} />
       <div className="w-full max-w-md">
-        {/* The mascot, cut out and faded at the feet into the ground (see .hero-mascot). The
-            emoji it replaces was the one cartoon element on an otherwise considered screen. */}
-        <div className="relative mx-auto mb-3 flex items-center justify-center" aria-hidden>
-          <span className="hero-glow animate-idle-glow absolute" />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/mikke.webp" alt="" className="hero-mascot relative" width={420} height={747} />
-        </div>
+        {/* The mascot replaces the emoji that was the one cartoon element on an otherwise
+            considered screen — see HeroMascot. */}
+        <HeroMascot />
         <h1 className="text-center mb-10 font-display" style={{ color: "var(--color-cream)", fontSize: "2.5rem", letterSpacing: "0.02em" }}>
           Mikke Mus
         </h1>
@@ -82,7 +79,17 @@ export function AppRoot() {
             Bull-duell
           </button>
         </div>
-        <p className="text-center mt-8 flex items-center justify-center gap-4">
+        <p className="text-center mt-8 flex items-center justify-center gap-4 flex-wrap">
+          {/* Moved here from the setup screens, which are for picking who plays — the numbers
+              belong at the front door, where you go to look them up. Hall of Fame keeps its route
+              but no link for now. */}
+          <Link
+            href="/spillere"
+            className={`font-display text-sm underline ${FOCUS_RING}`}
+            style={{ color: "var(--color-muted)", fontStyle: "italic" }}
+          >
+            Spillerstatistikk
+          </Link>
           <Link
             href="/storskjerm"
             className={`font-display text-sm underline inline-flex items-center gap-1.5 ${FOCUS_RING}`}

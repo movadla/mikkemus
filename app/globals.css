@@ -877,6 +877,18 @@ button {
   pointer-events: none;
 }
 
+/* The setup screens' version: the same figure at a little over half height, so the picker
+   below it still starts above the fold on a phone. */
+.hero-mascot--sm {
+  height: 7rem;
+}
+
+.hero-glow--sm {
+  width: 7.5rem;
+  height: 7.5rem;
+  filter: blur(30px);
+}
+
 /* -- winner screen flourish -- */
 @keyframes winner-pop {
   from {
