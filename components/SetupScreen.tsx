@@ -158,7 +158,8 @@ export function SetupScreen({
     setShowAddMenu(false);
   }
 
-  function openCameraFor(name: string) {
+  /** Opens the OS picker for this player: camera or photo library, the user chooses. */
+  function choosePhotoFor(name: string) {
     setCapturingFor(name);
     fileInputRef.current?.click();
   }
@@ -230,14 +231,10 @@ export function SetupScreen({
           ← Hjem
         </button>
       )}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        className="hidden"
-        onChange={onPhotoSelected}
-      />
+      {/* No `capture` attribute. With it, iOS opens the camera directly and offers no way to
+          reach the photo library at all — so a picture you already have of someone was
+          impossible to use. Without it the OS shows its normal sheet, which has both. */}
+      <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={onPhotoSelected} />
       <div className="w-full max-w-md">
         <DartboardGlyph className="w-14 h-14 mx-auto mb-2 block" />
         <h1
@@ -370,14 +367,14 @@ export function SetupScreen({
                       ) : (
                         <button
                           type="button"
-                          onClick={() => openCameraFor(p)}
+                          onClick={() => choosePhotoFor(p)}
                           className={`tactile w-9 h-9 rounded-full flex items-center justify-center overflow-hidden shrink-0 ${FOCUS_RING}`}
                           style={{
                             background: "var(--color-cell)",
                             border: `1.5px solid ${avatarAccent(p)}`,
                             color: "var(--color-muted)",
                           }}
-                          aria-label={`Ta bilde av ${p}`}
+                          aria-label={`Velg bilde av ${p}`}
                         >
                           {photos[p] ? (
                             // eslint-disable-next-line @next/next/no-img-element
