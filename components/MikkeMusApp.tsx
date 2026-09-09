@@ -949,6 +949,49 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     registerHit(step);
   }
 
+  /**
+   * Takes one cross off a specific row — the long-press on a cell.
+   *
+   * Angre only walks backwards in order, so correcting a misread first dart after the third
+   * had landed meant undoing all three and re-entering the two that were right. This goes
+   * straight at the row.
+   *
+   * Limited to THIS turn on purpose. A cross from an earlier turn lives in the turn log as
+   * well as on the board, and removing it here would leave the two disagreeing — the exact
+   * drift advanceTurn now reports. Rewinding into that turn with Angre is the path for those,
+   * and it rewrites the log properly.
+   */
+  function removeHitFromUi(step: Step) {
+    if (!activePlayer) return;
+    const records = pendingHitsRef.current;
+    let idx = -1;
+    for (let i = records.length - 1; i >= 0; i--) {
+      if (records[i].player === activePlayer && records[i].step === step) {
+        idx = i;
+        break;
+      }
+    }
+    if (idx === -1) {
+      reportError("Ingen kryss fra denne turen å ta av der. Bruk Angre for tidligere turer.", {
+        key: "remove-hit-none",
+      });
+      return;
+    }
+    const removed = records[idx];
+    writeProgress({
+      ...progressRef.current,
+      [activePlayer]: {
+        ...progressRef.current[activePlayer],
+        [step]: removeOneCross(progressRef.current[activePlayer][step]),
+      },
+    });
+    writePendingHits(records.filter((_, i) => i !== idx));
+    clearPerfectClose(activePlayer, step);
+    // A choice attached to the dart that just went away has nothing left to decide.
+    updatePendingAmbiguous(pendingAmbiguousRef.current.filter((p) => p.hitRecord !== removed));
+    haptics.undo();
+  }
+
   /** The board as it stands after one dart — processDart needs these by hand, because the
    *  state the same synchronous handler just set has not flushed yet. */
   type DartApplication = { hits: HitRecord[] | null; progress: PlayerProgress; pendingHits: HitRecord[] };
@@ -1537,6 +1580,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         perfectCloses={perfectCloses}
         onResolvePendingChoice={resolvePendingChoice}
         onRegisterHit={botIsThrowing ? () => {} : registerHitFromUi}
+        onRemoveHit={botIsThrowing ? () => {} : removeHitFromUi}
         onUndo={botIsThrowing ? () => {} : undo}
         onConfirm={botIsThrowing ? () => {} : confirm}
         onAbort={abortGame}

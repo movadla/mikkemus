@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import {
   STEPS,
   STEP_LABELS,
@@ -32,6 +32,10 @@ const FOCUS_RING =
 // slowMotion prop) — long enough to be unmistakable, short enough not to
 // block the next dart.
 const RETRACT_MS = 650;
+
+/** Hold this long on a cell to take a cross off it. Long enough not to fire on a normal tap,
+ *  short enough to feel deliberate rather than stuck. */
+const LONG_PRESS_MS = 480;
 
 const SLAM_MS = 560;
 
@@ -103,6 +107,8 @@ type Props = {
   scolia: { label: string; color: string } | null;
   onResolvePendingChoice: (choice: "keep" | "redirect") => void;
   onRegisterHit: (step: Step) => void;
+  /** Long-press on a cell: take one cross back off that row. */
+  onRemoveHit: (step: Step) => void;
   onUndo: () => void;
   onConfirm: () => void;
   onAbort: () => void;
@@ -241,6 +247,7 @@ export function GameScreen({
   perfectCloses,
   onResolvePendingChoice,
   onRegisterHit,
+  onRemoveHit,
   matchThrows,
   dartsThisTurn,
   liveStats,
@@ -254,6 +261,31 @@ export function GameScreen({
   // Landscape only — the settings panel behind the (i) button. It overlays rather than taking
   // a column of its own, so opening it never moves the board a single pixel.
   const [chromeOpen, setChromeOpen] = useState(false);
+
+  // Long-press to take a cross off a row. Kept in refs rather than state: nothing here should
+  // re-render the board, and the "did the hold already fire" flag has to be readable by the
+  // click that follows the release — a long press ends in a click too, and without this the
+  // cross would come off and go straight back on.
+  const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const holdFiredRef = useRef(false);
+
+  function startHold(step: Step) {
+    cancelHold();
+    holdFiredRef.current = false;
+    holdTimerRef.current = setTimeout(() => {
+      holdFiredRef.current = true;
+      onRemoveHit(step);
+    }, LONG_PRESS_MS);
+  }
+
+  function cancelHold() {
+    if (holdTimerRef.current) {
+      clearTimeout(holdTimerRef.current);
+      holdTimerRef.current = null;
+    }
+  }
+
+  useEffect(() => cancelHold, []);
   const [showHomeConfirm, setShowHomeConfirm] = useState(false);
   // Lazy-initialized from localStorage so the button reflects whatever the host last chose,
   // without waiting for an effect — announce() itself reads the same localStorage value
@@ -692,8 +724,24 @@ export function GameScreen({
                       )}
                       <button
                         type="button"
-                        disabled={!clickable}
-                        onClick={() => onRegisterHit(s)}
+                        // Not `disabled`: a disabled button dispatches no pointer events, and a
+                        // row that is wrongly full is exactly the one you need to hold to
+                        // correct. aria-disabled still tells assistive tech it won't register,
+                        // and the tap below refuses on its own.
+                        aria-disabled={!clickable}
+                        onPointerDown={() => startHold(s)}
+                        onPointerUp={cancelHold}
+                        onPointerLeave={cancelHold}
+                        onPointerCancel={cancelHold}
+                        onContextMenu={(e) => e.preventDefault()}
+                        onClick={() => {
+                          // The hold already acted; the click that ends it must not undo that.
+                          if (holdFiredRef.current) {
+                            holdFiredRef.current = false;
+                            return;
+                          }
+                          if (clickable) onRegisterHit(s);
+                        }}
                         className={`cell-tile ${count >= 3 ? "cell-tile--done" : ""} ${tileState} relative w-full h-full min-h-0 min-w-0 max-w-full max-h-full rounded-md flex items-center justify-center ${FOCUS_RING}`}
                         style={{
                           cursor: clickable ? "pointer" : "default",
