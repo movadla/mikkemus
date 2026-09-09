@@ -21,9 +21,9 @@ export function botLevelBadge(level: BotLevel): string {
   return level === "1" ? "🥇" : level === "2" ? "🥈" : level === "3" ? "🥉" : `(${level})`;
 }
 
-/** The name a bot plays under: "Littler 🥇 🤖". The robot marks it as a bot wherever names are listed. */
+/** The name a bot plays under: "Littler 🥇". No robot suffix — everyone at the board knows. */
 export function botDisplayName(level: BotLevel): string {
-  return `${BOT_LEVELS[level].name} ${botLevelBadge(level)} 🤖`;
+  return `${BOT_LEVELS[level].name} ${botLevelBadge(level)}`;
 }
 
 /** One entrant in a shared-board team — a real person or a bot, mixed freely. The game engine
