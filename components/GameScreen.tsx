@@ -85,8 +85,12 @@ type Props = {
   rewound: boolean;
   pendingCount: number;
   canUndo: boolean;
-  /** The most recent undecided triple/double-on-active-number hit, if any — drives the ghost preview and, once awaitingConfirmResolution, the choice dialog. */
+  /** The most recent undecided triple/double-on-active-number hit, if any — the live question:
+   *  its shot box is highlighted, its two possible rows are tap targets, and the ghost preview
+   *  shows what the number would look like. */
   pendingChoice: PendingAmbiguous | null;
+  /** Every undecided one, so the boxes of those still queued behind the live question read as such. */
+  pendingChoices: PendingAmbiguous[];
   awaitingConfirmResolution: boolean;
   /** Retriggerable "a dart just landed" signal, with how many in a row have hit this turn —
    *  drives the screen shake and the heat that builds across an unbroken turn. Token rather
@@ -221,11 +225,22 @@ function ChromeControls({
 
 /** The three per-dart boxes under the active player's name — green on a scored cross, red otherwise.
  *  With `onEdit`, a filled box is a button: tap it to say what that dart actually was. */
-function ShotIndicator({ shots, onEdit }: { shots: (TurnShot | null)[]; onEdit?: (index: number) => void }) {
+function ShotIndicator({
+  shots,
+  onEdit,
+  highlight,
+}: {
+  shots: (TurnShot | null)[];
+  onEdit?: (index: number) => void;
+  /** Gold ring on a box whose dart is an open triple/double question — "active" for the one
+   *  being asked, "queued" for those waiting behind it. */
+  highlight?: (index: number) => "active" | "queued" | null;
+}) {
   return (
     <div className="flex items-center justify-center gap-1.5 mt-1.5" aria-hidden={shots.every((s) => s === null)}>
       {shots.map((shot, i) => {
         const editable = !!shot && !!onEdit;
+        const asked = shot ? highlight?.(i) ?? null : null;
         const Tag = editable ? "button" : "div";
         return (
           <Tag
@@ -249,6 +264,12 @@ function ShotIndicator({ shots, onEdit }: { shots: (TurnShot | null)[]; onEdit?:
               color: "var(--color-cream)",
               padding: 0,
               cursor: editable ? "pointer" : "default",
+              boxShadow:
+                asked === "active"
+                  ? "0 0 0 2px var(--color-gold), 0 0 16px rgba(201, 162, 75, 0.6)"
+                  : asked === "queued"
+                    ? "0 0 0 2px rgba(201, 162, 75, 0.45)"
+                    : undefined,
             }}
           >
             {shot?.label ?? ""}
@@ -378,6 +399,7 @@ export function GameScreen({
   shotsEditable,
   onEditShot,
   awaitingTakeoutToConfirm,
+  pendingChoices,
 }: Props) {
   // Picks the wide variant of the mark glyph — see lib/useCompactLandscape.ts.
   const compactLandscape = useCompactLandscape();
@@ -488,6 +510,17 @@ export function GameScreen({
       })()
     : null;
   const ringLabel = pendingChoice?.ringStep === "T" ? "Trippel" : "Dobbel";
+  // The undecided triple/double is answered on the board itself, not in a dialog: its shot box
+  // lights up gold, the two rows it could go to light up the same way, and tapping one of them
+  // is the answer. Several undecided darts queue behind the live one and are answered in turn.
+  const shotHighlight = (i: number): "active" | "queued" | null =>
+    pendingChoice?.dartIndex === i ? "active" : pendingChoices.some((c) => c.dartIndex === i) ? "queued" : null;
+  const choicePrompt = pendingChoice
+    ? `${pendingChoice.ringStep}${STEP_LABELS[pendingChoice.number]} – hvor vil du sette den? Trykk ${STEP_LABELS[pendingChoice.number]} eller ${ringLabel} i tabellen${awaitingConfirmResolution ? " for å bekrefte turen" : ""}.`
+    : null;
+  /** Which answer tapping this cell gives, if the cell is one of the live question's two rows. */
+  const choiceRoleFor = (s: Step, isActive: boolean): "redirect" | "keep" | null =>
+    isActive && pendingChoice ? (s === pendingChoice.number ? "redirect" : s === pendingChoice.ringStep ? "keep" : null) : null;
 
   /** 20-14 are the ordered run; D/T/BULL are a different kind of target and are set apart. */
   const isNumberStep = (s: Step) => !Number.isNaN(Number(s));
@@ -627,48 +660,6 @@ export function GameScreen({
             />
           </div>
         </>
-      )}
-
-      {awaitingConfirmResolution && pendingChoice && (
-        <ConfirmDialog
-          message={
-            (() => {
-              // The ring cross is applied the moment the dart lands, so the counts on screen
-              // ALREADY include it. Adding one more to show the "keep" outcome counted it
-              // twice; keeping simply leaves things where they are.
-              const ringNow = activeProgress?.[pendingChoice.ringStep] ?? 0;
-              const numberNow = activeProgress?.[pendingChoice.number] ?? 0;
-              return (
-                <>
-                  <div>
-                    {pendingChoice.ringStep}
-                    {STEP_LABELS[pendingChoice.number]} – Hva setter du den på?
-                  </div>
-                  <div className="mt-2 text-sm" style={{ color: "var(--color-muted)" }}>
-                    Nå: {STEP_LABELS[pendingChoice.number]} på {numberNow}/3, {ringLabel} på {ringNow}/3
-                  </div>
-                </>
-              );
-            })()
-          }
-          messageFontSize="1.05rem"
-          buttons={[
-            {
-              // Redirecting rolls the ring cross back and puts the multiplier on the number
-              // instead. Labelled as what the dart IS on each row — "17×3" or "Trippel" — the
-              // way a player would say it; the "Nå:" line above carries the counts.
-              label: `${STEP_LABELS[pendingChoice.number]}×${pendingChoice.multiplier}`,
-              onClick: () => onResolvePendingChoice("redirect"),
-              background: "var(--color-green)",
-            },
-            {
-              label: ringLabel,
-              onClick: () => onResolvePendingChoice("keep"),
-              background: "var(--color-teal)",
-              color: "var(--color-bg)",
-            },
-          ]}
-        />
       )}
 
       {editingShot !== null && turnShots[editingShot] && (
@@ -825,6 +816,7 @@ export function GameScreen({
                   const clickable = isActive && activeStep !== null && isRegistrable(s, activeStep, progress[p]);
                   const ghostCount = isActive && pendingPreview?.number === s ? pendingPreview.ghostCount : 0;
                   const previewOpening = isActive && pendingPreview?.opensNext === s;
+                  const choiceRole = choiceRoleFor(s, isActive);
                   // Only the active player's own unconfirmed marks are provisional. A finished
                   // turn settles to cream at Confirm rather than staying accent-coloured until
                   // the darts come out — accent then means exactly one thing, "not locked in
@@ -835,13 +827,15 @@ export function GameScreen({
                   // (pre-banking) and take the quiet ring, so they read as available without
                   // competing with the actual target.
                   const isTarget = clickable && s === activeStep;
-                  const tileState = isTarget
-                    ? "cell-tile--active"
-                    : clickable
-                      ? "cell-tile--open"
-                      : previewOpening
-                        ? "cell-tile--preview"
-                        : "";
+                  const tileState = choiceRole
+                    ? "cell-tile--choice"
+                    : isTarget
+                      ? "cell-tile--active"
+                      : clickable
+                        ? "cell-tile--open"
+                        : previewOpening
+                          ? "cell-tile--preview"
+                          : "";
                   return (
                     <div
                       key={p}
@@ -849,11 +843,11 @@ export function GameScreen({
                     >
                       {/* Only the current target breathes. It used to run on every clickable
                           cell, which meant the always-open D and T rows pulsed all match. */}
-                      {isTarget && (
+                      {(isTarget || choiceRole) && (
                         <span
                           aria-hidden
                           className="animate-idle-glow absolute inset-1.5 rounded-md pointer-events-none"
-                          style={{ boxShadow: `0 0 14px ${glowColor}` }}
+                          style={{ boxShadow: `0 0 14px ${choiceRole ? "rgba(201, 162, 75, 0.6)" : glowColor}` }}
                         />
                       )}
                       <button
@@ -862,7 +856,12 @@ export function GameScreen({
                         // row that is wrongly full is exactly the one you need to hold to
                         // correct. aria-disabled still tells assistive tech it won't register,
                         // and the tap below refuses on its own.
-                        aria-disabled={!clickable}
+                        aria-disabled={!clickable && !choiceRole}
+                        aria-label={
+                          choiceRole
+                            ? `Sett ${pendingChoice!.ringStep}${STEP_LABELS[pendingChoice!.number]} på ${choiceRole === "redirect" ? STEP_LABELS[s] : ringLabel}`
+                            : undefined
+                        }
                         onPointerDown={() => startHold(s)}
                         onPointerUp={cancelHold}
                         onPointerLeave={cancelHold}
@@ -874,15 +873,21 @@ export function GameScreen({
                             holdFiredRef.current = false;
                             return;
                           }
+                          // While a triple/double is undecided, its two rows answer the question
+                          // instead of registering a tap — the question has to be settled first.
+                          if (choiceRole) {
+                            onResolvePendingChoice(choiceRole);
+                            return;
+                          }
                           if (clickable) onRegisterHit(s);
                         }}
                         className={`cell-tile ${count >= 3 ? "cell-tile--done" : ""} ${tileState} relative w-full h-full min-h-0 min-w-0 max-w-full max-h-full rounded-md flex items-center justify-center ${FOCUS_RING}`}
                         style={{
-                          cursor: clickable ? "pointer" : "default",
+                          cursor: clickable || choiceRole ? "pointer" : "default",
                           // Untouched, unreachable cells recede rather than disappear — still
                           // legible as part of the board, just clearly not in play.
-                          opacity: clickable || count > 0 || previewOpening ? 1 : 0.55,
-                          transform: clickable ? "translateY(-1px)" : undefined,
+                          opacity: clickable || choiceRole || count > 0 || previewOpening ? 1 : 0.55,
+                          transform: clickable || choiceRole ? "translateY(-1px)" : undefined,
                         }}
                       >
                         {/* No padding of its own: the tile around it already insets the mark,
@@ -916,8 +921,19 @@ export function GameScreen({
           bar, which is where there is room there. */}
       {compactLandscape && !rewound && (
         <div className="shot-rail">
-          <ShotIndicator shots={turnShots} onEdit={shotsEditable ? setEditingShot : undefined} />
+          <ShotIndicator shots={turnShots} onEdit={shotsEditable ? setEditingShot : undefined} highlight={shotHighlight} />
         </div>
+      )}
+      {/* Landscape has no room under the rail for a sentence, so the question floats over the
+          top of the board instead — the gold matches the boxes and cells it refers to. */}
+      {compactLandscape && choicePrompt && (
+        <p
+          role="status"
+          className="fixed top-2 left-1/2 -translate-x-1/2 z-40 px-3 py-1 rounded-full text-center"
+          style={{ background: "var(--color-surface)", border: "1px solid var(--color-gold)", color: "var(--color-gold-strong)", fontSize: "0.72rem", maxWidth: "70vw" }}
+        >
+          {choicePrompt}
+        </p>
       )}
 
       {/* Landscape only — this fills the gap in the right-hand column. In portrait there is no
@@ -939,10 +955,15 @@ export function GameScreen({
       <div className="action-bar shrink-0 mt-3 -mx-4 px-4 pt-2 pb-1">
         {!rewound && !compactLandscape && (
           <div className="max-w-3xl mx-auto w-full mb-1">
-            <ShotIndicator shots={turnShots} onEdit={shotsEditable ? setEditingShot : undefined} />
+            <ShotIndicator shots={turnShots} onEdit={shotsEditable ? setEditingShot : undefined} highlight={shotHighlight} />
+            {choicePrompt && (
+              <p role="status" className="text-center mt-1" style={{ color: "var(--color-gold-strong)", fontSize: "0.78rem", fontWeight: 600 }}>
+                {choicePrompt}
+              </p>
+            )}
             {/* Why the turn has not moved on yet — and, implicitly, that the boxes can still be
                 corrected until it does. */}
-            {awaitingTakeoutToConfirm && (
+            {!choicePrompt && awaitingTakeoutToConfirm && (
               <p className="text-center mt-1" style={{ color: "var(--color-muted)", fontSize: "0.72rem" }}>
                 Ta ut pilene for å bekrefte turen
               </p>

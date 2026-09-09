@@ -2084,6 +2084,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         onEditShot={editDart}
         awaitingTakeoutToConfirm={turnActionCount > 0 && dartsThisTurn >= DARTS_PER_TURN && !awaitingConfirmResolution}
         pendingChoice={rewound === null ? pendingAmbiguous[pendingAmbiguous.length - 1] ?? null : null}
+        pendingChoices={rewound === null ? pendingAmbiguous : []}
         awaitingConfirmResolution={awaitingConfirmResolution}
         hitPulse={hitPulse}
         closedStep={closedStep}
