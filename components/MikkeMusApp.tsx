@@ -23,8 +23,6 @@ import {
   type TurnResult,
   type TurnShot,
   type PendingAmbiguous,
-  type CrossDelta,
-  type Progress,
 } from "@/lib/game";
 import { playPlayerSound, recordAccuracyTotals, recordLuckTotals, recordMatchHistory, recordMatchResult, recordRingHits, type RingHits } from "@/lib/storage";
 import { announce } from "@/lib/announcer";
@@ -35,6 +33,7 @@ import { luckForThrow, sectorAt, throwAccuracy } from "@/lib/dartboard";
 import { haptics } from "@/lib/haptics";
 import { playFanfare, playHitStreakSound, playWinBoom, primeAudio } from "@/lib/fanfare";
 import { classifyThrow, formatSectorLabel, parseSector } from "@/lib/scoliaMapping";
+import { applyDartToBoard } from "@/lib/turnResolution";
 import { botChooseThrow, botDecideRedirect, solverFor } from "@/lib/botStrategy";
 import { type BotLevel, type TeamMember } from "@/lib/botLevels";
 import { useScolia } from "@/lib/useScolia";
@@ -1014,29 +1013,21 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     if (!activePlayer) return { hits: null, progress: progressRef.current, pendingHits: pendingHitsRef.current };
     const player = activePlayer;
     const turnIndex = rewound ? rewoundTurnIndex ?? 0 : turnCounters[player] ?? 0;
-    const asRecords = (s: Step, deltas: CrossDelta[]): HitRecord[] =>
-      deltas.map((d) => ({ player, step: s, prevCount: d.prevCount, newCount: d.newCount, turnIndex }));
-
-    // 1. Un-park: take this dart's cross back off the ring — see removeOneCross for why that
-    //    is not the same as writing parked.hitRecord.prevCount back.
-    const board: Progress = {
-      ...progressRef.current[player],
-      [parked.ringStep]: removeOneCross(progressRef.current[player][parked.ringStep]),
-    };
-    let kept = pendingHitsRef.current.filter((h) => h !== parked.hitRecord);
-
-    // 2. The parked dart pays out on its number instead. Capped like any other hit, so it can
-    //    come to nothing when the number is full too — that is still no worse than before.
-    const redirected = chainCrosses(board[parked.number], parked.multiplier);
-    if (redirected.length > 0) {
-      board[parked.number] = redirected[redirected.length - 1].newCount;
-      kept = [...kept, ...asRecords(parked.number, redirected)];
-    }
-
-    // 3. This dart takes the slot that just came free.
-    const landed = chainCrosses(board[step], crosses);
-    const hits = landed.length > 0 ? asRecords(step, landed) : null;
-    if (landed.length > 0) board[step] = landed[landed.length - 1].newCount;
+    // The rule itself lives in lib/turnResolution.ts — un-parking, the redirect and this
+    // dart's own crosses, in order. All that is left here is turning them into records and
+    // getting them into state.
+    const { board, added } = applyDartToBoard(progressRef.current[player], step, crosses, parked);
+    const records: HitRecord[] = added.map((d) => ({
+      player,
+      step: d.step,
+      prevCount: d.prevCount,
+      newCount: d.newCount,
+      turnIndex,
+    }));
+    const kept = pendingHitsRef.current.filter((h) => h !== parked.hitRecord);
+    // This dart's own crosses, as distinct from the parked one's payout — the caller uses these
+    // for the streak sound and the closing slam, which belong to the throw that just happened.
+    const hits = records.filter((r) => r.step === step);
 
     // Darts, not crosses — same counting rule as registerHit, and the same marker: three
     // separate darts closing a row the hard way earns the ring-with-a-dot. This dart lands on
@@ -1048,12 +1039,12 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     }
 
     const nextProgress = { ...progressRef.current, [player]: board };
-    const nextPending = hits ? [...kept, ...hits] : kept;
+    const nextPending = [...kept, ...records];
     writeProgress(nextProgress);
     writePendingHits(nextPending);
     updatePendingAmbiguous(pendingAmbiguousRef.current.filter((p) => p.key !== parked.key));
-    if (hits) haptics.hit();
-    return { hits, progress: nextProgress, pendingHits: nextPending };
+    if (records.length > 0) haptics.hit();
+    return { hits: hits.length > 0 ? hits : null, progress: nextProgress, pendingHits: nextPending };
   }
 
   /**
