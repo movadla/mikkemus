@@ -117,6 +117,8 @@ type Props = {
   shotsEditable: boolean;
   /** "Dart number `index` was actually `sector`" — the turn is rebuilt around the correction. */
   onEditShot: (index: number, sector: string) => void;
+  /** Three darts in, turn still open: the board's takeout (or Bekreft) will confirm it. */
+  awaitingTakeoutToConfirm: boolean;
 };
 
 /**
@@ -375,6 +377,7 @@ export function GameScreen({
   onAbort,
   shotsEditable,
   onEditShot,
+  awaitingTakeoutToConfirm,
 }: Props) {
   // Picks the wide variant of the mark glyph — see lib/useCompactLandscape.ts.
   const compactLandscape = useCompactLandscape();
@@ -937,6 +940,13 @@ export function GameScreen({
         {!rewound && !compactLandscape && (
           <div className="max-w-3xl mx-auto w-full mb-1">
             <ShotIndicator shots={turnShots} onEdit={shotsEditable ? setEditingShot : undefined} />
+            {/* Why the turn has not moved on yet — and, implicitly, that the boxes can still be
+                corrected until it does. */}
+            {awaitingTakeoutToConfirm && (
+              <p className="text-center mt-1" style={{ color: "var(--color-muted)", fontSize: "0.72rem" }}>
+                Ta ut pilene for å bekrefte turen
+              </p>
+            )}
           </div>
         )}
         <div className="action-buttons grid gap-3 max-w-3xl mx-auto w-full" style={{ gridTemplateColumns: "0.7fr 1.3fr" }}>

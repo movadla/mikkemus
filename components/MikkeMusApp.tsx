@@ -232,6 +232,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   const replayingRef = useRef(false);
   /** A turn found mid-way in the restored snapshot, waiting for the player to be mounted. */
   const pendingReplayRef = useRef<{ start: TurnStart; actions: TurnAction[] } | null>(null);
+  /** Dev only: behave as if a board were online and going to report takeouts. */
+  const devTakeoutRef = useRef(false);
   const preBankedRef = useRef<Record<string, { D: number; T: number }>>({});
   const [preBanked, setPreBanked] = useState<Record<string, { D: number; T: number }>>({});
   function bumpPreBanked(player: string, ring: "D" | "T", delta: number) {
@@ -375,12 +377,20 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     // board or a row in scolia_events — which is shared with the real board, so a test dart put
     // there would land in whatever match is being played on it.
     if (process.env.NODE_ENV === "development") {
-      const dev = window as unknown as { __mikkeDart?: unknown; __mikkeCoords?: unknown };
+      const dev = window as unknown as { __mikkeDart?: unknown; __mikkeCoords?: unknown; __mikkeTakeout?: unknown; __mikkeExpectTakeout?: unknown };
       // Coordinates default to the middle of the sector's bed, so xH and the heatmap see a
       // plausible dart rather than one at the bull.
       dev.__mikkeDart = (sector: string, coordinates: [number, number] = coordinatesForSector(sector)) =>
         processDart({ sector, bounceout: sector === "None", coordinates });
       dev.__mikkeCoords = coordinatesForSector;
+      // The board's takeout, as the relay would report it: the hand reaching in, then the darts out.
+      dev.__mikkeTakeout = (phase: "started" | "finished" | "both" = "both") => {
+        if (phase !== "finished") handleTakeoutStarted();
+        if (phase !== "started") handleTakeoutFinished({ falseTakeout: false });
+      };
+      dev.__mikkeExpectTakeout = (on: boolean) => {
+        devTakeoutRef.current = on;
+      };
     }
     resolvePendingChoiceRef.current = resolvePendingChoice;
     confirmRef.current = confirm;
@@ -687,6 +697,17 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       reportError("Velg trippel eller dobbel før neste pil — denne ble ikke registrert.", { key: "dart-during-choice" });
       return;
     }
+    // Three darts are in and the turn is waiting for the takeout that confirms it (see the
+    // third-dart branch below). A fourth dart can only be the NEXT player's first, with the
+    // takeout event lost somewhere between the board and here. Confirm what is finished, then
+    // hand this dart back in on the next tick — `activePlayer` in this closure is still the
+    // player who just finished, and only a render moves it on.
+    if (scoliaDartsRef.current >= DARTS_PER_TURN) {
+      scoliaDartsRef.current = 0;
+      finishTurn();
+      setTimeout(() => processDartRef.current(payload), 0);
+      return;
+    }
     ensureTurnStart();
     const dartIndex = scoliaDartsRef.current;
     scoliaDartsRef.current += 1;
@@ -883,6 +904,13 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       });
     }
     if (scoliaDartsRef.current >= DARTS_PER_TURN) {
+      // With a live board, the turn ends the way it does in real darts: when the darts come
+      // out. Until then it stays open — the third dart can be undone, a misread box corrected,
+      // the choice dialog answered — and the takeout confirms it (see handleTakeoutStarted).
+      // Confirming on the third dart instead closed the turn before the player could see what
+      // the board made of it. Without a board to report the takeout (manual play, a bot, the
+      // board offline) there is nothing to wait for, so the turn ends here as before.
+      if (expectsTakeout()) return;
       scoliaDartsRef.current = 0;
       finishTurn(finalProgress, finalPendingHits, dartIndex + 1);
     }
@@ -893,6 +921,46 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   // since processDart/confirm all bail out immediately when activePlayer is null
   // (always true on setup, since `players` is empty).
   const scoliaEnabled = screen === "game" || screen === "setup";
+
+  /**
+   * Whether a takeout event is coming to end this turn: a live board, a human throwing. Same
+   * test the bot's own wait uses. `devTakeoutRef` lets the dev console pretend the board is
+   * there (see the __mikke* hooks) so the deferred path can be exercised without one.
+   */
+  function expectsTakeout(): boolean {
+    if (activeBotLevel !== null) return false;
+    return devTakeoutRef.current || (scoliaEnabled && scolia.state.boardStatus === "Ready");
+  }
+
+  /** The hand reaching for the darts. Ends the turn — three darts in, or fewer on an early checkout. */
+  function handleTakeoutStarted() {
+    if (activeBotLevel !== null) return;
+    if (scoliaDartsRef.current > 0) {
+      scoliaDartsRef.current = 0;
+      confirm();
+    }
+  }
+
+  function handleTakeoutFinished(payload: { falseTakeout: boolean }) {
+    // If the "started" event never arrived, this is the confirmation instead. Before the bot
+    // gate below is released, so advanceTurn's own setAwaitingTakeout(true) is overtaken by
+    // the release in the same tick — the darts are demonstrably out.
+    if (!payload.falseTakeout && activeBotLevel === null && scoliaDartsRef.current > 0) {
+      scoliaDartsRef.current = 0;
+      confirm();
+    }
+    // Released BEFORE the bot guard below, and that order is the whole point: by the time
+    // your darts come out it is already the bot's turn, so a guard that bails on an active
+    // bot would never clear the very gate it is waiting on. That deadlocked the match.
+    if (!payload.falseTakeout) setAwaitingTakeout(false);
+    if (activeBotLevel !== null) return;
+    // The real signal the shot boxes/highlight are held for: darts are physically
+    // out of the board now. A "false" takeout means nothing was actually pulled.
+    if (!payload.falseTakeout) {
+      clearTurnDisplay();
+    }
+  }
+
   const scolia = useScolia(scoliaEnabled, {
     // Ignored while a bot is active — a bot's turn has no physical darts to detect,
     // and gating this here (rather than toggling `enabled`) avoids tearing down and
@@ -901,26 +969,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       if (activeBotLevel !== null) return;
       processDart(payload);
     },
-    onTakeoutStarted: () => {
-      if (activeBotLevel !== null) return;
-      // Player started collecting darts before the 3rd was thrown (e.g. they checked out early).
-      if (scoliaDartsRef.current > 0) {
-        scoliaDartsRef.current = 0;
-        confirm();
-      }
-    },
-    onTakeoutFinished: (payload) => {
-      // Released BEFORE the bot guard below, and that order is the whole point: by the time
-      // your darts come out it is already the bot's turn, so a guard that bails on an active
-      // bot would never clear the very gate it is waiting on. That deadlocked the match.
-      if (!payload.falseTakeout) setAwaitingTakeout(false);
-      if (activeBotLevel !== null) return;
-      // The real signal the shot boxes/highlight are held for: darts are physically
-      // out of the board now. A "false" takeout means nothing was actually pulled.
-      if (!payload.falseTakeout) {
-        clearTurnDisplay();
-      }
-    },
+    onTakeoutStarted: handleTakeoutStarted,
+    onTakeoutFinished: handleTakeoutFinished,
     onCameraImages: (payload) => {
       setCameraImages(extractImageUrls(payload));
     },
@@ -2020,6 +2070,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         canUndo={turnActionCount > 0 || pendingHits.length > 0 || history.length > 0}
         shotsEditable={turnActionCount > 0 && !botIsThrowing}
         onEditShot={editDart}
+        awaitingTakeoutToConfirm={turnActionCount > 0 && dartsThisTurn >= DARTS_PER_TURN && !awaitingConfirmResolution}
         pendingChoice={rewound === null ? pendingAmbiguous[pendingAmbiguous.length - 1] ?? null : null}
         awaitingConfirmResolution={awaitingConfirmResolution}
         hitPulse={hitPulse}
