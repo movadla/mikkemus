@@ -14,7 +14,9 @@ export function summarizeScolia(state: ScoliaState): { label: string; color: str
   }
   switch (state.boardStatus) {
     case "Ready":
-      return { label: "Scolia: Online", color: "var(--color-green)" };
+      // Which transport is carrying the darts. Push lands one in ~100ms, polling in up to a
+      // quarter second — and on a laggy night this is the line that says which one you are on.
+      return { label: `Scolia: Online · ${state.transport === "realtime" ? "push" : "polling"}`, color: "var(--color-green)" };
     case "Calibrating":
       return { label: "Scolia: Kalibrerer …", color: "var(--color-gold)" };
     case "Error":

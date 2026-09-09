@@ -16,6 +16,13 @@ export type ScoliaState = {
   boardStatus: BoardStatus | null;
   boardPhase: BoardPhase;
   errorType: BoardErrorType;
+  /**
+   * What is actually carrying the darts right now. "realtime" once the events channel has
+   * confirmed SUBSCRIBED; "poll" until then and whenever it drops. Surfaced because the two feel
+   * completely different at the oche — push lands a dart in ~100ms, polling in up to a full
+   * interval — and without this there was no way to tell which one a laggy night was running on.
+   */
+  transport: "realtime" | "poll";
 };
 
 type StatusRow = {
@@ -30,7 +37,20 @@ type EventRow = { id: number; type: string; payload: unknown };
 // The relay heartbeats every 30s (see scripts/scolia-relay.ts) — anything much older
 // than that means the relay process probably isn't running right now.
 const STALE_AFTER_MS = 90_000;
-const EVENTS_POLL_MS = 1_000;
+/**
+ * The events poll runs at two speeds, chosen by whether the realtime channel is confirmed up.
+ *
+ * It used to be a flat second. Realtime is unreliable from the deployed origin (see below) and
+ * the poll is what carries the darts whenever it is down — so a dart could sit up to a full
+ * second before the board reacted, and averaged half of one. That is the lag you feel at the
+ * oche. At 250ms the worst case is a quarter of that. Four requests a second for one phone is
+ * nothing to Supabase; a dart that lands late is not nothing to the player.
+ *
+ * Once the channel reports SUBSCRIBED, push carries the darts in ~100ms and the poll only has to
+ * be a safety net, so it eases off to 2s to stop hammering for no gain.
+ */
+const EVENTS_POLL_FAST_MS = 250;
+const EVENTS_POLL_BACKUP_MS = 2_000;
 const STATUS_POLL_MS = 5_000;
 /** See the poll below — a ceiling, not an expected batch size. */
 const MAX_EVENTS_PER_POLL = 20;
@@ -73,6 +93,7 @@ export function useScolia(enabled: boolean, callbacks: ScoliaCallbacks) {
     boardStatus: null,
     boardPhase: null,
     errorType: null,
+    transport: "poll",
   });
   const callbacksRef = useRef(callbacks);
   useEffect(() => {
@@ -86,6 +107,9 @@ export function useScolia(enabled: boolean, callbacks: ScoliaCallbacks) {
     let cancelled = false;
     const lastSeenAtRef = { current: 0 };
     const lastEventIdRef = { current: 0 };
+    // Whether the events channel is confirmed SUBSCRIBED right now — picks the poll speed.
+    const realtimeLiveRef = { current: false };
+    let pollTimer: ReturnType<typeof setTimeout> | null = null;
     let channels: { status: ReturnType<SupabaseClient["channel"]>; events: ReturnType<SupabaseClient["channel"]> } | null = null;
 
     function noteAlive() {
@@ -105,12 +129,15 @@ export function useScolia(enabled: boolean, callbacks: ScoliaCallbacks) {
       const updatedAtMs = Date.parse(row.updated_at);
       const isFresh = !Number.isNaN(updatedAtMs) && Date.now() - updatedAtMs <= STALE_AFTER_MS;
       if (isFresh) lastSeenAtRef.current = updatedAtMs;
-      setState({
+      // Spread, not replace — `transport` is owned by the realtime channel's own status
+      // callback and must survive a status row landing on top of it.
+      setState((s) => ({
+        ...s,
         relay: isFresh ? "live" : "stale",
         boardStatus: row.board_status as BoardStatus | null,
         boardPhase: row.board_phase as BoardPhase,
         errorType: row.error_type as BoardErrorType,
-      });
+      }));
     }
 
     // Shared by the realtime channel and the poll below, so whichever notices a
@@ -143,7 +170,19 @@ export function useScolia(enabled: boolean, callbacks: ScoliaCallbacks) {
         .on("postgres_changes", { event: "INSERT", schema: "public", table: "scolia_events" }, (payload) => {
           processEventRow(payload.new as EventRow);
         })
-        .subscribe();
+        // The status callback is what makes the poll adaptive and the transport visible. It
+        // was subscribed blind before: whether push was up or down was simply unknown, so the
+        // poll ran at one speed regardless, and a laggy night had no explanation on screen.
+        .subscribe((status) => {
+          if (cancelled) return;
+          const live = status === "SUBSCRIBED";
+          const wasLive = realtimeLiveRef.current;
+          realtimeLiveRef.current = live;
+          setState((s) => (s.transport === (live ? "realtime" : "poll") ? s : { ...s, transport: live ? "realtime" : "poll" }));
+          // Push just dropped: don't wait out a backup-speed interval — anything that landed in
+          // the gap should come through now, and the poll should be back at full speed.
+          if (wasLive && !live) pollEvents();
+        });
 
       channels = { status: statusChannel, events: eventsChannel };
     }
@@ -187,8 +226,8 @@ export function useScolia(enabled: boolean, callbacks: ScoliaCallbacks) {
      * backbone; realtime becomes purely a latency optimization for whenever it
      * does happen to connect. processEventRow/applyStatusRow dedupe between them.
      */
-    const eventsPoll = setInterval(() => {
-      if (!baselineReadyRef.current) return;
+    function pollEvents() {
+      if (cancelled || !baselineReadyRef.current) return;
       client
         .from("scolia_events")
         .select("id, type, payload")
@@ -206,7 +245,19 @@ export function useScolia(enabled: boolean, callbacks: ScoliaCallbacks) {
             (data as EventRow[]).forEach(processEventRow);
           }
         });
-    }, EVENTS_POLL_MS);
+    }
+
+    // A self-rescheduling timeout rather than setInterval, so the gap is decided fresh each
+    // time from whether push is up — see EVENTS_POLL_FAST_MS. Before the baseline lands it
+    // just keeps ticking cheaply; pollEvents itself refuses to query until then.
+    function scheduleNextPoll() {
+      if (cancelled) return;
+      pollTimer = setTimeout(() => {
+        pollEvents();
+        scheduleNextPoll();
+      }, realtimeLiveRef.current ? EVENTS_POLL_BACKUP_MS : EVENTS_POLL_FAST_MS);
+    }
+    scheduleNextPoll();
 
     const statusPoll = setInterval(() => {
       client
@@ -237,7 +288,7 @@ export function useScolia(enabled: boolean, callbacks: ScoliaCallbacks) {
           realtimeClient.removeChannel(channels.events);
         });
       }
-      clearInterval(eventsPoll);
+      if (pollTimer) clearTimeout(pollTimer);
       clearInterval(statusPoll);
       clearInterval(staleCheck);
     };
