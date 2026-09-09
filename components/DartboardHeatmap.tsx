@@ -41,6 +41,9 @@ const BOARD = {
   surround: "#111412",
 } as const;
 
+/** The darts of the turn in progress. A clear blue: nothing on a dartboard is blue. */
+const HIT_BLUE = "#2f7bff";
+
 /** A single player's thrown-dart coordinates plotted over a dartboard outline — a quick, per-match spread visual, not a precision analysis tool. */
 export function DartboardHeatmap({
   throws,
@@ -126,20 +129,24 @@ export function DartboardHeatmap({
           </g>
         );
       })}
-      {/* Every dart gets a dark outline: a plain teal dot vanished on the cream beds, and a plain
-          cream one on the cream beds too. */}
+      {/* This turn's darts are blue — the one colour the board itself never uses — and the newest
+          one lands: it starts several times its size and shrinks onto the point (see .hit-zoom),
+          so the eye is led to exactly where the dart went in. Earlier darts recede in grey. Every
+          dot has a dark outline so it reads on cream and black alike. */}
       {throws.map(([x, y], i) => {
         const isRecent = recentFrom !== undefined && i >= recentFrom;
+        const isLatest = isRecent && i === throws.length - 1;
         return (
           <circle
             key={i}
             cx={x}
             cy={-y}
-            r={isRecent ? dotRadius * 1.25 : dotRadius}
-            fill={isRecent ? "var(--color-cream)" : "var(--color-teal)"}
-            opacity={isRecent ? 1 : 0.8}
-            stroke="rgba(0,0,0,0.7)"
+            r={isRecent ? dotRadius * 1.3 : dotRadius}
+            fill={isRecent ? HIT_BLUE : "rgba(200, 205, 200, 0.75)"}
+            stroke={isRecent ? "rgba(255,255,255,0.9)" : "rgba(0,0,0,0.6)"}
             strokeWidth={isRecent ? 1.5 : 1}
+            className={isLatest ? "hit-zoom" : undefined}
+            style={isLatest ? { transformBox: "fill-box", transformOrigin: "center" } : undefined}
           />
         );
       })}
