@@ -529,7 +529,9 @@ export function GameScreen({
 
   return (
     <div
-      className="game-root animate-screen-enter motion-hit relative w-full flex flex-col p-4"
+      // board-live: a connected board registers the darts itself, so landscape shrinks
+      // Angre/Bekreft further (see .board-live in globals.css).
+      className={`game-root animate-screen-enter motion-hit relative w-full flex flex-col p-4 ${scolia?.label.includes("Online") ? "board-live" : ""}`}
       style={{ height: "100dvh", background: "var(--color-bg)", animation: shakeAnimation }}
       // Covers resuming an in-progress match after a page reload, where startGame's own
       // primeAudio() call never ran this session — the first tap anywhere on this screen

@@ -682,6 +682,14 @@ button {
        Ten rows sharing 390px cannot spare them. */
     border-radius: 0.5rem;
     box-shadow: none;
+    /* The whole board fits sideways by design, so nothing here needs to scroll — and the
+       scroll container was clipping the 2px ring around the active cell on the board's right
+       edge, where the ring has to sit outside the cell. */
+    overflow: visible;
+  }
+
+  .game-board > div {
+    overflow: visible !important;
   }
 
   /* Takes whatever the header and the buttons leave — the board glyph inside is square and
@@ -708,15 +716,24 @@ button {
     gap: 0.4rem;
   }
 
-  /* Side by side has no room in an 11rem column — stack them, biggest target last. */
+  /* Side by side and small. Stacked full-height buttons ate a third of the column that the
+     thrower's photo and the heatmap are competing for, and with a board connected they are
+     pressed a handful of times a match. */
   .action-buttons {
-    grid-template-columns: 1fr !important;
-    gap: 0.4rem;
+    grid-template-columns: 0.8fr 1.2fr !important;
+    gap: 0.3rem;
   }
 
   .action-buttons button {
-    padding-top: 0.7rem;
-    padding-bottom: 0.7rem;
+    padding: 0.55rem 0.3rem;
+    font-size: 0.95rem;
+    border-radius: 0.6rem;
+  }
+
+  /* Board online: the darts register themselves, so these shrink to a footnote. */
+  .board-live .action-buttons button {
+    padding: 0.4rem 0.25rem;
+    font-size: 0.82rem;
   }
 
   /* The three "what you just threw" boxes get their own lane beside the board rather than a

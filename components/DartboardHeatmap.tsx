@@ -32,7 +32,9 @@ export function DartboardHeatmap({
    *  rest of the match recedes. Without it every dart looks equally current. */
   recentFrom?: number;
 }) {
-  const pad = compact ? 14 : 20;
+  // Compact keeps room for its four big cardinal labels — at 14 the "11" on the left and the
+  // "6" on the right were sliced by the viewBox edge and read as "1" and a fragment.
+  const pad = compact ? 34 : 20;
   const size = (BOARD_RADIUS + pad) * 2;
   const half = BOARD_RADIUS + pad;
   // The triple band is 8 units wide and the double 8 — a dot has to be able to sit INSIDE one
@@ -44,7 +46,15 @@ export function DartboardHeatmap({
   const labelledIndices = compact ? [0, 5, 10, 15] : NUMBER_ORDER.map((_, i) => i);
 
   return (
-    <svg viewBox={`${-half} ${-half} ${size} ${size}`} className="w-full h-auto" role="img" aria-label="Kastspredning på dartboard">
+    // Compact fills the box it is given in BOTH directions and lets preserveAspectRatio keep it
+    // square: sized off the width alone (h-auto) it came out taller than the side panel's
+    // slot and spilled under the thrower's photo above it.
+    <svg
+      viewBox={`${-half} ${-half} ${size} ${size}`}
+      className={compact ? "block w-full h-full" : "w-full h-auto"}
+      role="img"
+      aria-label="Kastspredning på dartboard"
+    >
       <circle r={BOARD_RADIUS} fill="var(--color-panel)" stroke="var(--color-border)" strokeWidth={1} />
       {[DOUBLE_OUTER, DOUBLE_INNER, TRIPLE_OUTER, TRIPLE_INNER, BULL_OUTER, BULL_INNER].map((r) => (
         <circle key={r} r={r} fill="none" stroke="var(--color-border)" strokeWidth={0.75} />

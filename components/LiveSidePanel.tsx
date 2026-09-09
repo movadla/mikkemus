@@ -47,10 +47,13 @@ export function LiveSidePanel({
       <div
         className="rounded-full overflow-hidden flex items-center justify-center shrink-0"
         style={{
-          width: "2.1rem",
-          height: "2.1rem",
+          // The face of whoever is throwing is what the room looks at — it gets the height the
+          // shrunken Angre/Bekreft gave back, and the heatmap below sizes itself to what is left.
+          width: "3.6rem",
+          height: "3.6rem",
           border: "2px solid var(--color-teal)",
           background: "var(--color-surface)",
+          boxShadow: "0 0 14px rgba(47, 180, 194, 0.35)",
         }}
         title={playerName}
       >
@@ -58,7 +61,7 @@ export function LiveSidePanel({
           // eslint-disable-next-line @next/next/no-img-element
           <img src={photo} alt={playerName} className="w-full h-full object-cover" />
         ) : (
-          <span className="font-display" style={{ color: "var(--color-teal)", fontSize: "1rem" }}>
+          <span className="font-display" style={{ color: "var(--color-teal)", fontSize: "1.6rem" }}>
             {playerName.charAt(0).toUpperCase()}
           </span>
         )}
