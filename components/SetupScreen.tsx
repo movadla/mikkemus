@@ -20,11 +20,7 @@ const FOCUS_RING =
 export function SetupScreen({
   onStart,
   onHome,
-  title = (
-    <>
-      Mikke Mus <span aria-hidden>🐭</span>
-    </>
-  ),
+  title = "Mikke Mus",
 }: {
   onStart: (
     players: string[],

@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import { loadActiveTournamentId } from "@/lib/tournamentStorage";
 import { useScolia } from "@/lib/useScolia";
 import { BullDuelApp } from "./BullDuelApp";
-import { DartboardGlyph } from "./DartboardGlyph";
 import { BullseyeIcon, DartIcon, TrophyIcon, TvIcon } from "./icons";
 import { MikkeMusApp } from "./MikkeMusApp";
 import { ScoliaStatusBadge } from "./ScoliaStatusBadge";
@@ -44,9 +43,15 @@ export function AppRoot() {
     <div className="animate-screen-enter min-h-screen w-full flex items-center justify-center p-6" style={{ background: "var(--color-bg)" }}>
       <ScoliaStatusBadge state={scolia.state} />
       <div className="w-full max-w-md">
-        <DartboardGlyph className="w-14 h-14 mx-auto mb-2 block" />
+        {/* The mascot, cut out and faded at the feet into the ground (see .hero-mascot). The
+            emoji it replaces was the one cartoon element on an otherwise considered screen. */}
+        <div className="relative mx-auto mb-3 flex items-center justify-center" aria-hidden>
+          <span className="hero-glow animate-idle-glow absolute" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/mikke.webp" alt="" className="hero-mascot relative" width={420} height={747} />
+        </div>
         <h1 className="text-center mb-10 font-display" style={{ color: "var(--color-cream)", fontSize: "2.5rem", letterSpacing: "0.02em" }}>
-          Mikke Mus <span aria-hidden>🐭</span>
+          Mikke Mus
         </h1>
         <div className="space-y-4">
           <button

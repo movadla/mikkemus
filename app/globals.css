@@ -817,6 +817,39 @@ button {
   animation: winner-shockwave 900ms var(--ease-standard) both;
 }
 
+/* -- the home screen mascot -------------------------------------------------
+   Sits on the page the way an illustration sits on a dark magazine spread: cut out of its
+   white background (public/mikke.webp is the cutout), faded at the feet into the ground, with
+   a low warm glow behind it so it belongs to this palette rather than being pasted onto it.
+   Never at full opacity or full saturation — the Disney primaries are loud against this
+   green, and a touch off both is what makes it read as part of the surface. */
+.hero-mascot {
+  height: 12.5rem;
+  width: auto;
+  opacity: 0.94;
+  /* No drop-shadow. There was one, and against the gold bloom behind him it rendered as a
+     faint dark rectangle around the whole figure — a dark shadow cast onto a light source is
+     contradictory lighting, and the bloom already lifts him off the ground. */
+  filter: saturate(0.9);
+  /* The fade. Solid to just past the waist, then out through the feet — an illustration
+     standing on nothing, rather than a figure with a hard bottom edge. */
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 58%, rgba(0, 0, 0, 0.35) 82%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 58%, rgba(0, 0, 0, 0.35) 82%, transparent 100%);
+}
+
+/* Same gold bloom the winner screen puts behind its photo — and it breathes with the same
+   idle-glow, so the two screens share one gesture. */
+.hero-glow {
+  width: 13rem;
+  height: 13rem;
+  border-radius: 50%;
+  background: var(--color-gold);
+  opacity: 0.16;
+  filter: blur(46px);
+  transform: translateY(-8%);
+  pointer-events: none;
+}
+
 /* -- winner screen flourish -- */
 @keyframes winner-pop {
   from {
