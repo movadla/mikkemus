@@ -15,6 +15,12 @@ export type ThrowerTeam = {
   activeIdx: number;
 };
 
+/** A kit colour at some opacity — the bar is tinted in the team's own colour when it is up. */
+function tint(hex: string, alpha: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+}
+
 function Avatar({ who, size, active = true, ring = false }: { who: Thrower; size: number; active?: boolean; ring?: boolean }) {
   const accent = avatarAccent(who.name);
   return (
@@ -76,6 +82,7 @@ export function ThrowerBar({
   const mates = team ? team.members.map((_, i) => team.members[(team.activeIdx + 1 + i) % team.members.length]).slice(0, team.members.length - 1) : [];
   const photoSize = compact ? 44 : 72;
   const teamPhotoSize = compact ? 18 : 26;
+  const kitBadge = compact ? 26 : 40;
 
   return (
     <div
@@ -84,13 +91,23 @@ export function ThrowerBar({
       className={`thrower-bar shadow-panel flex items-center rounded-xl ${animate ? "animate-thrower-in" : ""}`}
       style={{
         gap: compact ? "0.6rem" : "0.8rem",
-        background: "var(--color-surface)",
-        border: `1px solid var(--color-border)`,
-        borderLeft: `4px solid var(--color-teal)`,
+        // A team's turn is in the team's colours: the bar washes from the kit's main colour, and
+        // the left edge is the kit, not the app's teal.
+        background: kit ? `linear-gradient(90deg, ${tint(kit.primary, 0.32)}, var(--color-surface) 65%)` : "var(--color-surface)",
+        border: `1px solid ${kit ? tint(kit.primary, 0.6) : "var(--color-border)"}`,
+        borderLeft: `6px solid ${kit ? kit.primary : "var(--color-teal)"}`,
         padding: compact ? "0.4rem 0.6rem" : "0.6rem 0.8rem",
       }}
     >
-      <Avatar who={thrower} size={photoSize} ring={animate} />
+      <span className="relative shrink-0" style={{ width: photoSize, height: photoSize }}>
+        <Avatar who={thrower} size={photoSize} ring={animate} />
+        {/* The shirt the thrower is playing in, worn on the picture — big enough to read across the room. */}
+        {kit && (
+          <span className="absolute" style={{ right: -kitBadge * 0.3, bottom: -kitBadge * 0.15 }} aria-hidden>
+            <TeamKit kit={kit} size={kitBadge} />
+          </span>
+        )}
+      </span>
       <div className="min-w-0 flex-1">
         <p style={{ color: "var(--color-teal)", fontSize: compact ? "0.62rem" : "0.72rem", letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: 700, lineHeight: 1.2 }}>
           {thrower.isBot ? "Kaster …" : "Kaster"}
@@ -103,7 +120,6 @@ export function ThrowerBar({
         </p>
         {team && (
           <p className="truncate flex items-center gap-1.5 mt-1" style={{ color: "var(--color-cream)", opacity: 0.85, fontSize: compact ? "0.72rem" : "0.85rem", fontWeight: 600 }}>
-            {kit && <TeamKit kit={kit} size={compact ? 18 : 24} />}
             {team.photo && (
               <span className="rounded-full overflow-hidden shrink-0" style={{ width: teamPhotoSize, height: teamPhotoSize, border: "1px solid var(--color-border)" }} aria-hidden>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
