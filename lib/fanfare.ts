@@ -234,6 +234,67 @@ export function playWinBoom() {
 }
 
 /**
+ * The click under a finger when a hit is tapped in by hand — every tap, not just the good ones.
+ *
+ * Short on purpose (about 60 ms) so it is over before the next tap can start, and dry: no reverb,
+ * because a tail on something that happens every second turns into mush. The pitch climbs with
+ * each dart of the turn (`dartInTurn` 1–3), so three quick taps read as a phrase going up rather
+ * than the same sound three times — a small reward for a clean turn that costs nothing when the
+ * turn is not clean. The boom that rides on real throws is not used here; see lib/fxLevel.ts for
+ * why those effects are turned down for hand-entered darts.
+ */
+export function playTapSound(dartInTurn: number = 1) {
+  const ctx = getContext();
+  if (!ctx) return;
+  try {
+    if (ctx.state === "suspended") ctx.resume().catch(() => {});
+    const buses = getBuses(ctx);
+    if (!buses) return;
+    const t = ctx.currentTime + 0.005;
+    const step = Math.max(0, Math.min(2, Math.round(dartInTurn) - 1));
+    const freq = 540 * Math.pow(2, (step * 3) / 12); // minor third up per dart
+
+    const env = ctx.createGain();
+    env.gain.setValueAtTime(0.0001, t);
+    env.gain.exponentialRampToValueAtTime(0.28, t + 0.004);
+    env.gain.exponentialRampToValueAtTime(0.0001, t + 0.07);
+    env.connect(buses.master);
+
+    const osc = ctx.createOscillator();
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(freq * 1.5, t);
+    osc.frequency.exponentialRampToValueAtTime(freq, t + 0.03);
+    osc.connect(env);
+    osc.start(t);
+    osc.stop(t + 0.08);
+  } catch {
+    // A sound that fails to play must never get in the way of the tap that asked for it.
+  }
+}
+
+/**
+ * Someone is one cross from winning. Played the moment it becomes true, not when it is won —
+ * a held-breath sound, two brass notes rising into a quiet sustained fifth over a low thump. Much
+ * quieter than the fanfare: it is a warning to the table, not a celebration.
+ */
+export function playMatchDartSound() {
+  const ctx = getContext();
+  if (!ctx) return;
+  try {
+    if (ctx.state === "suspended") ctx.resume().catch(() => {});
+    const buses = getBuses(ctx);
+    if (!buses) return;
+    const t = ctx.currentTime + 0.03;
+    brassNote(ctx, buses, G3, t, 0.18, 0.11);
+    brassNote(ctx, buses, C4, t + 0.2, 0.9, 0.12);
+    brassNote(ctx, buses, G4, t + 0.2, 0.9, 0.07);
+    playBoom({ darkness: 5, volume: 2, grit: 1, punch: 3, length: 2 });
+  } catch {
+    // Same rule as every other sound here: never break the game over audio.
+  }
+}
+
+/**
  * The three candidate win fanfares:
  *  1. Rising bugle call into a held top note over a triad, then a closing accent.
  *  2. Classic cavalry "charge!" — repeated short notes driving up into the top note.

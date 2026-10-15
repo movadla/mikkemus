@@ -1,5 +1,6 @@
 import { reportError } from "./errorReporting";
 import { supabase } from "./supabaseClient";
+import { normalizeVariant } from "./rules";
 import type { Participant, Tournament, TournamentMatch, TournamentMode } from "./tournament";
 
 type TournamentRow = {
@@ -13,9 +14,10 @@ type TournamentRow = {
   status: string;
   winner: string | null;
   match_size: number;
-  /** Game variant (see lib/rules.ts). Nullable column, added after the table: run
+  /** Game variant (see lib/rules.ts) — the row length and the stand rule, as one string.
+   *  Nullable column, added after the table: run
    *    alter table tournaments add column if not exists variant text;
-   *  in Supabase before the first "1 treff" tournament — see tournamentToRow. */
+   *  in Supabase before the first non-standard tournament — see tournamentToRow. */
   variant?: string | null;
 };
 
@@ -32,7 +34,7 @@ function rowToTournament(row: TournamentRow): Tournament {
     completedAt: row.completed_at ?? undefined,
     // Older tournaments (before match_size existed) default to the normal 1-vs-1 behavior.
     matchSize: row.match_size ?? 2,
-    variant: row.variant === "onehit" ? "onehit" : "standard",
+    variant: normalizeVariant(row.variant),
   };
 }
 

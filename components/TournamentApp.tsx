@@ -5,6 +5,8 @@ import {
   createTournament,
   matchParticipants,
   recordMatchResult,
+  suggestGroups,
+  MAX_WITHOUT_GROUP_SCREEN,
   type Participant,
   type Tournament,
   type TournamentMatch,
@@ -52,6 +54,10 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
   const [pendingParticipants, setPendingParticipants] = useState<Participant[] | null>(null);
   const [pendingVariant, setPendingVariant] = useState<GameVariant>("standard");
   const [currentMatch, setCurrentMatch] = useState<TournamentMatch | null>(null);
+  // The match that just ended, so the overview can show what it did to the table. Kept only until
+  // the next match starts — it is about the moment after a result, not a permanent setting. A
+  // reload starts without it, which is right: the table is then simply the table.
+  const [justPlayedId, setJustPlayedId] = useState<string | null>(null);
   // Guards "Generer turnering" and the cancel-tournament confirm button against a double-tap
   // firing a second Supabase write while the first is still in flight.
   const [submitting, setSubmitting] = useState(false);
@@ -91,28 +97,56 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  function handleSetupNext(mode: TournamentMode, participants: Participant[], variant: GameVariant) {
-    setPendingMode(mode);
-    setPendingParticipants(participants);
-    setPendingVariant(variant);
-    setScreen("group-setup");
-  }
-
-  async function handleGenerate(groups: string[][], matchSize: number) {
-    if (!pendingMode || !pendingParticipants || submitting) return;
+  /** Makes the tournament and opens it. Everything it needs is passed in, because the small-
+   *  tournament shortcut below calls it in the same breath as the setup screen's own submit,
+   *  before any `pending…` state has been applied. */
+  async function createAndOpen(mode: TournamentMode, participants: Participant[], variant: GameVariant, groups: string[][], matchSize: number) {
+    if (submitting) return;
     setSubmitting(true);
     const id = newTournamentId();
     // Playing several at once is an individual-mode-only setting — a team match is always 1 team
     // vs 1 team, regardless of whatever the (hidden, for team mode) matchSize toggle last held.
-    const created = createTournament(pendingMode, pendingParticipants, groups, id, new Date().toISOString(), pendingMode === "team" ? 2 : matchSize, pendingVariant);
+    const created = createTournament(mode, participants, groups, id, new Date().toISOString(), mode === "team" ? 2 : matchSize, variant);
     setTournament(created);
+    setJustPlayedId(null);
     saveActiveTournamentId(id);
     setScreen("overview");
     await upsertTournament(created);
     setSubmitting(false);
   }
 
+  function handleSetupNext(mode: TournamentMode, participants: Participant[], variant: GameVariant, adjustGroups: boolean) {
+    setPendingMode(mode);
+    setPendingParticipants(participants);
+    setPendingVariant(variant);
+    // Up to four play in a single group, so there is nothing for the group screen to decide: the
+    // tournament is made straight away unless the user asked to adjust the groups.
+    if (!adjustGroups && participants.length <= MAX_WITHOUT_GROUP_SCREEN) {
+      void createAndOpen(mode, participants, variant, suggestGroups(participants.map((p) => p.name)), 2);
+      return;
+    }
+    setScreen("group-setup");
+  }
+
+  async function handleGenerate(groups: string[][], matchSize: number) {
+    if (!pendingMode || !pendingParticipants) return;
+    await createAndOpen(pendingMode, pendingParticipants, pendingVariant, groups, matchSize);
+  }
+
+  /** A finished tournament, played again by the same people: back to the setup screen with
+   *  everyone already in, to change what they want and start. */
+  function handleNewWithSame() {
+    if (!tournament) return;
+    setPendingMode(tournament.mode);
+    setPendingParticipants(tournament.participants);
+    setPendingVariant(tournament.variant ?? "standard");
+    setTournament(null);
+    setJustPlayedId(null);
+    setScreen("setup");
+  }
+
   function handlePlayNext(match: TournamentMatch) {
+    setJustPlayedId(null);
     setCurrentMatch(match);
     setScreen("match");
   }
@@ -132,6 +166,7 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
     if (!tournament || !currentMatch) return;
     const updated = recordMatchResult(tournament, currentMatch.id, result.placements, result.stats);
     setTournament(updated);
+    setJustPlayedId(currentMatch.id);
     setCurrentMatch(null);
     setScreen("overview");
     await upsertTournament(updated);
@@ -176,7 +211,6 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
     return (
       <TournamentGroupSetupScreen
         participantNames={pendingParticipants.map((p) => p.name)}
-        mode={pendingMode}
         onBack={() => setScreen("setup")}
         onGenerate={handleGenerate}
         submitting={submitting}
@@ -208,6 +242,8 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
       <TournamentOverviewScreen
         tournament={tournament}
         onPlayNext={handlePlayNext}
+        justPlayedId={justPlayedId}
+        onNewWithSame={handleNewWithSame}
         onExitToHome={onExitToHome}
         onCancelTournament={handleCancelTournament}
         cancelingTournament={submitting}

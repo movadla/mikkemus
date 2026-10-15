@@ -192,7 +192,7 @@ export function BullDuelWinnerScreen({
           className={`glossy w-full py-4 rounded-lg font-semibold text-lg mb-3 ${FOCUS_RING}`}
           style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)" } as React.CSSProperties}
         >
-          Spill igjen
+          Revansj
         </button>
         <button
           type="button"

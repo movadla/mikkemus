@@ -1,28 +1,121 @@
 "use client";
 
 import { useState } from "react";
-import { bracketRoundLabel, computeStandings, matchParticipants, previewPlayoffBracket, type Tournament, type TournamentMatch } from "@/lib/tournament";
+import { bracketRoundLabel, matchParticipants, podium, previewPlayoffBracket, standingsWithMovement, type Podium, type Tournament, type TournamentMatch } from "@/lib/tournament";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { TrophyIcon } from "./icons";
 
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
 
-function StandingsTable({ names, matches }: { names: string[]; matches: TournamentMatch[] }) {
-  const rows = computeStandings(names, matches);
+/** Same columns in every table: place, name, played, won, lost, points. The two who just played
+ *  are marked and show what the match gave them, so the table answers "what changed" without
+ *  anyone comparing it to how it looked before. */
+const TABLE_COLUMNS = "1.6rem minmax(0, 1fr) 1.8rem 1.8rem 1.8rem 2.6rem";
+
+function MovementMark({ placesGained }: { placesGained: number | null }) {
+  if (placesGained === null || placesGained === 0) return <span aria-hidden style={{ width: "1rem" }} />;
+  const up = placesGained > 0;
   return (
-    <div className="space-y-1">
-      {rows.map((r, i) => (
-        <div key={r.name} className="flex items-center justify-between px-3 py-1.5 rounded-lg" style={{ background: "var(--color-surface)" }}>
-          <span style={{ color: "var(--color-cream)", fontSize: "0.85rem" }}>
-            <span style={{ color: "var(--color-muted)", marginRight: "0.5rem" }}>{i + 1}.</span>
-            {r.name}
-          </span>
-          <span className="tabular" style={{ color: "var(--color-teal)", fontSize: "0.8rem" }}>
-            {r.wins}-{r.losses} · {r.points}p
-          </span>
+    <span
+      aria-label={up ? `opp ${placesGained} plasser` : `ned ${-placesGained} plasser`}
+      style={{ color: up ? "var(--color-green)" : "var(--color-red)", fontSize: "0.7rem", marginLeft: "0.35rem" }}
+    >
+      {up ? "▲" : "▼"}
+      {Math.abs(placesGained)}
+    </span>
+  );
+}
+
+function StandingsTable({ names, matches, justPlayedId = null }: { names: string[]; matches: TournamentMatch[]; justPlayedId?: string | null }) {
+  const rows = standingsWithMovement(names, matches, justPlayedId);
+  const headStyle: React.CSSProperties = { color: "var(--color-label)", fontSize: "0.65rem", letterSpacing: "0.1em" };
+  return (
+    <div role="table" aria-label="Tabell">
+      <div role="row" className="grid items-center px-3 pb-1" style={{ gridTemplateColumns: TABLE_COLUMNS, gap: "0.25rem", ...headStyle }}>
+        <span role="columnheader">#</span>
+        <span role="columnheader">NAVN</span>
+        <span role="columnheader" className="text-center" title="Kamper">K</span>
+        <span role="columnheader" className="text-center" title="Vunnet">V</span>
+        <span role="columnheader" className="text-center" title="Tapt">T</span>
+        <span role="columnheader" className="text-right" title="Poeng">P</span>
+      </div>
+      <div className="space-y-1">
+        {rows.map((r, i) => (
+          <div
+            key={r.name}
+            role="row"
+            className="grid items-center px-3 py-2 rounded-lg"
+            style={{
+              gridTemplateColumns: TABLE_COLUMNS,
+              gap: "0.25rem",
+              background: "var(--color-surface)",
+              border: r.inMatch ? "1px solid var(--color-teal)" : "1px solid transparent",
+            }}
+          >
+            <span role="cell" className="tabular" style={{ color: i === 0 && r.played > 0 ? "var(--color-gold)" : "var(--color-muted)", fontSize: "0.9rem" }}>
+              {i + 1}
+            </span>
+            <span role="cell" className="flex items-center min-w-0" style={{ color: "var(--color-cream)", fontSize: "0.92rem" }}>
+              <span className="truncate">{r.name}</span>
+              <MovementMark placesGained={r.placesGained} />
+            </span>
+            <span role="cell" className="tabular text-center" style={{ color: "var(--color-muted)", fontSize: "0.85rem" }}>
+              {r.played}
+            </span>
+            <span role="cell" className="tabular text-center" style={{ color: "var(--color-cream)", fontSize: "0.85rem" }}>
+              {r.wins}
+            </span>
+            <span role="cell" className="tabular text-center" style={{ color: "var(--color-muted)", fontSize: "0.85rem" }}>
+              {r.losses}
+            </span>
+            <span role="cell" className="tabular text-right" style={{ color: "var(--color-teal)", fontSize: "0.95rem", fontWeight: 700 }}>
+              {r.points}
+              {r.pointsGained > 0 && <span style={{ color: "var(--color-green)", fontSize: "0.65rem", marginLeft: "0.2rem" }}>+{r.pointsGained}</span>}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** What the match that was just played ended as — shown above the table it changed. */
+function JustPlayedCard({ match, tournament }: { match: TournamentMatch; tournament: Tournament }) {
+  const participants = matchParticipants(match);
+  const winner = match.winner;
+  if (!winner || match.isBye) return null;
+  const darts = (name: string) => match.stats?.[name]?.darts;
+  const round = match.round === "group" ? `Gruppe ${(match.groupIndex ?? 0) + 1}` : bracketRoundLabel(match.bracketRoundSize ?? 1, match.isBronzeMatch);
+  const group = match.round === "group" && match.groupIndex !== undefined ? tournament.groups[match.groupIndex] : null;
+  return (
+    <div className="shadow-panel rounded-xl p-3 mb-6" style={{ background: "var(--color-panel)", border: "1px solid var(--color-teal)" }}>
+      <p className="section-label mb-2">KAMPEN ER FERDIG · {round.toUpperCase()}</p>
+      <p style={{ color: "var(--color-cream)", fontSize: "1.1rem" }}>
+        <span className="font-display" style={{ color: "var(--color-gold)", fontSize: "1.3rem" }}>
+          {winner}
+        </span>{" "}
+        {participants.length === 2 ? (
+          <>
+            vant over {participants.find((p) => p !== winner)}
+          </>
+        ) : (
+          <>vant · {match.placements?.join(" › ")}</>
+        )}
+      </p>
+      {participants.some((p) => darts(p) !== undefined) && (
+        <p className="tabular mt-1" style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>
+          Piler brukt: {participants.map((p) => `${p} ${darts(p) ?? "–"}`).join(" · ")}
+        </p>
+      )}
+      {group && (
+        <div className="mt-3">
+          <p className="mb-1.5" style={{ color: "var(--color-label)", fontSize: "0.7rem", letterSpacing: "0.1em" }}>
+            TABELL ETTER KAMPEN
+          </p>
+          <StandingsTable names={group} matches={tournament.matches.filter((m) => m.groupIndex === match.groupIndex)} justPlayedId={match.id} />
         </div>
-      ))}
+      )}
     </div>
   );
 }
@@ -30,8 +123,10 @@ function StandingsTable({ names, matches }: { names: string[]; matches: Tourname
 function MatchRow({ match }: { match: TournamentMatch }) {
   const done = !!match.winner;
   const participants = matchParticipants(match);
+  const darts = participants.map((p) => match.stats?.[p]?.darts);
+  const showDarts = done && !match.isBye && darts.every((d) => d !== undefined);
   return (
-    <div className="flex items-center justify-between px-3 py-1.5 rounded-lg" style={{ background: "var(--color-surface)", opacity: done ? 0.7 : 1 }}>
+    <div className="flex items-center justify-between gap-3 px-3 py-1.5 rounded-lg" style={{ background: "var(--color-surface)" }}>
       <span style={{ color: "var(--color-cream)", fontSize: "0.85rem" }}>
         {participants.map((p, i) => (
           <span key={p}>
@@ -41,7 +136,7 @@ function MatchRow({ match }: { match: TournamentMatch }) {
         ))}
       </span>
       {done && (
-        <span className="tabular" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>
+        <span className="tabular text-right shrink-0" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>
           {/* A pod with more than 2 players shows the full finishing order, since "vant" alone
               wouldn't say who came 2nd/3rd; a normal 1-vs-1 match keeps today's plain wording. A
               bye never actually played, so it gets its own wording instead of reading as a win. */}
@@ -50,8 +145,81 @@ function MatchRow({ match }: { match: TournamentMatch }) {
             : participants.length > 2 && match.placements
               ? match.placements.join(" › ")
               : `${match.winner} vant`}
+          {showDarts && <span className="block">{darts.join(" – ")} piler</span>}
         </span>
       )}
+    </div>
+  );
+}
+
+/** A group's matches in two lists: what is still to play, and what has been played with its result. */
+function GroupMatches({ matches }: { matches: TournamentMatch[] }) {
+  const upcoming = matches.filter((m) => !m.winner);
+  const played = matches.filter((m) => !!m.winner);
+  const label = { color: "var(--color-muted)", fontSize: "0.65rem", letterSpacing: "0.1em" } as const;
+  return (
+    <>
+      {upcoming.length > 0 && (
+        <>
+          <p className="mt-3 mb-1.5" style={label}>
+            NESTE
+          </p>
+          <div className="space-y-1.5">
+            {upcoming.map((m) => (
+              <MatchRow key={m.id} match={m} />
+            ))}
+          </div>
+        </>
+      )}
+      {played.length > 0 && (
+        <>
+          <p className="mt-3 mb-1.5" style={label}>
+            SPILT
+          </p>
+          <div className="space-y-1.5">
+            {played.map((m) => (
+              <MatchRow key={m.id} match={m} />
+            ))}
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
+/** First, second and third of a finished tournament — the winner at the centre and tallest. */
+function PodiumCard({ podium }: { podium: Podium }) {
+  const places: { name: string | null; place: number; height: string }[] = [
+    { name: podium.second, place: 2, height: "5.2rem" },
+    { name: podium.first, place: 1, height: "6.8rem" },
+    { name: podium.third, place: 3, height: "4.2rem" },
+  ];
+  return (
+    <div className="mb-6" role="list" aria-label="Pallen">
+      <p className="mb-2 section-label text-center">TURNERINGEN ER FERDIG</p>
+      <div className="flex items-end justify-center gap-2">
+        {places.map(({ name, place, height }) => (
+          <div key={place} role="listitem" className="flex-1 min-w-0 flex flex-col items-center gap-1.5">
+            {place === 1 && <TrophyIcon className="w-6 h-6" />}
+            <p className="font-display truncate w-full text-center" style={{ color: place === 1 ? "var(--color-gold)" : "var(--color-cream)", fontSize: place === 1 ? "1.3rem" : "1rem" }}>
+              {name ?? "–"}
+            </p>
+            <div
+              className={`w-full rounded-t-lg flex items-start justify-center pt-2 ${place === 1 ? "card-gold" : ""}`}
+              style={{
+                height,
+                background: place === 1 ? undefined : "var(--color-surface)",
+                border: place === 1 ? undefined : "1px solid var(--color-border)",
+                borderBottom: "none",
+              }}
+            >
+              <span className="font-display" style={{ fontSize: "1.6rem", color: place === 1 ? "var(--color-bg)" : "var(--color-muted)" }}>
+                {place}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -61,9 +229,16 @@ export function TournamentOverviewScreen({
   onPlayNext,
   onExitToHome,
   onCancelTournament,
+  onNewWithSame,
   cancelingTournament = false,
+  justPlayedId = null,
 }: {
   tournament: Tournament;
+  /** After a finished tournament: set up another with the same people. */
+  onNewWithSame: () => void;
+  /** The match that was just finished, if this screen is being shown straight after one — it is
+   *  summarised above everything else, with the table it changed. */
+  justPlayedId?: string | null;
   onPlayNext: (match: TournamentMatch) => void;
   onExitToHome: () => void;
   onCancelTournament: () => void;
@@ -72,6 +247,8 @@ export function TournamentOverviewScreen({
   cancelingTournament?: boolean;
 }) {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const finished = podium(tournament);
+  const justPlayed = justPlayedId ? tournament.matches.find((m) => m.id === justPlayedId && m.winner) ?? null : null;
   const nextMatch = tournament.matches.find((m) => !m.winner && matchParticipants(m).length >= 2) ?? null;
   const bracketMatches = tournament.matches.filter((m) => m.round === "bracket");
   const bracketRoundSizes = Array.from(new Set(bracketMatches.map((m) => m.bracketRoundSize!))).sort((a, b) => b - a);
@@ -102,17 +279,21 @@ export function TournamentOverviewScreen({
           <div style={{ width: "72px" }} />
         </div>
 
-        {tournament.status === "done" && tournament.winner && (
-          <div className="card-gold shadow-panel rounded-xl p-5 mb-6 text-center">
-            <p className="font-display" style={{ fontStyle: "italic", fontSize: "0.9rem" }}>
-              Turneringsvinner
-            </p>
-            <p className="font-display flex items-center justify-center gap-2" style={{ fontSize: "1.6rem" }}>
-              <TrophyIcon className="w-6 h-6" />
-              {tournament.winner}
-            </p>
-          </div>
+        {finished && (
+          <>
+            <PodiumCard podium={finished} />
+            <button
+              type="button"
+              onClick={onNewWithSame}
+              className={`glossy w-full py-4 rounded-xl font-semibold text-lg mb-6 ${FOCUS_RING}`}
+              style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)" } as React.CSSProperties}
+            >
+              Ny turnering med samme deltakere
+            </button>
+          </>
         )}
+
+        {justPlayed && <JustPlayedCard match={justPlayed} tournament={tournament} />}
 
         {nextMatch && tournament.status !== "done" && (
           <button
@@ -121,7 +302,7 @@ export function TournamentOverviewScreen({
             className={`tactile w-full py-4 rounded-lg font-semibold text-lg mb-6 ${FOCUS_RING}`}
             style={{ background: "var(--color-teal)", color: "var(--color-bg)" }}
           >
-            Spill: {matchParticipants(nextMatch).join(" vs ")}
+            Neste kamp: {matchParticipants(nextMatch).join(" vs ")}
           </button>
         )}
 
@@ -134,17 +315,14 @@ export function TournamentOverviewScreen({
               <p className="mb-2" style={{ color: "var(--color-muted)", fontSize: "0.7rem", letterSpacing: "0.1em" }}>
                 GRUPPE {gi + 1}
               </p>
-              <StandingsTable names={group} matches={tournament.matches.filter((m) => m.groupIndex === gi)} />
-              <p className="mt-3 mb-1.5" style={{ color: "var(--color-muted)", fontSize: "0.65rem", letterSpacing: "0.1em" }}>
-                KAMPER
-              </p>
-              <div className="space-y-1.5">
-                {tournament.matches
-                  .filter((m) => m.groupIndex === gi)
-                  .map((m) => (
-                    <MatchRow key={m.id} match={m} />
-                  ))}
-              </div>
+              {/* The group that has just played has its table in the result card above; showing it
+                  again right under would only be the same numbers twice. */}
+              {justPlayed?.round === "group" && justPlayed.groupIndex === gi ? (
+                <p style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>Tabellen står i resultatkortet over.</p>
+              ) : (
+                <StandingsTable names={group} matches={tournament.matches.filter((m) => m.groupIndex === gi)} />
+              )}
+              <GroupMatches matches={tournament.matches.filter((m) => m.groupIndex === gi)} />
             </div>
           ))}
         </div>

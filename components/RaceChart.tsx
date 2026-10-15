@@ -17,7 +17,7 @@ export function RaceChart({
   players: string[];
   turnLog: Record<string, TurnResult[]>;
   winner: string;
-  /** Crosses a full board needs — 30 in Standard, 10 in 1 treff. Sets the top of the chart. */
+  /** Crosses a full board needs — 30 in Standard, 10 in 1 treff, 50 at five. Sets the top of the chart. */
   total: number;
 }) {
   const series = players.map((p) => {
@@ -39,8 +39,10 @@ export function RaceChart({
   const x = (round: number) => left + (round / rounds) * plotW;
   const y = (hits: number) => top + plotH - (Math.min(hits, total) / total) * plotH;
 
-  // Grid at thirds of the board (10/20/30 in Standard), rounds every 5 or every round when short.
-  const yTicks = total % 3 === 0 ? [total / 3, (2 * total) / 3, total] : [total];
+  // Grid at thirds of the board (10/20/30 in Standard), or halves when the row length makes it
+  // not divide by three (20, 40, 50 crosses) — rounds every 5 or every round when short.
+  const yTicks =
+    total % 3 === 0 ? [total / 3, (2 * total) / 3, total] : total % 2 === 0 ? [total / 2, total] : [total];
   const xStep = rounds <= 8 ? 1 : rounds <= 20 ? 5 : 10;
   const xTicks: number[] = [];
   for (let r = xStep; r <= rounds; r += xStep) xTicks.push(r);

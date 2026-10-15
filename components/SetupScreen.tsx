@@ -5,11 +5,17 @@ import { ensurePlayer, getPlayerRecord, setPlayerPhoto, setPlayerSound, useRoste
 import { reportError } from "@/lib/errorReporting";
 import { BOT_LEVELS, BOT_LEVEL_PICKABLE, botDisplayName, botLevelBadge, type BotLevel, type TeamMember } from "@/lib/botLevels";
 import { avatarAccent } from "@/lib/avatarAccent";
-import { RULES, VARIANT_ORDER, type GameVariant } from "@/lib/rules";
+import { botsSupported, withStandRule, type GameVariant } from "@/lib/rules";
+import { rememberTeamNames, resolveTeams, teamNameProblems } from "@/lib/teamNames";
+import { rememberTeamCards } from "@/lib/teamCards";
+import { markPlayersUsed } from "@/lib/recentPlayers";
 import { CameraIcon, GuestIcon, MicIcon, PeopleIcon, PersonIcon } from "./icons";
-import { HeroMascot } from "./HeroMascot";
 import { PeoplePicker, type Person } from "./PeoplePicker";
 import { PrimaryActionButton } from "./PrimaryActionButton";
+import { RulesPicker } from "./RulesPicker";
+import { FxPicker } from "./FxPicker";
+import { RosterPills } from "./RosterPills";
+import { SavedTeams, useTeamCard } from "./SavedTeams";
 import { TeamComposer, isTeamSetupReady, type Team } from "./TeamComposer";
 
 const RECORDING_MS = 2000;
@@ -20,7 +26,7 @@ const FOCUS_RING =
 export function SetupScreen({
   onStart,
   onHome,
-  title = "Mikke Mus",
+  title = "Enkeltkamp",
   variantSelectable = true,
 }: {
   onStart: (
@@ -48,7 +54,6 @@ export function SetupScreen({
   const [guestPlayers, setGuestPlayers] = useState<Record<string, true>>({});
   const [addingAsGuest, setAddingAsGuest] = useState(false);
   const [confirmingRemove, setConfirmingRemove] = useState<string | null>(null);
-  const [showAddMenu, setShowAddMenu] = useState(false);
   const [showBotPicker, setShowBotPicker] = useState(false);
   const [error, setError] = useState("");
   const [addingPlayer, setAddingPlayer] = useState(false);
@@ -75,24 +80,49 @@ export function SetupScreen({
     setTeamPeople(next);
   }
 
-  const teamsReady = isTeamSetupReady(teamPeople, teams);
+  const pickTeamCard = useTeamCard(teamPeople, teams, (nextPeople, nextTeams) => {
+    setTeamPeople(nextPeople);
+    setTeams(nextTeams);
+  });
+
+  // The longer games have no bots — see botsSupported. Bots already added when the length is
+  // changed are not removed behind the user's back; the start button waits until they are.
+  const botsAllowed = botsSupported(variant);
+  const blockedBots = !botsAllowed && Object.keys(botLevels).length > 0;
+  const blockedTeamBots = !botsAllowed && teamPeople.some((p) => p.isBot);
+  const teamsReady = isTeamSetupReady(teamPeople, teams) && !blockedTeamBots;
 
   function startTeamGame() {
     if (!teamsReady) return;
+    // The names the teams will actually play under: typed ones as typed, the rest built from
+    // their members (or remembered for that pair). Checked again here rather than trusted from
+    // the button, since two teams sharing a name would share one column on the board.
+    const playing = resolveTeams(teams);
+    if (!teamNameProblems(playing).every((p) => p === null)) return;
+    rememberTeamNames(teams.map((t, i) => ({ ...t, name: playing[i].name })));
+    rememberTeamCards(playing);
+    markPlayersUsed(teamPeople.filter((p) => !p.isBot).map((p) => p.name));
     const teamRosters: Record<string, TeamMember[]> = {};
-    teams.forEach((t) => {
+    playing.forEach((t) => {
       teamRosters[t.name] = t.members.map((name) => {
         const person = teamPeople.find((p) => p.name === name)!;
         return { name: person.name, isBot: person.isBot, botLevel: person.botLevel };
       });
     });
     onStart(
-      teams.map((t) => t.name),
+      playing.map((t) => t.name),
       {},
       teamRosters,
       undefined,
       variant
     );
+  }
+
+  function startIndividualGame() {
+    // The people from this match come first in the list next time.
+    markPlayersUsed(players.filter((p) => !botLevels[p] && !guestPlayers[p]));
+    // The stand rule belongs to team play; a lone player has no one to hand over to.
+    onStart(players, botLevels, undefined, guestPlayers, withStandRule(variant, false));
   }
 
   function addPlayer(name: string, isGuest: boolean) {
@@ -108,7 +138,6 @@ export function SetupScreen({
       setNameInput("");
       setError("");
       setAddingPlayer(false);
-      setShowAddMenu(false);
       return;
     }
     ensurePlayer(trimmed);
@@ -116,7 +145,6 @@ export function SetupScreen({
     setNameInput("");
     setError("");
     setAddingPlayer(false);
-    setShowAddMenu(false);
     const record = getPlayerRecord(trimmed);
     if (record?.photo) {
       setPhotos((prev) => ({ ...prev, [trimmed]: record.photo! }));
@@ -158,7 +186,6 @@ export function SetupScreen({
     setPlayers((prev) => [...prev, name]);
     setBotLevels((prev) => ({ ...prev, [name]: level }));
     setShowBotPicker(false);
-    setShowAddMenu(false);
   }
 
   /** Opens the OS picker for this player: camera or photo library, the user chooses. */
@@ -219,11 +246,11 @@ export function SetupScreen({
     }
   }
 
-  /** The name field with its Legg til/Avbryt — shown in the Spillere box for a new roster
-   *  player and in Med i kampen for a guest, so it is one piece of UI in two places. */
+  /** The name field with its Legg til/Avbryt — one piece of UI for a new roster player and for a
+   *  guest, which differ only in what the field asks for. */
   function renderNameInput() {
     return (
-      <div className="flex gap-2">
+      <div className="flex gap-2 mt-3">
         <input
           autoFocus
           value={nameInput}
@@ -264,33 +291,40 @@ export function SetupScreen({
     );
   }
 
+  /** One of the three ways to put someone in the match. */
+  const addButton = "tactile flex-1 px-3 py-3 rounded-lg text-sm font-medium flex items-center justify-center gap-1.5";
+
   return (
     <div
-      className="animate-screen-enter min-h-screen w-full flex items-center justify-center p-6"
-      style={{ background: "var(--color-bg)" }}
+      className="animate-screen-enter min-h-screen w-full flex items-start justify-center px-6 pb-10"
+      // The top is left clear for the Scolia badge, which sits in the corner of every screen.
+      style={{ background: "var(--color-bg)", paddingTop: "3.5rem" }}
     >
-      {onHome && (
-        <button
-          type="button"
-          onClick={onHome}
-          className={`fixed top-2 left-2 z-40 tactile px-3 py-2 rounded-lg text-sm ${FOCUS_RING}`}
-          style={{ background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
-        >
-          ← Hjem
-        </button>
-      )}
       {/* No `capture` attribute. With it, iOS opens the camera directly and offers no way to
           reach the photo library at all — so a picture you already have of someone was
           impossible to use. Without it the OS shows its normal sheet, which has both. */}
       <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={onPhotoSelected} />
       <div className="w-full max-w-md">
-        <HeroMascot small />
-        <h1
-          className="text-center mb-6 font-display"
-          style={{ color: "var(--color-cream)", fontSize: "2.5rem", letterSpacing: "0.02em" }}
-        >
-          {title}
-        </h1>
+        {/* The mascot and the big title that used to open every setup screen took the top fifth
+            of the screen and pushed Start under the fold. The title is now one line beside Hjem. */}
+        <div className="flex items-center justify-between mb-5">
+          {onHome ? (
+            <button
+              type="button"
+              onClick={onHome}
+              className={`tactile px-3 py-2 rounded-lg text-sm ${FOCUS_RING}`}
+              style={{ background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
+            >
+              ← Hjem
+            </button>
+          ) : (
+            <span style={{ width: "72px" }} />
+          )}
+          <h1 className="font-display" style={{ color: "var(--color-cream)", fontSize: "1.7rem", letterSpacing: "0.02em" }}>
+            {title}
+          </h1>
+          <span style={{ width: "72px" }} aria-hidden />
+        </div>
 
         <div className="flex gap-3 mb-6">
           <button
@@ -325,101 +359,109 @@ export function SetupScreen({
           </button>
         </div>
 
-        {/* Which game. Smaller than the mode toggle above on purpose — it is the second
-            question, not the first — and shared by both modes. */}
-        {variantSelectable && (
-          <div className="flex gap-2 -mt-3 mb-6">
-            {VARIANT_ORDER.map((v) => (
-              <button
-                key={v}
-                type="button"
-                onClick={() => setVariant(v)}
-                aria-pressed={variant === v}
-                className={`tactile flex-1 py-1.5 rounded-lg text-sm font-medium ${FOCUS_RING}`}
-                style={{
-                  background: variant === v ? "rgba(47, 180, 194, 0.18)" : "var(--color-surface)",
-                  color: variant === v ? "var(--color-teal)" : "var(--color-muted)",
-                  border: variant === v ? "1px solid var(--color-teal)" : "1px solid var(--color-border)",
-                }}
-              >
-                {RULES[v].label}
-              </button>
-            ))}
-          </div>
-        )}
+        {/* Which game. The second question, not the first — shared by both modes, with the
+            stand rule offered only where a team has several members to alternate between. */}
+        {variantSelectable && <RulesPicker variant={variant} onChange={setVariant} teamPlay={mode === "team"} />}
+        {variantSelectable && <FxPicker />}
 
         {mode === "individual" && (
           <>
-            {/* These used to wrap loose between the mode toggle and the panel below, with no
-                frame and no label — a free-floating row of pills that read as debris rather
-                than as a step. Boxed and titled, the screen now reads top to bottom as one
-                sequence: pick from before, see who's in, start. */}
-            {/* Always shown: besides everyone on the roster it holds the "Ny spiller" chip, so
-                adding someone new is the same gesture as picking someone known — one row of
-                people, tap to put them in the match. */}
-            <div
-              className="shadow-panel rounded-xl p-4 mb-4"
-              style={{ background: "var(--color-panel)", border: "1px solid var(--color-border)" }}
-            >
-                <p className="section-label text-center mb-3">
-                  SPILLERE
-                </p>
-                <div className="flex flex-wrap justify-center gap-2">
-                {availableRoster.map((n) => {
-                  const photo = getPlayerRecord(n)?.photo;
-                  return (
-                    <button
-                      key={n}
-                      type="button"
-                      onClick={() => addPlayer(n, false)}
-                      className={`tactile flex items-center gap-2 pl-1.5 pr-3 py-1.5 rounded-full ${FOCUS_RING}`}
-                      style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
-                    >
-                      <span
-                        className="w-6 h-6 rounded-full overflow-hidden shrink-0 flex items-center justify-center"
-                        style={{ background: "var(--color-cell)", border: `1.5px solid ${avatarAccent(n)}` }}
-                      >
-                        {photo ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={photo} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <span style={{ color: avatarAccent(n), fontSize: "0.7rem" }}>
-                            {n.charAt(0).toUpperCase()}
-                          </span>
-                        )}
-                      </span>
-                      <span style={{ color: "var(--color-cream)", fontSize: "0.9rem" }}>{n}</span>
-                    </button>
-                  );
-                })}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAddingAsGuest(false);
-                    setAddingPlayer(true);
-                    setShowAddMenu(false);
-                    setError("");
-                  }}
-                  className={`tactile flex items-center gap-1.5 px-3 py-1.5 rounded-full ${FOCUS_RING}`}
-                  style={{ background: "var(--color-surface)", border: "1.5px dashed var(--color-teal)", color: "var(--color-teal)" }}
-                >
-                  <span aria-hidden style={{ fontSize: "1rem", lineHeight: 1, fontWeight: 700 }}>
-                    +
-                  </span>
-                  <span style={{ fontSize: "0.9rem" }}>Ny spiller</span>
-                </button>
-                </div>
-                {addingPlayer && !addingAsGuest && <div className="mt-3">{renderNameInput()}</div>}
+            {/* Earlier players first — only shown when there are any, so a new device does not
+                open on an empty box. Search and clean-up live inside it. */}
+            {availableRoster.length > 0 && (
+              <div
+                className="shadow-panel rounded-xl p-4 mb-4"
+                style={{ background: "var(--color-panel)", border: "1px solid var(--color-border)" }}
+              >
+                <p className="section-label text-center mb-3">VELG FRA TIDLIGERE</p>
+                <RosterPills names={availableRoster} onPick={(n) => addPlayer(n, false)} />
+              </div>
+            )}
+
+            {/* The three ways to put someone in the match, side by side and always in view. They
+                used to be a "+ Ny spiller" chip in one box and a "Legg til" button in another that
+                opened a menu with two more. */}
+            <div className="flex gap-2 mb-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setAddingAsGuest(false);
+                  setAddingPlayer(true);
+                  setShowBotPicker(false);
+                  setError("");
+                }}
+                className={`${addButton} ${FOCUS_RING}`}
+                style={{ background: "var(--color-surface)", border: "1.5px dashed var(--color-teal)", color: "var(--color-teal)" }}
+              >
+                <span aria-hidden style={{ fontSize: "1.05rem", lineHeight: 1, fontWeight: 700 }}>
+                  +
+                </span>
+                Ny spiller
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAddingAsGuest(true);
+                  setAddingPlayer(true);
+                  setShowBotPicker(false);
+                  setError("");
+                }}
+                className={`${addButton} ${FOCUS_RING}`}
+                style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-cream)" }}
+              >
+                <GuestIcon className="w-3.5 h-3.5" />
+                Gjest
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAddingPlayer(false);
+                  setShowBotPicker((v) => !v);
+                }}
+                disabled={!botsAllowed}
+                title={botsAllowed ? undefined : "Boter spiller bare ved 1–3 treff per seksjon"}
+                className={`${addButton} ${FOCUS_RING}`}
+                style={{
+                  background: "var(--color-surface)",
+                  border: "1px solid var(--color-border)",
+                  color: "var(--color-cream)",
+                  opacity: botsAllowed ? 1 : 0.4,
+                }}
+              >
+                <span aria-hidden>🤖</span>
+                Bot
+              </button>
             </div>
+            {addingPlayer && <div className="mb-4 -mt-1">{renderNameInput()}</div>}
+            {showBotPicker && botsAllowed && (
+              <div className="flex flex-wrap justify-center gap-2 mb-4">
+                {BOT_LEVEL_PICKABLE.map((level) => (
+                  <button
+                    key={level}
+                    type="button"
+                    onClick={() => addBot(level)}
+                    className={`tactile px-3 py-1.5 rounded-full text-sm ${FOCUS_RING}`}
+                    style={{ background: "var(--color-cell)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
+                  >
+                    {BOT_LEVELS[level].name} {botLevelBadge(level)}
+                  </button>
+                ))}
+              </div>
+            )}
+            {error && (
+              <p className="text-sm text-center mb-4" style={{ color: "var(--color-red)" }}>
+                {error}
+              </p>
+            )}
 
             <div className="shadow-panel rounded-xl p-4 mb-8" style={{ background: "var(--color-panel)", border: "1px solid var(--color-border)" }}>
               <p className="section-label text-center mb-3">
-                MED I KAMPEN
+                DELTAKERE
               </p>
-              <div className="space-y-2 min-h-[64px]">
+              <div className="space-y-2">
               {players.length === 0 && (
                 <p className="text-center py-2" style={{ color: "var(--color-muted)", fontSize: "0.85rem" }}>
-                  Ingen spillere lagt til enda
+                  Ingen deltakere ennå – velg over
                 </p>
               )}
               {players.map((p, i) => {
@@ -543,106 +585,38 @@ export function SetupScreen({
                   </div>
                 );
               })}
-              {addingPlayer && addingAsGuest ? (
-                renderNameInput()
-              ) : showAddMenu ? (
-                // New roster players are added up in the Spillere box; this menu is for the two
-                // kinds that never join the roster.
-                <div
-                  className="flex items-center justify-center flex-wrap gap-2 px-4 py-3 rounded-lg"
-                  style={{ background: "var(--color-surface)", border: "1.5px dashed var(--color-border)" }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAddingAsGuest(true);
-                      setAddingPlayer(true);
-                    }}
-                    className={`tactile px-3 py-1.5 rounded-lg text-sm flex items-center gap-1.5 ${FOCUS_RING}`}
-                    style={{ background: "var(--color-cell)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
-                  >
-                    <GuestIcon className="w-3.5 h-3.5" />
-                    Gjest
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowBotPicker((v) => !v)}
-                    className={`tactile px-3 py-1.5 rounded-lg text-sm flex items-center gap-1.5 ${FOCUS_RING}`}
-                    style={{ background: "var(--color-cell)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
-                  >
-                    <span aria-hidden>🤖</span>
-                    Bot
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowAddMenu(false);
-                      setShowBotPicker(false);
-                    }}
-                    aria-label="Lukk"
-                    className={`tactile w-8 h-8 rounded-lg text-sm flex items-center justify-center shrink-0 ${FOCUS_RING}`}
-                    style={{ background: "var(--color-cell)", color: "var(--color-muted)", border: "1px solid var(--color-border)" }}
-                  >
-                    ✕
-                  </button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setShowAddMenu(true)}
-                  className={`tactile flex items-center justify-center gap-2 w-full px-4 py-3 rounded-lg font-medium ${FOCUS_RING}`}
-                  style={{ background: "var(--color-surface)", border: "1.5px dashed var(--color-border)", color: "var(--color-teal)" }}
-                >
-                  <span aria-hidden style={{ fontSize: "1.1rem", lineHeight: 1, fontWeight: 700 }}>
-                    +
-                  </span>
-                  Legg til
-                </button>
-              )}
-              {showAddMenu && showBotPicker && (
-                <div className="flex flex-wrap justify-center gap-2">
-                  {BOT_LEVEL_PICKABLE.map((level) => (
-                    <button
-                      key={level}
-                      type="button"
-                      onClick={() => addBot(level)}
-                      className={`tactile px-3 py-1.5 rounded-full text-sm ${FOCUS_RING}`}
-                      style={{ background: "var(--color-cell)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
-                    >
-                      {BOT_LEVELS[level].name} {botLevelBadge(level)}
-                    </button>
-                  ))}
-                </div>
-              )}
-              {error && (
+              {blockedBots && (
                 <p className="text-sm text-center" style={{ color: "var(--color-red)" }}>
-                  {error}
+                  Boter spiller bare ved 1–3 treff per seksjon. Fjern dem, eller velg færre treff.
                 </p>
               )}
               </div>
             </div>
 
-            <PrimaryActionButton
-              onClick={() => onStart(players, botLevels, undefined, guestPlayers, variant)}
-              ready={players.length >= 1}
-            >
-              Start spill
+            <PrimaryActionButton onClick={startIndividualGame} ready={players.length >= 1 && !blockedBots}>
+              Start kampen
             </PrimaryActionButton>
           </>
         )}
 
         {mode === "team" && (
           <>
-            <PeoplePicker people={teamPeople} onChange={handleTeamPeopleChange} />
+            <SavedTeams onPick={pickTeamCard} />
+
+            <PeoplePicker people={teamPeople} onChange={handleTeamPeopleChange} botsAllowed={botsAllowed} />
 
             {teamPeople.length > 0 && <TeamComposer people={teamPeople} teams={teams} onChange={setTeams} />}
 
             <PrimaryActionButton
               onClick={startTeamGame}
               ready={teamsReady}
-              hint="Trenger minst 2 lag, alle med minst ett medlem, og ingen utildelte spillere"
+              hint={
+                blockedTeamBots
+                  ? "Fjern botene, eller velg færre treff per seksjon"
+                  : "Trenger minst 2 lag, alle med minst ett medlem, og ingen utildelte spillere"
+              }
             >
-              Start spill
+              Start kampen
             </PrimaryActionButton>
           </>
         )}

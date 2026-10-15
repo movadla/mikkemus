@@ -72,6 +72,10 @@ export function matchParticipants(m: TournamentMatch): string[] {
   return [m.participantA, m.participantB].filter((p): p is string => !!p);
 }
 
+/** At or under this many, everyone plays in one group, so there is nothing for a group screen to
+ *  decide and a tournament can be made without one. */
+export const MAX_WITHOUT_GROUP_SCREEN = 4;
+
 /** Distributes participants round-robin across `numGroups`, as evenly as possible. */
 export function distributeEvenly(names: string[], numGroups: number): string[][] {
   const groups: string[][] = Array.from({ length: Math.max(1, numGroups) }, () => []);
@@ -187,6 +191,71 @@ export function computeStandings(names: string[], matches: TournamentMatch[]): S
     const bAvg = b.avgDartsPerWin ?? Infinity;
     if (aAvg !== bAvg) return aAvg - bAvg;
     return headToHead(a.name, b.name, matches);
+  });
+}
+
+export type Podium = { first: string; second: string | null; third: string | null };
+
+/**
+ * First, second and third place of a finished tournament. With a playoff it is the final's winner
+ * and loser and the bronze match's winner; with a single group it is the top of the table. Null
+ * until the tournament is done. A place nobody earned — no bronze match in a two-player bracket,
+ * a group where only two have played — is null rather than guessed.
+ */
+export function podium(t: Tournament): Podium | null {
+  if (t.status !== "done" || !t.winner) return null;
+  const bracket = t.matches.filter((m) => m.round === "bracket");
+  if (bracket.length > 0) {
+    const final = bracket.find((m) => m.bracketRoundSize === 1 && !m.isBronzeMatch);
+    if (!final?.winner) return null;
+    const runnerUp = final.participantA === final.winner ? final.participantB : final.participantA;
+    const bronze = bracket.find((m) => m.isBronzeMatch);
+    return { first: final.winner, second: runnerUp, third: bronze?.winner ?? null };
+  }
+  const standings = computeStandings(t.groups[0] ?? [], t.matches).filter((r) => r.played > 0);
+  return {
+    first: t.winner,
+    second: standings.find((r) => r.name !== t.winner)?.name ?? null,
+    third: standings.filter((r) => r.name !== t.winner)[1]?.name ?? null,
+  };
+}
+
+export type MovementRow = StandingRow & {
+  /** Places moved since before the match: positive is up the table. Null when the table before
+   *  it had no real order to move from — see standingsWithMovement. */
+  placesGained: number | null;
+  /** Points this match gave them (0 for someone who was not in it). */
+  pointsGained: number;
+  /** In the match that was just played. */
+  inMatch: boolean;
+};
+
+/**
+ * The table as it stands, with what one match — the one just played — did to it.
+ *
+ * "Before" is the same table with that match's result taken out. A place is only called moved
+ * when somebody had already played before it: with a table where nobody had, the order is just
+ * how the names happened to be listed, and an arrow beside it would be inventing a story.
+ */
+export function standingsWithMovement(names: string[], matches: TournamentMatch[], justPlayedId: string | null): MovementRow[] {
+  const after = computeStandings(names, matches);
+  const justPlayed = justPlayedId ? matches.find((m) => m.id === justPlayedId) : undefined;
+  if (!justPlayed || !justPlayed.winner) {
+    return after.map((row) => ({ ...row, placesGained: null, pointsGained: 0, inMatch: false }));
+  }
+  const withoutIt = matches.map((m) => (m.id === justPlayedId ? { ...m, winner: undefined, placements: undefined, stats: undefined } : m));
+  const before = computeStandings(names, withoutIt);
+  const anyoneHadPlayed = before.some((r) => r.played > 0);
+  const inMatch = new Set(matchParticipants(justPlayed));
+  return after.map((row, rank) => {
+    const was = before.findIndex((r) => r.name === row.name);
+    const prior = before[was];
+    return {
+      ...row,
+      placesGained: anyoneHadPlayed && was !== -1 ? was - rank : null,
+      pointsGained: prior ? row.points - prior.points : 0,
+      inMatch: inMatch.has(row.name),
+    };
   });
 }
 

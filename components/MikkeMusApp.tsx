@@ -26,15 +26,17 @@ import {
   type TurnShot,
   type PendingAmbiguous,
 } from "@/lib/game";
-import { playPlayerSound, recordAccuracyTotals, recordLuckTotals, recordMatchHistory, recordMatchResult, recordRingHits, type RingHits } from "@/lib/storage";
+import { getPlayerRecord, playPlayerSound, recordAccuracyTotals, recordLuckTotals, recordMatchHistory, recordMatchResult, recordRingHits, type RingHits } from "@/lib/storage";
 import { announce } from "@/lib/announcer";
 import { reportError } from "@/lib/errorReporting";
 import { clearActiveMatch, loadActiveMatch, saveActiveMatch } from "@/lib/activeMatch";
 import { publishLiveMatch } from "@/lib/liveMatch";
 import { coordinatesForSector, luckForThrow, sectorAt, throwAccuracy } from "@/lib/dartboard";
-import { getRules, setGameVariant, type GameVariant } from "@/lib/rules";
+import { getRules, isPerfectClose, setGameVariant, type GameVariant } from "@/lib/rules";
+import { countingDarts, nextMemberIndex, standsAfterTurn } from "@/lib/teamTurn";
 import { haptics } from "@/lib/haptics";
-import { playFanfare, playHitStreakSound, playWinBoom, primeAudio } from "@/lib/fanfare";
+import { crowdForStreak, playCrowd, playFanfare, playHitStreakSound, playMatchDartSound, playTapSound, playWinBoom, primeAudio } from "@/lib/fanfare";
+import { fxFlags, getFxLevel, useFxLevel } from "@/lib/fxLevel";
 import { classifyThrow, formatSectorLabel, parseSector } from "@/lib/scoliaMapping";
 import {
   applyDartToBoard,
@@ -61,6 +63,10 @@ import { WinDive } from "./WinDive";
 import { ScoliaStatusBadge, summarizeScolia } from "./ScoliaStatusBadge";
 import { TripleCelebration } from "./TripleCelebration";
 import { CameraImages } from "./CameraImages";
+import type { Thrower, ThrowerTeam } from "./ThrowerBar";
+import { assignKits, type Kit } from "@/lib/teamKit";
+import { hasSeenRulesIntro } from "@/lib/rulesIntro";
+import { RulesIntro } from "./RulesIntro";
 
 type Screen = "setup" | "game" | "winner";
 
@@ -154,6 +160,13 @@ type MikkeMusAppProps = {
 
 export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRosters, initialVariant, onMatchComplete, onExitToHome }: MikkeMusAppProps = {}) {
   const [screen, setScreen] = useState<Screen>("setup");
+  // How much happens on screen — see lib/fxLevel.ts. Read as a React value here for what the
+  // render decides; the handlers read getFxLevel() fresh instead, so a change takes effect on
+  // the very next dart without waiting for a render.
+  const fxLevel = useFxLevel();
+  const fx = fxFlags(fxLevel);
+  // The rules introduction, shown over the first match started on a device (see lib/rulesIntro.ts).
+  const [showRules, setShowRules] = useState(false);
   // Which game this match is (see lib/rules.ts). The module-wide rules are set alongside it in
   // startGame and on restore; this copy is what gets saved, published and shown.
   const [variant, setVariant] = useState<GameVariant>("standard");
@@ -306,6 +319,15 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   // Which member of a team's own roster throws NEXT time that team is up — advanced in
   // advanceTurn, independent of the overall players[]/currentIdx rotation.
   const [teamMemberIdx, setTeamMemberIdx] = useState<Record<string, number>>({});
+  // Per team: did its last turn end with the thrower standing ("stå ved 3 tellende")? Only so the
+  // thrower bar can say why the same person is up again. Per team, not one flag for the match —
+  // the other team's turn in between must not wipe it. Not persisted: it is a courtesy, and the
+  // thrower itself (teamMemberIdx) is.
+  const [stoodByTeam, setStoodByTeam] = useState<Record<string, boolean>>({});
+  // Per team: its latest confirmed turn, who threw it and whether they stood. Lets a corrected
+  // turn change the stand decision after the fact (see advanceTurn). In-memory only — after a
+  // reload a correction simply leaves the pointer where it was.
+  const lastTeamTurnRef = useRef<Record<string, { turnIndex: number; memberIdx: number; stood: boolean }>>({});
 
   const activePlayer = rewound ?? players[currentIdx] ?? null;
   // For a team with a roster, the CURRENT thrower is a specific member (who may or may not be a
@@ -812,9 +834,12 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     if (hit) {
       hitStreakRef.current += 1;
       const streak = Math.min(3, hitStreakRef.current) as 1 | 2 | 3;
-      // A replayed dart already had its boom the first time round.
+      // A replayed dart already had its boom the first time round. How big it gets, and whether
+      // a crowd joins the third dart, is the chosen level's call (see lib/fxLevel.ts).
       if (!replayingRef.current) {
-        playHitStreakSound(streak);
+        const fx = fxFlags(getFxLevel());
+        playHitStreakSound(Math.min(streak, fx.boomMaxStreak) as 1 | 2 | 3);
+        if (fx.crowd && streak === 3) playCrowd(crowdForStreak(3));
         setHitPulse({ token: ++pulseTokenRef.current, streak });
       }
     } else {
@@ -835,7 +860,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       parsed.number === Number(activeStepAtThrow)
     ) {
       activeTriplesRef.current += 1;
-      if (activeTriplesRef.current === 3 && !replayingRef.current) setTripleCelebration(true);
+      if (activeTriplesRef.current === 3 && !replayingRef.current && fxFlags(getFxLevel()).tripleOverlay) setTripleCelebration(true);
     }
 
     setMatchThrows((prev) => ({
@@ -1014,6 +1039,34 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     else if (prevRelay === "stale" && scolia.state.relay === "live") announce("Brettet er tilbake.");
   }, [scolia.state.relay, screen]);
 
+  // "Matchdart": the moment someone — a player or a team — is one cross from winning, a held-breath
+  // sound tells the table. Watched on the board itself rather than hooked into each way a cross can
+  // land, so it covers darts, taps, redirects and Angre alike. It fires when the state BECOMES
+  // true: staying there turn after turn is silent, and undoing out of it and back in sounds again
+  // because it is true again. The first look after a match opens or is restored is a baseline,
+  // not an event — resuming a match that is already at one to go must not announce it.
+  const matchDartSeenRef = useRef<Record<string, boolean>>({});
+  const matchDartBaselineRef = useRef(true);
+  useEffect(() => {
+    if (screen !== "game") {
+      matchDartSeenRef.current = {};
+      matchDartBaselineRef.current = true;
+      return;
+    }
+    const now: Record<string, boolean> = {};
+    let fresh = false;
+    for (const p of players) {
+      const board = progress[p];
+      const oneToGo = !!board && remainingMarks(board) === 1;
+      now[p] = oneToGo;
+      if (oneToGo && !matchDartSeenRef.current[p]) fresh = true;
+    }
+    const baseline = matchDartBaselineRef.current;
+    matchDartSeenRef.current = now;
+    matchDartBaselineRef.current = false;
+    if (fresh && !baseline) playMatchDartSound();
+  }, [progress, screen, players]);
+
   function startGame(
     startPlayers: string[],
     startBotLevels: Record<string, BotLevel> = {},
@@ -1033,8 +1086,11 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     // Same dive as the win, as an intro. Doubles as an audio check you get for free: it plays
     // straight off the tap that unlocked the context, so if you hear the boom here the sound
     // is working for the rest of the match — including, on AirPlay, whether it went to the TV.
-    playWinBoom();
-    setIntroDiving(true);
+    // Vanlig skips it: the game starts straight on the board.
+    if (fxFlags(getFxLevel()).dives) {
+      playWinBoom();
+      setIntroDiving(true);
+    }
     const prog: PlayerProgress = {};
     startPlayers.forEach((p) => (prog[p] = emptyProgress()));
     setPlayers(startPlayers);
@@ -1071,8 +1127,11 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     setTeamRosters(startTeamRosters);
     setGuestPlayers(startGuestPlayers);
     setTeamMemberIdx({});
+    setStoodByTeam({});
+    lastTeamTurnRef.current = {};
     scoliaDartsRef.current = 0;
     setScreen("game");
+    if (!hasSeenRulesIntro()) setShowRules(true);
     if (!startBotLevels[startPlayers[0]]) playPlayerSound(startPlayers[0] ?? null);
 
     // Building a level's solver the first time it's used is a fairly heavy synchronous
@@ -1219,7 +1278,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     const dartsOnStep = (dartsOnStepRef.current[step] ?? 0) + 1;
     dartsOnStepRef.current[step] = dartsOnStep;
     // Three darts each worth one cross, ending on 3, can only have started from 0.
-    if (dartsOnStep === 3 && count >= 3) markPerfectClose(activePlayer, step);
+    if (isPerfectClose(dartsOnStep, count)) markPerfectClose(activePlayer, step);
 
     if (!replayingRef.current) haptics.hit();
     writeProgress({
@@ -1239,8 +1298,17 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   function registerHitFromUi(step: Step) {
     ensureTurnStart();
     manualTapsRef.current += 1;
-    registerHit(step);
+    const hits = registerHit(step);
     writeTurnActions([...turnActionsRef.current, { kind: "tap", step }]);
+    if (replayingRef.current || !hits) return;
+    // The click under the finger — every tap that registers, rising with each dart of the turn.
+    // Nothing else of the per-dart effects: those ride on real throws (see lib/fxLevel.ts).
+    primeAudio();
+    playTapSound(Math.min(DARTS_PER_TURN, turnActionsRef.current.filter((a) => a.kind === "tap").length));
+    // A row closed by hand gets the same slam a Scolia dart gives it, which does not depend on
+    // how fast anyone taps.
+    const closed = hits.find((h) => h.newCount >= getRules().target && h.prevCount < getRules().target);
+    if (closed) setClosedStep({ token: ++pulseTokenRef.current, step: closed.step });
   }
 
   /**
@@ -1351,7 +1419,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         return next;
       });
       dartsOnStepRef.current[d.step] = (dartsOnStepRef.current[d.step] ?? 0) + 1;
-      if (dartsOnStepRef.current[d.step] === 3 && d.newCount >= 3) markPerfectClose(player, d.step);
+      if (isPerfectClose(dartsOnStepRef.current[d.step] ?? 0, d.newCount)) markPerfectClose(player, d.step);
 
       // It was judged as a miss at the old number; judge it again as what it was — a dart at
       // the number it hit, on the board as it stood right before it.
@@ -1527,7 +1595,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     // the ring like any other, so it counts toward that too.
     const dartsOnStep = (dartsOnStepRef.current[step] ?? 0) + 1;
     dartsOnStepRef.current[step] = dartsOnStep;
-    if (dartsOnStep === 3 && board[step] >= 3) markPerfectClose(player, step);
+    if (isPerfectClose(dartsOnStep, board[step])) markPerfectClose(player, step);
 
     // Un-parking redirected the parked dart onto its number; if that filled it, the darts thrown
     // between it and this one may have been singles on the number that just became active.
@@ -1815,6 +1883,9 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
    */
   function advanceTurn(progressOverride?: PlayerProgress, pendingHitsOverride?: HitRecord[], dartsOverride?: number) {
     if (!activePlayer) return;
+    // Read before the turn's action list is emptied just below: the stand rule is decided by
+    // how many of this turn's darts counted.
+    const countedDarts = countingDarts(turnActionsRef.current);
     dartsOnStepRef.current = {};
     writeTurnActions([]);
     turnStartRef.current = null;
@@ -1842,13 +1913,30 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       [activePlayer]: setTurnAt(turnLog[activePlayer] ?? [], turnIndex, turn),
     };
     setTurnLog(nextTurnLog);
+    const roster = teamRosters[activePlayer];
+    const stands = standsAfterTurn(getRules().standOnThree, countedDarts);
     if (!rewound) {
       setTurnCounters((prev) => ({ ...prev, [activePlayer]: (prev[activePlayer] ?? 0) + 1 }));
       // Rotate this team's own "who throws next" pointer independent of the overall players[]
       // turn order — so next time this exact team is up, the next member in line is current.
-      const roster = teamRosters[activePlayer];
+      // With the stand rule on, three counting darts keep the same thrower for the next turn.
       if (roster && roster.length > 0) {
-        setTeamMemberIdx((prev) => ({ ...prev, [activePlayer]: ((prev[activePlayer] ?? 0) + 1) % roster.length }));
+        const thrower = teamMemberIdx[activePlayer] ?? 0;
+        lastTeamTurnRef.current[activePlayer] = { turnIndex, memberIdx: thrower, stood: stands };
+        setTeamMemberIdx((prev) => ({ ...prev, [activePlayer]: nextMemberIndex(prev[activePlayer] ?? 0, roster.length, stands) }));
+        setStoodByTeam((prev) => ({ ...prev, [activePlayer]: stands && roster.length > 1 }));
+      }
+    } else if (roster && roster.length > 0) {
+      // Re-confirming an edited turn. The pointer was moved when it was first confirmed; if the
+      // edit changed whether three darts counted, the decision made then no longer holds. Only
+      // the team's most recent turn can be corrected this way — once it has thrown again the
+      // pointer has moved on from it, and what a correction to the older turn would mean for who
+      // threw since is not something to guess at.
+      const last = lastTeamTurnRef.current[activePlayer];
+      if (last && last.turnIndex === turnIndex && last.stood !== stands) {
+        lastTeamTurnRef.current[activePlayer] = { ...last, stood: stands };
+        setStoodByTeam((prev) => ({ ...prev, [activePlayer]: stands && roster.length > 1 }));
+        setTeamMemberIdx((prev) => ({ ...prev, [activePlayer]: nextMemberIndex(last.memberIdx, roster.length, stands) }));
       }
     }
 
@@ -1905,8 +1993,13 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       haptics.win();
       // The boom lands now, on the frame the board slams into the dive; the fanfare waits for
       // the winner screen to burst out of the bull, so the two read as impact then announcement.
-      playWinBoom();
-      setDiving(true);
+      if (fxFlags(getFxLevel()).dives) {
+        playWinBoom();
+        setDiving(true);
+      } else {
+        // No dive to land from, so the win is announced on the spot.
+        playFanfare();
+      }
       // Reaching the winner screen must never depend on stats persistence succeeding —
       // see abortGame's identical guard for why.
       let stats: Record<string, TurnAggregate> = {};
@@ -1958,6 +2051,29 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     if (onMatchComplete) onExitToHome?.();
   }
 
+  /** "Ny kamp": other people, through the setup screen. The result is written first — it used to
+   *  be written only on a rematch or when the page was closed, so leaving through this button
+   *  quietly dropped the match from the players' statistics. */
+  function newMatch() {
+    flushMatchResults();
+    setScreen("setup");
+    setPlayers([]);
+  }
+
+  /** "Hjem": the same, then out. The saved match is cleared by hand because this component is
+   *  about to be unmounted — its own effect that clears it after a screen change would never run,
+   *  and the finished match would be restored the next time Enkeltkamp is opened. */
+  function goHome() {
+    flushMatchResults();
+    clearActiveMatch();
+    if (onExitToHome) {
+      onExitToHome();
+      return;
+    }
+    setScreen("setup");
+    setPlayers([]);
+  }
+
   function playAgain() {
     if (onMatchComplete && winner) {
     flushMatchResults();
@@ -1999,6 +2115,13 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     undo();
   }
 
+  // The teams' shirts, by team name — the same two people are always in the same shirt, and a team
+  // whose colours would clash with an earlier one's plays in its away kit (lib/teamKit.ts).
+  const kitAssignment = assignKits(
+    players.filter((p) => teamRosters[p]?.length).map((p) => ({ name: p, members: teamRosters[p].map((m) => m.name) })),
+  );
+  const kits: Record<string, Kit> = Object.fromEntries(Object.entries(kitAssignment).map(([name, v]) => [name, v.kit]));
+
   if (screen === "setup") {
     // Tournament matches skip SetupScreen entirely (see the restore-from-localStorage effect
     // above) — but this branch can still render for one tick before that effect's startGame call
@@ -2034,12 +2157,37 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         preBankedByPlayer={preBanked}
         throwsByPlayer={matchThrows}
         turnLogByPlayer={turnLog}
-        onHome={playAgain}
+        progressByPlayer={progress}
+        winnerKit={kits[winner] ?? null}
+        onHome={onMatchComplete ? playAgain : goHome}
         homeLabel={onMatchComplete ? "Til turnering" : "Hjem"}
         onPlayAgain={onMatchComplete ? undefined : rematch}
+        onNewMatch={onMatchComplete ? undefined : newMatch}
         onUndoWin={history.length > 0 ? undoWin : undefined}
       />
     );
+  }
+
+  // Who is throwing, for the thrower bar. A team's current thrower is a specific member (the
+  // column only shows the team's name); a lone player is themselves. Photos come from the roster —
+  // bots and guests have none. A rewound turn belongs to whoever threw it, which for a team is
+  // not worked out here: the bar then shows the team, not a guess at the person.
+  const toThrower = (name: string, isBot: boolean): Thrower => ({
+    name,
+    isBot,
+    photo: isBot ? null : getPlayerRecord(name)?.photo ?? null,
+  });
+  let thrower: Thrower | null = null;
+  let throwerTeam: ThrowerTeam | null = null;
+  if (activePlayer) {
+    if (activeRoster && activeRoster.length > 0) {
+      const activeIdx = (teamMemberIdx[activePlayer] ?? 0) % activeRoster.length;
+      const members = activeRoster.map((m) => toThrower(m.name, m.isBot));
+      throwerTeam = { name: activePlayer, members, activeIdx };
+      thrower = rewound !== null ? { name: activePlayer, isBot: false, photo: null } : members[activeIdx];
+    } else {
+      thrower = toThrower(activePlayer, activeBotLevel !== null);
+    }
   }
 
   // Summed from the turns actually played rather than turns x 3 — a leg-winning or
@@ -2089,27 +2237,19 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
 
   return (
     <>
+      {showRules && <RulesIntro onDone={() => setShowRules(false)} />}
       {scoliaEnabled && <ScoliaStatusBadge state={scolia.state} />}
       <CameraImages images={cameraImages} />
-      {activeBotLevel && rewound === null && (
-        <div
-          className="turn-toast fixed top-16 z-40 px-3 py-1.5 rounded-full text-sm shadow-panel"
-          style={{ background: "var(--color-surface)", color: "var(--color-teal)", border: "1px solid var(--color-border)" }}
-        >
-          {currentMember ? currentMember.name : activePlayer} kaster …
-        </div>
-      )}
-      {/* A mixed team's human member up now — the column only shows the team's name, so this is
-          the only way the physical players know who should actually pick up the darts. */}
-      {!activeBotLevel && currentMember && rewound === null && (
-        <div
-          className="turn-toast fixed top-16 z-40 px-3 py-1.5 rounded-full text-sm shadow-panel"
-          style={{ background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
-        >
-          {currentMember.name} sin tur
-        </div>
-      )}
       <GameScreen
+        thrower={thrower}
+        throwerTeam={throwerTeam}
+        throwerStood={!!activePlayer && rewound === null && stoodByTeam[activePlayer] === true}
+        throwerAnimate={fxLevel !== "normal"}
+        fxHeat={fx.heat}
+        fxShake={fx.shake}
+        kits={kits}
+        choiceInteractive={!botIsThrowing}
+
         players={players}
         progress={progress}
         activePlayer={activePlayer}

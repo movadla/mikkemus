@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ensurePlayer, useRosterNames } from "@/lib/storage";
 import { BOT_LEVEL_PICKABLE, BOT_LEVELS, botDisplayName, botLevelBadge, type BotLevel } from "@/lib/botLevels";
+import { RosterPills } from "./RosterPills";
 
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
@@ -13,7 +14,17 @@ export type Person = { name: string; isBot: boolean; botLevel?: BotLevel };
  *  participants and as the source pool teams are built from (see TeamComposer). Controlled:
  *  the parent owns `people` and decides what removing someone should also affect (e.g. also
  *  unassigning them from a team) via `onChange`. */
-export function PeoplePicker({ people, onChange }: { people: Person[]; onChange: (people: Person[]) => void }) {
+export function PeoplePicker({
+  people,
+  onChange,
+  botsAllowed = true,
+}: {
+  people: Person[];
+  onChange: (people: Person[]) => void;
+  /** False for the longer games, where the bot's model is too heavy to build — see botsSupported.
+   *  Bots already in the pool stay visible, marked, so they can be removed rather than vanish. */
+  botsAllowed?: boolean;
+}) {
   const [nameInput, setNameInput] = useState("");
   const [addingPlayer, setAddingPlayer] = useState(false);
   const [showBotPicker, setShowBotPicker] = useState(false);
@@ -55,18 +66,9 @@ export function PeoplePicker({ people, onChange }: { people: Person[]; onChange:
   return (
     <>
       {availableRoster.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-3">
-          {availableRoster.map((n) => (
-            <button
-              key={n}
-              type="button"
-              onClick={() => addPerson(n)}
-              className={`tactile px-3 py-1.5 rounded-full text-sm ${FOCUS_RING}`}
-              style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-cream)" }}
-            >
-              {n}
-            </button>
-          ))}
+        <div className="mb-3">
+          <p className="section-label text-center mb-2">VELG FRA TIDLIGERE</p>
+          <RosterPills names={availableRoster} onPick={addPerson} />
         </div>
       )}
 
@@ -94,12 +96,23 @@ export function PeoplePicker({ people, onChange }: { people: Person[]; onChange:
             <button type="button" onClick={() => setAddingPlayer(true)} className={`tactile px-4 py-1.5 rounded-lg text-sm ${FOCUS_RING}`} style={{ background: "var(--color-surface)", color: "var(--color-teal)", border: "1px solid var(--color-border)" }}>
               Legg til spiller
             </button>
-            <button type="button" onClick={() => setShowBotPicker((v) => !v)} className={`tactile px-4 py-1.5 rounded-lg text-sm ${FOCUS_RING}`} style={{ background: "var(--color-surface)", color: "var(--color-gold)", border: "1px solid var(--color-border)" }}>
+            <button
+              type="button"
+              onClick={() => setShowBotPicker((v) => !v)}
+              disabled={!botsAllowed}
+              className={`tactile px-4 py-1.5 rounded-lg text-sm ${FOCUS_RING}`}
+              style={{ background: "var(--color-surface)", color: "var(--color-gold)", border: "1px solid var(--color-border)", opacity: botsAllowed ? 1 : 0.4 }}
+            >
               🤖 Legg til bot
             </button>
           </div>
         )}
-        {showBotPicker && (
+        {!botsAllowed && (
+          <p className="text-sm mt-2" style={{ color: "var(--color-muted)" }}>
+            Boter spiller bare ved 1–3 treff per seksjon.
+          </p>
+        )}
+        {showBotPicker && botsAllowed && (
           <div className="flex flex-wrap gap-2 mt-3">
             {BOT_LEVEL_PICKABLE.map((level) => (
               <button key={level} type="button" onClick={() => addBot(level)} className={`tactile px-3 py-1.5 rounded-full text-sm ${FOCUS_RING}`} style={{ background: "var(--color-cell)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}>
@@ -127,6 +140,9 @@ export function PeoplePicker({ people, onChange }: { people: Person[]; onChange:
               <span style={{ color: "var(--color-cream)" }}>
                 <span style={{ color: "var(--color-teal)", marginRight: "0.5rem" }}>{i + 1}.</span>
                 {p.name}
+                {p.isBot && !botsAllowed && (
+                  <span style={{ color: "var(--color-red)", fontSize: "0.75rem", marginLeft: "0.5rem" }}>kan ikke spille her</span>
+                )}
               </span>
               <button type="button" onClick={() => removePerson(p.name)} className={`text-sm px-2 ${FOCUS_RING}`} style={{ color: "var(--color-red)" }}>
                 Fjern

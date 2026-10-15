@@ -4,7 +4,7 @@ import { Fragment } from "react";
 import Link from "next/link";
 import { STEPS, STEP_LABELS } from "@/lib/game";
 import { useLiveMatch } from "@/lib/liveMatch";
-import { RULES } from "@/lib/rules";
+import { RULES, baseOf } from "@/lib/rules";
 import { avatarAccent } from "@/lib/avatarAccent";
 import { DartboardGlyph } from "@/components/DartboardGlyph";
 import { Mark } from "@/components/Mark";
@@ -48,7 +48,7 @@ export default function StorskjermPage() {
   const live = useLiveMatch();
   // This page is not the one playing the match, so it reads the variant off the snapshot rather
   // than from the module-wide rules (which are whatever this browser last set — nothing).
-  const target = RULES[live?.variant ?? "standard"].target;
+  const target = RULES[baseOf(live?.variant)].target;
 
   if (!live || live.screen === "setup" || live.players.length === 0) {
     return (

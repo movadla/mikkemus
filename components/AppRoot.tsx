@@ -8,19 +8,23 @@ import { BullDuelApp } from "./BullDuelApp";
 import { HeroMascot } from "./HeroMascot";
 import { BullseyeIcon, DartIcon, TrophyIcon, TvIcon } from "./icons";
 import { MikkeMusApp } from "./MikkeMusApp";
+import { RulesIntro } from "./RulesIntro";
+import { SettingsScreen } from "./SettingsScreen";
 import { ScoliaStatusBadge } from "./ScoliaStatusBadge";
 import { TournamentApp } from "./TournamentApp";
 
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
 
-type Mode = "home" | "single" | "tournament" | "bullduel";
+type Mode = "home" | "single" | "tournament" | "bullduel" | "settings";
 
 /** The very first thing rendered — chooses between a one-off "Singel game" (today's app,
  *  unchanged) and "Tournament" mode. Replaces the old direct `<MikkeMusApp />` in app/page.tsx. */
 export function AppRoot() {
   const [mode, setMode] = useState<Mode>("home");
   const [hasActiveTournament, setHasActiveTournament] = useState(false);
+  // The rules introduction, on request from the home screen. The first-time showing is MikkeMusApp's.
+  const [showRules, setShowRules] = useState(false);
   // Only connected while the home screen itself is showing — MikkeMusApp/TournamentApp own their
   // own connection once a mode is picked, so this never runs two connections at once.
   const scolia = useScolia(mode === "home", {});
@@ -36,6 +40,8 @@ export function AppRoot() {
   }, [mode]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
+  if (showRules) return <RulesIntro onDone={() => setShowRules(false)} />;
+  if (mode === "settings") return <SettingsScreen onBack={() => setMode("home")} />;
   if (mode === "single") return <MikkeMusApp onExitToHome={() => setMode("home")} />;
   if (mode === "tournament") return <TournamentApp onExitToHome={() => setMode("home")} />;
   if (mode === "bullduel") return <BullDuelApp onExitToHome={() => setMode("home")} />;
@@ -58,7 +64,7 @@ export function AppRoot() {
             style={{ "--btn-fill": "var(--color-green)", color: "var(--color-cream)" } as React.CSSProperties}
           >
             <DartIcon className="w-5 h-5" />
-            Singelspill
+            Enkeltkamp
           </button>
           <button
             type="button"
@@ -83,6 +89,14 @@ export function AppRoot() {
           {/* Moved here from the setup screens, which are for picking who plays — the numbers
               belong at the front door, where you go to look them up. Hall of Fame keeps its route
               but no link for now. */}
+          <button
+            type="button"
+            onClick={() => setShowRules(true)}
+            className={`font-display text-sm underline ${FOCUS_RING}`}
+            style={{ color: "var(--color-muted)", fontStyle: "italic" }}
+          >
+            Regler
+          </button>
           <Link
             href="/spillere"
             className={`font-display text-sm underline ${FOCUS_RING}`}
@@ -98,13 +112,14 @@ export function AppRoot() {
             <TvIcon className="w-3.5 h-3.5" />
             Åpne storskjerm-visning
           </Link>
-          <Link
-            href="/lyd"
+          <button
+            type="button"
+            onClick={() => setMode("settings")}
             className={`font-display text-sm underline ${FOCUS_RING}`}
             style={{ color: "var(--color-muted)", fontStyle: "italic" }}
           >
-            Lyder
-          </Link>
+            Innstillinger
+          </button>
         </p>
       </div>
     </div>

@@ -3,6 +3,7 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import { getRules } from "@/lib/rules";
 import {
+  DARTS_PER_TURN,
   STEPS,
   STEP_LABELS,
   currentStepFor,
@@ -24,6 +25,9 @@ import { useCompactLandscape } from "@/lib/useCompactLandscape";
 import { LiveSidePanel } from "./LiveSidePanel";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { Mark } from "./Mark";
+import { ThrowerBar, type Thrower, type ThrowerTeam } from "./ThrowerBar";
+import { TeamKit } from "./TeamKit";
+import type { Kit } from "@/lib/teamKit";
 import { CalibrateIcon, DartIcon, ShakeIcon, SpeakerIcon, SpeakerMuteIcon } from "./icons";
 
 const FOCUS_RING =
@@ -124,6 +128,20 @@ type Props = {
   onEditShot: (index: number, sector: string) => void;
   /** Three darts in, turn still open: the board's takeout (or Bekreft) will confirm it. */
   awaitingTakeoutToConfirm: boolean;
+  /** Who is throwing — see ThrowerBar. For a team, `throwerTeam` carries the rest of it. */
+  thrower: Thrower | null;
+  throwerTeam: ThrowerTeam | null;
+  /** The thrower kept their place under the stand rule. */
+  throwerStood: boolean;
+  /** Whether the thrower bar plays its entrance when the turn changes. */
+  throwerAnimate: boolean;
+  /** False while a bot throws — it answers its own questions, and a box to tap would be a trap. */
+  choiceInteractive: boolean;
+  /** Whether the chosen animation level allows the building heat and the shake — see lib/fxLevel. */
+  fxHeat: boolean;
+  fxShake: boolean;
+  /** Each team's shirt, by team name — empty in a match with no teams. */
+  kits: Record<string, Kit>;
 };
 
 /**
@@ -281,6 +299,81 @@ function ShotIndicator({
   );
 }
 
+/**
+ * The triple/double question, asked once the round is over: "that T17 — does it count as a
+ * triple, or as 17s?". Two large buttons say what each answer is worth, so nobody has to know
+ * the rule to answer it. It sits in the action bar, where Angre and Bekreft are, and not over the
+ * board: an earlier version floated above the grid and covered the 20 row.
+ *
+ * The same answers are still available by tapping the two gold rows on the board; this is the
+ * one that cannot be missed.
+ */
+function ChoiceBox({
+  choice,
+  currentOnNumber,
+  target,
+  queued,
+  onChoose,
+  compact = false,
+}: {
+  choice: PendingAmbiguous;
+  /** Crosses already on the number the dart could be redirected to. */
+  currentOnNumber: number;
+  target: number;
+  /** Other undecided darts waiting behind this one. */
+  queued: number;
+  onChoose: (choice: "keep" | "redirect") => void;
+  compact?: boolean;
+}) {
+  const ring = choice.ringStep === "T" ? "Trippel" : "Dobbel";
+  const label = `${choice.ringStep}${STEP_LABELS[choice.number]}`;
+  const gain = Math.max(0, Math.min(choice.multiplier, target - currentOnNumber));
+  const closes = currentOnNumber + gain >= target;
+  const option = (key: "keep" | "redirect", title: string, detail: string) => (
+    <button
+      type="button"
+      onClick={() => onChoose(key)}
+      className={`glossy flex-1 rounded-xl text-left ${FOCUS_RING}`}
+      style={
+        {
+          "--btn-fill": "var(--color-surface)",
+          color: "var(--color-cream)",
+          border: "1.5px solid var(--color-gold)",
+          padding: compact ? "0.35rem 0.5rem" : "0.6rem 0.75rem",
+        } as React.CSSProperties
+      }
+    >
+      <span className="block font-semibold" style={{ fontSize: compact ? "0.85rem" : "1.05rem" }}>
+        {title}
+      </span>
+      <span className="block" style={{ color: "var(--color-gold-strong)", fontSize: compact ? "0.68rem" : "0.78rem" }}>
+        {detail}
+      </span>
+    </button>
+  );
+  return (
+    <div
+      role="group"
+      aria-label={`${ring} ${STEP_LABELS[choice.number]}: velg hvor den skal telle`}
+      className={`choice-box rounded-xl ${compact ? "" : "mb-2"}`}
+      style={{
+        background: "rgba(201, 162, 75, 0.12)",
+        border: "1px solid var(--color-gold)",
+        padding: compact ? "0.4rem" : "0.6rem",
+      }}
+    >
+      <p className="text-center mb-1.5" style={{ color: "var(--color-gold-strong)", fontSize: compact ? "0.72rem" : "0.9rem", fontWeight: 700 }}>
+        {label} – hva skal den telle som?
+        {queued > 0 && <span style={{ fontWeight: 400 }}> ({queued} til venter)</span>}
+      </p>
+      <div className={`flex gap-2 ${compact ? "flex-col" : ""}`}>
+        {option("keep", `Sett på ${choice.ringStep}`, `${ring}-raden · +1 kryss`)}
+        {option("redirect", `Sett på ${STEP_LABELS[choice.number]}`, gain > 0 ? `+${gain} på ${STEP_LABELS[choice.number]}${closes ? " · lukker raden" : ""}` : "raden er full")}
+      </div>
+    </div>
+  );
+}
+
 const PICKER_RINGS: { key: "S" | "D" | "T"; label: string }[] = [
   { key: "S", label: "Enkel" },
   { key: "D", label: "Dobbel" },
@@ -400,6 +493,15 @@ export function GameScreen({
   onEditShot,
   awaitingTakeoutToConfirm,
   pendingChoices,
+  thrower,
+  throwerTeam,
+  throwerStood,
+  throwerAnimate,
+  awaitingConfirmResolution,
+  choiceInteractive,
+  fxHeat,
+  fxShake,
+  kits,
 }: Props) {
   // Picks the wide variant of the mark glyph — see lib/useCompactLandscape.ts.
   const compactLandscape = useCompactLandscape();
@@ -462,7 +564,7 @@ export function GameScreen({
   // them — two identical hits in a row still replay, with no state, effect or timeout here.
   // Only the shake is switchable. The heat, the boom and the marks all still play with it off —
   // this turns down the one effect that moves the whole screen, not the feedback itself.
-  const shakeLevel = hitPulse && shakeOn ? Math.min(3, Math.max(1, hitPulse.streak)) : 0;
+  const shakeLevel = hitPulse && shakeOn && fxShake ? Math.min(3, Math.max(1, hitPulse.streak)) : 0;
   const shakeStep = SHAKE[shakeLevel];
   const shakeAnimation =
     hitPulse && shakeStep
@@ -471,7 +573,7 @@ export function GameScreen({
   const slamAnimation = closedStep ? `${SLAM_NAMES[closedStep.token % 2]} ${SLAM_MS}ms cubic-bezier(0.2, 0.9, 0.25, 1) both` : undefined;
   // Heat belongs to the turn, not the dart: the parent clears hitPulse when a turn ends
   // (see clearTurnDisplay), so this stays lit across an unbroken turn and drops on its own.
-  const heat = hitPulse?.streak ?? 0;
+  const heat = fxHeat ? hitPulse?.streak ?? 0 : 0;
 
   function handleUndo() {
     setRetractToken((t) => t + 1);
@@ -520,6 +622,21 @@ export function GameScreen({
   // Short on purpose: the two gold cells say where it can go, the sentence only says that a
   // choice is waiting.
   const choicePrompt = pendingChoice ? `Velg hvor du skal sette ${pendingChoice.ringStep}${STEP_LABELS[pendingChoice.number]}` : null;
+  // The big box waits for the round to be over — mid-turn the short line and the gold rows are
+  // enough, and the player is still throwing. Over means three darts in, or Bekreft was pressed.
+  const roundOver = awaitingConfirmResolution || dartsThisTurn >= DARTS_PER_TURN;
+  const showChoiceBox = !!pendingChoice && choiceInteractive && roundOver;
+  const choiceBox = (compact: boolean) =>
+    pendingChoice ? (
+      <ChoiceBox
+        choice={pendingChoice}
+        currentOnNumber={activeProgress?.[pendingChoice.number] ?? 0}
+        target={target}
+        queued={Math.max(0, pendingChoices.length - 1)}
+        onChoose={onResolvePendingChoice}
+        compact={compact}
+      />
+    ) : null;
   /** Which answer tapping this cell gives, if the cell is one of the live question's two rows. */
   const choiceRoleFor = (s: Step, isActive: boolean): "redirect" | "keep" | null =>
     isActive && pendingChoice ? (s === pendingChoice.number ? "redirect" : s === pendingChoice.ringStep ? "keep" : null) : null;
@@ -583,6 +700,14 @@ export function GameScreen({
               REDIGERER TIDLIGERE TUR
             </p>
           )}
+        </div>
+      )}
+
+      {/* Portrait: its own row between the controls and the board. Landscape has no room for a
+          row of its own and carries it in the right-hand column instead (see .live-side below). */}
+      {!compactLandscape && thrower && (
+        <div className="max-w-3xl mx-auto w-full mb-2 shrink-0">
+          <ThrowerBar key={turnToken} thrower={thrower} team={throwerTeam} kit={throwerTeam ? kits[throwerTeam.name] : null} stood={throwerStood} animate={throwerAnimate} />
         </div>
       )}
 
@@ -777,6 +902,11 @@ export function GameScreen({
                         } as React.CSSProperties
                       }
                     >
+                      {kits[p] && (
+                        <span className="inline-block align-middle mr-1" style={{ marginTop: "-2px" }}>
+                          <TeamKit kit={kits[p]} size={18} />
+                        </span>
+                      )}
                       {p}
                     </span>
                   </span>
@@ -933,9 +1063,15 @@ export function GameScreen({
           gap to fill, and the same content would push the board off screen. */}
       {compactLandscape && activePlayer && liveStats && (
         <div className="live-side">
+          {thrower && (
+            <div className="mb-1 shrink-0">
+              <ThrowerBar key={turnToken} thrower={thrower} team={throwerTeam} kit={throwerTeam ? kits[throwerTeam.name] : null} stood={throwerStood} animate={throwerAnimate} compact />
+            </div>
+          )}
           {/* The question lives in this column in landscape. It floated over the top of the board
               before, which covered the 20 row — the very cell a T20 would need tapped. */}
-          {choicePrompt && (
+          {showChoiceBox && <div className="mb-1 shrink-0">{choiceBox(true)}</div>}
+          {choicePrompt && !showChoiceBox && (
             <p
               role="status"
               className="text-center mb-1 px-2 py-1 rounded-lg shrink-0"
@@ -960,7 +1096,8 @@ export function GameScreen({
         {!rewound && !compactLandscape && (
           <div className="max-w-3xl mx-auto w-full mb-1">
             <ShotIndicator shots={turnShots} onEdit={shotsEditable ? setEditingShot : undefined} highlight={shotHighlight} />
-            {choicePrompt && (
+            {showChoiceBox && <div className="mt-2">{choiceBox(false)}</div>}
+            {choicePrompt && !showChoiceBox && (
               <p role="status" className="text-center mt-1" style={{ color: "var(--color-gold-strong)", fontSize: "0.78rem", fontWeight: 600 }}>
                 {choicePrompt}
               </p>
@@ -994,8 +1131,11 @@ export function GameScreen({
           <button
             type="button"
             onClick={onConfirm}
+            // While the question is on the screen, Bekreft has nothing to confirm yet: the
+            // answer is what moves the turn on.
+            disabled={showChoiceBox}
             className={`glossy py-5 rounded-xl font-bold text-xl ${FOCUS_RING}`}
-            style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)" } as React.CSSProperties}
+            style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", opacity: showChoiceBox ? 0.4 : 1 } as React.CSSProperties}
           >
             {pendingCount === 0 ? "Bekreft (bom)" : "Bekreft"}
           </button>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { distributeEvenly, suggestGroups, type TournamentMode } from "@/lib/tournament";
+import { distributeEvenly, suggestGroups } from "@/lib/tournament";
 import { PrimaryActionButton } from "./PrimaryActionButton";
 
 const FOCUS_RING =
@@ -15,49 +15,41 @@ function nextPowerOfTwo(n: number): number {
 
 /** Same "how many advance per group" rule buildPlayoffBracket uses — kept in sync here purely for
  *  the live summary line, not for actually generating matches. */
-function describeSetup(groups: string[][], matchSize: number): string {
-  const podNote = matchSize > 2 ? ` Hver gruppe spilles i puljer på inntil ${matchSize} sammen på delt brett.` : "";
-  if (groups.length <= 1) return `Ingen sluttspill — vinneren av tabellen blir turneringsvinner.${podNote}`;
+function describeSetup(groups: string[][]): string {
+  if (groups.length <= 1) return "Ingen sluttspill — vinneren av tabellen blir turneringsvinner.";
   const minSize = Math.min(...groups.map((g) => g.length));
   const advancePerGroup = Math.min(2, minSize);
   const advancers = groups.length * advancePerGroup;
   const bracketSize = nextPowerOfTwo(advancers);
   const byes = bracketSize - advancers;
   const byeNote = byes > 0 ? ` (${byes} får walkover første runde)` : "";
-  return `${groups.length} grupper → sluttspill med topp ${advancePerGroup} fra hver (${advancers} deltakere)${byeNote}.${podNote}`;
+  return `${groups.length} grupper → sluttspill med topp ${advancePerGroup} fra hver (${advancers} deltakere)${byeNote}.`;
 }
+
+/** Every match is one against one. Tournaments from before this was fixed may still hold pods of
+ *  three or more (see lib/tournament.ts) and keep working, but nothing creates them any more. */
+const MATCH_SIZE = 2;
 
 export function TournamentGroupSetupScreen({
   participantNames,
-  mode,
   onBack,
   onGenerate,
   submitting = false,
 }: {
   participantNames: string[];
-  mode: TournamentMode;
   onBack: () => void;
   onGenerate: (groups: string[][], matchSize: number) => void;
   /** True while a previous "Generer turnering" tap is still saving — disables the button so a
    *  double-tap can't fire a second write while the first is in flight. */
   submitting?: boolean;
 }) {
-  const [matchSize, setMatchSize] = useState(2);
   const [groups, setGroups] = useState<string[][]>(() => suggestGroups(participantNames));
 
-  const maxGroups = Math.max(1, Math.floor(participantNames.length / matchSize));
+  const maxGroups = Math.max(1, Math.floor(participantNames.length / MATCH_SIZE));
 
   function setGroupCount(count: number) {
     const clamped = Math.min(maxGroups, Math.max(1, count));
     setGroups(distributeEvenly(participantNames, clamped));
-  }
-
-  function changeMatchSize(size: number) {
-    setMatchSize(size);
-    // Only re-suggest if the manual layout on screen is actually invalid for the new size —
-    // otherwise this would silently discard moveToGroup() edits the user just made.
-    const stillValid = groups.every((g) => g.length >= size);
-    if (!stillValid) setGroups(suggestGroups(participantNames));
   }
 
   function moveToGroup(name: string, groupIndex: number) {
@@ -76,31 +68,6 @@ export function TournamentGroupSetupScreen({
           </h1>
           <div style={{ width: "72px" }} />
         </div>
-
-        {mode === "individual" && (
-          <>
-            <p className="mb-2 text-center section-label">
-              HVOR MANGE SPILLER SAMTIDIG?
-            </p>
-            <div className="flex gap-3 mb-6">
-              {[2, 3].map((size) => (
-                <button
-                  key={size}
-                  type="button"
-                  onClick={() => changeMatchSize(size)}
-                  className={`tactile flex-1 py-2.5 rounded-lg font-medium ${FOCUS_RING}`}
-                  style={{
-                    background: matchSize === size ? "var(--color-teal)" : "var(--color-surface)",
-                    color: matchSize === size ? "var(--color-bg)" : "var(--color-cream)",
-                    border: "1px solid var(--color-border)",
-                  }}
-                >
-                  {size}
-                </button>
-              ))}
-            </div>
-          </>
-        )}
 
         <div className="flex items-center justify-center gap-4 mb-4">
           <button
@@ -127,7 +94,7 @@ export function TournamentGroupSetupScreen({
         </div>
 
         <p className="text-center mb-6" style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>
-          {describeSetup(groups, matchSize)}
+          {describeSetup(groups)}
         </p>
 
         <div className="space-y-3 mb-6">
@@ -167,9 +134,9 @@ export function TournamentGroupSetupScreen({
         </div>
 
         <PrimaryActionButton
-          onClick={() => onGenerate(groups, matchSize)}
-          ready={!groups.some((g) => g.length < matchSize) && !submitting}
-          hint={submitting ? undefined : `Hver gruppe trenger minst ${matchSize} deltakere`}
+          onClick={() => onGenerate(groups, MATCH_SIZE)}
+          ready={!groups.some((g) => g.length < MATCH_SIZE) && !submitting}
+          hint={submitting ? undefined : `Hver gruppe trenger minst ${MATCH_SIZE} deltakere`}
         >
           Generer turnering
         </PrimaryActionButton>

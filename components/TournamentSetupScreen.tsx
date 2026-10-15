@@ -1,13 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import type { Participant, TournamentMode } from "@/lib/tournament";
+import { MAX_WITHOUT_GROUP_SCREEN, type Participant, type TournamentMode } from "@/lib/tournament";
 import type { TeamMember } from "@/lib/botLevels";
-import { RULES, VARIANT_ORDER, type GameVariant } from "@/lib/rules";
-import { HeroMascot } from "./HeroMascot";
+import { botsSupported, withStandRule, type GameVariant } from "@/lib/rules";
+import { rememberTeamNames, resolveTeams, teamNameProblems } from "@/lib/teamNames";
+import { rememberTeamCards } from "@/lib/teamCards";
+import { markPlayersUsed } from "@/lib/recentPlayers";
 import { PeopleIcon, PersonIcon } from "./icons";
 import { PeoplePicker, type Person } from "./PeoplePicker";
 import { PrimaryActionButton } from "./PrimaryActionButton";
+import { RulesPicker } from "./RulesPicker";
+import { FxPicker } from "./FxPicker";
+import { SavedTeams, useTeamCard } from "./SavedTeams";
 import { TeamComposer, isTeamSetupReady, type Team } from "./TeamComposer";
 
 const FOCUS_RING =
@@ -33,7 +38,9 @@ function peopleFromParticipants(mode: TournamentMode, participants: Participant[
 
 function teamsFromParticipants(mode: TournamentMode, participants: Participant[]): Team[] {
   if (mode !== "team") return [{ name: "Lag 1", members: [] }, { name: "Lag 2", members: [] }];
-  return participants.map((p) => ({ name: p.name, members: (p.members ?? []).map((m) => m.name) }));
+  // Coming back from the group screen: these names are final, so they stay as they are rather
+  // than being rebuilt from the members.
+  return participants.map((p) => ({ name: p.name, members: (p.members ?? []).map((m) => m.name), custom: true }));
 }
 
 export function TournamentSetupScreen({
@@ -44,14 +51,18 @@ export function TournamentSetupScreen({
   initialVariant = "standard",
 }: {
   onBack: () => void;
-  onNext: (mode: TournamentMode, participants: Participant[], variant: GameVariant) => void;
+  /** `adjustGroups` is true when the user asked to see the group screen even though the tournament
+   *  is small enough to make without one. */
+  onNext: (mode: TournamentMode, participants: Participant[], variant: GameVariant, adjustGroups: boolean) => void;
   /** Seeds mode/people/teams from a previous submission — lets "Tilbake" from group-setup restore
    *  what was already entered instead of remounting this screen back to a blank slate. */
   initialMode?: TournamentMode | null;
   initialParticipants?: Participant[] | null;
   initialVariant?: GameVariant;
 }) {
-  const [mode, setMode] = useState<TournamentMode | null>(initialMode);
+  // Individual to begin with, as in Enkeltkamp, so the whole screen is there from the first moment
+  // instead of waiting for a choice most people make the same way.
+  const [mode, setMode] = useState<TournamentMode | null>(initialMode ?? "individual");
   const [variant, setVariant] = useState<GameVariant>(initialVariant);
   const [people, setPeople] = useState<Person[]>(() =>
     initialMode && initialParticipants ? peopleFromParticipants(initialMode, initialParticipants) : []
@@ -71,15 +82,33 @@ export function TournamentSetupScreen({
     setPeople(next);
   }
 
-  const teamsReady = mode === "team" && isTeamSetupReady(people, teams);
-  const individualReady = mode === "individual" && people.length >= 3;
+  // The longer games have no bots — see botsSupported. Nothing is removed behind the user's back;
+  // the button just waits until the bots are taken out or the game is shortened.
+  const botsAllowed = botsSupported(variant);
+  const blockedBots = !botsAllowed && people.some((p) => p.isBot);
+  const teamsReady = mode === "team" && isTeamSetupReady(people, teams) && !blockedBots;
+  const individualReady = mode === "individual" && people.length >= 3 && !blockedBots;
 
-  function handleNext() {
+  const pickTeamCard = useTeamCard(people, teams, (nextPeople, nextTeams) => {
+    setPeople(nextPeople);
+    setTeams(nextTeams);
+  });
+
+  // Up to four take part in one group and need no group screen — the tournament is made at once.
+  const participantCount = mode === "team" ? teams.length : people.length;
+  const makesGroupsAtOnce = participantCount <= MAX_WITHOUT_GROUP_SCREEN;
+
+  function handleNext(adjustGroups: boolean = false) {
+    markPlayersUsed(people.filter((p) => !p.isBot).map((p) => p.name));
     if (mode === "individual") {
       const participants: Participant[] = people.map((p) => ({ name: p.name, isBot: p.isBot, botLevel: p.botLevel }));
-      onNext("individual", participants, variant);
+      onNext("individual", participants, withStandRule(variant, false), adjustGroups);
     } else if (mode === "team") {
-      const participants: Participant[] = teams.map((t) => ({
+      const playing = resolveTeams(teams);
+      if (!teamNameProblems(playing).every((p) => p === null)) return;
+      rememberTeamNames(teams.map((t, i) => ({ ...t, name: playing[i].name })));
+      rememberTeamCards(playing);
+      const participants: Participant[] = playing.map((t) => ({
         name: t.name,
         isBot: false,
         members: t.members.map((name): TeamMember => {
@@ -87,19 +116,18 @@ export function TournamentSetupScreen({
           return { name: person.name, isBot: person.isBot, botLevel: person.botLevel };
         }),
       }));
-      onNext("team", participants, variant);
+      onNext("team", participants, variant, adjustGroups);
     }
   }
 
   return (
-    <div className="animate-screen-enter min-h-screen w-full flex items-center justify-center p-6" style={{ background: "var(--color-bg)" }}>
+    <div className="animate-screen-enter min-h-screen w-full flex items-start justify-center px-6 pb-10" style={{ background: "var(--color-bg)", paddingTop: "3.5rem" }}>
       <div className="w-full max-w-md">
-        <HeroMascot small />
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-5">
           <button type="button" onClick={onBack} className={`tactile px-3 py-2 rounded-lg text-sm ${FOCUS_RING}`} style={{ background: "var(--color-surface)", color: "var(--color-cream)" }}>
             ← Hjem
           </button>
-          <h1 className="font-display" style={{ color: "var(--color-cream)", fontSize: "1.3rem" }}>
+          <h1 className="font-display" style={{ color: "var(--color-cream)", fontSize: "1.7rem", letterSpacing: "0.02em" }}>
             Ny turnering
           </h1>
           <div style={{ width: "72px" }} />
@@ -137,25 +165,9 @@ export function TournamentSetupScreen({
           </button>
         </div>
 
-        {/* Which game every match is played as — same small pair as SetupScreen's. */}
-        <div className="flex gap-2 -mt-3 mb-6">
-          {VARIANT_ORDER.map((v) => (
-            <button
-              key={v}
-              type="button"
-              onClick={() => setVariant(v)}
-              aria-pressed={variant === v}
-              className={`tactile flex-1 py-1.5 rounded-lg text-sm font-medium ${FOCUS_RING}`}
-              style={{
-                background: variant === v ? "rgba(47, 180, 194, 0.18)" : "var(--color-surface)",
-                color: variant === v ? "var(--color-teal)" : "var(--color-muted)",
-                border: variant === v ? "1px solid var(--color-teal)" : "1px solid var(--color-border)",
-              }}
-            >
-              {RULES[v].label}
-            </button>
-          ))}
-        </div>
+        {/* Which game every match is played as — the same picker SetupScreen uses. */}
+        <RulesPicker variant={variant} onChange={setVariant} teamPlay={mode === "team"} />
+        <FxPicker />
 
         {mode && (
           <>
@@ -163,7 +175,9 @@ export function TournamentSetupScreen({
               2. DELTAKERE
             </p>
 
-            <PeoplePicker people={people} onChange={handlePeopleChange} />
+            {mode === "team" && <SavedTeams onPick={pickTeamCard} />}
+
+            <PeoplePicker people={people} onChange={handlePeopleChange} botsAllowed={botsAllowed} />
 
             {mode === "team" && people.length > 0 && (
               <>
@@ -175,16 +189,30 @@ export function TournamentSetupScreen({
             )}
 
             <PrimaryActionButton
-              onClick={handleNext}
+              onClick={() => handleNext(false)}
               ready={individualReady || teamsReady}
               hint={
-                mode === "team"
-                  ? "Trenger minst 2 lag, alle med minst ett medlem, og ingen utildelte spillere"
-                  : "Trenger minst 3 deltakere"
+                blockedBots
+                  ? "Fjern botene, eller velg færre treff per seksjon"
+                  : mode === "team"
+                    ? "Trenger minst 2 lag, alle med minst ett medlem, og ingen utildelte spillere"
+                    : "Trenger minst 3 deltakere"
               }
             >
-              Neste: juster grupper
+              {makesGroupsAtOnce ? "Opprett turnering" : "Neste: juster grupper"}
             </PrimaryActionButton>
+            {makesGroupsAtOnce && (individualReady || teamsReady) && (
+              <div className="flex justify-center mt-3">
+                <button
+                  type="button"
+                  onClick={() => handleNext(true)}
+                  className={`tactile px-4 py-2 rounded-lg text-sm ${FOCUS_RING}`}
+                  style={{ color: "var(--color-muted)", background: "transparent", border: "1px solid var(--color-border)" }}
+                >
+                  Endre grupper
+                </button>
+              </div>
+            )}
           </>
         )}
       </div>

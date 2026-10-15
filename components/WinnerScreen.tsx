@@ -1,8 +1,13 @@
 "use client";
 
 import { useMemo } from "react";
-import { STEPS, STEP_LABELS, totalMarks, type Step, type TurnAggregate, type TurnResult } from "@/lib/game";
+import { STEPS, STEP_LABELS, totalMarks, type PlayerProgress, type Step, type TurnAggregate, type TurnResult } from "@/lib/game";
 import { getRules } from "@/lib/rules";
+import { buildMatchFacts } from "@/lib/matchSummary";
+import { MatchSummary } from "./MatchSummary";
+import { TeamKit } from "./TeamKit";
+import type { Kit } from "@/lib/teamKit";
+import { fxFlags, useFxLevel } from "@/lib/fxLevel";
 import { RaceChart } from "./RaceChart";
 import { getPlayerRecord } from "@/lib/storage";
 import { generateConfetti, generateConfettiRain } from "@/lib/confetti";
@@ -59,8 +64,11 @@ export function WinnerScreen({
   onHome,
   homeLabel = "Hjem",
   onPlayAgain,
+  onNewMatch,
   onUndoWin,
   turnLogByPlayer,
+  progressByPlayer,
+  winnerKit = null,
 }: {
   winner: string;
   players: string[];
@@ -81,20 +89,39 @@ export function WinnerScreen({
   preBankedByPlayer: Record<string, { D: number; T: number }>;
   /** Every confirmed turn per player, in order — the race chart is drawn from these. */
   turnLogByPlayer: Record<string, TurnResult[]>;
+  /** Where every player's board stood when the match ended — what the summary says about who got stuck. */
+  progressByPlayer: PlayerProgress;
+  /** The winning team's shirt, when the winner is a team — shown where a person's photo would be. */
+  winnerKit?: Kit | null;
   onHome: () => void;
   /** Overridden by tournament mode to "Til turnering" — see MikkeMusApp's onMatchComplete prop. */
   homeLabel?: string;
   /** Starts a fresh match with the same roster — omitted in tournament mode, where onHome/
    *  homeLabel already handles "what's next" via "Til turnering". */
   onPlayAgain?: () => void;
+  /** A new match with other people, through the setup screen — also omitted in tournament mode. */
+  onNewMatch?: () => void;
   /** Takes the last cross back and returns to the board — for when Scolia read a bounce-out or a
    *  wire as the winning dart. Omitted where there is nothing to go back to. */
   onUndoWin?: () => void;
 }) {
   const photo = getPlayerRecord(winner)?.photo;
   const winnerLuck = luckByPlayer[winner] ? overallSumLuck(luckByPlayer[winner]) : null;
-  const confetti = useMemo(() => generateConfetti(CONFETTI_COUNT), []);
-  const rain = useMemo(() => generateConfettiRain(RAIN_COUNT), []);
+  // The celebration follows the chosen level (see lib/fxLevel.ts): none at Vanlig, the usual at
+  // Party, twice the rain at Full party. The rest of the screen is the same at every level.
+  const fx = fxFlags(useFxLevel());
+  const confettiCount = fx.confetti ? CONFETTI_COUNT * (fx.bigConfetti ? 2 : 1) : 0;
+  const rainCount = fx.confetti ? RAIN_COUNT * (fx.bigConfetti ? 2 : 1) : 0;
+  // What the summary is written from — rebuilt only when the match itself changes.
+  const facts = useMemo(
+    () =>
+      players.includes(winner)
+        ? buildMatchFacts({ players, winner, turnLog: turnLogByPlayer, finalProgress: progressByPlayer, target: getRules().target })
+        : null,
+    [players, winner, turnLogByPlayer, progressByPlayer],
+  );
+  const confetti = useMemo(() => generateConfetti(confettiCount), [confettiCount]);
+  const rain = useMemo(() => generateConfettiRain(rainCount), [rainCount]);
 
   return (
     <div className="animate-winner-slam relative min-h-screen w-full flex items-center justify-center p-6 overflow-hidden" style={{ background: "var(--color-bg)" }}>
@@ -199,6 +226,9 @@ export function WinnerScreen({
                 {photo ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={photo} alt={winner} className="w-full h-full object-cover" />
+                ) : winnerKit ? (
+                  // A winning team has no face of its own: its shirt is the headline instead.
+                  <TeamKit kit={winnerKit} size={112} title={`Drakten til ${winner}`} />
                 ) : (
                   <span className="font-display" style={{ color: "var(--color-gold)", fontSize: "4rem" }}>
                     {winner.charAt(0).toUpperCase()}
@@ -235,27 +265,49 @@ export function WinnerScreen({
           </div>
         </div>
 
+        {/* What people read first, and often all they read: hit percentage and darts, side by side
+            for everyone. The charts and the finer statistics are further down, for those who
+            keep scrolling. */}
         <div className="shadow-panel rounded-xl p-5 mb-6" style={{ background: "var(--color-surface)" }}>
           <p className="mb-3 section-label">
             STATISTIKK — DENNE KAMPEN
           </p>
-          <div className="space-y-2">
-            {players.map((p) => (
-              <div key={p} className="flex justify-between items-center">
-                <span style={{ color: "var(--color-cream)" }}>{p}</span>
-                <span
-                  className="tabular"
+          <div role="table" aria-label="Statistikk for kampen">
+            <div
+              role="row"
+              className="grid items-end pb-1"
+              style={{ gridTemplateColumns: "minmax(0, 1fr) 4.2rem 4.2rem", color: "var(--color-label)", fontSize: "0.65rem", letterSpacing: "0.1em" }}
+            >
+              <span role="columnheader" />
+              <span role="columnheader" className="text-right">TREFF</span>
+              <span role="columnheader" className="text-right">PILER</span>
+            </div>
+            <div className="space-y-2">
+              {players.map((p) => (
+                <div
+                  key={p}
+                  role="row"
+                  className="grid items-baseline"
                   style={{
+                    gridTemplateColumns: "minmax(0, 1fr) 4.2rem 4.2rem",
                     color: p === winner ? "var(--color-gold)" : "var(--color-cream)",
                     fontWeight: p === winner ? 600 : 400,
                   }}
                 >
-                  {treffPct(stats[p])}%
-                </span>
-              </div>
-            ))}
+                  <span role="cell" className="truncate">{p}</span>
+                  <span role="cell" className="tabular text-right font-display" style={{ fontSize: "1.4rem" }}>
+                    {treffPct(stats[p])}%
+                  </span>
+                  <span role="cell" className="tabular text-right font-display" style={{ fontSize: "1.4rem" }}>
+                    {totalDarts(stats[p])}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
+
+        <MatchSummary facts={facts} />
 
         {/* The match as a race — who led when, and by how much. */}
         <div className="shadow-panel rounded-xl p-5 mb-6" style={{ background: "var(--color-surface)" }}>
@@ -351,6 +403,9 @@ export function WinnerScreen({
           </div>
         )}
 
+        {/* After a single match there are three things to do next, in the order people want them:
+            the same people again, other people, or leave. In tournament mode there is only one —
+            back to the tournament — and it is the main button. */}
         {onPlayAgain && (
           <button
             type="button"
@@ -358,7 +413,17 @@ export function WinnerScreen({
             className={`glossy w-full py-4 rounded-lg font-semibold text-lg mb-3 ${FOCUS_RING}`}
             style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)" } as React.CSSProperties}
           >
-            Spill igjen
+            Revansj
+          </button>
+        )}
+        {onNewMatch && (
+          <button
+            type="button"
+            onClick={onNewMatch}
+            className={`tactile w-full py-4 rounded-lg font-semibold text-lg mb-3 ${FOCUS_RING}`}
+            style={{ background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
+          >
+            Ny kamp
           </button>
         )}
         <button
@@ -366,12 +431,12 @@ export function WinnerScreen({
           onClick={onHome}
           className={
             onPlayAgain
-              ? `tactile w-full py-4 rounded-lg font-semibold text-lg ${FOCUS_RING}`
+              ? `tactile w-full py-3 rounded-lg font-medium ${FOCUS_RING}`
               : `glossy w-full py-4 rounded-lg font-semibold text-lg ${FOCUS_RING}`
           }
           style={
             onPlayAgain
-              ? { background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }
+              ? { background: "transparent", color: "var(--color-muted)" }
               : ({ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)" } as React.CSSProperties)
           }
         >

@@ -28,14 +28,16 @@ export type LiveMatchState = {
 type LiveMatchRow = { id: string; state: LiveMatchState | null; updated_at: string };
 
 /** Fire-and-forget, same as the relay's own status updates — a failed write just leaves the
- *  storskjerm view a little stale, never something the actual game logic depends on. */
+ *  storskjerm view a little stale, never something the actual game logic depends on.
+ *
+ *  Logged, not shown. It used to raise a toast, but the people at the board are playing a match
+ *  that works fine and can do nothing about a spectator screen being a beat behind; the message
+ *  only ever sat on top of the buttons. The spectator page reports its own trouble (see
+ *  useLiveMatch below), which is where it matters. */
 export async function publishLiveMatch(state: LiveMatchState | null) {
   if (!supabase) return;
   const { error } = await supabase.from("live_match").upsert({ id: "current", state, updated_at: new Date().toISOString() });
-  if (error) {
-    console.error("Kunne ikke oppdatere live_match:", error.message);
-    reportError("Kunne ikke oppdatere storskjerm-visningen.", { key: "live-match-publish" });
-  }
+  if (error) console.error("Kunne ikke oppdatere live_match:", error.message);
 }
 
 const POLL_MS = 1000;

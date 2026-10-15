@@ -498,9 +498,11 @@ function buildSolver(profiles: LevelProfiles): Solver {
  *  match start (see startGame) — normal gameplay itself goes through botChooseThrow/
  *  botDecideRedirect instead, which call this internally. */
 export function solverFor(level: BotLevel): Solver {
-  // Per level and variant: the whole model — states, transitions, what a ring hit on the own
-  // number means — is different under 1 treff.
-  const key = `${level}|${getRules().variant}`;
+  // Per level and row length: the whole model — states, transitions, what a ring hit on the own
+  // number means — depends on how many crosses close a row. The stand rule is about who throws,
+  // which the model has no opinion on, so it is left out of the key: a "+stand" suffix would
+  // build an identical solver a second time.
+  const key = `${level}|${getRules().base}`;
   const cached = solverCache.get(key);
   if (cached) return cached;
   const solver = buildSolver(profilesFor(level));

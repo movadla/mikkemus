@@ -21,6 +21,7 @@
  * up at ~33px.
  */
 import { getRules } from "@/lib/rules";
+import { glyphFor } from "@/lib/markGlyph";
 
 const GEOMETRY = {
   normal: { cross: 7, ring: 6 },
@@ -46,10 +47,9 @@ export function Mark({
   pendingCount?: number;
   ghostCount?: number;
   accent?: string;
-  /** Crosses that close a row in the game being drawn. The glyph has three stages; in a variant
-   *  where one cross closes the row, that one cross draws as the full closed glyph — a lone
-   *  slash would read as a third of the way there. Defaults to the current match's rules; the
-   *  spectator page passes it in from the published snapshot. */
+  /** Crosses that close a row in the game being drawn. See lib/markGlyph.ts for how the stages
+   *  stretch or shrink to fit it. Defaults to the current match's rules; the spectator page
+   *  passes it in from the published snapshot. */
   target?: number;
   /** Landscape, where the mark is only ~33px — heavier strokes. See GEOMETRY above. */
   compact?: boolean;
@@ -63,12 +63,11 @@ export function Mark({
    *  red flash (the previous way of signaling an undo happened). */
   slowMotion?: boolean;
 }) {
-  // Everything below is drawn in glyph stages (0–3). A count at or past the target is the
-  // closed glyph whatever the target is; below it, stages map one to one.
-  const stage = (n: number) => (n >= target ? 3 : n);
-  const count = stage(rawCount);
-  const confirmedCount = stage(rawCount - pendingCount);
-  const previewedCount = stage(rawCount + ghostCount);
+  // What the row shows now, what of it is already locked in by Bekreft, and what it would show
+  // if the undecided triple/double went onto this number.
+  const glyph = glyphFor(rawCount, target);
+  const confirmed = glyphFor(rawCount - pendingCount, target);
+  const previewed = glyphFor(rawCount + ghostCount, target);
   const strokeMs = slowMotion ? 650 : 190;
   const g = compact ? GEOMETRY.compact : GEOMETRY.normal;
   const cx = CENTRE;
@@ -78,10 +77,9 @@ export function Mark({
   const yBottom = 60 - INSET;
   // Only once it's actually closed — mid-turn the crosses still draw one by one, so the
   // player watches the number fill the normal way and the ring is the reward at the end.
-  const showPerfect = perfect && count >= 3;
+  const showPerfect = perfect && rawCount >= target;
 
-  function ghostStrokeProps(threshold: number) {
-    const isGhost = threshold > count && threshold <= previewedCount;
+  function ghostStrokeProps(isGhost: boolean) {
     return { stroke: accent, opacity: isGhost ? 0.45 : 0, strokeDasharray: "5 4" };
   }
 
@@ -117,7 +115,7 @@ export function Mark({
         y2={yTop}
         strokeWidth={g.cross}
         strokeLinecap="round"
-        style={{ transition: "opacity 190ms ease-out", ...ghostStrokeProps(1) }}
+        style={{ transition: "opacity 190ms ease-out", ...ghostStrokeProps(!glyph.slash && previewed.slash) }}
       />
       <line
         x1={x1}
@@ -126,7 +124,7 @@ export function Mark({
         y2={yBottom}
         strokeWidth={g.cross}
         strokeLinecap="round"
-        style={{ transition: "opacity 190ms ease-out", ...ghostStrokeProps(2) }}
+        style={{ transition: "opacity 190ms ease-out", ...ghostStrokeProps(!glyph.cross && previewed.cross) }}
       />
       <ellipse
         cx={cx}
@@ -135,7 +133,7 @@ export function Mark({
         ry={RADIUS}
         fill="none"
         strokeWidth={g.ring}
-        style={{ transition: "opacity 150ms ease-out", ...ghostStrokeProps(3) }}
+        style={{ transition: "opacity 150ms ease-out", ...ghostStrokeProps(previewed.ring > glyph.ring) }}
       />
       <line
         x1={x1}
@@ -143,13 +141,13 @@ export function Mark({
         x2={x2}
         y2={yTop}
         pathLength={1}
-        stroke={confirmedCount >= 1 ? "var(--color-cream)" : accent}
+        stroke={confirmed.slash ? "var(--color-cream)" : accent}
         strokeWidth={g.cross}
         strokeLinecap="round"
         style={{
           strokeDasharray: 1,
-          strokeDashoffset: count >= 1 ? 0 : 1,
-          opacity: count >= 1 ? 1 : 0,
+          strokeDashoffset: glyph.slash ? 0 : 1,
+          opacity: glyph.slash ? 1 : 0,
           transition: `stroke-dashoffset ${strokeMs}ms ease-out, opacity ${strokeMs}ms ease-out`,
         }}
       />
@@ -159,13 +157,13 @@ export function Mark({
         x2={x2}
         y2={yBottom}
         pathLength={1}
-        stroke={confirmedCount >= 2 ? "var(--color-cream)" : accent}
+        stroke={confirmed.cross ? "var(--color-cream)" : accent}
         strokeWidth={g.cross}
         strokeLinecap="round"
         style={{
           strokeDasharray: 1,
-          strokeDashoffset: count >= 2 ? 0 : 1,
-          opacity: count >= 2 ? 1 : 0,
+          strokeDashoffset: glyph.cross ? 0 : 1,
+          opacity: glyph.cross ? 1 : 0,
           transition: `stroke-dashoffset ${strokeMs}ms ease-out 65ms, opacity ${strokeMs}ms ease-out 65ms`,
         }}
       />
@@ -176,12 +174,12 @@ export function Mark({
         ry={RADIUS}
         pathLength={1}
         fill="none"
-        stroke={confirmedCount >= 3 ? "var(--color-cream)" : accent}
+        stroke={confirmed.ring >= glyph.ring ? "var(--color-cream)" : accent}
         strokeWidth={g.ring}
         style={{
           strokeDasharray: 1,
-          strokeDashoffset: count >= 3 ? 0 : 1,
-          opacity: count >= 3 ? 1 : 0,
+          strokeDashoffset: 1 - glyph.ring,
+          opacity: glyph.ring > 0 ? 1 : 0,
           transition: `stroke-dashoffset ${strokeMs}ms ease-out 55ms, opacity ${strokeMs}ms ease-out 55ms`,
         }}
       />
