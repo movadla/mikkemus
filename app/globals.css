@@ -1172,6 +1172,28 @@ button {
   animation: thrower-in var(--duration-fast) var(--ease-spring) both;
 }
 
+/* The thrower's picture breathes a teal ring — "you're up" without a word. */
+@keyframes thrower-ring {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(47, 180, 194, 0.65);
+  }
+  50% {
+    box-shadow: 0 0 0 7px rgba(47, 180, 194, 0);
+  }
+}
+
+.animate-thrower-ring {
+  animation: thrower-ring 1.6s ease-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-thrower-ring {
+    animation: none;
+    box-shadow: 0 0 0 3px rgba(47, 180, 194, 0.35);
+  }
+}
+
 @keyframes toast-enter {
   from {
     opacity: 0;

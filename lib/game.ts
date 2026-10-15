@@ -168,6 +168,13 @@ export type TurnResult = {
    * turns logged before this was tracked, hence optional.
    */
   darts?: number;
+  /** Who threw it, in team play — the member, where the log itself is keyed by the team. Absent
+   *  for a lone player and on turns logged before this was tracked. */
+  thrower?: string;
+  /** Darts that counted this turn (see lib/teamTurn.ts's countingDarts) — what the stand rule
+   *  and the "tre tellende" statistic go by. With manual entry a tap is a mark, so this is the
+   *  marks unless the thrower was asked (see MikkeMusApp's standQuestionDue). */
+  counted?: number;
 };
 
 export function emptyProgress(): Progress {

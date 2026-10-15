@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { STEPS, STEP_LABELS, totalMarks, type PlayerProgress, type Step, type TurnAggregate, type TurnResult } from "@/lib/game";
 import { getRules } from "@/lib/rules";
 import { buildMatchFacts } from "@/lib/matchSummary";
+import { throwerStats } from "@/lib/turnStats";
 import { MatchSummary } from "./MatchSummary";
 import { TeamKit } from "./TeamKit";
 import type { Kit } from "@/lib/teamKit";
@@ -311,6 +312,61 @@ export function WinnerScreen({
                   </span>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Per thrower: in team play the members' own numbers, which the table above cannot show;
+            for everyone, the turns where all three darts counted — and how many of those in a row. */}
+        <div className="shadow-panel rounded-xl p-4 mb-6" style={{ background: "var(--color-surface)" }}>
+          <p className="mb-4 section-label">PER KASTER</p>
+          <div role="table" aria-label="Per kaster">
+            <div
+              role="row"
+              className="grid items-end pb-1"
+              style={{ gridTemplateColumns: "minmax(0, 1fr) 3.2rem 3.2rem 5.8rem", color: "var(--color-label)", fontSize: "0.75rem", letterSpacing: "0.1em" }}
+            >
+              <span role="columnheader" />
+              <span role="columnheader" className="text-right">TREFF</span>
+              <span role="columnheader" className="text-right">PILER</span>
+              <span role="columnheader" className="text-right whitespace-nowrap">3 TELLENDE</span>
+            </div>
+            <div className="space-y-2">
+              {players.map((p) => {
+                const rows = throwerStats(turnLogByPlayer[p] ?? [], p);
+                const isTeam = rows.some((r) => r.name !== p);
+                return (
+                  <div key={p}>
+                    {isTeam && (
+                      <p className="truncate text-left" style={{ color: p === winner ? "var(--color-gold)" : "var(--color-cream)", fontWeight: 600, fontSize: "0.85rem" }}>
+                        {p}
+                      </p>
+                    )}
+                    {rows.map((r) => (
+                      <div
+                        key={r.name}
+                        role="row"
+                        className="grid items-baseline"
+                        style={{ gridTemplateColumns: "minmax(0, 1fr) 3.2rem 3.2rem 5.8rem", color: p === winner ? "var(--color-gold)" : "var(--color-cream)", paddingLeft: isTeam ? "0.75rem" : 0 }}
+                      >
+                        <span role="cell" className="truncate text-left">{r.name}</span>
+                        <span role="cell" className="tabular text-right font-display" style={{ fontSize: "1.2rem" }}>
+                          {r.hitPct}%
+                        </span>
+                        <span role="cell" className="tabular text-right font-display" style={{ fontSize: "1.2rem" }}>
+                          {r.darts}
+                        </span>
+                        <span role="cell" className="tabular text-right font-display whitespace-nowrap" style={{ fontSize: "1.2rem" }}>
+                          {r.perfectTurns}
+                          {r.bestRun >= 2 && (
+                            <span className="font-sans" style={{ color: "var(--color-muted)", fontSize: "0.75rem", marginLeft: "0.35rem" }}>{r.bestRun} på rad</span>
+                          )}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

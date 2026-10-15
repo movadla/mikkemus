@@ -1943,8 +1943,16 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     const scoliaDarts = turnShots.filter(Boolean).length;
     const dartsForTurn =
       dartsOverride ?? (scoliaDarts || (finishedNow ? Math.max(1, manualTapsThisTurn) : DARTS_PER_TURN));
-    const turn = summarizeTurn(effectivePendingHits, activeStepNow, dartsForTurn);
     const turnIndex = rewound ? rewoundTurnIndex ?? 0 : turnCounters[activePlayer] ?? 0;
+    // Who threw it, for the per-member numbers afterwards: the team's current member, or — on a
+    // re-confirmed turn, where the pointer has moved on — whoever the turn already says.
+    const rosterNow = teamRosters[activePlayer];
+    const throwerName = rewound
+      ? turnLog[activePlayer]?.[turnIndex]?.thrower
+      : rosterNow && rosterNow.length > 0
+        ? rosterNow[(teamMemberIdx[activePlayer] ?? 0) % rosterNow.length].name
+        : undefined;
+    const turn: TurnResult = { ...summarizeTurn(effectivePendingHits, activeStepNow, dartsForTurn), counted: countedDarts, ...(throwerName ? { thrower: throwerName } : {}) };
     const nextTurnLog = {
       ...turnLog,
       [activePlayer]: setTurnAt(turnLog[activePlayer] ?? [], turnIndex, turn),
@@ -2223,7 +2231,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     if (activeRoster && activeRoster.length > 0) {
       const activeIdx = (teamMemberIdx[activePlayer] ?? 0) % activeRoster.length;
       const members = activeRoster.map((m) => toThrower(m.name, m.isBot));
-      throwerTeam = { name: activePlayer, members, activeIdx };
+      throwerTeam = { name: activePlayer, photo: getPlayerRecord(activePlayer)?.photo ?? null, members, activeIdx };
       thrower = rewound !== null ? { name: activePlayer, isBot: false, photo: null } : members[activeIdx];
     } else {
       thrower = toThrower(activePlayer, activeBotLevel !== null);
