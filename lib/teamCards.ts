@@ -99,29 +99,22 @@ export function rememberTeamCards(teams: NamedTeam[], now: number = Date.now()):
   }
 }
 
-export type PersonRef = { name: string; isBot: boolean };
-
 /**
- * Fills a team slot from a card: the card's people are added to the pool if they are not in it
- * (taking them out of any team they were already on, so nobody is in two), and the card goes in
- * the first team that has nobody in it yet — or in a new team if every slot is taken.
- * Pure, so the screens that offer it all behave the same.
+ * The device's cards and the teams that have a record of their own (lib/playerRows.ts), as one
+ * list. A record is a card with no last-used time of its own, so the cards this device has used
+ * come first; where both exist for the same people, the record's name wins — it is the name the
+ * statistics are under, on every device.
  */
-export function applyTeamCard<P extends PersonRef>(
-  card: TeamCard,
-  people: P[],
-  teams: NamedTeam[],
-  makePerson: (name: string) => P,
-): { people: P[]; teams: NamedTeam[] } {
-  const known = new Set(people.map((p) => p.name.toLowerCase()));
-  const added = card.members.filter((m) => !known.has(m.toLowerCase())).map(makePerson);
-  const nextPeople = [...people, ...added];
-  // Match the card's names to the spelling already in the pool.
-  const spelled = card.members.map((m) => nextPeople.find((p) => p.name.toLowerCase() === m.toLowerCase())!.name);
-  const taken = new Set(spelled);
-  const cleared = teams.map((t) => ({ ...t, members: t.members.filter((m) => !taken.has(m)) }));
-  const slot = cleared.findIndex((t) => t.members.length === 0);
-  const filled: NamedTeam = { name: card.name, members: spelled, custom: true };
-  if (slot === -1) return { people: nextPeople, teams: [...cleared, filled] };
-  return { people: nextPeople, teams: cleared.map((t, i) => (i === slot ? filled : t)) };
+export function withTeamRecords(cards: TeamCard[], records: { name: string; members?: string[] }[]): TeamCard[] {
+  const byPair = new Map<string, TeamCard>();
+  cards.forEach((c) => byPair.set(pairKey(c.members), c));
+  for (const r of records) {
+    const members = r.members ?? [];
+    const key = pairKey(members);
+    const name = cleanTeamName(r.name);
+    if (!key || !name) continue;
+    const local = byPair.get(key);
+    byPair.set(key, { name, members: local?.members ?? members, lastUsed: local?.lastUsed ?? 0 });
+  }
+  return [...byPair.values()].sort((a, b) => b.lastUsed - a.lastUsed || a.name.localeCompare(b.name, "no"));
 }

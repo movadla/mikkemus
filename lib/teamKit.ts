@@ -24,8 +24,13 @@ export type Kit = {
   pattern: KitPattern;
 };
 
+/** A team's two shirts. Stored on the team's record (lib/playerRows.ts) once it has one, so the
+ *  shirts are the team's own and can be changed in the settings; until then — and for a team
+ *  that is only on this device — they are worked out from the members, see defaultKits. */
+export type TeamKits = { home: Kit; away: Kit };
+
 /** Colour pairs chosen to be unmistakable at 24 px and to read on the app's dark green. */
-const PALETTE: { primary: string; secondary: string; trim: string }[] = [
+export const PALETTE: { primary: string; secondary: string; trim: string }[] = [
   { primary: "#d8392b", secondary: "#f4f0e8", trim: "#f4f0e8" }, // red / cream
   { primary: "#2f6fd1", secondary: "#f4f0e8", trim: "#f4f0e8" }, // blue / cream
   { primary: "#e8c13a", secondary: "#1d2a4a", trim: "#1d2a4a" }, // yellow / navy
@@ -40,7 +45,30 @@ const PALETTE: { primary: string; secondary: string; trim: string }[] = [
   { primary: "#5db7e8", secondary: "#1d2a4a", trim: "#1d2a4a" }, // sky / navy
 ];
 
-const PATTERNS: KitPattern[] = ["hoops", "stripes", "solid", "sash", "halves", "chevron"];
+export const PATTERNS: KitPattern[] = ["hoops", "stripes", "solid", "sash", "halves", "chevron"];
+
+export const PATTERN_LABELS: Record<KitPattern, string> = {
+  solid: "Ensfarget",
+  hoops: "Ringer",
+  stripes: "Striper",
+  sash: "Skrå",
+  halves: "Halv",
+  chevron: "Vinkel",
+};
+
+/** A shirt from a colour pair and a pattern — what the settings let a team pick. */
+export function kitFrom(colours: number, pattern: KitPattern): Kit {
+  const c = PALETTE[((colours % PALETTE.length) + PALETTE.length) % PALETTE.length];
+  return { ...c, pattern };
+}
+
+/** Which colour pair a shirt is — either way round, since a default away shirt wears its pair
+ *  swapped — or -1 for one that is not in the palette. */
+export function colourIndexOf(kit: Kit): number {
+  return PALETTE.findIndex(
+    (c) => (c.primary === kit.primary && c.secondary === kit.secondary) || (c.primary === kit.secondary && c.secondary === kit.primary),
+  );
+}
 
 /** FNV-1a — small, stable, and spreads two similar names far apart. */
 function hash(text: string): number {
@@ -89,7 +117,12 @@ export function kitDistance(a: Kit, b: Kit): number {
 /** Below this, two shirts are too alike to tell apart across a room. */
 export const CLASH_DISTANCE = 110;
 
-export type TeamForKit = { name: string; members: string[] };
+/** The shirts a team starts out with — the same two for the same people on every device. */
+export function defaultKits(members: string[]): TeamKits {
+  return { home: firstKit(members), away: awayKit(members) };
+}
+
+export type TeamForKit = { name: string; members: string[]; kits?: TeamKits | null };
 
 /**
  * The shirt every team in a match plays in. Teams are taken in order and each is checked against
@@ -101,8 +134,7 @@ export function assignKits(teams: TeamForKit[]): Record<string, { kit: Kit; away
   const placed: Kit[] = [];
   const result: Record<string, { kit: Kit; away: boolean }> = {};
   for (const team of teams) {
-    const home = firstKit(team.members);
-    const away = awayKit(team.members);
+    const { home, away } = team.kits ?? defaultKits(team.members);
     const nearest = (kit: Kit) => (placed.length === 0 ? Infinity : Math.min(...placed.map((p) => kitDistance(kit, p))));
     const useAway = nearest(home) < CLASH_DISTANCE && nearest(away) > nearest(home);
     const chosen = useAway ? away : home;

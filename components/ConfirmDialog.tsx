@@ -76,7 +76,7 @@ export function ConfirmDialog({
         <p id={messageId} className="text-center mb-6" style={{ color: "var(--color-cream)", fontSize: messageFontSize }}>
           {message}
         </p>
-        <div className="space-y-3">
+        <div className="space-y-4">
           {buttons.map((b, i) => (
             <button
               key={i}
@@ -85,7 +85,7 @@ export function ConfirmDialog({
               }}
               type="button"
               onClick={b.onClick}
-              className={`glossy w-full py-3 rounded-lg font-medium ${FOCUS_RING}`}
+              className={`glossy w-full py-4 rounded-lg font-medium ${FOCUS_RING}`}
               style={{ "--btn-fill": b.background, color: b.color ?? "var(--color-cream)" } as React.CSSProperties}
             >
               {b.label}

@@ -1,169 +1,135 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 import { STEPS, STEP_LABELS } from "@/lib/game";
-import {
-  averageDartsPerWin,
-  averagePct,
-  deletePlayer,
-  meanEuclideanDistance,
-  meanHorizontalDistance,
-  meanVerticalDistance,
-  useRoster,
-} from "@/lib/storage";
+import { averageDartsPerWin, averagePct, meanEuclideanDistance, meanHorizontalDistance, meanVerticalDistance, useRoster, type PlayerRecord } from "@/lib/storage";
 import { avatarAccent } from "@/lib/avatarAccent";
-import { TrashIcon, TrophyIcon } from "@/components/icons";
+import { TrophyIcon } from "@/components/icons";
+import { ScreenTop } from "@/components/ScreenTop";
 
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
 
+/** One player or team with their numbers — a team has its members under the name. */
+function RecordCard({ p }: { p: PlayerRecord }) {
+  return (
+    <Link
+      href={`/spillere/${encodeURIComponent(p.name)}`}
+      className={`block shadow-panel rounded-xl p-4 ${FOCUS_RING}`}
+      style={{ background: "var(--color-surface)" }}
+    >
+      <div className="flex items-center gap-4 mb-4">
+        <div
+          className="rounded-full overflow-hidden shrink-0 flex items-center justify-center"
+          style={{ width: "2.75rem", height: "2.75rem", background: "var(--color-cell)", border: "1px solid var(--color-border)" }}
+        >
+          {p.photo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={p.photo} alt="" className="w-full h-full object-cover" />
+          ) : (
+            <span style={{ color: avatarAccent(p.name) }}>{p.name.charAt(0).toUpperCase()}</span>
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="truncate" style={{ color: "var(--color-cream)", fontWeight: 600 }}>{p.name}</p>
+          <p className="truncate" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>
+            {p.kind === "team" && p.members?.length ? `${p.members.join(", ")} · ` : ""}
+            {p.matchesPlayed} {p.matchesPlayed === 1 ? "kamp" : "kamper"}
+          </p>
+        </div>
+        <div className="text-right tabular shrink-0">
+          <p style={{ color: "var(--color-teal)", fontSize: "1.3rem", fontWeight: 700 }}>
+            {averagePct(p.overall)}%
+          </p>
+          <p className="section-label" style={{ fontSize: "0.75rem" }}>TOTALT</p>
+        </div>
+      </div>
+      <div className="grid grid-cols-5 gap-2">
+        {STEPS.map((s) => (
+          <div
+            key={s}
+            className="rounded-md py-2 text-center tabular"
+            style={{ background: "var(--color-cell)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -4px 8px rgba(0,0,0,0.18)" }}
+          >
+            <p style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>{STEP_LABELS[s]}</p>
+            <p style={{ color: "var(--color-cream)", fontSize: "0.75rem", fontWeight: 600 }}>
+              {averagePct(p.steps[s])}%
+            </p>
+          </div>
+        ))}
+      </div>
+      <div className="mt-4 pt-4 flex items-center justify-between" style={{ borderTop: "1px solid var(--color-border)" }}>
+        <span className="section-label" style={{ fontSize: "0.75rem" }}>SNITT PILER PR RUNDE</span>
+        <span className="tabular" style={{ color: "var(--color-teal)", fontWeight: 700 }}>
+          {averageDartsPerWin(p) ?? "–"}
+        </span>
+      </div>
+      <div className="mt-2 pt-2 grid grid-cols-3 gap-2 text-center" style={{ borderTop: "1px solid var(--color-border)" }}>
+        {[
+          { label: "MED", value: meanEuclideanDistance(p) },
+          { label: "MHD", value: meanHorizontalDistance(p) },
+          { label: "MVD", value: meanVerticalDistance(p) },
+        ].map(({ label, value }) => (
+          <div key={label}>
+            <p style={{ color: "var(--color-muted)", fontSize: "0.75rem", letterSpacing: "0.05em" }}>{label}</p>
+            <p className="tabular" style={{ color: "var(--color-cream)", fontSize: "0.8rem", fontWeight: 600 }}>
+              {value === null ? "–" : `${Math.round(value)}mm`}
+            </p>
+          </div>
+        ))}
+      </div>
+    </Link>
+  );
+}
+
+/** Every player with their numbers, then every team with a record of its own. Deleting happens on
+ *  the player's or team's own page, so the list is only the list — no bin beside each name. */
 export default function PlayersPage() {
   const roster = useRoster();
-  const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
+  const players = roster.filter((p) => p.kind !== "team");
+  const teams = roster.filter((p) => p.kind === "team");
 
   return (
-    <div className="animate-screen-enter min-h-screen w-full p-4" style={{ background: "var(--color-bg)" }}>
-      <div className="max-w-md mx-auto">
-        <div className="flex items-center justify-between mb-6 pt-2">
-          <Link href="/" className={`tactile px-3 py-2 rounded-lg text-sm ${FOCUS_RING}`} style={{ background: "var(--color-surface)", color: "var(--color-cream)" }}>
-            ← Hjem
-          </Link>
-          <h1 className="font-display" style={{ color: "var(--color-cream)", fontSize: "1.4rem" }}>
-            Spillere
-          </h1>
-          <Link
-            href="/hall-of-fame"
-            aria-label="Hall of Fame"
-            className={`tactile px-3 py-2 rounded-lg flex items-center justify-center ${FOCUS_RING}`}
-            style={{ background: "var(--color-surface)", color: "var(--color-gold)" }}
-          >
-            <TrophyIcon className="w-4 h-4" />
-          </Link>
-        </div>
+    <div className="animate-screen-enter screen" style={{ background: "var(--color-bg)" }}>
+      <div className="screen-inner">
+        <ScreenTop
+          title="Spillere"
+          backHref="/"
+          right={
+            <Link
+              href="/hall-of-fame"
+              aria-label="Hall of Fame"
+              className={`tactile rounded-lg flex items-center justify-center ${FOCUS_RING}`}
+              style={{ width: "2.75rem", height: "2.75rem", background: "var(--color-surface)", color: "var(--color-gold)", border: "1px solid var(--color-border)" }}
+            >
+              <TrophyIcon className="w-4 h-4" />
+            </Link>
+          }
+        />
 
         {roster.length === 0 && (
-          <p className="text-center py-10" style={{ color: "var(--color-muted)" }}>
-            Ingen spillere registrert enda
+          <p className="text-center py-8" style={{ color: "var(--color-muted)" }}>
+            Ingen spillere ennå
           </p>
         )}
 
-        <div className="space-y-3">
-          {roster.map((p) => (
-            <div key={p.name} className="shadow-panel rounded-xl p-4" style={{ background: "var(--color-surface)" }}>
-              {confirmingDelete === p.name ? (
-                <div className="flex items-center flex-wrap gap-3 mb-3">
-                  <p className="flex-1" style={{ color: "var(--color-cream)", fontSize: "0.9rem" }}>
-                    Slette {p.name}? Statistikken forsvinner.
-                  </p>
-                  <div className="flex gap-2 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        deletePlayer(p.name);
-                        setConfirmingDelete(null);
-                      }}
-                      className={`tactile px-3 py-2 rounded-lg text-sm font-medium ${FOCUS_RING}`}
-                      style={{ background: "var(--color-red)", color: "var(--color-cream)" }}
-                    >
-                      Slett
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setConfirmingDelete(null)}
-                      className={`tactile px-3 py-2 rounded-lg text-sm font-medium ${FOCUS_RING}`}
-                      style={{ background: "var(--color-green)", color: "var(--color-cream)" }}
-                    >
-                      Avbryt
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center gap-3 mb-3">
-                  <Link href={`/spillere/${encodeURIComponent(p.name)}`} className={`flex items-center gap-3 flex-1 min-w-0 rounded-lg ${FOCUS_RING}`}>
-                    <div
-                      className="w-12 h-12 rounded-full overflow-hidden shrink-0 flex items-center justify-center"
-                      style={{ background: "var(--color-cell)", border: "1px solid var(--color-border)" }}
-                    >
-                      {p.photo ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={p.photo} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <span style={{ color: avatarAccent(p.name) }}>{p.name.charAt(0).toUpperCase()}</span>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p style={{ color: "var(--color-cream)", fontWeight: 600 }}>{p.name}</p>
-                      <p style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>
-                        {p.matchesPlayed} {p.matchesPlayed === 1 ? "kamp" : "kamper"}
-                      </p>
-                    </div>
-                    <div className="text-right tabular shrink-0">
-                      <p style={{ color: "var(--color-teal)", fontSize: "1.3rem", fontWeight: 700 }}>
-                        {averagePct(p.overall)}%
-                      </p>
-                      <p style={{ color: "var(--color-muted)", fontSize: "0.65rem", letterSpacing: "0.1em" }}>TOTALT</p>
-                    </div>
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={() => setConfirmingDelete(p.name)}
-                    aria-label={`Slett ${p.name}`}
-                    className={`tactile w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${FOCUS_RING}`}
-                    style={{ background: "var(--color-cell)", color: "var(--color-red)" }}
-                  >
-                    <TrashIcon className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
-              <div className="grid grid-cols-5 gap-1">
-                {STEPS.map((s) => (
-                  <div
-                    key={s}
-                    className="rounded-md py-1.5 text-center tabular"
-                    style={{
-                      background: "var(--color-cell)",
-                      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -4px 8px rgba(0,0,0,0.18)",
-                    }}
-                  >
-                    <p style={{ color: "var(--color-muted)", fontSize: "0.6rem" }}>{STEP_LABELS[s]}</p>
-                    <p style={{ color: "var(--color-cream)", fontSize: "0.75rem", fontWeight: 600 }}>
-                      {averagePct(p.steps[s])}%
-                    </p>
-                  </div>
-                ))}
-              </div>
-              <div
-                className="mt-3 pt-3 flex items-center justify-between"
-                style={{ borderTop: "1px solid var(--color-border)" }}
-              >
-                <span style={{ color: "var(--color-muted)", fontSize: "0.75rem", letterSpacing: "0.05em" }}>
-                  SNITT PILER PR RUNDE
-                </span>
-                <span className="tabular" style={{ color: "var(--color-teal)", fontWeight: 700 }}>
-                  {averageDartsPerWin(p) ?? "–"}
-                </span>
-              </div>
-              <div
-                className="mt-2 pt-2 grid grid-cols-3 gap-1 text-center"
-                style={{ borderTop: "1px solid var(--color-border)" }}
-              >
-                {[
-                  { label: "MED", value: meanEuclideanDistance(p) },
-                  { label: "MHD", value: meanHorizontalDistance(p) },
-                  { label: "MVD", value: meanVerticalDistance(p) },
-                ].map(({ label, value }) => (
-                  <div key={label}>
-                    <p style={{ color: "var(--color-muted)", fontSize: "0.6rem", letterSpacing: "0.05em" }}>{label}</p>
-                    <p className="tabular" style={{ color: "var(--color-cream)", fontSize: "0.8rem", fontWeight: 600 }}>
-                      {value === null ? "–" : `${Math.round(value)}mm`}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
+        {teams.length > 0 && players.length > 0 && <p className="section-label mb-2">SPILLERE</p>}
+        <div className="space-y-4">
+          {players.map((p) => (
+            <RecordCard key={p.name} p={p} />
           ))}
         </div>
+
+        {teams.length > 0 && (
+          <>
+            <p className="section-label mb-2 mt-8">LAG</p>
+            <div className="space-y-4">
+              {teams.map((p) => (
+                <RecordCard key={p.name} p={p} />
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

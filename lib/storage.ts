@@ -2,193 +2,24 @@ import { useSyncExternalStore } from "react";
 import { reportError } from "./errorReporting";
 import { STEPS, type Step, type TurnAggregate } from "./game";
 import { supabase } from "./supabaseClient";
+import { defaultKits, type TeamKits } from "./teamKit";
+import {
+  emptyRecord,
+  recordKey as key,
+  recordToRow,
+  rowToRecord,
+  type AccuracyStat,
+  type BullDuelStat,
+  type HitStat,
+  type MatchHistoryEntry,
+  type PlayerRecord,
+  type PlayerRow,
+  type RingHits,
+} from "./playerRows";
 
-export type HitStat = { hits: number; misses: number };
-
-/** Running totals behind the MED/MHD/MVD career stats — see lib/dartboard.ts for what they measure. */
-export type AccuracyStat = { sumDistance: number; sumHorizontal: number; sumVertical: number; throws: number };
-
-function emptyAccuracyStat(): AccuracyStat {
-  return { sumDistance: 0, sumHorizontal: 0, sumVertical: 0, throws: 0 };
-}
-
-/** Running total behind one section's "Expected Goals" mean (expected crosses per dart) — see lib/dartboard.ts. */
-export type LuckStat = { sum: number; count: number };
-
-function emptyLuckStat(): LuckStat {
-  return { sum: 0, count: 0 };
-}
-
-/** Same per-section breakdown as `steps: Record<Step, HitStat>` — one running xG total per section, not just one overall mean. */
-function emptyLuckByStep(): Record<Step, LuckStat> {
-  const s = {} as Record<Step, LuckStat>;
-  STEPS.forEach((step) => (s[step] = emptyLuckStat()));
-  return s;
-}
-
-/** Career totals behind Bull-duell's kast/poeng/treff%/xG stats — see
- *  lib/bullDuel.ts. `redHits`/`greenHits` back the rødt/grønt drilldown. */
-export type BullDuelStat = { throws: number; points: number; redHits: number; greenHits: number; luckSum: number; luckCount: number };
-
-function emptyBullDuelStat(): BullDuelStat {
-  return { throws: 0, points: 0, redHits: 0, greenHits: 0, luckSum: 0, luckCount: 0 };
-}
-
-/** Keyed by the number (1–20) as a string — how many times a Triple or Double of that number has landed, regardless of how the game ended up scoring it. */
-export type RingHits = Record<string, number>;
-
-/** One completed match's own numbers, for the "over time" trend on a player's stats page — separate from the cumulative career totals above. */
-export type MatchHistoryEntry = {
-  date: string;
-  won: boolean;
-  dartsUsed: number;
-  hitPct: number;
-  /** This match's own MED/MHD/MVD — null if Scolia didn't detect any throws this match (manual-only play). */
-  med: number | null;
-  mhd: number | null;
-  mvd: number | null;
-};
-
-export type PlayerRecord = {
-  name: string;
-  photo?: string;
-  /** A short recorded clip (data URL), played when it becomes this player's turn. */
-  sound?: string;
-  matchesPlayed: number;
-  /** Matches this player actually finished (won) — the only matches where a
-   *  "darts to finish" number even makes sense. */
-  matchesWon: number;
-  /** Sum of hits+misses across every match this player has won. */
-  dartsInWins: number;
-  /** Fewest darts used in any single won match. Null until the first win. */
-  bestDartsToFinish: number | null;
-  overall: HitStat;
-  steps: Record<Step, HitStat>;
-  accuracy: AccuracyStat;
-  luck: Record<Step, LuckStat>;
-  bullDuel: BullDuelStat;
-  tripleHits: RingHits;
-  doubleHits: RingHits;
-  matchHistory: MatchHistoryEntry[];
-};
+export type { AccuracyStat, BullDuelStat, HitStat, LuckStat, MatchHistoryEntry, PlayerRecord, RecordKind, RingHits } from "./playerRows";
 
 type Roster = Record<string, PlayerRecord>;
-
-type PlayerRow = {
-  id: string;
-  name: string;
-  photo: string | null;
-  sound: string | null;
-  matches_played: number;
-  matches_won: number;
-  darts_in_wins: number;
-  overall_hits: number;
-  overall_misses: number;
-  steps: Record<Step, HitStat>;
-  accuracy_sum_distance: number | null;
-  accuracy_sum_horizontal: number | null;
-  accuracy_sum_vertical: number | null;
-  accuracy_throws: number | null;
-  // Superseded by the `luck` column below (per-section breakdown) — left in
-  // place as harmless dead columns rather than a destructive migration.
-  luck_sum: number | null;
-  luck_count: number | null;
-  luck: Partial<Record<Step, LuckStat>> | null;
-  bull_duel: BullDuelStat | null;
-  best_darts_to_finish: number | null;
-  triple_hits: RingHits | null;
-  double_hits: RingHits | null;
-  match_history: MatchHistoryEntry[] | null;
-};
-
-function emptyStepStats(): Record<Step, HitStat> {
-  const s = {} as Record<Step, HitStat>;
-  STEPS.forEach((step) => (s[step] = { hits: 0, misses: 0 }));
-  return s;
-}
-
-function key(name: string) {
-  return name.trim().toLowerCase();
-}
-
-/** Rows written before the `luck` column existed (or missing individual sections within it) fall back per-section, same convention as emptyStepStats. */
-function luckByStepFromRow(row: PlayerRow): Record<Step, LuckStat> {
-  const luck = {} as Record<Step, LuckStat>;
-  STEPS.forEach((step) => {
-    luck[step] = { sum: row.luck?.[step]?.sum ?? 0, count: row.luck?.[step]?.count ?? 0 };
-  });
-  return luck;
-}
-
-function rowToRecord(row: PlayerRow): PlayerRecord {
-  return {
-    name: row.name,
-    photo: row.photo ?? undefined,
-    sound: row.sound ?? undefined,
-    matchesPlayed: row.matches_played,
-    matchesWon: row.matches_won,
-    dartsInWins: row.darts_in_wins,
-    overall: { hits: row.overall_hits, misses: row.overall_misses },
-    steps: row.steps,
-    // Rows written before the accuracy columns existed have them as null.
-    accuracy: {
-      sumDistance: row.accuracy_sum_distance ?? 0,
-      sumHorizontal: row.accuracy_sum_horizontal ?? 0,
-      sumVertical: row.accuracy_sum_vertical ?? 0,
-      throws: row.accuracy_throws ?? 0,
-    },
-    luck: luckByStepFromRow(row),
-    // Rows written before the bull_duel column existed (or with an empty
-    // '{}' default, or from before the points/redHits/greenHits fields
-    // replaced the old "hits" count) have some/all fields missing — fall
-    // back per-field. Old "hits" data isn't migrated into points (a count
-    // and a point-sum aren't the same number) — it's simply reset to 0.
-    bullDuel: {
-      throws: row.bull_duel?.throws ?? 0,
-      points: row.bull_duel?.points ?? 0,
-      redHits: row.bull_duel?.redHits ?? 0,
-      greenHits: row.bull_duel?.greenHits ?? 0,
-      luckSum: row.bull_duel?.luckSum ?? 0,
-      luckCount: row.bull_duel?.luckCount ?? 0,
-    },
-    bestDartsToFinish: row.best_darts_to_finish ?? null,
-    tripleHits: row.triple_hits ?? {},
-    doubleHits: row.double_hits ?? {},
-    matchHistory: row.match_history ?? [],
-  };
-}
-
-function recordToRow(k: string, record: PlayerRecord): PlayerRow {
-  return {
-    id: k,
-    name: record.name,
-    photo: record.photo ?? null,
-    sound: record.sound ?? null,
-    matches_played: record.matchesPlayed,
-    matches_won: record.matchesWon,
-    darts_in_wins: record.dartsInWins,
-    overall_hits: record.overall.hits,
-    overall_misses: record.overall.misses,
-    steps: record.steps,
-    accuracy_sum_distance: record.accuracy.sumDistance,
-    accuracy_sum_horizontal: record.accuracy.sumHorizontal,
-    accuracy_sum_vertical: record.accuracy.sumVertical,
-    accuracy_throws: record.accuracy.throws,
-    // Dead columns, superseded by the per-section `luck` below — but they're NOT NULL in
-    // the table, so writing null here made EVERY write to `players` fail wholesale
-    // ("null value in column luck_sum violates not-null constraint"), silently killing all
-    // stat saving from 2026-08-22 until this was found. Written as 0 rather than dropped
-    // from the payload, since an insert can't rely on a default that may not exist.
-    luck_sum: 0,
-    luck_count: 0,
-    luck: record.luck,
-    bull_duel: record.bullDuel,
-    best_darts_to_finish: record.bestDartsToFinish,
-    triple_hits: record.tripleHits,
-    double_hits: record.doubleHits,
-    match_history: record.matchHistory,
-  };
-}
 
 // In-memory cache, kept in sync with the Supabase "players" table so every
 // device sees the same roster. useSyncExternalStore needs a stable snapshot
@@ -198,10 +29,13 @@ const listeners = new Set<() => void>();
 const EMPTY_ARRAY: never[] = [];
 let cachedNames: string[] = EMPTY_ARRAY;
 let cachedRecords: PlayerRecord[] = EMPTY_ARRAY;
+let cachedTeams: PlayerRecord[] = EMPTY_ARRAY;
 
 function recomputeSnapshots() {
   cachedRecords = Object.values(roster).sort((a, b) => a.name.localeCompare(b.name, "no"));
-  cachedNames = cachedRecords.map((p) => p.name);
+  // The names the pickers offer are people. Teams are picked as teams (see useTeamRecords).
+  cachedNames = cachedRecords.filter((p) => p.kind !== "team").map((p) => p.name);
+  cachedTeams = cachedRecords.filter((p) => p.kind === "team");
 }
 
 function notify() {
@@ -304,9 +138,19 @@ export function useRosterNames(): string[] {
   return useSyncExternalStore(subscribe, cachedNamesSnapshot, () => EMPTY_ARRAY);
 }
 
-/** Client-only read of the full roster, safe to call during render (no effect/setState needed). */
+/** Client-only read of the full roster — players and teams — safe to call during render. */
 export function useRoster(): PlayerRecord[] {
   return useSyncExternalStore(subscribe, cachedRecordsSnapshot, () => EMPTY_ARRAY);
+}
+
+function cachedTeamsSnapshot(): PlayerRecord[] {
+  ensureInitialized();
+  return cachedTeams;
+}
+
+/** The teams that have a record of their own — the ones with statistics. */
+export function useTeamRecords(): PlayerRecord[] {
+  return useSyncExternalStore(subscribe, cachedTeamsSnapshot, () => EMPTY_ARRAY);
 }
 
 export function getPlayerRecord(name: string): PlayerRecord | undefined {
@@ -318,26 +162,49 @@ export function ensurePlayer(name: string): PlayerRecord {
   ensureInitialized();
   const k = key(name);
   if (!roster[k]) {
-    const record: PlayerRecord = {
-      name: name.trim(),
-      matchesPlayed: 0,
-      matchesWon: 0,
-      dartsInWins: 0,
-      bestDartsToFinish: null,
-      overall: { hits: 0, misses: 0 },
-      steps: emptyStepStats(),
-      accuracy: emptyAccuracyStat(),
-      luck: emptyLuckByStep(),
-      bullDuel: emptyBullDuelStat(),
-      tripleHits: {},
-      doubleHits: {},
-      matchHistory: [],
-    };
+    const record = emptyRecord(name);
     roster = { ...roster, [k]: record };
     notify();
     upsertRow(k, record);
   }
   return roster[k];
+}
+
+/**
+ * The record a team's matches are written to. Made the first time the team plays; a row that
+ * already exists under that name — a pair name someone once entered as a player — becomes the
+ * team, keeping whatever statistics it had. The members are refreshed each time, so a renamed
+ * player follows.
+ */
+export function ensureTeam(name: string, members: string[]): PlayerRecord {
+  ensureInitialized();
+  const k = key(name);
+  const existing = roster[k];
+  const sameMembers = existing?.kind === "team" && JSON.stringify(existing.members ?? []) === JSON.stringify(members);
+  if (existing && sameMembers && existing.kits) return existing;
+  // Every saved team has its two shirts from the start; a team from before they were stored gets
+  // its default ones the next time it plays.
+  const kits = existing?.kits ?? defaultKits(members);
+  const record: PlayerRecord = existing ? { ...existing, kind: "team", members, kits } : { ...emptyRecord(name, "team", members), kits };
+  roster = { ...roster, [k]: record };
+  notify();
+  upsertRow(k, record);
+  return record;
+}
+
+/** The two shirts a team plays in — its own if it has them, otherwise the default for its people. */
+export function teamKitsOf(record: PlayerRecord): TeamKits {
+  return record.kits ?? defaultKits(record.members ?? []);
+}
+
+/** Changes a team's shirts — from the settings. */
+export function setTeamKits(name: string, kits: TeamKits) {
+  const k = key(name);
+  if (roster[k]?.kind !== "team") return;
+  const record = { ...roster[k], kits };
+  roster = { ...roster, [k]: record };
+  notify();
+  upsertRow(k, record);
 }
 
 export function setPlayerPhoto(name: string, photo: string) {
@@ -383,23 +250,7 @@ export function deletePlayer(name: string) {
 /** Rolls one player's final turn-by-turn match aggregate into their persisted stats. */
 export function recordMatchResult(name: string, aggregate: TurnAggregate, won: boolean) {
   const k = key(name);
-  const existing =
-    roster[k] ??
-    ({
-      name,
-      matchesPlayed: 0,
-      matchesWon: 0,
-      dartsInWins: 0,
-      bestDartsToFinish: null,
-      overall: { hits: 0, misses: 0 },
-      steps: emptyStepStats(),
-      accuracy: emptyAccuracyStat(),
-      luck: emptyLuckByStep(),
-      bullDuel: emptyBullDuelStat(),
-      tripleHits: {},
-      doubleHits: {},
-      matchHistory: [],
-    } satisfies PlayerRecord);
+  const existing = roster[k] ?? emptyRecord(name);
 
   const steps = { ...existing.steps };
   STEPS.forEach((step) => {

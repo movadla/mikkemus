@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { STEPS, STEP_LABELS, totalMarks, type PlayerProgress, type Step, type TurnAggregate, type TurnResult } from "@/lib/game";
 import { getRules } from "@/lib/rules";
 import { buildMatchFacts } from "@/lib/matchSummary";
@@ -122,9 +122,16 @@ export function WinnerScreen({
   );
   const confetti = useMemo(() => generateConfetti(confettiCount), [confettiCount]);
   const rain = useMemo(() => generateConfettiRain(rainCount), [rainCount]);
+  // The finer statistics (xH per row, where the darts landed) only exist with a board that
+  // reports coordinates, and even then they are for the ones who scroll for them: the screen
+  // was 2 198 px tall with everything open.
+  const hasScoliaData =
+    players.some((p) => STEPS.some((s) => (luckByPlayer[p]?.[s].count ?? 0) > 0)) ||
+    players.some((p) => (throwsByPlayer[p]?.length ?? 0) > 0);
+  const [showMore, setShowMore] = useState(false);
 
   return (
-    <div className="animate-winner-slam relative min-h-screen w-full flex items-center justify-center p-6 overflow-hidden" style={{ background: "var(--color-bg)" }}>
+    <div className="animate-winner-slam relative min-h-screen w-full flex items-center justify-center p-4 overflow-hidden" style={{ background: "var(--color-bg)" }}>
       {/* The blown-out first frame. Above everything, pointer-transparent, gone in 620ms. */}
       <div
         className="animate-winner-flash absolute inset-0 pointer-events-none z-50"
@@ -140,12 +147,13 @@ export function WinnerScreen({
           type="button"
           onClick={onUndoWin}
           title="Angre siste pil og gå tilbake til brettet"
-          className={`absolute top-3 right-3 z-40 px-2.5 py-1.5 rounded-lg ${FOCUS_RING}`}
+          className={`absolute top-4 right-4 z-40 px-4 rounded-lg ${FOCUS_RING}`}
           style={{
+            minHeight: "2.75rem",
             background: "var(--color-surface)",
             border: "1px solid var(--color-border)",
             color: "var(--color-muted)",
-            fontSize: "0.7rem",
+            fontSize: "0.75rem",
           }}
         >
           ↩ Angre
@@ -268,15 +276,15 @@ export function WinnerScreen({
         {/* What people read first, and often all they read: hit percentage and darts, side by side
             for everyone. The charts and the finer statistics are further down, for those who
             keep scrolling. */}
-        <div className="shadow-panel rounded-xl p-5 mb-6" style={{ background: "var(--color-surface)" }}>
-          <p className="mb-3 section-label">
+        <div className="shadow-panel rounded-xl p-4 mb-6" style={{ background: "var(--color-surface)" }}>
+          <p className="mb-4 section-label">
             STATISTIKK — DENNE KAMPEN
           </p>
           <div role="table" aria-label="Statistikk for kampen">
             <div
               role="row"
               className="grid items-end pb-1"
-              style={{ gridTemplateColumns: "minmax(0, 1fr) 4.2rem 4.2rem", color: "var(--color-label)", fontSize: "0.65rem", letterSpacing: "0.1em" }}
+              style={{ gridTemplateColumns: "minmax(0, 1fr) 4.2rem 4.2rem", color: "var(--color-label)", fontSize: "0.75rem", letterSpacing: "0.1em" }}
             >
               <span role="columnheader" />
               <span role="columnheader" className="text-right">TREFF</span>
@@ -310,17 +318,25 @@ export function WinnerScreen({
         <MatchSummary facts={facts} />
 
         {/* The match as a race — who led when, and by how much. */}
-        <div className="shadow-panel rounded-xl p-5 mb-6" style={{ background: "var(--color-surface)" }}>
-          <p className="mb-3 section-label">LEDELSE RUNDE FOR RUNDE</p>
+        <div className="shadow-panel rounded-xl p-4 mb-6" style={{ background: "var(--color-surface)" }}>
+          <p className="mb-4 section-label">LEDELSE RUNDE FOR RUNDE</p>
           <RaceChart players={players} turnLog={turnLogByPlayer} winner={winner} total={totalMarks()} />
         </div>
 
-        {/* Always rendered, even with nothing to show. Hiding it outright meant a match that
-            produced no judgeable darts looked identical to one where the stat had broken —
-            and until the match's luck totals were persisted, any mid-match reload silently
-            emptied this. A line saying why is worth more than a missing card. */}
-        <div className="shadow-panel rounded-xl p-5 mb-6" style={{ background: "var(--color-surface)" }}>
-          <p className="mb-3 section-label">EXPECTED HITS (FORVENTET / FAKTISK)</p>
+        {hasScoliaData && !showMore && (
+          <button
+            type="button"
+            onClick={() => setShowMore(true)}
+            className={`tactile w-full rounded-lg text-sm mb-4 ${FOCUS_RING}`}
+            style={{ minHeight: "2.75rem", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
+          >
+            Mer statistikk
+          </button>
+        )}
+        {hasScoliaData && showMore && (
+          <>
+        <div className="shadow-panel rounded-xl p-4 mb-4" style={{ background: "var(--color-surface)" }}>
+          <p className="mb-4 section-label">FORVENTEDE TREFF</p>
           {!players.some((p) => STEPS.some((s) => luckByPlayer[p]?.[s].count > 0)) ? (
             <p style={{ color: "var(--color-muted)", fontSize: "0.8rem", lineHeight: 1.45 }}>
               Ingen piler i denne kampen kunne bedømmes. xH regnes ut fra koordinatene til
@@ -338,7 +354,7 @@ export function WinnerScreen({
                     (stats[p]?.hits ?? 0) - (preBankedByPlayer[p]?.D ?? 0) - (preBankedByPlayer[p]?.T ?? 0);
                   return (
                     <div key={p}>
-                      <div className="flex justify-between items-center mb-1.5">
+                      <div className="flex justify-between items-center mb-2">
                         <span style={{ color: "var(--color-cream)" }}>{p}</span>
                         <span className="tabular" style={{ color: "var(--color-gold-strong)", fontWeight: 600 }}>
                           {overall === null ? "–" : `${formatLuck(overall)} / ${actualTotal}`}
@@ -355,8 +371,8 @@ export function WinnerScreen({
                           return (
                             <div
                               key={s}
-                              className="cell-tile rounded-md py-1.5 text-center tabular section-label">
-                              <p style={{ color: "var(--color-muted)", fontSize: "0.6rem" }}>{STEP_LABELS[s]}</p>
+                              className="cell-tile rounded-md py-2 text-center tabular section-label">
+                              <p style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>{STEP_LABELS[s]}</p>
                               <p style={{ color: "var(--color-cream)", fontSize: "0.75rem", fontWeight: 600 }}>
                                 {/* The actual count is only worth printing when it isn't the
                                     3 that closing a field always means — for the winner that
@@ -382,8 +398,8 @@ export function WinnerScreen({
         </div>
 
         {players.some((p) => (throwsByPlayer[p]?.length ?? 0) > 0) && (
-          <div className="shadow-panel rounded-xl p-5 mb-6" style={{ background: "var(--color-surface)" }}>
-            <p className="mb-3 section-label">
+          <div className="shadow-panel rounded-xl p-4 mb-6" style={{ background: "var(--color-surface)" }}>
+            <p className="mb-4 section-label">
               KASTSPREDNING
             </p>
             <div className="space-y-4">
@@ -402,6 +418,8 @@ export function WinnerScreen({
             </div>
           </div>
         )}
+          </>
+        )}
 
         {/* After a single match there are three things to do next, in the order people want them:
             the same people again, other people, or leave. In tournament mode there is only one —
@@ -410,8 +428,8 @@ export function WinnerScreen({
           <button
             type="button"
             onClick={onPlayAgain}
-            className={`glossy w-full py-4 rounded-lg font-semibold text-lg mb-3 ${FOCUS_RING}`}
-            style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)" } as React.CSSProperties}
+            className={`glossy w-full rounded-xl font-semibold text-lg mb-2 ${FOCUS_RING}`}
+            style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", minHeight: "3.25rem" } as React.CSSProperties}
           >
             Revansj
           </button>
@@ -420,8 +438,8 @@ export function WinnerScreen({
           <button
             type="button"
             onClick={onNewMatch}
-            className={`tactile w-full py-4 rounded-lg font-semibold text-lg mb-3 ${FOCUS_RING}`}
-            style={{ background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
+            className={`tactile w-full rounded-xl font-semibold text-lg mb-2 ${FOCUS_RING}`}
+            style={{ minHeight: "3.25rem", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
           >
             Ny kamp
           </button>
@@ -431,13 +449,13 @@ export function WinnerScreen({
           onClick={onHome}
           className={
             onPlayAgain
-              ? `tactile w-full py-3 rounded-lg font-medium ${FOCUS_RING}`
-              : `glossy w-full py-4 rounded-lg font-semibold text-lg ${FOCUS_RING}`
+              ? `tactile w-full rounded-xl font-semibold text-lg ${FOCUS_RING}`
+              : `glossy w-full rounded-xl font-semibold text-lg ${FOCUS_RING}`
           }
           style={
             onPlayAgain
-              ? { background: "transparent", color: "var(--color-muted)" }
-              : ({ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)" } as React.CSSProperties)
+              ? { minHeight: "3.25rem", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }
+              : ({ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", minHeight: "3.25rem" } as React.CSSProperties)
           }
         >
           {homeLabel}

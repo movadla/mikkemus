@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { bracketRoundLabel, matchParticipants, podium, previewPlayoffBracket, standingsWithMovement, type Podium, type Tournament, type TournamentMatch } from "@/lib/tournament";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { ScreenTop } from "./ScreenTop";
 import { TrophyIcon } from "./icons";
 
 const FOCUS_RING =
@@ -19,7 +20,7 @@ function MovementMark({ placesGained }: { placesGained: number | null }) {
   return (
     <span
       aria-label={up ? `opp ${placesGained} plasser` : `ned ${-placesGained} plasser`}
-      style={{ color: up ? "var(--color-green)" : "var(--color-red)", fontSize: "0.7rem", marginLeft: "0.35rem" }}
+      style={{ color: up ? "var(--color-green)" : "var(--color-red)", fontSize: "0.75rem", marginLeft: "0.5rem" }}
     >
       {up ? "▲" : "▼"}
       {Math.abs(placesGained)}
@@ -29,10 +30,9 @@ function MovementMark({ placesGained }: { placesGained: number | null }) {
 
 function StandingsTable({ names, matches, justPlayedId = null }: { names: string[]; matches: TournamentMatch[]; justPlayedId?: string | null }) {
   const rows = standingsWithMovement(names, matches, justPlayedId);
-  const headStyle: React.CSSProperties = { color: "var(--color-label)", fontSize: "0.65rem", letterSpacing: "0.1em" };
   return (
     <div role="table" aria-label="Tabell">
-      <div role="row" className="grid items-center px-3 pb-1" style={{ gridTemplateColumns: TABLE_COLUMNS, gap: "0.25rem", ...headStyle }}>
+      <div role="row" className="section-label grid items-center px-4 pb-2" style={{ gridTemplateColumns: TABLE_COLUMNS, gap: "0.25rem" }}>
         <span role="columnheader">#</span>
         <span role="columnheader">NAVN</span>
         <span role="columnheader" className="text-center" title="Kamper">K</span>
@@ -45,10 +45,11 @@ function StandingsTable({ names, matches, justPlayedId = null }: { names: string
           <div
             key={r.name}
             role="row"
-            className="grid items-center px-3 py-2 rounded-lg"
+            className="grid items-center px-4 rounded-lg"
             style={{
               gridTemplateColumns: TABLE_COLUMNS,
               gap: "0.25rem",
+              minHeight: "2.75rem",
               background: "var(--color-surface)",
               border: r.inMatch ? "1px solid var(--color-teal)" : "1px solid transparent",
             }}
@@ -71,7 +72,7 @@ function StandingsTable({ names, matches, justPlayedId = null }: { names: string
             </span>
             <span role="cell" className="tabular text-right" style={{ color: "var(--color-teal)", fontSize: "0.95rem", fontWeight: 700 }}>
               {r.points}
-              {r.pointsGained > 0 && <span style={{ color: "var(--color-green)", fontSize: "0.65rem", marginLeft: "0.2rem" }}>+{r.pointsGained}</span>}
+              {r.pointsGained > 0 && <span style={{ color: "var(--color-green)", fontSize: "0.75rem", marginLeft: "0.25rem" }}>+{r.pointsGained}</span>}
             </span>
           </div>
         ))}
@@ -89,33 +90,21 @@ function JustPlayedCard({ match, tournament }: { match: TournamentMatch; tournam
   const round = match.round === "group" ? `Gruppe ${(match.groupIndex ?? 0) + 1}` : bracketRoundLabel(match.bracketRoundSize ?? 1, match.isBronzeMatch);
   const group = match.round === "group" && match.groupIndex !== undefined ? tournament.groups[match.groupIndex] : null;
   return (
-    <div className="shadow-panel rounded-xl p-3 mb-6" style={{ background: "var(--color-panel)", border: "1px solid var(--color-teal)" }}>
-      <p className="section-label mb-2">KAMPEN ER FERDIG · {round.toUpperCase()}</p>
-      <p style={{ color: "var(--color-cream)", fontSize: "1.1rem" }}>
+    <div className="shadow-panel rounded-xl p-4 mb-4" style={{ background: "var(--color-panel)", border: "1px solid var(--color-teal)" }}>
+      <p className="section-label mb-2">RESULTAT · {round.toUpperCase()}</p>
+      <p className="mb-4" style={{ color: "var(--color-cream)", fontSize: "1.1rem" }}>
         <span className="font-display" style={{ color: "var(--color-gold)", fontSize: "1.3rem" }}>
           {winner}
         </span>{" "}
-        {participants.length === 2 ? (
-          <>
-            vant over {participants.find((p) => p !== winner)}
-          </>
-        ) : (
-          <>vant · {match.placements?.join(" › ")}</>
+        {participants.length === 2 ? <>vant over {participants.find((p) => p !== winner)}</> : <>vant · {match.placements?.join(" › ")}</>}
+        {participants.every((p) => darts(p) !== undefined) && (
+          <span className="tabular" style={{ color: "var(--color-muted)", fontSize: "0.85rem" }}>
+            {" "}
+            · {participants.map((p) => darts(p)).join("–")} piler
+          </span>
         )}
       </p>
-      {participants.some((p) => darts(p) !== undefined) && (
-        <p className="tabular mt-1" style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>
-          Piler brukt: {participants.map((p) => `${p} ${darts(p) ?? "–"}`).join(" · ")}
-        </p>
-      )}
-      {group && (
-        <div className="mt-3">
-          <p className="mb-1.5" style={{ color: "var(--color-label)", fontSize: "0.7rem", letterSpacing: "0.1em" }}>
-            TABELL ETTER KAMPEN
-          </p>
-          <StandingsTable names={group} matches={tournament.matches.filter((m) => m.groupIndex === match.groupIndex)} justPlayedId={match.id} />
-        </div>
-      )}
+      {group && <StandingsTable names={group} matches={tournament.matches.filter((m) => m.groupIndex === match.groupIndex)} justPlayedId={match.id} />}
     </div>
   );
 }
@@ -126,7 +115,7 @@ function MatchRow({ match }: { match: TournamentMatch }) {
   const darts = participants.map((p) => match.stats?.[p]?.darts);
   const showDarts = done && !match.isBye && darts.every((d) => d !== undefined);
   return (
-    <div className="flex items-center justify-between gap-3 px-3 py-1.5 rounded-lg" style={{ background: "var(--color-surface)" }}>
+    <div className="flex items-center justify-between gap-4 px-4 py-2 rounded-lg" style={{ background: "var(--color-surface)", minHeight: "2.75rem" }}>
       <span style={{ color: "var(--color-cream)", fontSize: "0.85rem" }}>
         {participants.map((p, i) => (
           <span key={p}>
@@ -156,15 +145,12 @@ function MatchRow({ match }: { match: TournamentMatch }) {
 function GroupMatches({ matches }: { matches: TournamentMatch[] }) {
   const upcoming = matches.filter((m) => !m.winner);
   const played = matches.filter((m) => !!m.winner);
-  const label = { color: "var(--color-muted)", fontSize: "0.65rem", letterSpacing: "0.1em" } as const;
   return (
     <>
       {upcoming.length > 0 && (
         <>
-          <p className="mt-3 mb-1.5" style={label}>
-            NESTE
-          </p>
-          <div className="space-y-1.5">
+          <p className="section-label mt-4 mb-2">NESTE</p>
+          <div className="space-y-2">
             {upcoming.map((m) => (
               <MatchRow key={m.id} match={m} />
             ))}
@@ -173,10 +159,8 @@ function GroupMatches({ matches }: { matches: TournamentMatch[] }) {
       )}
       {played.length > 0 && (
         <>
-          <p className="mt-3 mb-1.5" style={label}>
-            SPILT
-          </p>
-          <div className="space-y-1.5">
+          <p className="section-label mt-4 mb-2">SPILT</p>
+          <div className="space-y-2">
             {played.map((m) => (
               <MatchRow key={m.id} match={m} />
             ))}
@@ -199,7 +183,7 @@ function PodiumCard({ podium }: { podium: Podium }) {
       <p className="mb-2 section-label text-center">TURNERINGEN ER FERDIG</p>
       <div className="flex items-end justify-center gap-2">
         {places.map(({ name, place, height }) => (
-          <div key={place} role="listitem" className="flex-1 min-w-0 flex flex-col items-center gap-1.5">
+          <div key={place} role="listitem" className="flex-1 min-w-0 flex flex-col items-center gap-2">
             {place === 1 && <TrophyIcon className="w-6 h-6" />}
             <p className="font-display truncate w-full text-center" style={{ color: place === 1 ? "var(--color-gold)" : "var(--color-cream)", fontSize: place === 1 ? "1.3rem" : "1rem" }}>
               {name ?? "–"}
@@ -254,7 +238,7 @@ export function TournamentOverviewScreen({
   const bracketRoundSizes = Array.from(new Set(bracketMatches.map((m) => m.bracketRoundSize!))).sort((a, b) => b - a);
 
   return (
-    <div className="animate-screen-enter min-h-screen w-full p-4" style={{ background: "var(--color-bg)" }}>
+    <div className="animate-screen-enter screen" style={{ background: "var(--color-bg)" }}>
       {showCancelConfirm && (
         <ConfirmDialog
           message="Avbryte turneringen? Fremgangen slettes permanent og kan ikke gjenopprettes."
@@ -268,16 +252,8 @@ export function TournamentOverviewScreen({
           ]}
         />
       )}
-      <div className="max-w-md mx-auto">
-        <div className="flex items-center justify-between mb-6 pt-2">
-          <button type="button" onClick={onExitToHome} className={`tactile px-3 py-2 rounded-lg text-sm ${FOCUS_RING}`} style={{ background: "var(--color-surface)", color: "var(--color-cream)" }}>
-            ← Hjem
-          </button>
-          <h1 className="font-display" style={{ color: "var(--color-cream)", fontSize: "1.3rem" }}>
-            Turnering
-          </h1>
-          <div style={{ width: "72px" }} />
-        </div>
+      <div className="screen-inner">
+        <ScreenTop title="Turnering" onBack={onExitToHome} />
 
         {finished && (
           <>
@@ -299,22 +275,17 @@ export function TournamentOverviewScreen({
           <button
             type="button"
             onClick={() => onPlayNext(nextMatch)}
-            className={`tactile w-full py-4 rounded-lg font-semibold text-lg mb-6 ${FOCUS_RING}`}
-            style={{ background: "var(--color-teal)", color: "var(--color-bg)" }}
+            className={`glossy w-full rounded-xl font-semibold text-lg mb-4 ${FOCUS_RING}`}
+            style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", minHeight: "3.25rem" } as React.CSSProperties}
           >
             Neste kamp: {matchParticipants(nextMatch).join(" vs ")}
           </button>
         )}
 
-        <p className="mb-2 section-label">
-          GRUPPER
-        </p>
-        <div className="space-y-4 mb-6">
+        <div className="space-y-4 mb-4">
           {tournament.groups.map((group, gi) => (
-            <div key={gi} className="shadow-panel rounded-xl p-3" style={{ background: "var(--color-panel)", border: "1px solid var(--color-border)" }}>
-              <p className="mb-2" style={{ color: "var(--color-muted)", fontSize: "0.7rem", letterSpacing: "0.1em" }}>
-                GRUPPE {gi + 1}
-              </p>
+            <div key={gi} className="shadow-panel rounded-xl p-4" style={{ background: "var(--color-panel)", border: "1px solid var(--color-border)" }}>
+              <p className="section-label mb-2">GRUPPE {gi + 1}</p>
               {/* The group that has just played has its table in the result card above; showing it
                   again right under would only be the same numbers twice. */}
               {justPlayed?.round === "group" && justPlayed.groupIndex === gi ? (
@@ -327,12 +298,6 @@ export function TournamentOverviewScreen({
           ))}
         </div>
 
-        {bracketMatches.length === 0 && tournament.groups.length <= 1 && (
-          <p className="text-center mb-6" style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>
-            Ingen sluttspill — vinneren av gruppa blir turneringsvinner.
-          </p>
-        )}
-
         {bracketMatches.length === 0 &&
           tournament.groups.length > 1 &&
           (() => {
@@ -340,46 +305,33 @@ export function TournamentOverviewScreen({
             if (!preview) return null;
             return (
               <>
-                <p className="mb-2 section-label">
-                  SLUTTSPILL (FORHÅNDSVISNING)
-                </p>
-                <div className="shadow-panel rounded-xl p-3 mb-3" style={{ background: "var(--color-panel)", border: "1px solid var(--color-border)" }}>
-                  <p className="mb-2" style={{ color: "var(--color-muted)", fontSize: "0.7rem", letterSpacing: "0.1em" }}>
-                    {bracketRoundLabel(preview.bracketSize / 2).toUpperCase()}
+                <div className="shadow-panel rounded-xl p-4 mb-4" style={{ background: "var(--color-panel)", border: "1px solid var(--color-border)" }}>
+                  <p className="section-label mb-2">
+                    SLUTTSPILL · {[bracketRoundLabel(preview.bracketSize / 2), ...preview.laterRoundLabels].join(" → ").toUpperCase()}
+                    {preview.hasBronzeMatch && " · BRONSE"}
                   </p>
-                  <div className="space-y-1.5">
+                  <div className="space-y-2">
                     {preview.matches.map((m, i) => (
-                      <div key={i} className="flex items-center justify-between px-3 py-1.5 rounded-lg" style={{ background: "var(--color-surface)" }}>
+                      <div key={i} className="flex items-center px-4 rounded-lg" style={{ background: "var(--color-surface)", minHeight: "2.75rem" }}>
                         <span style={{ color: "var(--color-cream)", fontSize: "0.85rem" }}>
                           {m.labelA}
-                          {m.labelB ? ` vs ${m.labelB}` : " (walkover videre)"}
+                          {m.labelB ? ` vs ${m.labelB}` : " · walkover"}
                         </span>
                       </div>
                     ))}
                   </div>
                 </div>
-                <p className="text-center mb-6" style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>
-                  {preview.laterRoundLabels.length > 0 && <>Deretter: {preview.laterRoundLabels.join(" → ")}. </>}
-                  {preview.hasBronzeMatch && "Det spilles også bronsefinale. "}
-                  {preview.byes > 0 && `${preview.byes} får walkover i første runde. `}
-                  Endelig oppsett avgjøres av gruppetabellene.
-                </p>
               </>
             );
           })()}
 
         {bracketMatches.length > 0 && (
           <>
-            <p className="mb-2 section-label">
-              SLUTTSPILL
-            </p>
-            <div className="space-y-4 mb-6">
+            <div className="space-y-4 mb-4">
               {bracketRoundSizes.map((size) => (
-                <div key={size} className="shadow-panel rounded-xl p-3" style={{ background: "var(--color-panel)", border: "1px solid var(--color-border)" }}>
-                  <p className="mb-2" style={{ color: "var(--color-muted)", fontSize: "0.7rem", letterSpacing: "0.1em" }}>
-                    {bracketRoundLabel(size).toUpperCase()}
-                  </p>
-                  <div className="space-y-1.5">
+                <div key={size} className="shadow-panel rounded-xl p-4" style={{ background: "var(--color-panel)", border: "1px solid var(--color-border)" }}>
+                  <p className="section-label mb-2">{bracketRoundLabel(size).toUpperCase()}</p>
+                  <div className="space-y-2">
                     {bracketMatches
                       .filter((m) => m.bracketRoundSize === size && !m.isBronzeMatch)
                       .map((m) => (
@@ -389,11 +341,9 @@ export function TournamentOverviewScreen({
                 </div>
               ))}
               {bracketMatches.some((m) => m.isBronzeMatch) && (
-                <div className="shadow-panel rounded-xl p-3" style={{ background: "var(--color-panel)", border: "1px solid var(--color-border)" }}>
-                  <p className="mb-2" style={{ color: "var(--color-muted)", fontSize: "0.7rem", letterSpacing: "0.1em" }}>
-                    BRONSEFINALE
-                  </p>
-                  <div className="space-y-1.5">
+                <div className="shadow-panel rounded-xl p-4" style={{ background: "var(--color-panel)", border: "1px solid var(--color-border)" }}>
+                  <p className="section-label mb-2">BRONSEFINALE</p>
+                  <div className="space-y-2">
                     {bracketMatches
                       .filter((m) => m.isBronzeMatch)
                       .map((m) => (
@@ -410,8 +360,8 @@ export function TournamentOverviewScreen({
           <button
             type="button"
             onClick={() => setShowCancelConfirm(true)}
-            className={`tactile w-full py-3 rounded-lg text-sm ${FOCUS_RING}`}
-            style={{ background: "var(--color-surface)", color: "var(--color-red)", border: "1px solid var(--color-border)" }}
+            className={`tactile w-full rounded-lg text-sm ${FOCUS_RING}`}
+            style={{ minHeight: "2.75rem", background: "var(--color-surface)", color: "var(--color-red)", border: "1px solid var(--color-border)" }}
           >
             Avbryt turnering
           </button>

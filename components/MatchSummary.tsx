@@ -5,6 +5,10 @@ import { factsFingerprint, ruleBasedSummary, type MatchFacts } from "@/lib/match
 
 const AI_TIMEOUT_MS = 25_000;
 
+/** The AI text is only asked for where it can be answered: set NEXT_PUBLIC_AI_SUMMARY=1 together
+ *  with ANTHROPIC_API_KEY. Until then the rule-based text is the summary, and nothing is sent. */
+const AI_ENABLED = process.env.NEXT_PUBLIC_AI_SUMMARY === "1";
+
 function cacheKey(facts: MatchFacts): string {
   return `mikke-mus-summary:${factsFingerprint(facts)}`;
 }
@@ -37,7 +41,7 @@ export function MatchSummary({ facts }: { facts: MatchFacts | null }) {
   const [aiText, setAiText] = useState<{ key: string; text: string } | null>(null);
 
   useEffect(() => {
-    if (!facts || !key) return;
+    if (!AI_ENABLED || !facts || !key) return;
     const cached = readCached(key);
     if (cached) {
       queueMicrotask(() => setAiText({ key, text: cached }));
@@ -75,14 +79,14 @@ export function MatchSummary({ facts }: { facts: MatchFacts | null }) {
   const isAi = aiText !== null && aiText.key === key;
 
   return (
-    <div className="shadow-panel rounded-xl p-5 mb-6" style={{ background: "var(--color-surface)" }}>
-      <p className="mb-3 section-label flex items-center justify-center gap-2">
+    <div className="shadow-panel rounded-xl p-4 mb-6" style={{ background: "var(--color-surface)" }}>
+      <p className="mb-4 section-label flex items-center justify-center gap-2">
         HVORDAN GIKK DET?
         {isAi && (
           <span
             title="Skrevet av AI ut fra tallene i kampen"
-            className="rounded-full px-1.5"
-            style={{ border: "1px solid var(--color-border)", color: "var(--color-teal)", fontSize: "0.6rem", letterSpacing: "0.08em" }}
+            className="rounded-full px-2"
+            style={{ border: "1px solid var(--color-border)", color: "var(--color-teal)", fontSize: "0.75rem", letterSpacing: "0.08em" }}
           >
             AI
           </span>

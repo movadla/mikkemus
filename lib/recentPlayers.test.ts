@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { filterNames, looksLikeTeam, sortByRecent } from "./recentPlayers";
+import { filterNames, sortByRecent } from "./recentPlayers";
 
 describe("sortByRecent", () => {
   it("puts the most recent first and everyone else alphabetically after", () => {
@@ -33,15 +33,5 @@ describe("filterNames", () => {
   it("a blank search is everyone", () => {
     expect(filterNames(["A", "B"], "")).toEqual(["A", "B"]);
     expect(filterNames(["A", "B"], "   ")).toEqual(["A", "B"]);
-  });
-});
-
-describe("looksLikeTeam", () => {
-  it("recognises the pair names that ended up in the player list", () => {
-    for (const n of ["Vadla & Lars", "Moen og Hans", "lars og monge", "Per and Ola"]) expect(looksLikeTeam(n)).toBe(true);
-  });
-
-  it("leaves ordinary names alone, including ones that merely contain the letters", () => {
-    for (const n of ["Hans", "Stevie Tissen", "Ogden", "Anders", "E L", "Roger Andersen"]) expect(looksLikeTeam(n)).toBe(false);
   });
 });

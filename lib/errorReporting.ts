@@ -69,3 +69,25 @@ export function getToasts(): Toast[] {
 export function useErrorToasts(): Toast[] {
   return useSyncExternalStore(subscribe, getToasts, () => EMPTY_ARRAY);
 }
+
+/**
+ * Where the message is shown. A screen with a screen top (see components/ScreenTop.tsx) mounts a
+ * slot under it, and the message takes a line there, in the flow, pushing the content down for
+ * the seconds it is visible. The board has no such slot, so the global, floating version in
+ * app/layout.tsx shows it instead — but only while no slot is mounted, or the message would
+ * appear twice.
+ */
+let slots = 0;
+
+export function registerToastSlot(): () => void {
+  slots += 1;
+  notify();
+  return () => {
+    slots -= 1;
+    notify();
+  };
+}
+
+export function useHasToastSlot(): boolean {
+  return useSyncExternalStore(subscribe, () => slots > 0, () => false);
+}

@@ -26,7 +26,7 @@ import {
   type TurnShot,
   type PendingAmbiguous,
 } from "@/lib/game";
-import { getPlayerRecord, playPlayerSound, recordAccuracyTotals, recordLuckTotals, recordMatchHistory, recordMatchResult, recordRingHits, type RingHits } from "@/lib/storage";
+import { ensureTeam, getPlayerRecord, playPlayerSound, recordAccuracyTotals, recordLuckTotals, recordMatchHistory, recordMatchResult, recordRingHits, useTeamRecords, type RingHits } from "@/lib/storage";
 import { announce } from "@/lib/announcer";
 import { reportError } from "@/lib/errorReporting";
 import { clearActiveMatch, loadActiveMatch, saveActiveMatch } from "@/lib/activeMatch";
@@ -307,6 +307,10 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     awaitingConfirmResolutionRef.current = value;
     setAwaitingConfirmResolution(value);
   }
+  // The stand rule's question is on the screen: "were all three darts good?" — see standQuestionDue.
+  const [standQuestion, setStandQuestion] = useState(false);
+  // The saved teams, for their shirts — see kitAssignment below.
+  const teamRecords = useTeamRecords();
   // Which players in this match are bots, and at what difficulty — set once at
   // startGame from SetupScreen's picks. Bots are never written via ensurePlayer and
   // are excluded from finalizeMatch's persistence calls (see there).
@@ -1077,6 +1081,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     // First, before anything reads a rule: the target, the active step and what a throw means
     // all come from here for the rest of the match.
     setGameVariant(startVariant);
+    setStandQuestion(false);
     setVariant(startVariant);
     // Called synchronously from a real button tap (SetupScreen/tournament) — the
     // narrow window where the browser actually allows unlocking audio playback, well
@@ -1687,6 +1692,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
 
   function undo() {
     haptics.undo();
+    setStandQuestion(false);
     // This turn: the last ACTION goes — a whole dart with everything it brought, or a tap. See
     // rewindTurn for why it is rebuilt from the start rather than patched.
     if (turnActionsRef.current.length > 0) {
@@ -1780,10 +1786,17 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     players.forEach((p) => {
       const aggregate = aggregateTurns(finalTurnLog[p] ?? []);
       // A bot's darts aren't real play — never let them land in a human player's career stats
-      // (bots are never ensurePlayer'd into the roster to begin with), a team's name has no
-      // individual Supabase player record either, and a guest was never ensurePlayer'd either
-      // (see SetupScreen's addPlayer) — so results only ever count for a real, saved individual.
-      if (botLevels[p] || teamRosters[p] || guestPlayers[p]) return;
+      // (bots are never ensurePlayer'd into the roster to begin with), and a guest was never
+      // ensurePlayer'd either (see SetupScreen's addPlayer) — so results only ever count for a
+      // real, saved individual, or for a team: a team has a record of its own (lib/playerRows.ts),
+      // and its match goes there, not to its members. A team with a bot or a guest in it is left
+      // out for the same reason as the bot or the guest.
+      if (botLevels[p] || guestPlayers[p]) return;
+      const roster = teamRosters[p];
+      if (roster) {
+        if (roster.some((m) => m.isBot || guestPlayers[m.name])) return;
+        ensureTeam(p, roster.map((m) => m.name));
+      }
       const dartsUsed = aggregate.darts;
       // A match aborted before this player ever threw a dart isn't a match they played — without
       // this guard, quitting instantly (or a tournament match started and immediately abandoned)
@@ -1844,7 +1857,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
    *
    * Never hand this to an event handler directly — see `confirm` below.
    */
-  function finishTurn(progressOverride?: PlayerProgress, pendingHitsOverride?: HitRecord[], dartsOverride?: number) {
+  function finishTurn(progressOverride?: PlayerProgress, pendingHitsOverride?: HitRecord[], dartsOverride?: number, countedOverride?: number) {
     if (!activePlayer) return;
     scoliaDartsRef.current = 0;
     const effectiveProgress = progressOverride ?? progress;
@@ -1858,7 +1871,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       updateAwaitingConfirmResolution(true);
       return;
     }
-    advanceTurn(progressOverride, pendingHitsOverride, dartsOverride);
+    advanceTurn(progressOverride, pendingHitsOverride, dartsOverride, countedOverride);
   }
 
   /**
@@ -1870,7 +1883,31 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
    * can't catch it: a `() => void` prop happily accepts a function with optional parameters.
    */
   function confirm() {
+    if (standQuestionDue()) {
+      setStandQuestion(true);
+      return;
+    }
     finishTurn();
+  }
+
+  /**
+   * Whether Bekreft has to ask before the turn moves on. Under the stand rule a thrower keeps
+   * their place when all three darts counted — and with manual entry a tap is a mark, not a
+   * dart: three marks can be one single, one double and a miss, which is two darts. The board
+   * knows its darts, so with Scolia there is nothing to ask; by hand, the thrower is asked.
+   */
+  function standQuestionDue(): boolean {
+    if (!activePlayer || rewound !== null || botIsThrowing) return false;
+    if (!getRules().standOnThree) return false;
+    const roster = teamRosters[activePlayer];
+    if (!roster || roster.length < 2) return false;
+    if (turnShots.some(Boolean)) return false;
+    return countingDarts(turnActionsRef.current) >= DARTS_PER_TURN;
+  }
+
+  function answerStandQuestion(stood: boolean) {
+    setStandQuestion(false);
+    finishTurn(undefined, undefined, undefined, stood ? DARTS_PER_TURN : DARTS_PER_TURN - 1);
   }
 
   /**
@@ -1881,11 +1918,11 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
    * render — reading `progress`/`pendingHits` here directly would still be the
    * pre-redirect snapshot at that point.
    */
-  function advanceTurn(progressOverride?: PlayerProgress, pendingHitsOverride?: HitRecord[], dartsOverride?: number) {
+  function advanceTurn(progressOverride?: PlayerProgress, pendingHitsOverride?: HitRecord[], dartsOverride?: number, countedOverride?: number) {
     if (!activePlayer) return;
     // Read before the turn's action list is emptied just below: the stand rule is decided by
-    // how many of this turn's darts counted.
-    const countedDarts = countingDarts(turnActionsRef.current);
+    // how many of this turn's darts counted — or by the thrower's own answer (see answerStandQuestion).
+    const countedDarts = countedOverride ?? countingDarts(turnActionsRef.current);
     dartsOnStepRef.current = {};
     writeTurnActions([]);
     turnStartRef.current = null;
@@ -2039,6 +2076,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   }
 
   function abortGame() {
+    setStandQuestion(false);
     // A match that's abandoned before anyone wins never persists any stats —
     // only a match that actually finishes counts as a "kamp", same principle
     // Bull-duell was built with from the start (see lib/bullDuel.ts).
@@ -2115,10 +2153,13 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     undo();
   }
 
-  // The teams' shirts, by team name — the same two people are always in the same shirt, and a team
-  // whose colours would clash with an earlier one's plays in its away kit (lib/teamKit.ts).
+  // The teams' shirts, by team name — a saved team's own two (lib/playerRows.ts), otherwise the
+  // default for its people — and a team whose colours would clash with an earlier one's plays in
+  // its away kit (lib/teamKit.ts). Read reactively: the records arrive after the first render.
   const kitAssignment = assignKits(
-    players.filter((p) => teamRosters[p]?.length).map((p) => ({ name: p, members: teamRosters[p].map((m) => m.name) })),
+    players
+      .filter((p) => teamRosters[p]?.length)
+      .map((p) => ({ name: p, members: teamRosters[p].map((m) => m.name), kits: teamRecords.find((r) => r.name.toLowerCase() === p.toLowerCase())?.kits ?? null })),
   );
   const kits: Record<string, Kit> = Object.fromEntries(Object.entries(kitAssignment).map(([name, v]) => [name, v.kit]));
 
@@ -2128,8 +2169,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     // takes effect, so keep it as a harmless fallback rather than special-casing it away.
     return (
       <>
-        <ScoliaStatusBadge state={scolia.state} />
-        <SetupScreen onStart={startGame} onHome={onExitToHome} />
+        <SetupScreen onStart={startGame} onHome={onExitToHome} scolia={summarizeScolia(scolia.state)} />
       </>
     );
   }
@@ -2274,8 +2314,25 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         closedStep={closedStep}
         perfectCloses={perfectCloses}
         onResolvePendingChoice={resolvePendingChoice}
-        onRegisterHit={botIsThrowing ? () => {} : registerHitFromUi}
-        onRemoveHit={botIsThrowing ? () => {} : removeHitFromUi}
+        standQuestion={standQuestion}
+        onAnswerStand={answerStandQuestion}
+        // A mark added or taken away while the question is up changes what it is asking about.
+        onRegisterHit={
+          botIsThrowing
+            ? () => {}
+            : (s) => {
+                setStandQuestion(false);
+                registerHitFromUi(s);
+              }
+        }
+        onRemoveHit={
+          botIsThrowing
+            ? () => {}
+            : (s) => {
+                setStandQuestion(false);
+                removeHitFromUi(s);
+              }
+        }
         onUndo={botIsThrowing ? () => {} : undo}
         onConfirm={botIsThrowing ? () => {} : confirm}
         onAbort={abortGame}

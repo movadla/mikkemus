@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { RULES_SLIDES, RULES_SLIDE_MS, markRulesIntroSeen, type RulesSlide } from "@/lib/rulesIntro";
+import {
+  RULES_SLIDES,
+  RULES_SLIDE_MS,
+  markRulesIntroSeen,
+  type RulesSlide,
+} from "@/lib/rulesIntro";
 import { STEPS, STEP_LABELS } from "@/lib/game";
 import { Mark } from "./Mark";
 
@@ -14,7 +19,10 @@ function Picture({ slide }: { slide: RulesSlide }) {
   const [crosses, setCrosses] = useState(0);
   useEffect(() => {
     if (slide.id !== "kryss") return;
-    const timer = setInterval(() => setCrosses((c) => (c >= 3 ? 0 : c + 1)), 900);
+    const timer = setInterval(
+      () => setCrosses((c) => (c >= 3 ? 0 : c + 1)),
+      900,
+    );
     return () => clearInterval(timer);
   }, [slide.id]);
 
@@ -27,7 +35,7 @@ function Picture({ slide }: { slide: RulesSlide }) {
   }
   if (slide.id === "mal" || slide.id === "vinner") {
     return (
-      <div className="flex flex-wrap justify-center gap-1.5 max-w-xs" aria-hidden>
+      <div className="flex flex-wrap justify-center gap-2 max-w-xs" aria-hidden>
         {STEPS.map((s) => (
           <span
             key={s}
@@ -35,7 +43,10 @@ function Picture({ slide }: { slide: RulesSlide }) {
             style={{
               width: 44,
               height: 44,
-              background: slide.id === "vinner" ? "var(--color-cell-done)" : "var(--color-cell)",
+              background:
+                slide.id === "vinner"
+                  ? "var(--color-cell-done)"
+                  : "var(--color-cell)",
               color: "var(--color-cream)",
               fontSize: s.length > 2 ? "0.8rem" : "1.2rem",
               border: "1px solid var(--color-border)",
@@ -49,7 +60,7 @@ function Picture({ slide }: { slide: RulesSlide }) {
   }
   if (slide.id === "ring") {
     return (
-      <div className="flex gap-3" aria-hidden>
+      <div className="flex gap-4" aria-hidden>
         {[
           { label: "D", note: "2 kryss", count: 2 },
           { label: "T", note: "3 kryss", count: 3 },
@@ -58,10 +69,15 @@ function Picture({ slide }: { slide: RulesSlide }) {
             <div style={{ width: 84, height: 84 }}>
               <Mark count={r.count} target={3} />
             </div>
-            <span className="font-display" style={{ color: "var(--color-cream)", fontSize: "1.3rem" }}>
+            <span
+              className="font-display"
+              style={{ color: "var(--color-cream)", fontSize: "1.3rem" }}
+            >
               {r.label}
             </span>
-            <span style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>{r.note}</span>
+            <span style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>
+              {r.note}
+            </span>
           </div>
         ))}
       </div>
@@ -74,7 +90,13 @@ function Picture({ slide }: { slide: RulesSlide }) {
         <span
           key={n}
           className="rounded-lg flex items-center justify-center font-display"
-          style={{ width: 56, height: 56, background: "var(--color-green)", color: "var(--color-cream)", fontSize: "1.5rem" }}
+          style={{
+            width: 56,
+            height: 56,
+            background: "var(--color-green)",
+            color: "var(--color-cream)",
+            fontSize: "1.5rem",
+          }}
         >
           {n}
         </span>
@@ -88,26 +110,9 @@ function Picture({ slide }: { slide: RulesSlide }) {
  * with a way out at every moment. Shown the first time a game starts on a device, and from the
  * home screen whenever someone wants it again.
  *
- * If there is a real video at /regler.mp4 it plays instead of the slides — drop the file into
- * `public/` and it is picked up, no code change. Until then the slides are the introduction.
  */
 export function RulesIntro({ onDone }: { onDone: () => void }) {
   const [index, setIndex] = useState(0);
-  const [hasVideo, setHasVideo] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/regler.mp4", { method: "HEAD" })
-      .then((res) => {
-        if (!cancelled && res.ok) setHasVideo(true);
-      })
-      .catch(() => {
-        // No video, or offline: the slides carry it.
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   function finish() {
     markRulesIntroSeen();
@@ -115,7 +120,6 @@ export function RulesIntro({ onDone }: { onDone: () => void }) {
   }
 
   useEffect(() => {
-    if (hasVideo) return;
     if (index >= RULES_SLIDES.length - 1) {
       const end = setTimeout(finish, RULES_SLIDE_MS);
       return () => clearTimeout(end);
@@ -125,7 +129,7 @@ export function RulesIntro({ onDone }: { onDone: () => void }) {
     // finish is re-created every render and only ever reads stable things; restarting the timer
     // on each render would stop a slide from ever ending.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [index, hasVideo]);
+  }, [index]);
 
   const slide = RULES_SLIDES[index];
 
@@ -143,43 +147,57 @@ export function RulesIntro({ onDone }: { onDone: () => void }) {
       <button
         type="button"
         onClick={finish}
-        className={`tactile absolute top-3 right-3 px-4 py-2 rounded-lg text-sm ${FOCUS_RING}`}
-        style={{ background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
+        className={`tactile absolute top-4 right-4 px-4 rounded-lg text-sm ${FOCUS_RING}`}
+        style={{
+          minHeight: "2.75rem",
+          background: "var(--color-surface)",
+          color: "var(--color-cream)",
+          border: "1px solid var(--color-border)",
+        }}
       >
-        {hasVideo ? "Lukk" : "Hopp over"}
+        Hopp over
       </button>
 
-      {hasVideo ? (
-        <video
-          src="/regler.mp4"
-          controls
-          autoPlay
-          playsInline
-          onEnded={finish}
-          className="w-full max-w-md rounded-xl"
-          style={{ maxHeight: "70dvh", background: "#000" }}
-        />
-      ) : (
-        <div className="w-full max-w-md text-center">
-          <p className="section-label mb-6">SLIK SPILLER DU</p>
-          <div key={slide.id} className="animate-name-swap flex flex-col items-center gap-6">
-            <Picture slide={slide} />
-            <h2 className="font-display" style={{ color: "var(--color-cream)", fontSize: "1.8rem" }}>
-              {slide.title}
-            </h2>
-            <p style={{ color: "var(--color-cream)", opacity: 0.85, fontSize: "1.05rem", lineHeight: 1.55 }}>{slide.text}</p>
-          </div>
-          <div className="flex justify-center gap-2 mt-8" aria-hidden>
-            {RULES_SLIDES.map((s, i) => (
-              <span
-                key={s.id}
-                className="rounded-full"
-                style={{ width: i === index ? 22 : 8, height: 8, background: i <= index ? "var(--color-teal)" : "var(--color-border)", transition: "width 200ms" }}
-              />
-            ))}
-          </div>
+      <div className="w-full max-w-md text-center">
+        <p className="section-label mb-6">SLIK SPILLER DU</p>
+        <div
+          key={slide.id}
+          className="animate-name-swap flex flex-col items-center gap-6"
+        >
+          <Picture slide={slide} />
+          <h2
+            className="font-display"
+            style={{ color: "var(--color-cream)", fontSize: "1.8rem" }}
+          >
+            {slide.title}
+          </h2>
+          <p
+            style={{
+              color: "var(--color-cream)",
+              opacity: 0.85,
+              fontSize: "1.05rem",
+              lineHeight: 1.55,
+            }}
+          >
+            {slide.text}
+          </p>
         </div>
-      )}
+        <div className="flex justify-center gap-2 mt-8" aria-hidden>
+          {RULES_SLIDES.map((s, i) => (
+            <span
+              key={s.id}
+              className="rounded-full"
+              style={{
+                width: i === index ? 22 : 8,
+                height: 8,
+                background:
+                  i <= index ? "var(--color-teal)" : "var(--color-border)",
+                transition: "width 200ms",
+              }}
+            />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

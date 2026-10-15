@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CLASH_DISTANCE, assignKits, awayKit, firstKit, kitDistance } from "./teamKit";
+import { CLASH_DISTANCE, assignKits, awayKit, colourIndexOf, firstKit, kitDistance, kitFrom } from "./teamKit";
 
 describe("team kits", () => {
   it("are the same for the same two people, whatever the order or case", () => {
@@ -83,6 +83,21 @@ describe("assignKits — two teams in one match", () => {
     expect(assignKits([])).toEqual({});
     expect(assignKits([{ name: "A", members: ["Per"] }]).A.away).toBe(false);
     expect(() => assignKits([{ name: "A", members: [] }, { name: "B", members: [] }])).not.toThrow();
+  });
+
+  it("a team's own shirts are used when it has them, and the away one when they clash", () => {
+    const red = kitFrom(0, "solid");
+    const blue = kitFrom(1, "hoops");
+    const kits = assignKits([
+      { name: "A", members: ["Per"], kits: { home: red, away: blue } },
+      { name: "B", members: ["Ola"], kits: { home: kitFrom(3, "stripes"), away: kitFrom(6, "sash") } }, // white/red clashes with red? no — but its primary is cream
+      { name: "C", members: ["Kari"], kits: { home: kitFrom(0, "sash"), away: kitFrom(2, "halves") } },
+    ]);
+    expect(kits.A).toEqual({ kit: red, away: false });
+    expect(kits.C.away).toBe(true);
+    expect(kits.C.kit).toEqual(kitFrom(2, "halves"));
+    expect(colourIndexOf(kitFrom(7, "chevron"))).toBe(7);
+    expect(colourIndexOf({ primary: "#000000", secondary: "#000000", trim: "#000000", pattern: "solid" })).toBe(-1);
   });
 
   it("with many teams, nobody changes more than necessary and nobody throws", () => {

@@ -5,6 +5,7 @@ import { useRoster, type MatchHistoryEntry, type PlayerRecord } from "@/lib/stor
 import { avatarAccent } from "@/lib/avatarAccent";
 import { formatNightDate, groupNights } from "@/lib/nights";
 import { TrophyIcon } from "@/components/icons";
+import { ScreenTop } from "@/components/ScreenTop";
 
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
@@ -33,33 +34,25 @@ function winStreaks(history: MatchHistoryEntry[]): { best: number; current: numb
 
 export default function HallOfFamePage() {
   const roster = useRoster();
-  const ranked = [...roster]
-    .filter((p) => p.matchesPlayed > 0)
+  // People only in the all-time table; a team's record is on its own page (/spillere), and its
+  // nights are in the list below like anyone else's.
+  const ranked = roster
+    .filter((p) => p.kind !== "team" && p.matchesPlayed > 0)
     .sort((a, b) => winPct(b) - winPct(a) || b.matchesWon - a.matchesWon || b.matchesPlayed - a.matchesPlayed);
   const nights = groupNights(roster);
 
   return (
-    <div className="animate-screen-enter min-h-screen w-full p-4" style={{ background: "var(--color-bg)" }}>
-      <div className="max-w-md mx-auto">
-        <div className="flex items-center justify-between mb-6 pt-2">
-          <Link href="/" className={`tactile px-3 py-2 rounded-lg text-sm ${FOCUS_RING}`} style={{ background: "var(--color-surface)", color: "var(--color-cream)" }}>
-            ← Hjem
-          </Link>
-          <h1 className="font-display" style={{ color: "var(--color-cream)", fontSize: "1.4rem" }}>
-            Hall of Fame
-          </h1>
-          <div style={{ width: "72px" }} />
-        </div>
+    <div className="animate-screen-enter screen" style={{ background: "var(--color-bg)" }}>
+      <div className="screen-inner">
+        <ScreenTop title="Hall of Fame" backHref="/spillere" backLabel="← Spillere" />
 
         {ranked.length === 0 ? (
-          <p className="text-center py-10" style={{ color: "var(--color-muted)" }}>
-            Ingen kamper spilt enda
+          <p className="text-center py-8" style={{ color: "var(--color-muted)" }}>
+            Ingen kamper spilt ennå
           </p>
         ) : (
           <>
-            <p className="mb-2 section-label">
-              ALLE TIDER
-            </p>
+            <p className="mb-2 section-label">ALLE TIDER</p>
             <div className="space-y-2 mb-8">
               {ranked.map((p, i) => {
                 const streaks = winStreaks(p.matchHistory);
@@ -67,8 +60,8 @@ export default function HallOfFamePage() {
                 return (
                   <div
                     key={p.name}
-                    className={`${rankClass} flex items-center gap-3 px-4 py-3 rounded-xl`}
-                    style={i < 3 ? undefined : { background: "var(--color-surface)" }}
+                    className={`${rankClass} flex items-center gap-4 px-4 rounded-xl`}
+                    style={{ minHeight: "3.5rem", ...(i < 3 ? {} : { background: "var(--color-surface)" }) }}
                   >
                     <span
                       className="font-display shrink-0 w-7 flex items-center justify-center"
@@ -77,8 +70,8 @@ export default function HallOfFamePage() {
                       {i === 0 ? <TrophyIcon className="w-4 h-4" /> : i + 1}
                     </span>
                     <div
-                      className="w-9 h-9 rounded-full overflow-hidden shrink-0 flex items-center justify-center"
-                      style={{ background: "var(--color-cell)", border: "1px solid var(--color-border)" }}
+                      className="rounded-full overflow-hidden shrink-0 flex items-center justify-center"
+                      style={{ width: "2.25rem", height: "2.25rem", background: "var(--color-cell)", border: "1px solid var(--color-border)" }}
                     >
                       {p.photo ? (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -91,7 +84,7 @@ export default function HallOfFamePage() {
                       <p className="truncate" style={{ color: "var(--color-cream)", fontWeight: 600 }}>
                         {p.name}
                       </p>
-                      <p style={{ color: "var(--color-muted)", fontSize: "0.7rem" }}>
+                      <p style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>
                         {p.matchesWon}-{p.matchesPlayed - p.matchesWon} · {p.matchesPlayed} kamper
                         {streaks.current >= 2 && ` · 🔥 ${streaks.current} på rad`}
                         {streaks.best >= 2 && ` · rekord ${streaks.best}`}
@@ -105,10 +98,8 @@ export default function HallOfFamePage() {
               })}
             </div>
 
-            <p className="mb-2 section-label">
-              KVELDER
-            </p>
-            <div className="space-y-3">
+            <p className="mb-2 section-label">KVELDER</p>
+            <div className="space-y-4">
               {nights.map((night) => (
                 <Link
                   key={night.date}
@@ -121,10 +112,7 @@ export default function HallOfFamePage() {
                       {formatNightDate(night.date)}
                     </p>
                     {night.players[0] && night.players[0].wins > 0 && (
-                      <span
-                        className="inline-flex items-center gap-1"
-                        style={{ color: "var(--color-gold)", fontSize: "0.75rem" }}
-                      >
+                      <span className="inline-flex items-center gap-2" style={{ color: "var(--color-gold)", fontSize: "0.75rem" }}>
                         <TrophyIcon className="w-3 h-3" />
                         {night.players[0].name}
                       </span>
@@ -132,11 +120,7 @@ export default function HallOfFamePage() {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {night.players.map((p) => (
-                      <span
-                        key={p.name}
-                        className="px-2.5 py-1 rounded-full"
-                        style={{ background: "var(--color-surface)", color: "var(--color-cream)", fontSize: "0.75rem" }}
-                      >
+                      <span key={p.name} className="px-2 py-1 rounded-full" style={{ background: "var(--color-surface)", color: "var(--color-cream)", fontSize: "0.75rem" }}>
                         {p.name} <span style={{ color: "var(--color-muted)" }}>{p.wins}-{p.losses}</span>
                       </span>
                     ))}

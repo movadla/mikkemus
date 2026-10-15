@@ -138,6 +138,25 @@ button {
   color: var(--color-label);
 }
 
+/* Every screen that is not the board: 16 px to the sides, the same top, and room at the bottom
+   for the fixed Start button where there is one. One wrapper class instead of each screen's own
+   padding — the audit found eight screens at 342 px of content and nine at 358. */
+.screen {
+  min-height: 100dvh;
+  width: 100%;
+  padding: 1rem 1rem 2.5rem;
+}
+
+.screen.has-sticky-action {
+  padding-bottom: 9rem;
+}
+
+.screen-inner {
+  width: 100%;
+  max-width: 28rem;
+  margin-inline: auto;
+}
+
 /* Focus for a row whose wrapper is `display: contents`. Such an element generates no box at
    all, so an `outline` on it is never painted — the ring has to be drawn by the children.
    Tinting the cells rather than outlining each one keeps it reading as one row instead of

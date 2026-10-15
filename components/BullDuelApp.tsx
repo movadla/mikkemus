@@ -19,7 +19,7 @@ import { useScolia } from "@/lib/useScolia";
 import { BullDuelGameScreen } from "./BullDuelGameScreen";
 import { BullDuelWinnerScreen } from "./BullDuelWinnerScreen";
 import { BullDuelTargetScreen } from "./BullDuelTargetScreen";
-import { ScoliaStatusBadge } from "./ScoliaStatusBadge";
+import { summarizeScolia } from "./ScoliaStatusBadge";
 import { SetupScreen } from "./SetupScreen";
 
 type Screen = "setup" | "target" | "game" | "winner";
@@ -197,12 +197,14 @@ export function BullDuelApp({ onExitToHome }: { onExitToHome: () => void }) {
 
   return (
     <>
-      {scoliaEnabled && <ScoliaStatusBadge state={scolia.state} />}
-      {screen === "setup" && <SetupScreen onStart={handleStart} onHome={onExitToHome} title="Bull-duell" variantSelectable={false} />}
+      {screen === "setup" && (
+        <SetupScreen onStart={handleStart} onHome={onExitToHome} title="Bull-duell" variantSelectable={false} scolia={scoliaEnabled ? summarizeScolia(scolia.state) : null} />
+      )}
       {screen === "target" && <BullDuelTargetScreen onNext={handleTargetChosen} onBack={() => setScreen("setup")} />}
       {screen === "game" && duel && (
         <BullDuelGameScreen
           duel={duel}
+          scolia={scoliaEnabled ? summarizeScolia(scolia.state) : null}
           isActiveBot={activeBotLevel !== null}
           onManualHit={(sector) => registerDart(sector, null)}
           onConfirm={advanceTurn}

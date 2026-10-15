@@ -1,7 +1,24 @@
 import { describe, expect, it } from "vitest";
-import { applyTeamCard, mergeTeamCards, type TeamCard } from "./teamCards";
+import { mergeTeamCards, withTeamRecords, type TeamCard } from "./teamCards";
 
-const person = (name: string) => ({ name, isBot: false });
+describe("withTeamRecords", () => {
+  it("adds the teams with a record after the cards this device has used", () => {
+    const cards: TeamCard[] = [{ name: "Rakettene", members: ["Per", "Ola"], lastUsed: 5 }];
+    const all = withTeamRecords(cards, [{ name: "Vadla & Hans", members: ["Vadla", "Hans"] }, { name: "Erik & Lars", members: ["Erik", "Lars"] }]);
+    expect(all.map((c) => c.name)).toEqual(["Rakettene", "Erik & Lars", "Vadla & Hans"]);
+    expect(all[2]).toEqual({ name: "Vadla & Hans", members: ["Vadla", "Hans"], lastUsed: 0 });
+  });
+
+  it("the record's name wins over the card's for the same people, and the card keeps its place", () => {
+    const cards: TeamCard[] = [{ name: "Rakettene", members: ["Per", "Ola"], lastUsed: 5 }];
+    const all = withTeamRecords(cards, [{ name: "Per & Ola", members: ["ola", "per"] }]);
+    expect(all).toEqual([{ name: "Per & Ola", members: ["Per", "Ola"], lastUsed: 5 }]);
+  });
+
+  it("a record with no members is not a card", () => {
+    expect(withTeamRecords([], [{ name: "Alene" }, { name: "Tom", members: [] }])).toEqual([]);
+  });
+});
 
 describe("mergeTeamCards", () => {
   it("adds a team as a card and keeps the most recent first", () => {
@@ -22,45 +39,5 @@ describe("mergeTeamCards", () => {
     expect(mergeTeamCards([], [{ name: "Tom", members: [] }, { name: "   ", members: ["A"] }], 1)).toEqual([]);
     const many = Array.from({ length: 60 }, (_, i) => ({ name: `Lag${i}`, members: [`P${i}`] }));
     expect(mergeTeamCards([], many, 1).length).toBeLessThanOrEqual(40);
-  });
-});
-
-describe("applyTeamCard", () => {
-  const card: TeamCard = { name: "Rakettene", members: ["Per", "Ola"], lastUsed: 1 };
-  const empty = () => [{ name: "Lag 1", members: [] as string[] }, { name: "Lag 2", members: [] as string[] }];
-
-  it("adds the people who are not in the pool and fills the first empty team", () => {
-    const { people, teams } = applyTeamCard(card, [], empty(), person);
-    expect(people.map((p) => p.name)).toEqual(["Per", "Ola"]);
-    expect(teams[0]).toEqual({ name: "Rakettene", members: ["Per", "Ola"], custom: true });
-    expect(teams[1].members).toEqual([]);
-  });
-
-  it("does not add anybody twice, and uses the spelling already in the pool", () => {
-    const { people, teams } = applyTeamCard(card, [person("PER")], empty(), person);
-    expect(people.map((p) => p.name)).toEqual(["PER", "Ola"]);
-    expect(teams[0].members).toEqual(["PER", "Ola"]);
-  });
-
-  it("takes the card's people off any team they were already on, so nobody is in two", () => {
-    const teams = [{ name: "Lag 1", members: ["Per", "Kari"] }, { name: "Lag 2", members: [] as string[] }];
-    const out = applyTeamCard(card, [person("Per"), person("Kari")], teams, person);
-    expect(out.teams[0].members).toEqual(["Kari"]);
-    expect(out.teams[1].members).toEqual(["Per", "Ola"]);
-  });
-
-  it("opens a new team when every slot is taken", () => {
-    const teams = [{ name: "A", members: ["X"] }, { name: "B", members: ["Y"] }];
-    const out = applyTeamCard(card, [person("X"), person("Y")], teams, person);
-    expect(out.teams).toHaveLength(3);
-    expect(out.teams[2].members).toEqual(["Per", "Ola"]);
-  });
-
-  it("does not change what it was given", () => {
-    const teams = empty();
-    const people = [person("Per")];
-    applyTeamCard(card, people, teams, person);
-    expect(teams[0].members).toEqual([]);
-    expect(people).toHaveLength(1);
   });
 });

@@ -55,13 +55,3 @@ export function filterNames(names: string[], query: string): string[] {
   const q = query.trim().toLowerCase();
   return q ? names.filter((n) => n.toLowerCase().includes(q)) : names;
 }
-
-/**
- * A name that looks like it is a team rather than a person — "Vadla & Lars", "Moen og Hans".
- * People have been creating these as players to get a team name, which put them in the list of
- * players and in the statistics. Only a hint for the clean-up view: nothing is ever deleted
- * because of it.
- */
-export function looksLikeTeam(name: string): boolean {
-  return /\s(&|og|and)\s/i.test(name.trim());
-}

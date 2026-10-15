@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { distributeEvenly, suggestGroups } from "@/lib/tournament";
-import { PrimaryActionButton } from "./PrimaryActionButton";
+import { ScreenTop } from "./ScreenTop";
+import { StickyAction } from "./StickyAction";
 
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
@@ -13,17 +14,16 @@ function nextPowerOfTwo(n: number): number {
   return Math.max(p, 1);
 }
 
-/** Same "how many advance per group" rule buildPlayoffBracket uses — kept in sync here purely for
- *  the live summary line, not for actually generating matches. */
+/** One line under the counter: how many groups, and what that means for the playoff. Same
+ *  "how many advance per group" rule buildPlayoffBracket uses — kept in sync here purely for
+ *  the summary, not for actually generating matches. */
 function describeSetup(groups: string[][]): string {
-  if (groups.length <= 1) return "Ingen sluttspill — vinneren av tabellen blir turneringsvinner.";
+  if (groups.length <= 1) return "1 gruppe · ingen sluttspill";
   const minSize = Math.min(...groups.map((g) => g.length));
   const advancePerGroup = Math.min(2, minSize);
   const advancers = groups.length * advancePerGroup;
-  const bracketSize = nextPowerOfTwo(advancers);
-  const byes = bracketSize - advancers;
-  const byeNote = byes > 0 ? ` (${byes} får walkover første runde)` : "";
-  return `${groups.length} grupper → sluttspill med topp ${advancePerGroup} fra hver (${advancers} deltakere)${byeNote}.`;
+  const byes = nextPowerOfTwo(advancers) - advancers;
+  return `${groups.length} grupper · sluttspill med ${advancers}${byes > 0 ? ` · ${byes} walkover` : ""}`;
 }
 
 /** Every match is one against one. Tournaments from before this was fixed may still hold pods of
@@ -39,8 +39,8 @@ export function TournamentGroupSetupScreen({
   participantNames: string[];
   onBack: () => void;
   onGenerate: (groups: string[][], matchSize: number) => void;
-  /** True while a previous "Generer turnering" tap is still saving — disables the button so a
-   *  double-tap can't fire a second write while the first is in flight. */
+  /** True while a previous tap is still saving — disables the button so a double-tap can't
+   *  fire a second write while the first is in flight. */
   submitting?: boolean;
 }) {
   const [groups, setGroups] = useState<string[][]>(() => suggestGroups(participantNames));
@@ -56,63 +56,52 @@ export function TournamentGroupSetupScreen({
     setGroups((prev) => prev.map((g, i) => (i === groupIndex ? [...g.filter((n) => n !== name), name] : g.filter((n) => n !== name))));
   }
 
-  return (
-    <div className="animate-screen-enter min-h-screen w-full flex items-center justify-center p-6" style={{ background: "var(--color-bg)" }}>
-      <div className="w-full max-w-md">
-        <div className="flex items-center justify-between mb-6">
-          <button type="button" onClick={onBack} className={`tactile px-3 py-2 rounded-lg text-sm ${FOCUS_RING}`} style={{ background: "var(--color-surface)", color: "var(--color-cream)" }}>
-            ← Tilbake
-          </button>
-          <h1 className="font-display" style={{ color: "var(--color-cream)", fontSize: "1.3rem" }}>
-            Juster grupper
-          </h1>
-          <div style={{ width: "72px" }} />
-        </div>
+  const tooSmall = groups.findIndex((g) => g.length < MATCH_SIZE);
+  const stepper = (label: string, onClick: () => void, disabled: boolean) => (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label === "−" ? "Færre grupper" : "Flere grupper"}
+      className={`tactile rounded-full text-xl font-semibold ${FOCUS_RING}`}
+      style={{ width: "2.75rem", height: "2.75rem", background: "var(--color-surface)", color: "var(--color-cream)", opacity: disabled ? 0.4 : 1 }}
+    >
+      {label}
+    </button>
+  );
 
-        <div className="flex items-center justify-center gap-4 mb-4">
-          <button
-            type="button"
-            onClick={() => setGroupCount(groups.length - 1)}
-            disabled={groups.length <= 1}
-            className={`tactile w-10 h-10 rounded-full text-lg font-semibold ${FOCUS_RING}`}
-            style={{ background: "var(--color-surface)", color: "var(--color-cream)", opacity: groups.length <= 1 ? 0.4 : 1 }}
-          >
-            −
-          </button>
+  return (
+    <div className="animate-screen-enter screen has-sticky-action" style={{ background: "var(--color-bg)" }}>
+      <div className="screen-inner">
+        <ScreenTop title="Grupper" onBack={onBack} backLabel="← Tilbake" />
+
+        <div className="flex items-center justify-center gap-4 mb-2">
+          {stepper("−", () => setGroupCount(groups.length - 1), groups.length <= 1)}
           <span className="tabular" style={{ color: "var(--color-cream)", fontSize: "1.1rem", minWidth: "7rem", textAlign: "center" }}>
             {groups.length} {groups.length === 1 ? "gruppe" : "grupper"}
           </span>
-          <button
-            type="button"
-            onClick={() => setGroupCount(groups.length + 1)}
-            disabled={groups.length >= maxGroups}
-            className={`tactile w-10 h-10 rounded-full text-lg font-semibold ${FOCUS_RING}`}
-            style={{ background: "var(--color-surface)", color: "var(--color-cream)", opacity: groups.length >= maxGroups ? 0.4 : 1 }}
-          >
-            +
-          </button>
+          {stepper("+", () => setGroupCount(groups.length + 1), groups.length >= maxGroups)}
         </div>
 
-        <p className="text-center mb-6" style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>
+        <p className="text-center mb-6 tabular" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>
           {describeSetup(groups)}
         </p>
 
-        <div className="space-y-3 mb-6">
+        <div className="space-y-4">
           {groups.map((group, gi) => (
-            <div key={gi} className="shadow-panel rounded-xl p-3" style={{ background: "var(--color-panel)", border: "1px solid var(--color-border)" }}>
-              <p className="mb-2 section-label">
-                GRUPPE {gi + 1}
-              </p>
-              <div className="space-y-1.5">
+            <div key={gi} className="shadow-panel rounded-xl p-4" style={{ background: "var(--color-panel)", border: "1px solid var(--color-border)" }}>
+              <p className="mb-2 section-label">GRUPPE {gi + 1}</p>
+              <div className="space-y-2">
                 {group.map((name) => (
-                  <div key={name} className="flex items-center justify-between px-3 py-1.5 rounded-lg" style={{ background: "var(--color-surface)" }}>
+                  <div key={name} className="flex items-center justify-between gap-2 pl-4 pr-2 rounded-lg" style={{ background: "var(--color-surface)", minHeight: "2.75rem" }}>
                     <span style={{ color: "var(--color-cream)", fontSize: "0.9rem" }}>{name}</span>
                     {groups.length > 1 && (
                       <select
                         value={gi}
                         onChange={(e) => moveToGroup(name, Number(e.target.value))}
-                        className={`text-xs px-2 py-1 rounded ${FOCUS_RING}`}
-                        style={{ background: "var(--color-cell)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
+                        aria-label={`Gruppe for ${name}`}
+                        className={`text-sm px-2 rounded ${FOCUS_RING}`}
+                        style={{ minHeight: "2.25rem", background: "var(--color-cell)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
                       >
                         {groups.map((_, i) => (
                           <option key={i} value={i} style={{ background: "var(--color-cell)", color: "var(--color-cream)" }}>
@@ -124,7 +113,7 @@ export function TournamentGroupSetupScreen({
                   </div>
                 ))}
                 {group.length === 0 && (
-                  <p className="text-center py-1" style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>
+                  <p className="text-center py-2" style={{ color: "var(--color-muted)", fontSize: "0.85rem" }}>
                     Tom gruppe
                   </p>
                 )}
@@ -133,13 +122,14 @@ export function TournamentGroupSetupScreen({
           ))}
         </div>
 
-        <PrimaryActionButton
+        <StickyAction
           onClick={() => onGenerate(groups, MATCH_SIZE)}
-          ready={!groups.some((g) => g.length < MATCH_SIZE) && !submitting}
-          hint={submitting ? undefined : `Hver gruppe trenger minst ${MATCH_SIZE} deltakere`}
+          ready={tooSmall === -1 && !submitting}
+          summary={describeSetup(groups)}
+          reason={tooSmall === -1 ? undefined : `Gruppe ${tooSmall + 1} trenger ${MATCH_SIZE} deltakere`}
         >
-          Generer turnering
-        </PrimaryActionButton>
+          {submitting ? "Oppretter …" : "Opprett turnering"}
+        </StickyAction>
       </div>
     </div>
   );

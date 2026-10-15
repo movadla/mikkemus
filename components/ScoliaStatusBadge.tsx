@@ -1,6 +1,10 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import type { ScoliaState } from "@/lib/useScolia";
+
+const FOCUS_RING =
+  "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
 
 /** Label is deliberately binary (Online only once the board is actually ready to register
  *  throws) — the color dot still carries the finer-grained relay/board state. */
@@ -28,6 +32,7 @@ export function summarizeScolia(state: ScoliaState): { label: string; color: str
   }
 }
 
+/** The badge the board screen keeps: fixed in the corner, dot and text. */
 export function ScoliaStatusBadge({ state }: { state: ScoliaState }) {
   const { label, color } = summarizeScolia(state);
 
@@ -47,5 +52,49 @@ export function ScoliaStatusBadge({ state }: { state: ScoliaState }) {
       />
       <span style={{ color: "var(--color-cream)", fontSize: "0.7rem" }}>{label}</span>
     </div>
+  );
+}
+
+const LABEL_MS = 2500;
+
+/**
+ * The same status as a dot in the screen top (see ScreenTop), for every screen that is not the
+ * board. The text used to sit over the top-right corner of every screen, where it covered titles
+ * and buttons and said the same thing all evening; the colour is what people glance at. A tap
+ * shows the words for a moment.
+ */
+export function ScoliaDot({ summary }: { summary: { label: string; color: string } }) {
+  const [showLabel, setShowLabel] = useState(false);
+  useEffect(() => {
+    if (!showLabel) return;
+    const timer = setTimeout(() => setShowLabel(false), LABEL_MS);
+    return () => clearTimeout(timer);
+  }, [showLabel]);
+
+  return (
+    <span className="relative inline-flex">
+      <button
+        type="button"
+        onClick={() => setShowLabel((v) => !v)}
+        aria-label={summary.label}
+        className={`inline-flex items-center justify-center rounded-full ${FOCUS_RING}`}
+        style={{ width: "2.75rem", height: "2.75rem" }}
+      >
+        <span
+          className="rounded-full"
+          style={{ width: "0.75rem", height: "0.75rem", background: summary.color, boxShadow: `0 0 6px 1px ${summary.color}` }}
+          aria-hidden
+        />
+      </button>
+      {showLabel && (
+        <span
+          role="status"
+          className="absolute right-0 top-full mt-1 whitespace-nowrap rounded-full px-3 py-1.5 shadow-panel"
+          style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-cream)", fontSize: "0.75rem", zIndex: 30 }}
+        >
+          {summary.label}
+        </span>
+      )}
+    </span>
   );
 }

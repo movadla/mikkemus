@@ -1,20 +1,14 @@
 "use client";
 
-import { FX_LABELS, FX_LEVELS, setFxLevel, useFxLevel, type FxLevel } from "@/lib/fxLevel";
+import { FX_LABELS, FX_LEVELS, setFxLevel, useFxLevel } from "@/lib/fxLevel";
 
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
 
-const HINTS: Record<FxLevel, string> = {
-  normal: "Rolig: én myk lyd per treff, ingen risting eller konfetti.",
-  party: "Boom som bygger seg opp, risting, glød og konfetti.",
-  full: "Alt i Party, pluss publikum under en rekke og dobbelt konfetti.",
-};
-
 /**
- * Vanlig / Party / Full party. A setting of the device, not of the match — it is remembered and
- * applies to every game until changed, so it sits with the other setup choices but is not
- * passed along with them.
+ * Vanlig / Party / Full party. A setting of the device, not of the match — it lives in
+ * Innstillinger and applies to every game until changed. The names say what they are; the
+ * sentence that used to explain each level under the buttons is gone.
  */
 export function FxPicker() {
   const level = useFxLevel();
@@ -31,8 +25,9 @@ export function FxPicker() {
               role="radio"
               aria-checked={selected}
               onClick={() => setFxLevel(l)}
-              className={`tactile flex-1 py-2 rounded-lg font-medium ${FOCUS_RING}`}
+              className={`tactile flex-1 rounded-lg font-medium ${FOCUS_RING}`}
               style={{
+                minHeight: "2.75rem",
                 background: selected ? "rgba(47, 180, 194, 0.18)" : "var(--color-surface)",
                 color: selected ? "var(--color-teal)" : "var(--color-muted)",
                 border: selected ? "1px solid var(--color-teal)" : "1px solid var(--color-border)",
@@ -44,9 +39,6 @@ export function FxPicker() {
           );
         })}
       </div>
-      <p className="text-center mt-1.5" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>
-        {HINTS[level]}
-      </p>
     </div>
   );
 }

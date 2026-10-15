@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { formatNightDate, nightAverages, type NightSummary } from "@/lib/nights";
 import { TrophyIcon } from "@/components/icons";
+import { ScreenTop } from "./ScreenTop";
 
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
@@ -13,30 +14,18 @@ const FOCUS_RING =
  */
 export function NightDetail({ night, otherDates }: { night: NightSummary | null; otherDates: string[] }) {
   return (
-    <div className="animate-screen-enter min-h-screen w-full p-4" style={{ background: "var(--color-bg)" }}>
-      <div className="max-w-md mx-auto">
-        <div className="flex items-center justify-between mb-6 pt-2">
-          <Link href="/hall-of-fame" className={`tactile px-3 py-2 rounded-lg text-sm ${FOCUS_RING}`} style={{ background: "var(--color-surface)", color: "var(--color-cream)" }}>
-            ← Hall of Fame
-          </Link>
-          <h1 className="font-display" style={{ color: "var(--color-cream)", fontSize: "1.2rem" }}>
-            Kveldens oppsummering
-          </h1>
-          <div style={{ width: "72px" }} />
-        </div>
+    <div className="animate-screen-enter screen" style={{ background: "var(--color-bg)" }}>
+      <div className="screen-inner">
+        <ScreenTop title={night ? formatNightDate(night.date) : "Kveld"} backHref="/hall-of-fame" backLabel="← Tilbake" />
 
         {!night ? (
-          <p className="text-center py-10" style={{ color: "var(--color-muted)" }}>
-            Ingen kamper spilt denne kvelden.
+          <p className="text-center py-8" style={{ color: "var(--color-muted)" }}>
+            Ingen kamper denne kvelden
           </p>
         ) : (
           <>
-            <p className="text-center mb-6 font-display" style={{ color: "var(--color-cream)", fontSize: "1.2rem", textTransform: "capitalize" }}>
-              {formatNightDate(night.date)}
-            </p>
-
             {night.players[0] && night.players[0].wins > 0 && (
-              <div className="card-gold shadow-panel rounded-xl p-5 mb-6 text-center">
+              <div className="card-gold shadow-panel rounded-xl p-4 mb-4 text-center">
                 <p className="font-display" style={{ color: "var(--color-bg)", fontStyle: "italic", fontSize: "0.9rem" }}>
                   Kveldens vinner
                 </p>
@@ -47,52 +36,45 @@ export function NightDetail({ night, otherDates }: { night: NightSummary | null;
               </div>
             )}
 
-            <div className="space-y-2 mb-6">
+            <div className="space-y-2 mb-8">
               {night.players.map((p, i) => {
                 const stats = nightAverages(p);
                 const rankClass = i === 0 ? "rank-glow-1" : i === 1 ? "rank-glow-2" : i === 2 ? "rank-glow-3" : "shadow-panel";
                 return (
                   <div
                     key={p.name}
-                    className={`${rankClass} rounded-xl p-4 flex items-center justify-between`}
-                    style={i < 3 ? undefined : { background: "var(--color-surface)" }}
+                    className={`${rankClass} rounded-xl px-4 flex items-center justify-between`}
+                    style={{ minHeight: "3.5rem", ...(i < 3 ? {} : { background: "var(--color-surface)" }) }}
                   >
                     <div>
                       <p style={{ color: "var(--color-cream)", fontWeight: 600 }}>{p.name}</p>
                       <p style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>
-                        {p.wins}-{p.losses} denne kvelden
+                        {p.wins}-{p.losses}
                       </p>
                     </div>
                     <div className="text-right tabular">
                       <p style={{ color: "var(--color-teal)", fontWeight: 700 }}>
                         {stats.hitPct !== null ? `${Math.round(stats.hitPct)}%` : "–"}
                       </p>
-                      <p style={{ color: "var(--color-muted)", fontSize: "0.65rem", letterSpacing: "0.05em" }}>SNITT TREFF</p>
+                      <p className="section-label" style={{ fontSize: "0.75rem" }}>TREFF</p>
                     </div>
                   </div>
                 );
               })}
             </div>
-
-            <p className="text-center mb-8" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>
-              Kastspredning vises kun rett etter hver kamp på vinnerskjermen — rå kast lagres ikke
-              historisk, så denne oppsummeringen viser tall, ikke kart.
-            </p>
           </>
         )}
 
         {otherDates.length > 0 && (
           <>
-            <p className="mb-2 section-label">
-              ANDRE KVELDER
-            </p>
+            <p className="mb-2 section-label">ANDRE KVELDER</p>
             <div className="flex flex-wrap gap-2">
               {otherDates.map((d) => (
                 <Link
                   key={d}
                   href={`/kveld/${d}`}
-                  className={`tactile px-3 py-1.5 rounded-full text-sm ${FOCUS_RING}`}
-                  style={{ background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
+                  className={`tactile inline-flex items-center px-4 rounded-full text-sm ${FOCUS_RING}`}
+                  style={{ minHeight: "2.75rem", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
                 >
                   {d}
                 </Link>

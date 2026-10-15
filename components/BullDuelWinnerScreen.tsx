@@ -34,7 +34,7 @@ export function BullDuelWinnerScreen({
   const rain = useMemo(() => generateConfettiRain(RAIN_COUNT), []);
 
   return (
-    <div className="animate-screen-enter relative min-h-screen w-full flex items-center justify-center p-6 overflow-hidden" style={{ background: "var(--color-bg)" }}>
+    <div className="animate-screen-enter relative min-h-screen w-full flex items-center justify-center p-4 overflow-hidden" style={{ background: "var(--color-bg)" }}>
       {/* Full-screen rain behind the card — see WinnerScreen for the same treatment. */}
       <div className="absolute inset-0 pointer-events-none z-0" aria-hidden>
         {rain.map((c, i) => (
@@ -92,7 +92,7 @@ export function BullDuelWinnerScreen({
               )}
             </div>
           </div>
-          <div className="animate-winner-pop card-gold shadow-panel relative z-20 rounded-2xl pt-14 pb-8 px-8 mb-6">
+          <div className="animate-winner-pop card-gold shadow-panel relative z-20 rounded-2xl pt-12 pb-8 px-8 mb-6">
             <p className="font-display" style={{ color: "var(--color-bg)", fontSize: "1.05rem", fontStyle: "italic", letterSpacing: "0.04em", marginBottom: "0.4rem" }}>
               Vinner
             </p>
@@ -105,25 +105,25 @@ export function BullDuelWinnerScreen({
           </div>
         </div>
 
-        <div className="shadow-panel rounded-xl p-5 mb-6" style={{ background: "var(--color-surface)" }}>
-          <p className="mb-3 section-label">
+        <div className="shadow-panel rounded-xl p-4 mb-6" style={{ background: "var(--color-surface)" }}>
+          <p className="mb-4 section-label">
             BULL-DUELL — DENNE KAMPEN
           </p>
           <div
-            className="grid gap-x-2 gap-y-3 text-left"
+            className="grid gap-x-2 gap-y-4 text-left"
             style={{ gridTemplateColumns: "1fr repeat(4, auto)" }}
           >
-            <span style={{ color: "var(--color-muted)", fontSize: "0.7rem" }} />
-            <span className="text-right" style={{ color: "var(--color-muted)", fontSize: "0.7rem" }}>
+            <span style={{ color: "var(--color-muted)", fontSize: "0.75rem" }} />
+            <span className="text-right" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>
               KAST
             </span>
-            <span className="text-right" style={{ color: "var(--color-muted)", fontSize: "0.7rem" }}>
+            <span className="text-right" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>
               POENG
             </span>
-            <span className="text-right" style={{ color: "var(--color-muted)", fontSize: "0.7rem" }}>
+            <span className="text-right" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>
               %
             </span>
-            <span className="text-right" style={{ color: "var(--color-muted)", fontSize: "0.7rem" }}>
+            <span className="text-right" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>
               XG
             </span>
             {duel.players.map((p) => {
@@ -166,7 +166,7 @@ export function BullDuelWinnerScreen({
                   </div>
                   {isExpanded && (
                     <div
-                      className="tabular text-left flex items-center gap-3"
+                      className="tabular text-left flex items-center gap-4"
                       style={{ gridColumn: "1 / -1", fontSize: "0.78rem", color: "var(--color-muted)", paddingBottom: "0.15rem" }}
                     >
                       <span className="flex items-center gap-1">
@@ -189,7 +189,7 @@ export function BullDuelWinnerScreen({
         <button
           type="button"
           onClick={onPlayAgain}
-          className={`glossy w-full py-4 rounded-lg font-semibold text-lg mb-3 ${FOCUS_RING}`}
+          className={`glossy w-full py-4 rounded-lg font-semibold text-lg mb-4 ${FOCUS_RING}`}
           style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)" } as React.CSSProperties}
         >
           Revansj

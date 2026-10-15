@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
+import { ScreenTop } from "@/components/ScreenTop";
 import {
   BOOM_DEFAULT,
   boomForStreak,
@@ -22,7 +22,7 @@ const FOCUS_RING =
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="shadow-panel rounded-xl p-4 mb-4" style={{ background: "var(--color-surface)" }}>
-      <p className="mb-3 section-label">
+      <p className="mb-4 section-label">
         {title}
       </p>
       {children}
@@ -77,7 +77,7 @@ function PlayButton({ onClick, accent, children }: { onClick: () => void; accent
     <button
       type="button"
       onClick={onClick}
-      className={`tactile w-full py-3.5 rounded-lg font-semibold ${FOCUS_RING}`}
+      className={`tactile w-full py-4.5 rounded-lg font-semibold ${FOCUS_RING}`}
       style={{ background: accent, color: "var(--color-bg)" }}
     >
       {children}
@@ -119,25 +119,8 @@ export default function LydPage() {
       // Any tap here unlocks audio playback for the page — see primeAudio.
       onPointerDownCapture={primeAudio}
     >
-      <div className="max-w-md mx-auto pb-10">
-        <div className="flex items-center justify-between mb-5 pt-2">
-          <Link
-            href="/"
-            className={`tactile px-3 py-2 rounded-lg text-sm ${FOCUS_RING}`}
-            style={{ background: "var(--color-surface)", color: "var(--color-cream)" }}
-          >
-            ← Hjem
-          </Link>
-          <h1 className="font-display" style={{ color: "var(--color-cream)", fontSize: "1.5rem" }}>
-            Lyder
-          </h1>
-          <span className="w-16" aria-hidden />
-        </div>
-
-        <p className="mb-5 px-1" style={{ color: "var(--color-muted)", fontSize: "0.8rem", lineHeight: 1.5 }}>
-          Skru på knottene til du finner lyden du vil ha, og si fra hvilke tall du landet på — så gjør jeg dem til
-          standard i spillet. Tallene vises over hver knott.
-        </p>
+      <div className="max-w-md mx-auto pb-8">
+        <ScreenTop title="Lyder" backHref="/" />
 
         <Panel title="BOOM — DYPT ANSLAG VED TREFF">
           <Slider
@@ -183,7 +166,7 @@ export default function LydPage() {
           <PlayButton onClick={() => playBoom(boom)} accent={boomAccent}>
             ▶ Spill boom ({boom.darkness}·{boom.volume}·{boom.grit}·{boom.punch}·{boom.length})
           </PlayButton>
-          <div className="grid grid-cols-2 gap-2 mt-3">
+          <div className="grid grid-cols-2 gap-2 mt-4">
             {BOOM_PRESETS.map((p) => (
               <button
                 key={p.label}
@@ -192,7 +175,7 @@ export default function LydPage() {
                   setBoom(p.params);
                   playBoom(p.params);
                 }}
-                className={`tactile py-2.5 rounded-lg ${FOCUS_RING}`}
+                className={`tactile py-2 rounded-lg ${FOCUS_RING}`}
                 style={{ background: "var(--color-cell)", color: "var(--color-cream)", fontSize: "0.75rem" }}
               >
                 {p.label}
@@ -229,7 +212,7 @@ export default function LydPage() {
           <PlayButton onClick={() => playCrowd(crowd)} accent={crowdAccent}>
             ▶ Spill jubel ({crowd.darkness}·{crowd.volume}·{crowd.density})
           </PlayButton>
-          <div className="grid grid-cols-2 gap-2 mt-3">
+          <div className="grid grid-cols-2 gap-2 mt-4">
             {CROWD_PRESETS.map((p) => (
               <button
                 key={p.label}
@@ -238,7 +221,7 @@ export default function LydPage() {
                   setCrowd(p.params);
                   playCrowd(p.params);
                 }}
-                className={`tactile py-2.5 rounded-lg ${FOCUS_RING}`}
+                className={`tactile py-2 rounded-lg ${FOCUS_RING}`}
                 style={{ background: "var(--color-cell)", color: "var(--color-cream)", fontSize: "0.75rem" }}
               >
                 {p.label}
@@ -248,7 +231,7 @@ export default function LydPage() {
         </Panel>
 
         <Panel title="OPPTRAPPING — SLIK DET VILLE HØRTES UT I SPILLET">
-          <p className="mb-3" style={{ color: "var(--color-muted)", fontSize: "0.72rem", lineHeight: 1.5 }}>
+          <p className="mb-4" style={{ color: "var(--color-muted)", fontSize: "0.72rem", lineHeight: 1.5 }}>
             Boomen blir lengre og hardere per treff, jubelen høyere og tettere — begge bygget på innstillingene dine
             over. Mørkheten holdes fast, så de tre leses som samme slag hardere, ikke tre ulike lyder.
           </p>

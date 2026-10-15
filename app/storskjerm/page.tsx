@@ -30,8 +30,8 @@ function HomeLink() {
   return (
     <Link
       href="/"
-      className="fixed top-2 left-2 z-40 text-xs opacity-20 hover:opacity-100 focus-visible:opacity-100 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)] transition-opacity"
-      style={{ color: "var(--color-cream)" }}
+      className="fixed top-2 left-2 z-40 inline-flex items-center px-4 text-xs opacity-20 hover:opacity-100 focus-visible:opacity-100 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)] transition-opacity"
+      style={{ color: "var(--color-cream)", minHeight: "2.75rem" }}
     >
       ← Hjem
     </Link>

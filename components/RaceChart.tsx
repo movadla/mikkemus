@@ -29,11 +29,12 @@ export function RaceChart({
   const rounds = Math.max(1, ...series.map((s) => s.points.length - 1));
 
   const W = 320;
-  const H = 168;
-  const left = 24;
-  const right = 34;
-  const top = 10;
-  const bottom = 20;
+  const H = 176;
+  // Margins sized for 11-unit text: at the 358 px the chart renders at, that is 12 px.
+  const left = 30;
+  const right = 40;
+  const top = 12;
+  const bottom = 24;
   const plotW = W - left - right;
   const plotH = H - top - bottom;
   const x = (round: number) => left + (round / rounds) * plotW;
@@ -68,7 +69,7 @@ export function RaceChart({
         {yTicks.map((t) => (
           <g key={t}>
             <line x1={left} x2={W - right} y1={y(t)} y2={y(t)} stroke="var(--color-border)" strokeWidth={0.6} strokeDasharray={t === total ? undefined : "2 3"} />
-            <text x={left - 5} y={y(t)} textAnchor="end" dominantBaseline="middle" fontSize={7.5} fill="var(--color-muted)" className="tabular">
+            <text x={left - 5} y={y(t)} textAnchor="end" dominantBaseline="middle" fontSize={12} fill="var(--color-muted)" className="tabular">
               {t}
             </text>
           </g>
@@ -77,7 +78,7 @@ export function RaceChart({
         {xTicks.map((r) => (
           <g key={r}>
             <line x1={x(r)} x2={x(r)} y1={y(0)} y2={y(0) + 3} stroke="var(--color-border)" strokeWidth={0.8} />
-            <text x={x(r)} y={H - 6} textAnchor="middle" fontSize={7.5} fill="var(--color-muted)" className="tabular">
+            <text x={x(r)} y={H - 8} textAnchor="middle" fontSize={12} fill="var(--color-muted)" className="tabular">
               {r}
             </text>
           </g>
@@ -96,7 +97,7 @@ export function RaceChart({
                 x={x(s.points.length - 1) + 6}
                 y={labelY.get(s.player)}
                 dominantBaseline="middle"
-                fontSize={8.5}
+                fontSize={12}
                 fontWeight={isWinner ? 700 : 500}
                 fill={s.colour}
                 className="tabular"
@@ -110,7 +111,7 @@ export function RaceChart({
       {/* Who is which line. */}
       <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 mt-1">
         {series.map((s) => (
-          <span key={s.player} className="inline-flex items-center gap-1.5" style={{ color: "var(--color-cream)", fontSize: "0.72rem" }}>
+          <span key={s.player} className="inline-flex items-center gap-1.5" style={{ color: "var(--color-cream)", fontSize: "0.75rem" }}>
             <span aria-hidden className="inline-block rounded-full" style={{ width: "0.55rem", height: "0.55rem", background: s.colour }} />
             {s.player}
           </span>

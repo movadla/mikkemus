@@ -115,6 +115,9 @@ type Props = {
    *  Scolia integration is switched off entirely. */
   scolia: { label: string; color: string } | null;
   onResolvePendingChoice: (choice: "keep" | "redirect") => void;
+  /** The stand rule's question is up: were all three darts good? See MikkeMusApp's standQuestionDue. */
+  standQuestion: boolean;
+  onAnswerStand: (stood: boolean) => void;
   onRegisterHit: (step: Step) => void;
   /** Long-press on a cell: take one cross back off that row. */
   onRemoveHit: (step: Step) => void;
@@ -374,6 +377,56 @@ function ChoiceBox({
   );
 }
 
+/**
+ * The stand rule's question, in the same box and the same place as the triple/double one: by
+ * hand, three marks are not always three darts, so before the turn moves on the thrower says
+ * whether all three counted. Ja keeps them at the oche; Nei hands over to the next in the team.
+ */
+function StandBox({ thrower, onAnswer, compact = false }: { thrower: string | null; onAnswer: (stood: boolean) => void; compact?: boolean }) {
+  const option = (stood: boolean, title: string, detail: string) => (
+    <button
+      type="button"
+      onClick={() => onAnswer(stood)}
+      className={`glossy flex-1 rounded-xl text-left ${FOCUS_RING}`}
+      style={
+        {
+          "--btn-fill": "var(--color-surface)",
+          color: "var(--color-cream)",
+          border: "1.5px solid var(--color-gold)",
+          padding: compact ? "0.35rem 0.5rem" : "0.6rem 0.75rem",
+        } as React.CSSProperties
+      }
+    >
+      <span className="block font-semibold" style={{ fontSize: compact ? "0.85rem" : "1.05rem" }}>
+        {title}
+      </span>
+      <span className="block" style={{ color: "var(--color-gold-strong)", fontSize: compact ? "0.68rem" : "0.78rem" }}>
+        {detail}
+      </span>
+    </button>
+  );
+  return (
+    <div
+      role="group"
+      aria-label="Tre tellende piler?"
+      className={`choice-box rounded-xl ${compact ? "" : "mb-2"}`}
+      style={{
+        background: "rgba(201, 162, 75, 0.12)",
+        border: "1px solid var(--color-gold)",
+        padding: compact ? "0.4rem" : "0.6rem",
+      }}
+    >
+      <p className="text-center mb-1.5" style={{ color: "var(--color-gold-strong)", fontSize: compact ? "0.72rem" : "0.9rem", fontWeight: 700 }}>
+        Tre tellende piler?
+      </p>
+      <div className={`flex gap-2 ${compact ? "flex-col" : ""}`}>
+        {option(true, "Ja", thrower ? `${thrower} står` : "kasteren står")}
+        {option(false, "Nei", "neste på laget")}
+      </div>
+    </div>
+  );
+}
+
 const PICKER_RINGS: { key: "S" | "D" | "T"; label: string }[] = [
   { key: "S", label: "Enkel" },
   { key: "D", label: "Dobbel" },
@@ -480,6 +533,8 @@ export function GameScreen({
   closedStep,
   perfectCloses,
   onResolvePendingChoice,
+  standQuestion,
+  onAnswerStand,
   onRegisterHit,
   onRemoveHit,
   matchThrows,
@@ -626,8 +681,12 @@ export function GameScreen({
   // enough, and the player is still throwing. Over means three darts in, or Bekreft was pressed.
   const roundOver = awaitingConfirmResolution || dartsThisTurn >= DARTS_PER_TURN;
   const showChoiceBox = !!pendingChoice && choiceInteractive && roundOver;
+  // The stand question takes the same spot; it is never up at the same time as the other.
+  const showStandBox = standQuestion && !showChoiceBox && rewound === false;
   const choiceBox = (compact: boolean) =>
-    pendingChoice ? (
+    showStandBox ? (
+      <StandBox thrower={thrower?.name ?? null} onAnswer={onAnswerStand} compact={compact} />
+    ) : pendingChoice ? (
       <ChoiceBox
         choice={pendingChoice}
         currentOnNumber={activeProgress?.[pendingChoice.number] ?? 0}
@@ -1070,7 +1129,7 @@ export function GameScreen({
           )}
           {/* The question lives in this column in landscape. It floated over the top of the board
               before, which covered the 20 row — the very cell a T20 would need tapped. */}
-          {showChoiceBox && <div className="mb-1 shrink-0">{choiceBox(true)}</div>}
+          {(showChoiceBox || showStandBox) && <div className="mb-1 shrink-0">{choiceBox(true)}</div>}
           {choicePrompt && !showChoiceBox && (
             <p
               role="status"
@@ -1096,7 +1155,7 @@ export function GameScreen({
         {!rewound && !compactLandscape && (
           <div className="max-w-3xl mx-auto w-full mb-1">
             <ShotIndicator shots={turnShots} onEdit={shotsEditable ? setEditingShot : undefined} highlight={shotHighlight} />
-            {showChoiceBox && <div className="mt-2">{choiceBox(false)}</div>}
+            {(showChoiceBox || showStandBox) && <div className="mt-2">{choiceBox(false)}</div>}
             {choicePrompt && !showChoiceBox && (
               <p role="status" className="text-center mt-1" style={{ color: "var(--color-gold-strong)", fontSize: "0.78rem", fontWeight: 600 }}>
                 {choicePrompt}
@@ -1133,9 +1192,9 @@ export function GameScreen({
             onClick={onConfirm}
             // While the question is on the screen, Bekreft has nothing to confirm yet: the
             // answer is what moves the turn on.
-            disabled={showChoiceBox}
+            disabled={showChoiceBox || showStandBox}
             className={`glossy py-5 rounded-xl font-bold text-xl ${FOCUS_RING}`}
-            style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", opacity: showChoiceBox ? 0.4 : 1 } as React.CSSProperties}
+            style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", opacity: showChoiceBox || showStandBox ? 0.4 : 1 } as React.CSSProperties}
           >
             {pendingCount === 0 ? "Bekreft (bom)" : "Bekreft"}
           </button>
