@@ -4,3 +4,5 @@ alter table players add column if not exists kind text;
 alter table players add column if not exists members jsonb;
 -- Lagets faste hjemme- og bortedrakt ({ "home": Kit, "away": Kit }, se lib/teamKit.ts).
 alter table players add column if not exists kits jsonb;
+-- Lengste serie av tellende piler på rad (i piler), for spillere og lag.
+alter table players add column if not exists best_run integer;

@@ -330,6 +330,17 @@ export function recordMatchResult(name: string, aggregate: TurnAggregate, won: b
   upsertRow(k, record);
 }
 
+/** Keeps the longest run of counting darts (in darts) if this match beat the old one. */
+export function recordBestRun(name: string, darts: number) {
+  const k = key(name);
+  const existing = roster[k];
+  if (!existing || darts <= (existing.bestRun ?? 0)) return;
+  const record = { ...existing, bestRun: darts };
+  roster = { ...roster, [k]: record };
+  notify();
+  upsertRow(k, record);
+}
+
 /** Rolls one player's per-throw accuracy samples from a finished match into their career totals. */
 export function recordAccuracyTotals(name: string, totals: { distance: number; horizontal: number; vertical: number; throws: number }) {
   if (totals.throws === 0) return;

@@ -85,3 +85,14 @@ describe("row mapping and teams", () => {
     expect(r.steps.BULL).toEqual({ hits: 0, misses: 0 });
   });
 });
+
+describe("best run", () => {
+  it("round-trips, is left out of the row until there is one, and merges as the longest", () => {
+    const rec = { ...emptyRecord("Per"), bestRun: 9 };
+    expect(recordToRow("per", rec).best_run).toBe(9);
+    expect(rowToRecord(recordToRow("per", rec)).bestRun).toBe(9);
+    expect("best_run" in recordToRow("ola", emptyRecord("Ola"))).toBe(false);
+    expect(mergeRecords([rec, { ...emptyRecord("B"), bestRun: 12 }], { name: "x", kind: "player" }).bestRun).toBe(12);
+    expect(mergeRecords([emptyRecord("A")], { name: "x", kind: "player" }).bestRun).toBeUndefined();
+  });
+});

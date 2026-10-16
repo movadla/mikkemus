@@ -26,7 +26,7 @@ import {
   type TurnShot,
   type PendingAmbiguous,
 } from "@/lib/game";
-import { ensureTeam, getPlayerRecord, playPlayerSound, recordAccuracyTotals, recordLuckTotals, recordMatchHistory, recordMatchResult, recordRingHits, useTeamRecords, type RingHits } from "@/lib/storage";
+import { recordBestRun, ensureTeam, getPlayerRecord, playPlayerSound, recordAccuracyTotals, recordLuckTotals, recordMatchHistory, recordMatchResult, recordRingHits, useTeamRecords, type RingHits } from "@/lib/storage";
 import { announce } from "@/lib/announcer";
 import { reportError } from "@/lib/errorReporting";
 import { clearActiveMatch, loadActiveMatch, saveActiveMatch } from "@/lib/activeMatch";
@@ -34,7 +34,7 @@ import { publishLiveMatch } from "@/lib/liveMatch";
 import { coordinatesForSector, luckForThrow, sectorAt, throwAccuracy } from "@/lib/dartboard";
 import { getRules, isPerfectClose, setGameVariant, type GameVariant } from "@/lib/rules";
 import { countingDarts, nextMemberIndex, standsAfterTurn } from "@/lib/teamTurn";
-import { currentRun } from "@/lib/turnStats";
+import { currentRun, throwerStats } from "@/lib/turnStats";
 import { haptics } from "@/lib/haptics";
 import { crowdForStreak, playCrowd, playFanfare, playHitStreakSound, playMatchDartSound, playTapSound, playWinBoom, primeAudio } from "@/lib/fanfare";
 import { fxFlags, getFxLevel, useFxLevel } from "@/lib/fxLevel";
@@ -1804,6 +1804,9 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       // still counted as a full "kamp" in their career matchesPlayed, with nothing to show for it.
       if (dartsUsed === 0) return;
       recordMatchResult(p, aggregate, p === winnerName);
+      // The longest run of counting darts any thrower on this side had — the team's own, in a team.
+      const bestRun = Math.max(0, ...throwerStats(finalTurnLog[p] ?? [], p).map((r) => r.bestRun)) * DARTS_PER_TURN;
+      if (bestRun > 0) recordBestRun(p, bestRun);
       const accuracy = accuracyTotalsRef.current[p];
       if (accuracy) recordAccuracyTotals(p, accuracy);
       const luckTotals = luckTotalsRef.current[p];

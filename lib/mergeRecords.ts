@@ -24,6 +24,7 @@ export function mergeRecords(records: PlayerRecord[], into: { name: string; kind
     dartsInWins: acc.dartsInWins + r.dartsInWins,
     bestDartsToFinish:
       acc.bestDartsToFinish === null ? r.bestDartsToFinish : r.bestDartsToFinish === null ? acc.bestDartsToFinish : Math.min(acc.bestDartsToFinish, r.bestDartsToFinish),
+    bestRun: Math.max(acc.bestRun ?? 0, r.bestRun ?? 0) || undefined,
     overall: { hits: acc.overall.hits + r.overall.hits, misses: acc.overall.misses + r.overall.misses },
     steps: STEPS.reduce(
       (s, step) => ({ ...s, [step]: { hits: acc.steps[step].hits + r.steps[step].hits, misses: acc.steps[step].misses + r.steps[step].misses } }),

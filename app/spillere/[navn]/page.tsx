@@ -153,6 +153,7 @@ export default function PlayerDetailPage() {
         <div className="grid grid-cols-2 gap-2 mb-4">
           <StatCard label="SNITT PILER/RUNDE" value={String(averageDartsPerWin(player) ?? "–")} />
           <StatCard label="BESTE RUNDE (PILER)" value={String(player.bestDartsToFinish ?? "–")} />
+          <StatCard label="LENGSTE SERIE (PILER)" value={player.bestRun ? `${player.bestRun} på rad` : "–"} />
           <StatCard label="FAVORITTALL" value={favNumber ? STEP_LABELS[favNumber] : "–"} />
           <StatCard label="FAVORITT-TRIPPEL" value={favTriple !== null ? `T${favTriple}` : "–"} />
           <StatCard label="FAVORITT-DOBBEL" value={favDouble !== null ? `D${favDouble}` : "–"} />

@@ -61,6 +61,9 @@ export type PlayerRecord = {
   dartsInWins: number;
   /** Fewest darts used in any single won match. Null until the first win. */
   bestDartsToFinish: number | null;
+  /** Longest unbroken run of counting darts in any match, in darts (see lib/turnStats.ts). Absent
+   *  until a match has been played with it tracked. */
+  bestRun?: number;
   overall: HitStat;
   steps: Record<Step, HitStat>;
   accuracy: AccuracyStat;
@@ -102,6 +105,9 @@ export type PlayerRow = {
   kind?: string | null;
   members?: string[] | null;
   kits?: TeamKits | null;
+  /** Nullable column added later (supabase-setup-teams.sql); written only once there is a value, so
+   *  saving keeps working on a database that does not have it yet. */
+  best_run?: number | null;
 };
 
 export function emptyStepStats(): Record<Step, HitStat> {
@@ -200,6 +206,7 @@ export function rowToRecord(row: PlayerRow): PlayerRecord {
       luckCount: row.bull_duel?.luckCount ?? 0,
     },
     bestDartsToFinish: row.best_darts_to_finish ?? null,
+    ...(row.best_run ? { bestRun: row.best_run } : {}),
     tripleHits: row.triple_hits ?? {},
     doubleHits: row.double_hits ?? {},
     matchHistory: row.match_history ?? [],
@@ -235,6 +242,7 @@ export function recordToRow(k: string, record: PlayerRecord): PlayerRow {
     triple_hits: record.tripleHits,
     double_hits: record.doubleHits,
     match_history: record.matchHistory,
+    ...(record.bestRun ? { best_run: record.bestRun } : {}),
     // Only a team touches the two newer columns — see PlayerRow.
     ...(record.kind === "team" ? { kind: "team", members: record.members ?? [], kits: record.kits ?? null } : {}),
   };
