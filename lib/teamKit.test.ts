@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CLASH_DISTANCE, assignKits, awayKit, colourIndexOf, firstKit, kitDistance, kitFrom } from "./teamKit";
+import { CLASH_DISTANCE, assignKits, awayKit, colourIndexOf, colourName, firstKit, kitDistance, kitFrom, makeKit, usesSecondColour } from "./teamKit";
 
 describe("team kits", () => {
   it("are the same for the same two people, whatever the order or case", () => {
@@ -105,5 +105,18 @@ describe("assignKits — two teams in one match", () => {
     const kits = assignKits(teams);
     expect(Object.keys(kits)).toHaveLength(8);
     expect(kits.T0.away).toBe(false);
+  });
+});
+
+describe("makeKit", () => {
+  it("uses the second colour for collar and cuffs, and only one colour on a plain shirt", () => {
+    expect(makeKit("stripes", "#d8392b", "#f4f0e8")).toEqual({ primary: "#d8392b", secondary: "#f4f0e8", trim: "#f4f0e8", pattern: "stripes" });
+    const plain = makeKit("solid", "#ffd400", "#d8392b");
+    expect(plain.secondary).toBe("#ffd400");
+    expect(plain.trim).toBe("#1d2a4a"); // a dark edge on a light shirt
+    expect(makeKit("solid", "#1b1b1b", "#d8392b").trim).toBe("#f4f0e8");
+    expect(usesSecondColour("solid")).toBe(false);
+    expect(colourName("#D8392B")).toBe("Rød");
+    expect(colourName("#123456")).toBe("Egen farge");
   });
 });

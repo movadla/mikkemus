@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   RULES_SLIDES,
-  RULES_SLIDE_MS,
   markRulesIntroSeen,
   type RulesSlide,
 } from "@/lib/rulesIntro";
@@ -106,96 +105,94 @@ function Picture({ slide }: { slide: RulesSlide }) {
 }
 
 /**
- * How the game is played, in under half a minute: five short slides that move on by themselves,
- * with a way out at every moment. Shown the first time a game starts on a device, and from the
- * home screen whenever someone wants it again.
- *
+ * How the game is played, in five short slides. Nothing moves on by itself: the reader pages
+ * forwards and back with the buttons, the dots, the arrow keys or a swipe, and the last slide's
+ * button closes it. Shown the first time a game starts on a device, and from the home screen
+ * whenever someone wants it again. «Hopp over» is there on every slide.
  */
 export function RulesIntro({ onDone }: { onDone: () => void }) {
   const [index, setIndex] = useState(0);
+  const touchX = useRef<number | null>(null);
+  const last = RULES_SLIDES.length - 1;
 
   function finish() {
     markRulesIntroSeen();
     onDone();
   }
-
-  useEffect(() => {
-    if (index >= RULES_SLIDES.length - 1) {
-      const end = setTimeout(finish, RULES_SLIDE_MS);
-      return () => clearTimeout(end);
-    }
-    const next = setTimeout(() => setIndex((i) => i + 1), RULES_SLIDE_MS);
-    return () => clearTimeout(next);
-    // finish is re-created every render and only ever reads stable things; restarting the timer
-    // on each render would stop a slide from ever ending.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [index]);
+  const go = (i: number) => setIndex(Math.max(0, Math.min(last, i)));
 
   const slide = RULES_SLIDES[index];
+  const nav = `tactile px-4 rounded-lg font-medium ${FOCUS_RING}`;
 
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-label="Slik spiller du"
-      className="animate-screen-enter fixed inset-0 z-[60] flex flex-col items-center justify-center p-6"
+      tabIndex={-1}
+      ref={(el) => el?.focus()}
+      className="animate-screen-enter fixed inset-0 z-[60] flex flex-col items-center justify-center p-6 outline-none"
       style={{ background: "var(--color-bg)" }}
       onKeyDown={(e) => {
         if (e.key === "Escape") finish();
+        if (e.key === "ArrowRight") go(index + 1);
+        if (e.key === "ArrowLeft") go(index - 1);
+      }}
+      onTouchStart={(e) => {
+        touchX.current = e.touches[0].clientX;
+      }}
+      onTouchEnd={(e) => {
+        if (touchX.current === null) return;
+        const dx = e.changedTouches[0].clientX - touchX.current;
+        touchX.current = null;
+        if (Math.abs(dx) > 50) go(index + (dx < 0 ? 1 : -1));
       }}
     >
       <button
         type="button"
         onClick={finish}
         className={`tactile absolute top-4 right-4 px-4 rounded-lg text-sm ${FOCUS_RING}`}
-        style={{
-          minHeight: "2.75rem",
-          background: "var(--color-surface)",
-          color: "var(--color-cream)",
-          border: "1px solid var(--color-border)",
-        }}
+        style={{ minHeight: "2.75rem", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
       >
         Hopp over
       </button>
 
       <div className="w-full max-w-md text-center">
-        <p className="section-label mb-6">SLIK SPILLER DU</p>
-        <div
-          key={slide.id}
-          className="animate-name-swap flex flex-col items-center gap-6"
-        >
+        <p className="section-label mb-6">SLIK SPILLER DU · {index + 1} AV {RULES_SLIDES.length}</p>
+        <div key={slide.id} className="animate-name-swap flex flex-col items-center gap-6" style={{ minHeight: "18rem" }}>
           <Picture slide={slide} />
-          <h2
-            className="font-display"
-            style={{ color: "var(--color-cream)", fontSize: "1.8rem" }}
-          >
+          <h2 className="font-display" style={{ color: "var(--color-cream)", fontSize: "1.8rem" }}>
             {slide.title}
           </h2>
-          <p
-            style={{
-              color: "var(--color-cream)",
-              opacity: 0.85,
-              fontSize: "1.05rem",
-              lineHeight: 1.55,
-            }}
-          >
-            {slide.text}
-          </p>
+          <p style={{ color: "var(--color-cream)", opacity: 0.85, fontSize: "1.05rem", lineHeight: 1.55 }}>{slide.text}</p>
         </div>
-        <div className="flex justify-center gap-2 mt-8" aria-hidden>
+
+        <div className="flex justify-center mt-4" role="group" aria-label="Velg side">
           {RULES_SLIDES.map((s, i) => (
-            <span
-              key={s.id}
-              className="rounded-full"
-              style={{
-                width: i === index ? 22 : 8,
-                height: 8,
-                background:
-                  i <= index ? "var(--color-teal)" : "var(--color-border)",
-                transition: "width 200ms",
-              }}
-            />
+            <button key={s.id} type="button" onClick={() => go(i)} aria-label={`Side ${i + 1}`} aria-current={i === index} className={`flex items-center justify-center ${FOCUS_RING}`} style={{ width: "2.75rem", height: "2.75rem" }}>
+              <span className="rounded-full block" style={{ width: i === index ? 22 : 8, height: 8, background: i === index ? "var(--color-teal)" : "var(--color-border)", transition: "width 200ms" }} />
+            </button>
           ))}
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 mt-4">
+          <button
+            type="button"
+            onClick={() => go(index - 1)}
+            disabled={index === 0}
+            className={nav}
+            style={{ minHeight: "3rem", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)", opacity: index === 0 ? 0.4 : 1 }}
+          >
+            ← Tilbake
+          </button>
+          <button
+            type="button"
+            onClick={() => (index === last ? finish() : go(index + 1))}
+            className={nav}
+            style={{ minHeight: "3rem", background: "var(--color-teal)", color: "var(--color-bg)" }}
+          >
+            {index === last ? "Ferdig" : "Neste →"}
+          </button>
         </div>
       </div>
     </div>

@@ -14,7 +14,7 @@ import { pairKey } from "./teamNames";
  * (components/TeamKit.tsx) without anything in this file changing.
  */
 
-export type KitPattern = "solid" | "hoops" | "stripes" | "sash" | "halves" | "chevron";
+export type KitPattern = "solid" | "hoops" | "stripes" | "sash" | "halves" | "chevron" | "panels" | "swoosh" | "yoke" | "flash";
 
 export type Kit = {
   primary: string;
@@ -43,11 +43,28 @@ export const PALETTE: { primary: string; secondary: string; trim: string }[] = [
   { primary: "#3f8f3a", secondary: "#f4f0e8", trim: "#f4f0e8" }, // green / cream
   { primary: "#8b1e3f", secondary: "#e8d9a8", trim: "#e8d9a8" }, // claret / sand
   { primary: "#5db7e8", secondary: "#1d2a4a", trim: "#1d2a4a" }, // sky / navy
+  // The bolder pairs of the dart-shirt kind. Added after the first twelve, which the default shirts
+  // are drawn from — so no existing default moves (see DEFAULT_COLOURS).
+  { primary: "#8bd13a", secondary: "#1b1b1b", trim: "#1b1b1b" }, // lime / black
+  { primary: "#1d2a4a", secondary: "#ff7a1a", trim: "#ff7a1a" }, // navy / orange
+  { primary: "#c8102e", secondary: "#1b1b1b", trim: "#1b1b1b" }, // red / black
+  { primary: "#f4f0e8", secondary: "#1d2a4a", trim: "#1d2a4a" }, // white / navy
+  { primary: "#6a1b9a", secondary: "#c9ced6", trim: "#c9ced6" }, // purple / silver
+  { primary: "#ffd400", secondary: "#c8102e", trim: "#c8102e" }, // yellow / red
 ];
 
-export const PATTERNS: KitPattern[] = ["hoops", "stripes", "solid", "sash", "halves", "chevron"];
+/** How many of the colour pairs and patterns the default shirts are drawn from — the original
+ *  ones, so a team without a stored shirt keeps the shirt it always had. */
+const DEFAULT_COLOURS = 12;
+const DEFAULT_PATTERN_COUNT = 6;
+
+export const PATTERNS: KitPattern[] = ["hoops", "stripes", "solid", "sash", "halves", "chevron", "panels", "swoosh", "yoke", "flash"];
 
 export const PATTERN_LABELS: Record<KitPattern, string> = {
+  panels: "Sidefelt",
+  swoosh: "Sveip",
+  yoke: "Skulderfelt",
+  flash: "Kile",
   solid: "Ensfarget",
   hoops: "Ringer",
   stripes: "Striper",
@@ -82,8 +99,8 @@ function hash(text: string): number {
 
 export function firstKit(members: string[]): Kit {
   const h = hash(pairKey(members) || "ingen");
-  const colours = PALETTE[h % PALETTE.length];
-  return { ...colours, pattern: PATTERNS[(h >>> 8) % PATTERNS.length] };
+  const colours = PALETTE[h % DEFAULT_COLOURS];
+  return { ...colours, pattern: PATTERNS[(h >>> 8) % DEFAULT_PATTERN_COUNT] };
 }
 
 /** A different shirt for the same team: the colours swapped over and a different pattern, so it
@@ -91,13 +108,13 @@ export function firstKit(members: string[]): Kit {
 export function awayKit(members: string[]): Kit {
   const first = firstKit(members);
   const h = hash(pairKey(members) || "ingen");
-  const colours = PALETTE[(h + 5) % PALETTE.length];
+  const colours = PALETTE[(h + 5) % DEFAULT_COLOURS];
   const flipped = h % 2 === 0;
   return {
     primary: flipped ? colours.secondary : colours.primary,
     secondary: flipped ? colours.primary : colours.secondary,
     trim: colours.trim,
-    pattern: PATTERNS[(PATTERNS.indexOf(first.pattern) + 2) % PATTERNS.length],
+    pattern: PATTERNS[(PATTERNS.indexOf(first.pattern) + 2) % DEFAULT_PATTERN_COUNT],
   };
 }
 
@@ -142,4 +159,32 @@ export function assignKits(teams: TeamForKit[]): Record<string, { kit: Kit; away
     result[team.name] = { kit: chosen, away: useAway };
   }
   return result;
+}
+
+/** The sixteen colours the settings offer for a shirt — any two of them, no more. */
+export const KIT_COLOURS: { hex: string; name: string }[] = [
+  { hex: "#d8392b", name: "Rød" }, { hex: "#c8102e", name: "Mørk rød" }, { hex: "#e8772e", name: "Oransje" }, { hex: "#ffd400", name: "Gul" },
+  { hex: "#8bd13a", name: "Lime" }, { hex: "#3f8f3a", name: "Grønn" }, { hex: "#1f9d8a", name: "Turkis" }, { hex: "#5db7e8", name: "Himmelblå" },
+  { hex: "#2f6fd1", name: "Blå" }, { hex: "#1d2a4a", name: "Marine" }, { hex: "#7a3fb0", name: "Lilla" }, { hex: "#d94f9a", name: "Rosa" },
+  { hex: "#8b1e3f", name: "Vinrød" }, { hex: "#f4f0e8", name: "Hvit" }, { hex: "#c9ced6", name: "Sølv" }, { hex: "#1b1b1b", name: "Sort" },
+];
+
+export function colourName(hex: string): string {
+  return KIT_COLOURS.find((c) => c.hex.toLowerCase() === hex.toLowerCase())?.name ?? "Egen farge";
+}
+
+/** Every pattern but plain draws a second colour. */
+export function usesSecondColour(pattern: KitPattern): boolean {
+  return pattern !== "solid";
+}
+
+/**
+ * A shirt from a style and two colours. The collar and cuffs are the second colour; on a plain
+ * shirt, which has only one, they are a light or dark edge, whichever reads against it.
+ */
+export function makeKit(pattern: KitPattern, primary: string, secondary: string): Kit {
+  if (usesSecondColour(pattern)) return { primary, secondary, trim: secondary, pattern };
+  const n = parseInt(primary.slice(1), 16);
+  const luminance = 0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255);
+  return { primary, secondary: primary, trim: luminance > 150 ? "#1d2a4a" : "#f4f0e8", pattern };
 }
