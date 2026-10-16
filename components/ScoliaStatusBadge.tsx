@@ -39,6 +39,7 @@ export function ScoliaStatusBadge({ state }: { state: ScoliaState }) {
   return (
     <div
       className="scolia-badge fixed top-2 right-2 z-40 flex items-center gap-2 px-3 py-1.5 rounded-full shadow-panel"
+      title={label}
       style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
     >
       <span
@@ -50,7 +51,7 @@ export function ScoliaStatusBadge({ state }: { state: ScoliaState }) {
         }}
         aria-hidden
       />
-      <span style={{ color: "var(--color-cream)", fontSize: "0.7rem" }}>{label}</span>
+      <span className="scolia-badge-label" style={{ color: "var(--color-cream)", fontSize: "0.7rem" }}>{label}</span>
     </div>
   );
 }

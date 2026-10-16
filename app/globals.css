@@ -1218,3 +1218,17 @@ button {
     transition-duration: 0.001ms !important;
   }
 }
+
+/* Standing, the board status shares the top row with five buttons: it gives way with an ellipsis
+   rather than sitting on top of the last one. Its full text is the badge's title. */
+@media (orientation: portrait) {
+  .scolia-badge {
+    max-width: 6.6rem;
+  }
+  .scolia-badge-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}

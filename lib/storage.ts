@@ -3,6 +3,7 @@ import { reportError } from "./errorReporting";
 import { STEPS, type Step, type TurnAggregate } from "./game";
 import { supabase } from "./supabaseClient";
 import { defaultKits, type TeamKits } from "./teamKit";
+import { cleanTeamName } from "./teamNames";
 import {
   emptyRecord,
   recordKey as key,
@@ -237,6 +238,30 @@ export function ensureTeam(name: string, members: string[]): PlayerRecord {
   notify();
   upsertRow(k, record);
   return record;
+}
+
+/**
+ * Gives a team another name. The row is keyed by the name, so this writes the team under the new
+ * one and removes the old row — statistics, shirts, members and picture come along. Returns an
+ * error text instead when the name will not do: empty, or already taken by a player or a team.
+ */
+export function renameTeam(oldName: string, newName: string): { ok: true; name: string } | { ok: false; error: string } {
+  ensureInitialized();
+  const name = cleanTeamName(newName);
+  const from = key(oldName);
+  const record = roster[from];
+  if (!record || record.kind !== "team") return { ok: false, error: "Fant ikke laget" };
+  if (!name) return { ok: false, error: "Laget trenger et navn" };
+  const to = key(name);
+  if (to !== from && roster[to]) return { ok: false, error: "Det navnet er allerede i bruk" };
+  const next: PlayerRecord = { ...record, name };
+  const rest = { ...roster };
+  if (to !== from) delete rest[from];
+  roster = { ...rest, [to]: next };
+  notify();
+  upsertRow(to, next);
+  if (to !== from) deleteRow(from);
+  return { ok: true, name };
 }
 
 /** The two shirts a team plays in — its own if it has them, otherwise the default for its people. */

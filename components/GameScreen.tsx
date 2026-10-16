@@ -28,7 +28,7 @@ import { Mark } from "./Mark";
 import { ThrowerBar, type Thrower, type ThrowerTeam } from "./ThrowerBar";
 import { TeamKit } from "./TeamKit";
 import type { Kit } from "@/lib/teamKit";
-import { CalibrateIcon, DartIcon, ShakeIcon, SpeakerIcon, SpeakerMuteIcon } from "./icons";
+import { CalibrateIcon, DartIcon, PeopleIcon, ShakeIcon, SpeakerIcon, SpeakerMuteIcon } from "./icons";
 
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
@@ -118,6 +118,11 @@ type Props = {
   /** The stand rule's question is up: were all three darts good? See MikkeMusApp's standQuestionDue. */
   standQuestion: boolean;
   onAnswerStand: (stood: boolean) => void;
+  /** Whether the match has a team with several members, so the stand rule means something. */
+  standAvailable: boolean;
+  /** Whether the stand rule is on now — switchable mid-match from the controls. */
+  standOn: boolean;
+  onToggleStand: () => void;
   onRegisterHit: (step: Step) => void;
   /** Long-press on a cell: take one cross back off that row. */
   onRemoveHit: (step: Step) => void;
@@ -163,6 +168,9 @@ function ChromeControls({
   onToggleShake,
   onCalibrate,
   calibrating,
+  standAvailable,
+  standOn,
+  onToggleStand,
 }: {
   stacked?: boolean;
   onHome: () => void;
@@ -172,6 +180,10 @@ function ChromeControls({
   onToggleShake: () => void;
   onCalibrate: () => void;
   calibrating: "idle" | "sending" | "sent" | "failed";
+  /** The stand rule applies only where a team has several members. */
+  standAvailable: boolean;
+  standOn: boolean;
+  onToggleStand: () => void;
 }) {
   const icon = stacked
     ? `tactile w-full h-8 rounded-lg flex items-center justify-center gap-2 text-sm ${FOCUS_RING}`
@@ -207,6 +219,26 @@ function ChromeControls({
         <ShakeIcon className="w-4 h-4" />
         {stacked && <span style={{ fontSize: "0.7rem" }}>{shakeOn ? "Risting på" : "Risting av"}</span>}
       </button>
+      {/* The stand rule can be switched on (or off) while the match is on — for the match that was
+          started with it forgotten. It counts from the moment it is switched. */}
+      {standAvailable && (
+        <button
+          type="button"
+          onClick={onToggleStand}
+          aria-pressed={standOn}
+          aria-label={standOn ? "Skru av stå ved 3 tellende piler" : "Skru på stå ved 3 tellende piler"}
+          title="Stå ved 3 tellende piler"
+          className={icon}
+          style={{
+            background: standOn ? "rgba(47, 180, 194, 0.18)" : "var(--color-surface)",
+            color: standOn ? "var(--color-teal)" : "var(--color-muted)",
+            border: standOn ? "1px solid var(--color-teal)" : undefined,
+          }}
+        >
+          <PeopleIcon className="w-4 h-4" />
+          {stacked && <span style={{ fontSize: "0.7rem" }}>{standOn ? "Står ved 3: på" : "Står ved 3: av"}</span>}
+        </button>
+      )}
       {/* AirPlay: an audio context created before mirroring started keeps the sound on the
           phone. Only offered inside the panel — it is a recovery action, not something you
           reach for mid-turn. */}
@@ -537,6 +569,9 @@ export function GameScreen({
   onResolvePendingChoice,
   standQuestion,
   onAnswerStand,
+  standAvailable,
+  standOn,
+  onToggleStand,
   onRegisterHit,
   onRemoveHit,
   matchThrows,
@@ -754,6 +789,9 @@ export function GameScreen({
             }}
             onCalibrate={handleCalibrate}
             calibrating={calibrating}
+            standAvailable={standAvailable}
+            standOn={standOn}
+            onToggleStand={onToggleStand}
           />
           {/* Not gold: this is a mode warning, not something earned, and gold only means the
               latter (see globals.css). Red is the app's "careful" colour. */}
@@ -848,6 +886,9 @@ export function GameScreen({
             }}
             onCalibrate={handleCalibrate}
               calibrating={calibrating}
+              standAvailable={standAvailable}
+              standOn={standOn}
+              onToggleStand={onToggleStand}
             />
           </div>
         </>

@@ -10,6 +10,7 @@ import {
   bullDuelHitPct,
   bullDuelLuckSum,
   deletePlayer,
+  renameTeam,
   favoriteNumber,
   favoriteRingNumber,
   luckSum,
@@ -22,6 +23,7 @@ import {
 import { StatsLineChart, CHART_SERIES_COLORS } from "@/components/StatsLineChart";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { PhotoButton } from "@/components/PhotoButton";
+import { TEAM_NAME_MAX } from "@/lib/teamNames";
 import { ScreenTop } from "@/components/ScreenTop";
 import { SoundClipButton } from "@/components/SoundClipButton";
 import { TrashIcon } from "@/components/icons";
@@ -49,6 +51,8 @@ export default function PlayerDetailPage() {
   const roster = useRoster();
   const player = roster.find((p) => p.name.toLowerCase() === name.toLowerCase());
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [newName, setNewName] = useState<string | null>(null);
+  const [nameError, setNameError] = useState("");
 
   if (!player) {
     return (
@@ -196,6 +200,50 @@ export default function PlayerDetailPage() {
             unit="mm"
           />
         </div>
+
+        {/* A team can be called anything — it does not have to be its players' names. */}
+        {player.kind === "team" && (
+          <div className="shadow-panel rounded-xl p-4 mb-4" style={{ background: "var(--color-surface)" }}>
+            <label htmlFor="rename-team" className="mb-2 section-label block">
+              LAGNAVN
+            </label>
+            <div className="flex gap-2">
+              <input
+                id="rename-team"
+                value={newName ?? player.name}
+                onChange={(e) => {
+                  setNewName(e.target.value);
+                  setNameError("");
+                }}
+                maxLength={TEAM_NAME_MAX}
+                className={`flex-1 min-w-0 px-4 rounded-lg ${FOCUS_RING}`}
+                style={{ minHeight: "2.75rem", background: "var(--color-cell)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
+              />
+              <button
+                type="button"
+                disabled={newName === null || newName.trim() === player.name}
+                onClick={() => {
+                  const result = renameTeam(player.name, newName ?? "");
+                  if (!result.ok) {
+                    setNameError(result.error);
+                    return;
+                  }
+                  setNewName(null);
+                  router.replace(`/spillere/${encodeURIComponent(result.name)}`);
+                }}
+                className={`glossy px-4 rounded-lg font-medium ${FOCUS_RING}`}
+                style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", minHeight: "2.75rem" } as React.CSSProperties}
+              >
+                Lagre
+              </button>
+            </div>
+            {nameError && (
+              <p role="alert" className="mt-2" style={{ color: "var(--color-red)", fontSize: "0.75rem" }}>
+                {nameError}
+              </p>
+            )}
+          </div>
+        )}
 
         {/* The teams this player is in — their matches are on the team's page, not here. */}
         {teams.length > 0 && (

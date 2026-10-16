@@ -96,3 +96,12 @@ describe("best run", () => {
     expect(mergeRecords([emptyRecord("A")], { name: "x", kind: "player" }).bestRun).toBeUndefined();
   });
 });
+
+describe("team names", () => {
+  it("cleanTeamName trims and keeps a name that is not the players' names", async () => {
+    const { cleanTeamName, defaultTeamName } = await import("./teamNames");
+    expect(cleanTeamName("  De   Røde  ")).toBe("De Røde");
+    expect(defaultTeamName(["Vadla", "Hans"])).toBe("Vadla & Hans");
+    expect(cleanTeamName("De Røde")).not.toBe(defaultTeamName(["Vadla", "Hans"]));
+  });
+});

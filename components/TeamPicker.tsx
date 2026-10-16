@@ -152,7 +152,11 @@ export function TeamPicker({ teams, onChange, botsAllowed }: { teams: PickedTeam
         <div className="shadow-panel rounded-xl p-4" style={{ background: "var(--color-panel)", border: "1px solid var(--color-border)" }}>
           <p className="section-label mb-4">NYTT LAG</p>
           <PlayerPicker people={members} onChange={setMembers} botsAllowed={botsAllowed} hidden={taken} />
+          <label htmlFor="team-name" className="section-label block mb-2">
+            LAGNAVN (VALGFRITT)
+          </label>
           <input
+            id="team-name"
             value={nameInput}
             onChange={(e) => {
               setNameInput(e.target.value);

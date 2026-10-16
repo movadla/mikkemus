@@ -32,7 +32,7 @@ import { reportError } from "@/lib/errorReporting";
 import { clearActiveMatch, loadActiveMatch, saveActiveMatch } from "@/lib/activeMatch";
 import { publishLiveMatch } from "@/lib/liveMatch";
 import { coordinatesForSector, luckForThrow, sectorAt, throwAccuracy } from "@/lib/dartboard";
-import { getRules, isPerfectClose, setGameVariant, type GameVariant } from "@/lib/rules";
+import { getRules, hasStandRule, isPerfectClose, setGameVariant, withStandRule, type GameVariant } from "@/lib/rules";
 import { countingDarts, nextMemberIndex, standsAfterTurn } from "@/lib/teamTurn";
 import { currentRun, throwerStats } from "@/lib/turnStats";
 import { haptics } from "@/lib/haptics";
@@ -1909,6 +1909,18 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     return countingDarts(turnActionsRef.current) >= DARTS_PER_TURN;
   }
 
+  /**
+   * Switches the stand rule on or off in a match that is already going — for the one that was
+   * started with it forgotten. The rule is part of the variant, so this changes the variant and
+   * nothing else: it counts from the next confirmed turn, and what has been played stays as it was.
+   */
+  function toggleStandRule() {
+    const next = withStandRule(variant, !hasStandRule(variant));
+    setGameVariant(next);
+    setVariant(next);
+    setStandQuestion(false);
+  }
+
   function answerStandQuestion(stood: boolean) {
     setStandQuestion(false);
     finishTurn(undefined, undefined, undefined, stood ? DARTS_PER_TURN : DARTS_PER_TURN - 1);
@@ -2332,6 +2344,9 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         perfectCloses={perfectCloses}
         onResolvePendingChoice={resolvePendingChoice}
         standQuestion={standQuestion}
+        standAvailable={Object.values(teamRosters).some((r) => r.length > 1)}
+        standOn={hasStandRule(variant)}
+        onToggleStand={toggleStandRule}
         onAnswerStand={answerStandQuestion}
         // A mark added or taken away while the question is up changes what it is asking about.
         onRegisterHit={
