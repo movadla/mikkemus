@@ -1921,6 +1921,21 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     setStandQuestion(false);
   }
 
+  /**
+   * Hands the turn to another member of the team that is up. For the first turn of a team that
+   * should start with the other one, and for a slip of the finger later, without taking anything
+   * back: only who is throwing changes — the turn in progress is recorded under them from here.
+   */
+  function switchThrower(name: string) {
+    if (!activePlayer || rewound !== null) return;
+    const roster = teamRosters[activePlayer];
+    const idx = roster?.findIndex((m) => m.name === name) ?? -1;
+    if (!roster || idx === -1) return;
+    setTeamMemberIdx((prev) => ({ ...prev, [activePlayer]: idx }));
+    // A stand carried over from the last turn belonged to the one who stood.
+    setStoodByTeam((prev) => ({ ...prev, [activePlayer]: false }));
+  }
+
   function answerStandQuestion(stood: boolean) {
     setStandQuestion(false);
     finishTurn(undefined, undefined, undefined, stood ? DARTS_PER_TURN : DARTS_PER_TURN - 1);
@@ -2344,6 +2359,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         perfectCloses={perfectCloses}
         onResolvePendingChoice={resolvePendingChoice}
         standQuestion={standQuestion}
+        onSwitchThrower={switchThrower}
         standAvailable={Object.values(teamRosters).some((r) => r.length > 1)}
         standOn={hasStandRule(variant)}
         onToggleStand={toggleStandRule}

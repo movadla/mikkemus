@@ -118,6 +118,8 @@ type Props = {
   /** The stand rule's question is up: were all three darts good? See MikkeMusApp's standQuestionDue. */
   standQuestion: boolean;
   onAnswerStand: (stood: boolean) => void;
+  /** Hands the turn to another member of the team that is up — see MikkeMusApp's switchThrower. */
+  onSwitchThrower: (name: string) => void;
   /** Whether the match has a team with several members, so the stand rule means something. */
   standAvailable: boolean;
   /** Whether the stand rule is on now — switchable mid-match from the controls. */
@@ -569,6 +571,7 @@ export function GameScreen({
   onResolvePendingChoice,
   standQuestion,
   onAnswerStand,
+  onSwitchThrower,
   standAvailable,
   standOn,
   onToggleStand,
@@ -634,6 +637,8 @@ export function GameScreen({
   // directly, so this state only drives the button's own icon/label.
   const [announcerOn, setAnnouncerOn] = useState(() => isAnnouncerEnabled());
   const [shakeOn, setShakeOn] = useState(() => isShakeEnabled());
+  // A teammate whose picture was tapped: the question "skal X kaste nå?" is up for them.
+  const [switchTo, setSwitchTo] = useState<string | null>(null);
 
   // Retriggerable "just undid a dart" window — drives Mark's slow-motion un-draw below.
   // Replaces an earlier full-panel red flash, which read as an error state rather than
@@ -807,7 +812,7 @@ export function GameScreen({
           row of its own and carries it in the right-hand column instead (see .live-side below). */}
       {!compactLandscape && thrower && (
         <div className="max-w-3xl mx-auto w-full mb-2 shrink-0">
-          <ThrowerBar key={turnToken} thrower={thrower} team={throwerTeam} kit={throwerTeam ? kits[throwerTeam.name] : null} stood={throwerStood} run={throwerRun} animate={throwerAnimate} />
+          <ThrowerBar key={turnToken} thrower={thrower} team={throwerTeam} kit={throwerTeam ? kits[throwerTeam.name] : null} stood={throwerStood} run={throwerRun} animate={throwerAnimate} onPickMate={choiceInteractive && !rewound ? setSwitchTo : undefined} />
         </div>
       )}
 
@@ -892,6 +897,23 @@ export function GameScreen({
             />
           </div>
         </>
+      )}
+
+      {switchTo && (
+        <ConfirmDialog
+          message={`Skal ${switchTo} kaste nå?`}
+          buttons={[
+            { label: "Nei", onClick: () => setSwitchTo(null), background: "var(--color-surface)" },
+            {
+              label: "Ja",
+              onClick: () => {
+                onSwitchThrower(switchTo);
+                setSwitchTo(null);
+              },
+              background: "var(--color-green)",
+            },
+          ]}
+        />
       )}
 
       {editingShot !== null && turnShots[editingShot] && (
@@ -1168,7 +1190,7 @@ export function GameScreen({
         <div className="live-side">
           {thrower && (
             <div className="mb-1 shrink-0">
-              <ThrowerBar key={turnToken} thrower={thrower} team={throwerTeam} kit={throwerTeam ? kits[throwerTeam.name] : null} stood={throwerStood} run={throwerRun} animate={throwerAnimate} compact />
+              <ThrowerBar key={turnToken} thrower={thrower} team={throwerTeam} kit={throwerTeam ? kits[throwerTeam.name] : null} stood={throwerStood} run={throwerRun} animate={throwerAnimate} onPickMate={choiceInteractive && !rewound ? setSwitchTo : undefined} compact />
             </div>
           )}
           {/* The question lives in this column in landscape. It floated over the top of the board

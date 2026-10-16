@@ -69,6 +69,7 @@ export function ThrowerBar({
   run = 0,
   animate,
   compact = false,
+  onPickMate,
 }: {
   thrower: Thrower;
   team: ThrowerTeam | null;
@@ -80,6 +81,8 @@ export function ThrowerBar({
   run?: number;
   animate: boolean;
   compact?: boolean;
+  /** A tap on a teammate's picture: the caller asks whether they should throw now. */
+  onPickMate?: (name: string) => void;
 }) {
   // The rest of the team in the order they come up next, so the first of them is the next thrower.
   const mates = team ? team.members.map((_, i) => team.members[(team.activeIdx + 1 + i) % team.members.length]).slice(0, team.members.length - 1) : [];
@@ -133,31 +136,50 @@ export function ThrowerBar({
           </p>
         )}
         {run >= 2 && (
-          <p className="tabular" style={{ color: "var(--color-gold-strong)", fontSize: compact ? "0.72rem" : "0.85rem", fontWeight: 700 }}>
-            {run} piler på rad
+          <p className="tabular truncate whitespace-nowrap" style={{ color: "var(--color-gold-strong)", fontSize: compact ? "0.72rem" : "0.85rem", fontWeight: 700 }}>
+            {compact ? `${run} på rad` : `${run} piler på rad`}
           </p>
         )}
         {stood && (
-          <p style={{ color: "var(--color-gold-strong)", fontSize: "0.72rem", fontWeight: 600 }}>Står – kaster igjen</p>
+          <p className="truncate whitespace-nowrap" style={{ color: "var(--color-gold-strong)", fontSize: "0.72rem", fontWeight: 600 }}>{compact ? "Står igjen" : "Står – kaster igjen"}</p>
         )}
       </div>
       {mates.length > 0 && (
         <div className="flex items-end gap-2 shrink-0" aria-label={`Neste på laget: ${mates.map((m) => m.name).join(", ")}`}>
-          {mates.map((m, i) => (
-            <span key={m.name} className="flex flex-col items-center" style={{ maxWidth: compact ? 40 : 56 }}>
-              {!compact && (
-                <span style={{ color: i === 0 ? "var(--color-muted)" : "transparent", fontSize: "0.6rem", letterSpacing: "0.1em", textTransform: "uppercase", lineHeight: 1.2 }}>
-                  neste
-                </span>
-              )}
-              <Avatar who={m} size={compact ? 26 : 38} active={false} />
-              {!compact && (
-                <span className="truncate w-full text-center" style={{ color: "var(--color-muted)", fontSize: "0.68rem" }}>
-                  {m.name}
-                </span>
-              )}
-            </span>
-          ))}
+          {mates.map((m, i) => {
+            const inner = (
+              <>
+                {!compact && (
+                  <span style={{ color: i === 0 ? "var(--color-muted)" : "transparent", fontSize: "0.6rem", letterSpacing: "0.1em", textTransform: "uppercase", lineHeight: 1.2 }}>
+                    neste
+                  </span>
+                )}
+                <Avatar who={m} size={compact ? 26 : 38} active={false} />
+                {!compact && (
+                  <span className="truncate w-full text-center" style={{ color: "var(--color-muted)", fontSize: "0.68rem" }}>
+                    {m.name}
+                  </span>
+                )}
+              </>
+            );
+            // A teammate's picture is a button: tap it to have them throw instead.
+            return onPickMate ? (
+              <button
+                key={m.name}
+                type="button"
+                onClick={() => onPickMate(m.name)}
+                aria-label={`La ${m.name} kaste`}
+                className="tactile flex flex-col items-center justify-center rounded-lg"
+                style={{ maxWidth: compact ? 44 : 60, minWidth: 44, minHeight: 44 }}
+              >
+                {inner}
+              </button>
+            ) : (
+              <span key={m.name} className="flex flex-col items-center" style={{ maxWidth: compact ? 40 : 56 }}>
+                {inner}
+              </span>
+            );
+          })}
         </div>
       )}
     </div>
