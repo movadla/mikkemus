@@ -34,6 +34,7 @@ import { publishLiveMatch } from "@/lib/liveMatch";
 import { coordinatesForSector, luckForThrow, sectorAt, throwAccuracy } from "@/lib/dartboard";
 import { getRules, isPerfectClose, setGameVariant, type GameVariant } from "@/lib/rules";
 import { countingDarts, nextMemberIndex, standsAfterTurn } from "@/lib/teamTurn";
+import { currentRun } from "@/lib/turnStats";
 import { haptics } from "@/lib/haptics";
 import { crowdForStreak, playCrowd, playFanfare, playHitStreakSound, playMatchDartSound, playTapSound, playWinBoom, primeAudio } from "@/lib/fanfare";
 import { fxFlags, getFxLevel, useFxLevel } from "@/lib/fxLevel";
@@ -2238,6 +2239,10 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     }
   }
 
+  // Darts in a row that counted for whoever is throwing: their unbroken run of three-counting turns
+  // (3 darts each), plus the darts of this turn so far. By hand a tap is a dart that counted.
+  const throwerRun = thrower ? currentRun(turnLog[activePlayer ?? ""] ?? [], thrower.name, activeRoster ? undefined : thrower.name) + (rewound === null ? countingDarts(turnActionsRef.current) : 0) : 0;
+
   // Summed from the turns actually played rather than turns x 3 — a leg-winning or
   // taken-out turn is shorter, and now says so.
   const dartsThrown: Record<string, number> = {};
@@ -2292,6 +2297,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         thrower={thrower}
         throwerTeam={throwerTeam}
         throwerStood={!!activePlayer && rewound === null && stoodByTeam[activePlayer] === true}
+        throwerRun={throwerRun}
         throwerAnimate={fxLevel !== "normal"}
         fxHeat={fx.heat}
         fxShake={fx.shake}

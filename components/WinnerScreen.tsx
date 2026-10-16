@@ -358,8 +358,8 @@ export function WinnerScreen({
                         </span>
                         <span role="cell" className="tabular text-right font-display whitespace-nowrap" style={{ fontSize: "1.2rem" }}>
                           {r.perfectTurns}
-                          {r.bestRun >= 2 && (
-                            <span className="font-sans" style={{ color: "var(--color-muted)", fontSize: "0.75rem", marginLeft: "0.35rem" }}>{r.bestRun} på rad</span>
+                          {r.bestRun >= 1 && (
+                            <span className="font-sans" style={{ color: "var(--color-muted)", fontSize: "0.75rem", marginLeft: "0.35rem" }}>{r.bestRun * 3} piler på rad</span>
                           )}
                         </span>
                       </div>

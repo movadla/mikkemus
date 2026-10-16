@@ -78,10 +78,49 @@ async function deleteRow(k: string) {
 
 let initialized = false;
 
+const CACHE_KEY = "mikke-mus-roster-cache";
+
+/** The roster as it was the last time it was fetched, kept on this device so the setup screen has
+ *  the players the moment it opens instead of waiting for the network. It is only what to show
+ *  first: the fetch below always replaces it. Never throws — full or blocked storage just means
+ *  no head start. */
+function readRosterCache(): Roster | null {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    return parsed as Roster;
+  } catch {
+    return null;
+  }
+}
+
+function writeRosterCache() {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(roster));
+  } catch {
+    // Too big for the quota, or storage is blocked: the next visit just waits for the network.
+    try {
+      localStorage.removeItem(CACHE_KEY);
+    } catch {
+      // Nothing more to do.
+    }
+  }
+}
+
 /** Fetches the roster once and subscribes to realtime changes from other devices. Safe to call repeatedly. */
 function ensureInitialized() {
   if (initialized || typeof window === "undefined" || !supabase) return;
   initialized = true;
+
+  // Last visit's roster straight away, so nothing waits for the fetch. Set without notifying:
+  // this runs from inside a snapshot read, and the snapshot is recomputed right here instead.
+  const cached = readRosterCache();
+  if (cached) {
+    roster = cached;
+    recomputeSnapshots();
+  }
 
   supabase
     .from("players")
@@ -89,7 +128,8 @@ function ensureInitialized() {
     .then(({ data, error }) => {
       if (error) {
         console.error("Kunne ikke hente spillere fra Supabase:", error.message);
-        reportError("Kunne ikke hente spillerliste. Prøv å laste siden på nytt.", { key: "roster-fetch" });
+        // With last visit's roster on screen the list is usable; only say so when there is nothing.
+        if (!cached) reportError("Kunne ikke hente spillerliste. Prøv å laste siden på nytt.", { key: "roster-fetch" });
         return;
       }
       const next: Roster = {};
@@ -98,6 +138,7 @@ function ensureInitialized() {
       });
       roster = next;
       notify();
+      writeRosterCache();
     });
 
   // Dev Fast Refresh can re-run this while a previous channel with the same
@@ -121,6 +162,12 @@ function ensureInitialized() {
       notify();
     })
     .subscribe();
+}
+
+/** Starts loading the roster now — called when the app opens, so by the time someone reaches the
+ *  setup screen the players are already there. */
+export function preloadRoster() {
+  ensureInitialized();
 }
 
 function cachedNamesSnapshot(): string[] {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { TurnResult } from "./game";
-import { throwerStats } from "./turnStats";
+import { currentRun, throwerStats } from "./turnStats";
 
 const turn = (hits: number, over: Partial<TurnResult> = {}): TurnResult => ({
   hitsByStep: hits > 0 ? { "20": hits } : {},
@@ -30,5 +30,19 @@ describe("throwerStats", () => {
   it("copes with holes in the log and an empty one", () => {
     expect(throwerStats([undefined, turn(1), undefined], "Per")[0].turns).toBe(1);
     expect(throwerStats([], "Per")).toEqual([]);
+  });
+});
+
+describe("currentRun", () => {
+  const full = (thrower?: string) => turn(3, { counted: 3, ...(thrower ? { thrower } : {}) });
+  it("is three darts per unbroken perfect turn, counted back from the latest", () => {
+    expect(currentRun([turn(1, { counted: 1 }), full(), full()], "Per")).toBe(6);
+    expect(currentRun([full(), turn(2, { counted: 2 })], "Per")).toBe(0);
+    expect(currentRun([], "Per")).toBe(0);
+  });
+  it("follows one member's own turns in a team log", () => {
+    const log = [full("Per"), full("Ola"), full("Per"), turn(0, { thrower: "Ola", counted: 0 })];
+    expect(currentRun(log, "Per")).toBe(6);
+    expect(currentRun(log, "Ola")).toBe(0);
   });
 });

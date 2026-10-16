@@ -68,3 +68,17 @@ export function throwerStats(turns: readonly (TurnResult | undefined)[], fallbac
     bestTurn: row.bestTurn,
   }));
 }
+
+/**
+ * Darts in a row that counted for one thrower, over their finished turns: three for each
+ * unbroken turn of three counting darts, counted back from their latest turn. In team play the
+ * log is the team's, so `thrower` picks out the member's own turns; for a lone player pass
+ * `undefined` as `only` semantics are the same — every turn is theirs. The turn in progress is
+ * the caller's to add.
+ */
+export function currentRun(turns: readonly (TurnResult | undefined)[], thrower: string, only?: string): number {
+  const mine = turns.filter((t): t is TurnResult => !!t && (only ? true : (t.thrower ?? thrower) === thrower));
+  let run = 0;
+  for (let i = mine.length - 1; i >= 0 && perfect(mine[i]); i--) run += DARTS_PER_TURN;
+  return run;
+}

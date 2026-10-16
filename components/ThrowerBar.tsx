@@ -66,6 +66,7 @@ export function ThrowerBar({
   team,
   kit,
   stood,
+  run = 0,
   animate,
   compact = false,
 }: {
@@ -75,6 +76,8 @@ export function ThrowerBar({
   kit?: Kit | null;
   /** The thrower kept their place after three counting darts (the stand rule). */
   stood: boolean;
+  /** Darts in a row that counted — shown from two up, so a lone hit is not announced. */
+  run?: number;
   animate: boolean;
   compact?: boolean;
 }) {
@@ -127,6 +130,11 @@ export function ThrowerBar({
               </span>
             )}
             <span className="truncate">{team.name}</span>
+          </p>
+        )}
+        {run >= 2 && (
+          <p className="tabular" style={{ color: "var(--color-gold-strong)", fontSize: compact ? "0.72rem" : "0.85rem", fontWeight: 700 }}>
+            {run} piler på rad
           </p>
         )}
         {stood && (

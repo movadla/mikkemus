@@ -136,6 +136,8 @@ type Props = {
   throwerTeam: ThrowerTeam | null;
   /** The thrower kept their place under the stand rule. */
   throwerStood: boolean;
+  /** Darts in a row that counted for the thrower, this turn included — see lib/turnStats.ts. */
+  throwerRun: number;
   /** Whether the thrower bar plays its entrance when the turn changes. */
   throwerAnimate: boolean;
   /** False while a bot throws — it answers its own questions, and a box to tap would be a trap. */
@@ -551,6 +553,7 @@ export function GameScreen({
   thrower,
   throwerTeam,
   throwerStood,
+  throwerRun,
   throwerAnimate,
   awaitingConfirmResolution,
   choiceInteractive,
@@ -766,7 +769,7 @@ export function GameScreen({
           row of its own and carries it in the right-hand column instead (see .live-side below). */}
       {!compactLandscape && thrower && (
         <div className="max-w-3xl mx-auto w-full mb-2 shrink-0">
-          <ThrowerBar key={turnToken} thrower={thrower} team={throwerTeam} kit={throwerTeam ? kits[throwerTeam.name] : null} stood={throwerStood} animate={throwerAnimate} />
+          <ThrowerBar key={turnToken} thrower={thrower} team={throwerTeam} kit={throwerTeam ? kits[throwerTeam.name] : null} stood={throwerStood} run={throwerRun} animate={throwerAnimate} />
         </div>
       )}
 
@@ -1124,7 +1127,7 @@ export function GameScreen({
         <div className="live-side">
           {thrower && (
             <div className="mb-1 shrink-0">
-              <ThrowerBar key={turnToken} thrower={thrower} team={throwerTeam} kit={throwerTeam ? kits[throwerTeam.name] : null} stood={throwerStood} animate={throwerAnimate} compact />
+              <ThrowerBar key={turnToken} thrower={thrower} team={throwerTeam} kit={throwerTeam ? kits[throwerTeam.name] : null} stood={throwerStood} run={throwerRun} animate={throwerAnimate} compact />
             </div>
           )}
           {/* The question lives in this column in landscape. It floated over the top of the board
@@ -1140,7 +1143,7 @@ export function GameScreen({
             </p>
           )}
           <LiveSidePanel
-            playerName={activePlayer}
+            playerName={thrower?.name ?? activePlayer}
             throws={matchThrows}
             recentFrom={Math.max(0, matchThrows.length - dartsThisTurn)}
             darts={(dartsThrown[activePlayer] ?? 0) + dartsThisTurn}

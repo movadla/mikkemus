@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { preloadRoster } from "@/lib/storage";
 import { loadActiveTournamentId } from "@/lib/tournamentStorage";
 import { useScolia } from "@/lib/useScolia";
 import { BullDuelApp } from "./BullDuelApp";
@@ -44,6 +45,11 @@ export function AppRoot() {
     if (mode === "home") setHasActiveTournament(!!loadActiveTournamentId());
   }, [mode]);
   /* eslint-enable react-hooks/set-state-in-effect */
+
+  // The players are fetched while the home screen is up, not when the setup screen first asks.
+  useEffect(() => {
+    preloadRoster();
+  }, []);
 
   if (showRules) return <RulesIntro onDone={() => setShowRules(false)} />;
   if (mode === "settings") return <SettingsScreen onBack={() => setMode("home")} />;
