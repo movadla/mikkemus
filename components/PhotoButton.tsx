@@ -3,6 +3,7 @@
 import { useRef } from "react";
 import { setPlayerPhoto } from "@/lib/storage";
 import { reportError } from "@/lib/errorReporting";
+import { photoToDataUrl } from "@/lib/image";
 import { avatarAccent } from "@/lib/avatarAccent";
 import { CameraIcon } from "./icons";
 
@@ -22,10 +23,10 @@ export function PhotoButton({ name, photo, size = "3.5rem" }: { name: string; ph
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => setPlayerPhoto(name, reader.result as string);
-    reader.onerror = () => reportError("Kunne ikke lese bildet.", { key: "photo-read" });
-    reader.readAsDataURL(file);
+    // Shrunk first: the camera's file is megabytes, and every picture is fetched with the player list.
+    photoToDataUrl(file)
+      .then((dataUrl) => setPlayerPhoto(name, dataUrl))
+      .catch(() => reportError("Kunne ikke lese bildet.", { key: "photo-read" }));
   }
 
   return (
