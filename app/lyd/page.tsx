@@ -12,6 +12,7 @@ import {
   playFanfareVariant,
   playHitStreakSound,
   playPerfectRoundVariant,
+  playStreakFanfare,
   primeAudio,
   type BoomParams,
   type CrowdParams,
@@ -272,6 +273,19 @@ export default function LydPage() {
             ))}
             <PlayButton accent={boomAccent} onClick={() => [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].forEach((s, i) => setTimeout(() => playHitStreakSound(s), i * 650))}>
               ▶ En serie på 10, pil for pil
+            </PlayButton>
+          </div>
+          <p className="mt-5 mb-3" style={{ color: "var(--color-muted)", fontSize: "0.72rem", lineHeight: 1.5 }}>
+            Fanfaren som kommer på hver tredje pil på rad. Større og større, og fra 15 løftes tonearten.
+          </p>
+          <div className="space-y-2">
+            {[3, 6, 9, 12, 15, 18].map((run) => (
+              <PlayButton key={run} accent={boomAccent} onClick={() => playStreakFanfare(run)}>
+                ▶ Fanfare ved {run} på rad
+              </PlayButton>
+            ))}
+            <PlayButton accent={crowdAccent} onClick={() => [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].forEach((s, i) => setTimeout(() => { playHitStreakSound(s); if (s % 3 === 0) playStreakFanfare(s); }, i * 900))}>
+              ▶ Hele serien på 12, med fanfarer
             </PlayButton>
           </div>
         </Panel>

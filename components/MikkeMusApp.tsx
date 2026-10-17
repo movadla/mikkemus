@@ -46,7 +46,7 @@ import { computeOdds } from "@/lib/odds";
 import { logOddsMatch, type OddsSnapshot } from "@/lib/oddsLog";
 import { useShowOdds } from "@/lib/oddsSetting";
 import { haptics } from "@/lib/haptics";
-import { crowdForStreak, playCrowd, playFanfare, playHitStreakSound, playMatchDartSound, playTapSound, playWalkOnTune, playWinBoom, primeAudio } from "@/lib/fanfare";
+import { crowdForStreak, playCrowd, playFanfare, playHitStreakSound, playStreakFanfare, playMatchDartSound, playTapSound, playWalkOnTune, playWinBoom, primeAudio } from "@/lib/fanfare";
 import { fxFlags, getFxLevel, useFxLevel } from "@/lib/fxLevel";
 import { classifyThrow, formatSectorLabel, parseSector } from "@/lib/scoliaMapping";
 import {
@@ -945,6 +945,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         // The boom follows the run, not just the turn: dart 4, 5, 6 in a row hit harder and harder.
         playHitStreakSound(Math.min(run, fx.boomMaxStreak));
         if (fx.crowd && run >= 3) playCrowd(crowdForStreak(run));
+        // Every third dart in a row has a fanfare of its own, bigger the longer the run (Full party).
+        if (fx.streakFanfare && run >= 3 && run % 3 === 0) playStreakFanfare(run);
         setHitPulse({ token: ++pulseTokenRef.current, streak });
         emitFx({ type: "dart", step: hitResult![0].step, player: activePlayer });
       }

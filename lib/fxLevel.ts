@@ -79,12 +79,14 @@ export type FxFlags = {
   momentum: boolean;
   /** The trophy, the beams and the cannons on the winner screen. */
   trophy: boolean;
+  /** A brass fanfare on every third dart in a row (3, 6, 9 ...), bigger each time. */
+  streakFanfare: boolean;
 };
 
 const FLAGS: Record<FxLevel, FxFlags> = {
-  normal: { boomMaxStreak: 1, heat: false, shake: false, tripleOverlay: false, dives: false, confetti: false, bigConfetti: false, crowd: false, dartFlight: false, ringSlam: false, perfectBurst: false, fire: false, walkOn: false, rowShine: false, shirtRain: false, leadChange: false, matchDart: false, replay: false, recordBanner: false, walkOnTune: false, missBounce: false, lineup: false, manga: false, momentum: false, trophy: false },
-  party: { boomMaxStreak: 3, heat: true, shake: true, tripleOverlay: true, dives: true, confetti: true, bigConfetti: false, crowd: false, dartFlight: false, ringSlam: false, perfectBurst: false, fire: false, walkOn: false, rowShine: false, shirtRain: false, leadChange: false, matchDart: false, replay: false, recordBanner: false, walkOnTune: false, missBounce: false, lineup: false, manga: false, momentum: false, trophy: false },
-  full: { boomMaxStreak: 12, heat: true, shake: true, tripleOverlay: true, dives: true, confetti: true, bigConfetti: true, crowd: true, dartFlight: true, ringSlam: true, perfectBurst: true, fire: true, walkOn: true, rowShine: true, shirtRain: true, leadChange: true, matchDart: true, replay: true, recordBanner: true, walkOnTune: true, missBounce: true, lineup: true, manga: true, momentum: true, trophy: true },
+  normal: { boomMaxStreak: 1, heat: false, shake: false, tripleOverlay: false, dives: false, confetti: false, bigConfetti: false, crowd: false, dartFlight: false, ringSlam: false, perfectBurst: false, fire: false, walkOn: false, rowShine: false, shirtRain: false, leadChange: false, matchDart: false, replay: false, recordBanner: false, walkOnTune: false, missBounce: false, lineup: false, manga: false, momentum: false, trophy: false, streakFanfare: false },
+  party: { boomMaxStreak: 3, heat: true, shake: true, tripleOverlay: true, dives: true, confetti: true, bigConfetti: false, crowd: false, dartFlight: false, ringSlam: false, perfectBurst: false, fire: false, walkOn: false, rowShine: false, shirtRain: false, leadChange: false, matchDart: false, replay: false, recordBanner: false, walkOnTune: false, missBounce: false, lineup: false, manga: false, momentum: false, trophy: false, streakFanfare: false },
+  full: { boomMaxStreak: 12, heat: true, shake: true, tripleOverlay: true, dives: true, confetti: true, bigConfetti: true, crowd: true, dartFlight: true, ringSlam: true, perfectBurst: true, fire: true, walkOn: true, rowShine: true, shirtRain: true, leadChange: true, matchDart: true, replay: true, recordBanner: true, walkOnTune: true, missBounce: true, lineup: true, manga: true, momentum: true, trophy: true, streakFanfare: true },
 };
 
 export function fxFlags(level: FxLevel): FxFlags {

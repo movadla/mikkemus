@@ -385,8 +385,99 @@ export function playHitStreakSound(streak: number) {
   // still exported so /lyd can put the old brass cues next to the new ones.
   playBoom(boomForStreak(streak));
   // Past the fourth dart in a row the boom gets company: a brass chord that climbs a step with every dart.
-  if (streak >= 5) playStreakStab(streak);
+  // Every third dart has a fanfare of its own instead (see playStreakFanfare).
+  if (streak >= 5 && streak % 3 !== 0) playStreakStab(streak);
 }
+
+/** A rush of filtered noise that swells and fades: the cymbal under a big fanfare. */
+function cymbalSwell(ctx: AudioContext, buses: Buses, at: number, duration: number, peak: number) {
+  const noise = getNoise(ctx);
+  if (!noise) return;
+  const src = ctx.createBufferSource();
+  src.buffer = noise;
+  src.loop = true;
+  const hp = ctx.createBiquadFilter();
+  hp.type = "highpass";
+  hp.frequency.setValueAtTime(3000, at);
+  hp.frequency.linearRampToValueAtTime(7000, at + duration * 0.8);
+  const env = ctx.createGain();
+  env.gain.setValueAtTime(0.0001, at);
+  env.gain.linearRampToValueAtTime(peak, at + duration * 0.7);
+  env.gain.exponentialRampToValueAtTime(0.0001, at + duration);
+  src.connect(hp);
+  hp.connect(env);
+  env.connect(buses.master);
+  env.connect(buses.reverb);
+  src.start(at);
+  src.stop(at + duration + 0.05);
+}
+
+/**
+ * The fanfare for a run: played on every third dart in a row (3, 6, 9, 12 ...), bigger each time.
+ * Three is a short call into a held note. Six is a rising run into a held chord. Nine is a charge
+ * with a cymbal swell under the top note. Twelve is a double-length flourish that lands on a high E
+ * with the whole chord behind it. From fifteen the key lifts a whole tone, and again at eighteen, so
+ * it keeps sounding like climbing. Always shorter than the winner's fanfare, so the two never read as
+ * the same event, and played over the boom of the dart (which owns the low end).
+ */
+export function playStreakFanfare(run: number) {
+  const ctx = getContext();
+  if (!ctx) return;
+  try {
+    if (ctx.state === "suspended") ctx.resume().catch(() => {});
+    const buses = getBuses(ctx);
+    if (!buses) return;
+    const now = ctx.currentTime + 0.03;
+    const tier = Math.max(1, Math.min(6, Math.floor(run / 3)));
+    const lift = tier >= 5 ? Math.pow(2, (2 * (tier - 4)) / 12) : 1;
+    const level = 1 + 0.12 * (tier - 1);
+    const n = (hz: number, at: number, dur: number, peak: number) => brassNote(ctx, buses, hz * lift, now + at, dur, peak * level);
+
+    if (tier === 1) {
+      n(G4, 0, 0.09, 0.13);
+      n(C5, 0.09, 0.09, 0.14);
+      n(E5, 0.18, 0.5, 0.16);
+      n(G5, 0.18, 0.5, 0.08);
+      n(C5, 0.18, 0.5, 0.07);
+    } else if (tier === 2) {
+      n(C5, 0, 0.1, 0.14);
+      n(E5, 0.1, 0.1, 0.15);
+      n(G5, 0.2, 0.1, 0.15);
+      n(C6, 0.3, 0.8, 0.18);
+      n(G5, 0.3, 0.8, 0.09);
+      n(E5, 0.3, 0.8, 0.08);
+      n(C4, 0.3, 0.8, 0.07);
+    } else if (tier === 3) {
+      n(G4, 0, 0.07, 0.13);
+      n(C5, 0.08, 0.07, 0.14);
+      n(C5, 0.16, 0.07, 0.14);
+      n(E5, 0.24, 0.09, 0.15);
+      n(G5, 0.34, 0.1, 0.16);
+      n(C6, 0.46, 1.0, 0.19);
+      n(E6, 0.46, 1.0, 0.09);
+      n(G5, 0.46, 1.0, 0.1);
+      n(C5, 0.46, 1.0, 0.09);
+      cymbalSwell(ctx, buses, now + 0.4, 1.1, 0.12 * level);
+    } else {
+      n(C5, 0, 0.08, 0.14);
+      n(E5, 0.08, 0.08, 0.15);
+      n(G5, 0.16, 0.08, 0.15);
+      n(C6, 0.24, 0.12, 0.16);
+      n(A5, 0.38, 0.1, 0.15);
+      n(G5, 0.5, 0.1, 0.15);
+      n(E6, 0.62, 1.25, 0.2);
+      n(G6, 0.62, 1.25, 0.1);
+      n(C6, 0.62, 1.25, 0.1);
+      n(G5, 0.62, 1.25, 0.09);
+      n(C5, 0.62, 1.25, 0.08);
+      n(C4, 0.62, 1.25, 0.08);
+      cymbalSwell(ctx, buses, now + 0.55, 1.4, 0.16 * level);
+    }
+  } catch {
+    // Never let a synth glitch break a turn.
+  }
+}
+
 
 /** Semitones above the root for each dart past the fourth: a major pentatonic climb, so it always sounds like going up. */
 const STAB_CLIMB = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21];

@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { boomForStreak, crowdForStreak, playBoom, playHitStreakSound } from "./fanfare";
+import { boomForStreak, crowdForStreak, playBoom, playHitStreakSound, playStreakFanfare } from "./fanfare";
 
 /** Just enough of Web Audio to count what a sound starts, and to throw if anything calls something that is not there. */
 const counts = { osc: 0, noise: 0, brass: 0 };
@@ -69,6 +69,31 @@ describe("the boom of a long run", () => {
     const five = counts.osc;
     expect(five).toBeGreaterThan(four); // four brass notes, two oscillators each
     expect(five - four).toBeGreaterThanOrEqual(8);
+  });
+
+  it("plays a fanfare that gets bigger every third dart in a row", () => {
+    const voices = (run: number) => {
+      counts.osc = 0;
+      counts.noise = 0;
+      playStreakFanfare(run);
+      return { osc: counts.osc, noise: counts.noise };
+    };
+    const three = voices(3), six = voices(6), nine = voices(9), twelve = voices(12);
+    expect(three.osc).toBe(10); // five brass notes, two oscillators each
+    expect(six.osc).toBeGreaterThan(three.osc);
+    expect(nine.osc).toBeGreaterThan(six.osc);
+    expect(twelve.osc).toBeGreaterThan(nine.osc);
+    expect(three.noise + six.noise).toBe(0); // the cymbal comes in at nine
+    expect(nine.noise).toBe(1);
+    expect(twelve.noise).toBe(1);
+    expect(voices(15).osc).toBe(twelve.osc); // the same shape, lifted a tone and louder
+  });
+
+  it("gives the fanfare the third dart and the climbing chord the ones in between", () => {
+    const osc = (s: number) => { counts.osc = 0; playHitStreakSound(s); return counts.osc; };
+    // 6 is a fanfare dart: no stab from the boom itself. 7 has the stab on top of a heavier boom.
+    expect(osc(7)).toBeGreaterThan(osc(6));
+    expect(osc(5)).toBeGreaterThan(osc(4));
   });
 
   it("keeps growing the crowd past the top of its scale", () => {
