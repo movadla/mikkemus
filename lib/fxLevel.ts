@@ -45,12 +45,38 @@ export type FxFlags = {
   bigConfetti: boolean;
   /** Crowd noise under the third dart of a streak. */
   crowd: boolean;
+  /** A dart that flies into the board for every cross that scores (also by hand). */
+  dartFlight: boolean;
+  /** A shockwave and the word slammed in when a triple or double lands. */
+  ringSlam: boolean;
+  /** The three lit darts and the glint when all three darts of a turn count. */
+  perfectBurst: boolean;
+  /** Flames round the thrower's picture while a run of counting darts builds. */
+  fire: boolean;
+  /** Spotlights and fog when a new thrower is up. */
+  walkOn: boolean;
+  /** Gold outline, glint and dust on a row that has just closed. */
+  rowShine: boolean;
+  /** The winning team's own shirts raining down on the winner screen. */
+  shirtRain: boolean;
+  /** The glint and the crown when a team or player takes the lead. */
+  leadChange: boolean;
+  /** Short lines about the match in a ticker (a run, a closed row, a triple, who is one row away). */
+  commentary: boolean;
+  /** The red pulsing edge and «MATCHDART» while the thrower has one row left. */
+  matchDart: boolean;
+  /** The last turn played back in slow motion on the winner screen, from the real dart positions. */
+  replay: boolean;
+  /** The gold banner and the crown when a personal record is beaten. */
+  recordBanner: boolean;
+  /** A team's own walk-on tune when it is up. */
+  walkOnTune: boolean;
 };
 
 const FLAGS: Record<FxLevel, FxFlags> = {
-  normal: { boomMaxStreak: 1, heat: false, shake: false, tripleOverlay: false, dives: false, confetti: false, bigConfetti: false, crowd: false },
-  party: { boomMaxStreak: 3, heat: true, shake: true, tripleOverlay: true, dives: true, confetti: true, bigConfetti: false, crowd: false },
-  full: { boomMaxStreak: 3, heat: true, shake: true, tripleOverlay: true, dives: true, confetti: true, bigConfetti: true, crowd: true },
+  normal: { boomMaxStreak: 1, heat: false, shake: false, tripleOverlay: false, dives: false, confetti: false, bigConfetti: false, crowd: false, dartFlight: false, ringSlam: false, perfectBurst: false, fire: false, walkOn: false, rowShine: false, shirtRain: false, leadChange: false, commentary: false, matchDart: false, replay: false, recordBanner: false, walkOnTune: false },
+  party: { boomMaxStreak: 3, heat: true, shake: true, tripleOverlay: true, dives: true, confetti: true, bigConfetti: false, crowd: false, dartFlight: false, ringSlam: false, perfectBurst: false, fire: false, walkOn: false, rowShine: false, shirtRain: false, leadChange: false, commentary: false, matchDart: false, replay: false, recordBanner: false, walkOnTune: false },
+  full: { boomMaxStreak: 3, heat: true, shake: true, tripleOverlay: true, dives: true, confetti: true, bigConfetti: true, crowd: true, dartFlight: true, ringSlam: true, perfectBurst: true, fire: true, walkOn: true, rowShine: true, shirtRain: true, leadChange: true, commentary: true, matchDart: true, replay: true, recordBanner: true, walkOnTune: true },
 };
 
 export function fxFlags(level: FxLevel): FxFlags {

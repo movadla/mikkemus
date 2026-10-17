@@ -790,3 +790,49 @@ export function crowdForStreak(streak: 1 | 2 | 3, base: CrowdParams = CROWD_DEFA
     density: Math.min(5, base.density - 2 + streak),
   };
 }
+
+/** A team's own walk-on tune — chosen in Innstillinger, played when the team is up (Full party). */
+export type WalkOnTune = "fanfare" | "rock" | "disco";
+export type WalkOnChoice = WalkOnTune | "none";
+export const WALK_ON_TUNES: WalkOnTune[] = ["fanfare", "rock", "disco"];
+export const WALK_ON_LABELS: Record<WalkOnChoice, string> = { none: "Ingen", fanfare: "Fanfare", rock: "Rock", disco: "Disco" };
+
+/** About a second and a half of synthesised tune. Never throws: sound is never worth breaking a turn. */
+export function playWalkOnTune(kind: WalkOnTune): void {
+  const ctx = getContext();
+  if (!ctx) return;
+  try {
+    if (ctx.state === "suspended") ctx.resume().catch(() => {});
+    const buses = getBuses(ctx);
+    if (!buses) return;
+    const t0 = ctx.currentTime + 0.02;
+    const tone = (freq: number, at: number, dur: number, type: OscillatorType, peak: number) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = type; o.frequency.value = freq; o.connect(g); g.connect(buses.master);
+      const s0 = t0 + at;
+      g.gain.setValueAtTime(0.0001, s0); g.gain.linearRampToValueAtTime(peak, s0 + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, s0 + dur);
+      o.start(s0); o.stop(s0 + dur + 0.05);
+    };
+    const hit = (at: number, dur: number, peak: number, highpass: number) => {
+      const buf = getNoise(ctx);
+      if (!buf) return;
+      const n = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+      n.buffer = buf; f.type = "highpass"; f.frequency.value = highpass; n.connect(f); f.connect(g); g.connect(buses.master);
+      const s0 = t0 + at;
+      g.gain.setValueAtTime(peak, s0); g.gain.exponentialRampToValueAtTime(0.0001, s0 + dur);
+      n.start(s0, 0, dur + 0.05);
+    };
+    if (kind === "fanfare") {
+      [[392, 0], [392, 0.18], [523, 0.36], [659, 0.6], [784, 0.9]].forEach(([f, at], i) => tone(f, at, i === 4 ? 0.9 : 0.22, "sawtooth", 0.1));
+    } else if (kind === "rock") {
+      [82, 123, 165].forEach((f) => tone(f, 0, 1.0, "sawtooth", 0.12));
+      hit(0, 0.5, 0.22, 400);
+      [[82, 0.5], [98, 0.5]].forEach(([f, at]) => tone(f, at, 0.6, "sawtooth", 0.1));
+    } else {
+      for (let i = 0; i < 4; i++) { tone(98, i * 0.3, 0.2, "sine", 0.22); hit(i * 0.3 + 0.15, 0.08, 0.08, 6000); }
+      [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.15, 0.2, "triangle", 0.08));
+    }
+  } catch {
+    // A synth glitch must never break the turn that asked for it.
+  }
+}

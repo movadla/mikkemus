@@ -4,6 +4,7 @@ import { STEPS, type Step, type TurnAggregate } from "./game";
 import { supabase } from "./supabaseClient";
 import { defaultKits, type TeamKits } from "./teamKit";
 import { cleanTeamName } from "./teamNames";
+import type { WalkOnChoice } from "./fanfare";
 import {
   emptyRecord,
   recordKey as key,
@@ -267,6 +268,16 @@ export function renameTeam(oldName: string, newName: string): { ok: true; name: 
 /** The two shirts a team plays in — its own if it has them, otherwise the default for its people. */
 export function teamKitsOf(record: PlayerRecord): TeamKits {
   return record.kits ?? defaultKits(record.members ?? []);
+}
+
+/** Chooses a team's walk-on tune — from the settings. */
+export function setTeamWalkOn(name: string, walkOn: WalkOnChoice) {
+  const k = key(name);
+  if (roster[k]?.kind !== "team") return;
+  const record = { ...roster[k], walkOn };
+  roster = { ...roster, [k]: record };
+  notify();
+  upsertRow(k, record);
 }
 
 /** Changes a team's shirts — from the settings. */

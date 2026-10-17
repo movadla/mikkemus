@@ -1,5 +1,6 @@
 import { STEPS, type Step } from "./game";
 import type { TeamKits } from "./teamKit";
+import type { WalkOnChoice } from "./fanfare";
 
 /**
  * The shape of a row in the `players` table and how it maps to a PlayerRecord — pulled out of
@@ -50,6 +51,8 @@ export type PlayerRecord = {
   /** A team's home and away shirt — its own, fixed, and changeable in the settings. Absent on a
    *  player, and on a team from before shirts were stored (those get defaultKits on next play). */
   kits?: TeamKits;
+  /** The tune played when this team is up (Full party). Absent until one has been chosen. */
+  walkOn?: WalkOnChoice;
   photo?: string;
   /** A short recorded clip (data URL), played when it becomes this player's turn. */
   sound?: string;
@@ -105,6 +108,9 @@ export type PlayerRow = {
   kind?: string | null;
   members?: string[] | null;
   kits?: TeamKits | null;
+  /** Nullable column (supabase-setup-teams.sql); written only once a tune has been chosen, so saving
+   *  keeps working on a database that does not have it yet. */
+  walk_on?: string | null;
   /** Nullable column added later (supabase-setup-teams.sql); written only once there is a value, so
    *  saving keeps working on a database that does not have it yet. */
   best_run?: number | null;
@@ -175,6 +181,7 @@ export function rowToRecord(row: PlayerRow): PlayerRecord {
     name: row.name,
     kind,
     ...(kind === "team" ? { members: Array.isArray(row.members) ? row.members.filter((m) => typeof m === "string") : [] } : {}),
+    ...(kind === "team" && (row.walk_on === "fanfare" || row.walk_on === "rock" || row.walk_on === "disco" || row.walk_on === "none") ? { walkOn: row.walk_on } : {}),
     ...(kind === "team" && row.kits?.home && row.kits?.away ? { kits: { home: row.kits.home, away: row.kits.away } } : {}),
     photo: row.photo ?? undefined,
     sound: row.sound ?? undefined,
@@ -243,6 +250,7 @@ export function recordToRow(k: string, record: PlayerRecord): PlayerRow {
     double_hits: record.doubleHits,
     match_history: record.matchHistory,
     ...(record.bestRun ? { best_run: record.bestRun } : {}),
+    ...(record.kind === "team" && record.walkOn ? { walk_on: record.walkOn } : {}),
     // Only a team touches the two newer columns — see PlayerRow.
     ...(record.kind === "team" ? { kind: "team", members: record.members ?? [], kits: record.kits ?? null } : {}),
   };

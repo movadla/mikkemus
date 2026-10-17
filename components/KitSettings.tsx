@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { setTeamKits, teamKitsOf, useTeamRecords } from "@/lib/storage";
+import { setTeamKits, setTeamWalkOn, teamKitsOf, useTeamRecords } from "@/lib/storage";
+import { WALK_ON_LABELS, playWalkOnTune, primeAudio } from "@/lib/fanfare";
 import { KIT_COLOURS, PATTERNS, PATTERN_LABELS, colourName, defaultKits, makeKit, usesSecondColour, type Kit, type TeamKits } from "@/lib/teamKit";
 import { TeamKit } from "./TeamKit";
 
@@ -140,6 +141,33 @@ export function KitSettings() {
               </button>
               {editing && (
                 <div className="p-4">
+                  <div className="mb-6">
+                    <p className="section-label mb-2">INNMARSJ</p>
+                    <div className="grid grid-cols-4 gap-2" role="radiogroup" aria-label="Innmarsj">
+                      {(["none", "fanfare", "rock", "disco"] as const).map((w) => {
+                        const selected = (team.walkOn ?? "none") === w;
+                        return (
+                          <button
+                            key={w}
+                            type="button"
+                            role="radio"
+                            aria-checked={selected}
+                            onClick={() => {
+                              setTeamWalkOn(team.name, w);
+                              if (w !== "none") {
+                                primeAudio();
+                                playWalkOnTune(w);
+                              }
+                            }}
+                            className={`tactile rounded-lg text-sm ${FOCUS_RING}`}
+                            style={{ minHeight: "2.75rem", background: selected ? "rgba(47, 180, 194, 0.18)" : "var(--color-surface)", color: selected ? "var(--color-teal)" : "var(--color-muted)", border: selected ? "1px solid var(--color-teal)" : "1px solid var(--color-border)" }}
+                          >
+                            {WALK_ON_LABELS[w]}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                   <KitEditor label="HJEMME" kit={kits.home} onChange={(home) => save({ ...kits, home })} />
                   <KitEditor label="BORTE" kit={kits.away} onChange={(away) => save({ ...kits, away })} />
                   <button

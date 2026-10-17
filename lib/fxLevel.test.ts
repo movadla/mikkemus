@@ -26,7 +26,26 @@ describe("fx levels", () => {
       confetti: false,
       bigConfetti: false,
       crowd: false,
+      dartFlight: false,
+      ringSlam: false,
+      perfectBurst: false,
+      fire: false,
+      walkOn: false,
+      rowShine: false,
+      shirtRain: false,
+      leadChange: false,
+      commentary: false,
+      matchDart: false,
+      replay: false,
+      recordBanner: false,
+      walkOnTune: false,
     });
+  });
+
+  it("every new effect is Full party only: Vanlig and Party have none, Full party has all of them", () => {
+    const keys = ["dartFlight", "ringSlam", "perfectBurst", "fire", "walkOn", "rowShine", "shirtRain", "leadChange", "commentary", "matchDart", "replay", "recordBanner", "walkOnTune"] as const;
+    for (const level of ["normal", "party"] as const) for (const k of keys) expect(fxFlags(level)[k], `${level}.${k}`).toBe(false);
+    for (const k of keys) expect(fxFlags("full")[k], `full.${k}`).toBe(true);
   });
 
   it("only Full party has the crowd and the heavy confetti", () => {

@@ -2,6 +2,7 @@
 
 import { avatarAccent } from "@/lib/avatarAccent";
 import type { Kit } from "@/lib/teamKit";
+import { useEffect, useRef } from "react";
 import { TeamKit } from "./TeamKit";
 
 export type Thrower = { name: string; photo?: string | null; isBot: boolean };
@@ -50,6 +51,67 @@ function Avatar({ who, size, active = true, ring = false }: { who: Thrower; size
   );
 }
 
+const rnd = (a: number, b: number) => a + Math.random() * (b - a);
+
+/**
+ * Flames round the thrower's picture while a run of counting darts builds: orange from two in a
+ * row, taller and hotter as it grows, blue-white from eleven. Drawn on a canvas behind the
+ * picture and stopped the moment the run ends. Nothing for a phone set to reduced motion.
+ */
+function Flames({ run, size }: { run: number; size: number }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  const level = useRef(run);
+  useEffect(() => {
+    level.current = run;
+  }, [run]);
+
+  useEffect(() => {
+    const cv = ref.current;
+    if (!cv || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const box = size * 2.4, dpr = Math.min(2, devicePixelRatio || 1);
+    cv.width = box * dpr; cv.height = box * dpr;
+    const ctx = cv.getContext("2d")!;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    type P = { x: number; y: number; vx: number; vy: number; life: number; max: number; s: number };
+    let parts: P[] = [];
+    let last = performance.now(), stop = false;
+    const cx = box / 2, cy = box / 2 + size * 0.05;
+    const step = (t: number) => {
+      if (stop) return;
+      const dt = Math.min(0.05, (t - last) / 1000); last = t;
+      ctx.clearRect(0, 0, box, box);
+      const n = Math.min(15, level.current), heat = Math.min(1, n / 12);
+      if (n >= 2) {
+        const spawn = Math.round(n * 2.2 * dt * 60);
+        for (let i = 0; i < spawn; i++) {
+          const a = rnd(0, Math.PI * 2);
+          parts.push({ x: cx + Math.cos(a) * size * 0.46, y: cy + Math.sin(a) * size * 0.4, vx: rnd(-8, 8), vy: -rnd(24, 44 + heat * 90) * (size / 52), life: 0, max: rnd(0.45, 0.8 + heat * 0.5), s: rnd(size * 0.1, size * (0.18 + heat * 0.2)) });
+        }
+      }
+      parts = parts.filter((p) => (p.life += dt) < p.max);
+      ctx.globalCompositeOperation = "lighter";
+      for (const p of parts) {
+        p.x += p.vx * dt + Math.sin(p.life * 9 + p.x) * 10 * dt; p.y += p.vy * dt;
+        const k = p.life / p.max, r = p.s * (1 - k * 0.8);
+        const c = n >= 11 ? [150 + 80 * (1 - k), 200 + 40 * (1 - k), 255] : [255, 90 + 150 * (1 - k), 20 + 40 * (1 - k)];
+        const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
+        g.addColorStop(0, `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${0.55 * (1 - k)})`);
+        g.addColorStop(1, `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},0)`);
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, 6.283); ctx.fill();
+      }
+      ctx.globalCompositeOperation = "source-over";
+      requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+    return () => {
+      stop = true;
+    };
+  }, [size]);
+
+  const box = size * 2.4;
+  return <canvas ref={ref} aria-hidden style={{ position: "absolute", left: -(box - size) / 2, top: -(box - size) / 2, width: box, height: box, pointerEvents: "none" }} />;
+}
+
 /**
  * Who is throwing right now — the one thing every player at the board needs to read at a glance.
  *
@@ -67,6 +129,7 @@ export function ThrowerBar({
   kit,
   stood,
   run = 0,
+  fire = false,
   animate,
   compact = false,
   onPickMate,
@@ -79,6 +142,8 @@ export function ThrowerBar({
   stood: boolean;
   /** Darts in a row that counted — shown from two up, so a lone hit is not announced. */
   run?: number;
+  /** Flames round the picture while the run builds (Party and up). */
+  fire?: boolean;
   animate: boolean;
   compact?: boolean;
   /** A tap on a teammate's picture: the caller asks whether they should throw now. */
@@ -105,7 +170,8 @@ export function ThrowerBar({
         padding: compact ? "0.4rem 0.6rem" : "0.6rem 0.8rem",
       }}
     >
-      <span className="relative shrink-0" style={{ width: photoSize, height: photoSize }}>
+      <span className="thrower-avatar relative shrink-0" style={{ width: photoSize, height: photoSize }}>
+        {fire && run >= 2 && <Flames run={run} size={photoSize} />}
         <Avatar who={thrower} size={photoSize} ring={animate} />
         {/* The shirt the thrower is playing in, worn on the picture — big enough to read across the room. */}
         {kit && (

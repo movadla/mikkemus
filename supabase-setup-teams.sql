@@ -6,3 +6,5 @@ alter table players add column if not exists members jsonb;
 alter table players add column if not exists kits jsonb;
 -- Lengste serie av tellende piler på rad (i piler), for spillere og lag.
 alter table players add column if not exists best_run integer;
+-- Lagets innmarsj (fanfare, rock, disco eller none), spilles på Full party.
+alter table players add column if not exists walk_on text;

@@ -13,6 +13,8 @@ import { RaceChart } from "./RaceChart";
 import { getPlayerRecord } from "@/lib/storage";
 import { generateConfetti, generateConfettiRain } from "@/lib/confetti";
 import { DartboardHeatmap } from "./DartboardHeatmap";
+import { ShirtRain } from "./ShirtRain";
+import { ReplayCard } from "./ReplayCard";
 
 type LuckByStep = Record<Step, { sum: number; count: number }>;
 
@@ -111,8 +113,10 @@ export function WinnerScreen({
   // The celebration follows the chosen level (see lib/fxLevel.ts): none at Vanlig, the usual at
   // Party, twice the rain at Full party. The rest of the screen is the same at every level.
   const fx = fxFlags(useFxLevel());
-  const confettiCount = fx.confetti ? CONFETTI_COUNT * (fx.bigConfetti ? 2 : 1) : 0;
-  const rainCount = fx.confetti ? RAIN_COUNT * (fx.bigConfetti ? 2 : 1) : 0;
+  // A winning team celebrates with its own shirts (ShirtRain) instead of the generic confetti.
+  const shirts = !!winnerKit && fx.shirtRain;
+  const confettiCount = fx.confetti && !shirts ? CONFETTI_COUNT * (fx.bigConfetti ? 2 : 1) : 0;
+  const rainCount = fx.confetti && !shirts ? RAIN_COUNT * (fx.bigConfetti ? 2 : 1) : 0;
   // What the summary is written from — rebuilt only when the match itself changes.
   const facts = useMemo(
     () =>
@@ -121,6 +125,25 @@ export function WinnerScreen({
         : null,
     [players, winner, turnLogByPlayer, progressByPlayer],
   );
+  // The last turn played back from where the darts really landed — only when every dart of it has a
+  // position (a board that reports them), so the replay never shows a made-up dart.
+  const lastTurn = [...(turnLogByPlayer[winner] ?? [])].filter(Boolean).at(-1);
+  const lastDarts = lastTurn?.darts ?? 0;
+  const winnerThrows = throwsByPlayer[winner] ?? [];
+  const replayThrows = fx.replay && lastDarts > 0 && winnerThrows.length >= lastDarts ? winnerThrows.slice(-lastDarts) : null;
+  // Personal records this match beat. The stored record is only updated when the win is accepted, so
+  // at this point it is still the old one to compare with — and a first-ever value is no record.
+  const newRecords = fx.recordBanner
+    ? players.flatMap((p) => {
+        const held = getPlayerRecord(p);
+        if (!held) return [];
+        const out: string[] = [];
+        const run = Math.max(0, ...throwerStats(turnLogByPlayer[p] ?? [], p).map((r) => r.bestRun)) * 3;
+        if (held.bestRun && run > held.bestRun) out.push(`${p}: lengste serie, ${run} piler`);
+        if (p === winner && held.bestDartsToFinish && stats[p] && stats[p].darts < held.bestDartsToFinish) out.push(`${p}: færrest piler, ${stats[p].darts}`);
+        return out;
+      })
+    : [];
   const confetti = useMemo(() => generateConfetti(confettiCount), [confettiCount]);
   const rain = useMemo(() => generateConfettiRain(rainCount), [rainCount]);
   // The finer statistics (xH per row, where the darts landed) only exist with a board that
@@ -162,6 +185,7 @@ export function WinnerScreen({
       )}
       {/* Rain across the whole screen, behind the card — the burst above the winner card
           stays as its own accent on top of this. */}
+      {shirts && winnerKit && <ShirtRain kit={winnerKit} heavy={fx.bigConfetti} />}
       <div className="absolute inset-0 pointer-events-none z-0" aria-hidden>
         {rain.map((c, i) => (
           <span
@@ -274,6 +298,22 @@ export function WinnerScreen({
           </div>
         </div>
 
+        {newRecords.length > 0 && (
+          <div className="animate-winner-pop rounded-xl p-4 mb-6 flex items-center gap-3" style={{ background: "linear-gradient(90deg, #e6bd57, #f3d98a)", color: "#2b2000" }} role="status">
+            <svg viewBox="0 0 32 24" width="36" height="28" aria-hidden>
+              <path d="M2 20 L5 6 L11 13 L16 3 L21 13 L27 6 L30 20Z" fill="#2b2000" />
+            </svg>
+            <div>
+              <p style={{ fontSize: "0.72rem", letterSpacing: "0.14em", fontWeight: 700 }}>NY REKORD</p>
+              {newRecords.map((r) => (
+                <p key={r} style={{ fontWeight: 700 }}>
+                  {r}
+                </p>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* What people read first, and often all they read: hit percentage and darts, side by side
             for everyone. The charts and the finer statistics are further down, for those who
             keep scrolling. */}
@@ -370,6 +410,8 @@ export function WinnerScreen({
             </div>
           </div>
         </div>
+
+        {replayThrows && <ReplayCard throws={replayThrows} />}
 
         <MatchSummary facts={facts} />
 

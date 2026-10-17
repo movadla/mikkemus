@@ -24,6 +24,7 @@ import { reportError } from "@/lib/errorReporting";
 import { useCompactLandscape } from "@/lib/useCompactLandscape";
 import { LiveSidePanel } from "./LiveSidePanel";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { emitFx } from "@/lib/fxBus";
 import { Mark } from "./Mark";
 import { ThrowerBar, type Thrower, type ThrowerTeam } from "./ThrowerBar";
 import { TeamKit } from "./TeamKit";
@@ -152,6 +153,8 @@ type Props = {
   /** Whether the chosen animation level allows the building heat and the shake — see lib/fxLevel. */
   fxHeat: boolean;
   fxShake: boolean;
+  /** Flames round the thrower while a run of counting darts builds. */
+  fxFire: boolean;
   /** Each team's shirt, by team name — empty in a match with no teams. */
   kits: Record<string, Kit>;
 };
@@ -597,6 +600,7 @@ export function GameScreen({
   choiceInteractive,
   fxHeat,
   fxShake,
+  fxFire,
   kits,
 }: Props) {
   // Picks the wide variant of the mark glyph — see lib/useCompactLandscape.ts.
@@ -639,6 +643,12 @@ export function GameScreen({
   const [shakeOn, setShakeOn] = useState(() => isShakeEnabled());
   // A teammate whose picture was tapped: the question "skal X kaste nå?" is up for them.
   const [switchTo, setSwitchTo] = useState<string | null>(null);
+  // A row that has just closed gets its glint and dust (FxStage), on the cells of that row.
+  useEffect(() => {
+    if (closedStep && activePlayer) emitFx({ type: "rowClosed", step: closedStep.step, player: activePlayer });
+    // Only a new closing should play it, not a change of player.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [closedStep?.token]);
 
   // Retriggerable "just undid a dart" window — drives Mark's slow-motion un-draw below.
   // Replaces an earlier full-panel red flash, which read as an error state rather than
@@ -812,7 +822,7 @@ export function GameScreen({
           row of its own and carries it in the right-hand column instead (see .live-side below). */}
       {!compactLandscape && thrower && (
         <div className="max-w-3xl mx-auto w-full mb-2 shrink-0">
-          <ThrowerBar key={turnToken} thrower={thrower} team={throwerTeam} kit={throwerTeam ? kits[throwerTeam.name] : null} stood={throwerStood} run={throwerRun} animate={throwerAnimate} onPickMate={choiceInteractive && !rewound ? setSwitchTo : undefined} />
+          <ThrowerBar key={turnToken} thrower={thrower} team={throwerTeam} kit={throwerTeam ? kits[throwerTeam.name] : null} stood={throwerStood} run={throwerRun} fire={fxFire} animate={throwerAnimate} onPickMate={choiceInteractive && !rewound ? setSwitchTo : undefined} />
         </div>
       )}
 
@@ -981,6 +991,7 @@ export function GameScreen({
               return (
                 <div
                   key={p}
+                  data-col-active={isActive ? "" : undefined}
                   className={`player-head relative flex flex-col items-center justify-center gap-1.5 p-2 pb-2.5 text-center transition-colors duration-300 grid-rule-left ${isActive ? "column-active" : ""}`}
                   style={{
                     borderBottom: isActive ? `2px solid ${accent}` : "2px solid var(--color-border)",
@@ -1126,6 +1137,8 @@ export function GameScreen({
                         onPointerLeave={cancelHold}
                         onPointerCancel={cancelHold}
                         onContextMenu={(e) => e.preventDefault()}
+                        data-step={s}
+                        data-player={p}
                         onClick={() => {
                           // The hold already acted; the click that ends it must not undo that.
                           if (holdFiredRef.current) {
@@ -1190,7 +1203,7 @@ export function GameScreen({
         <div className="live-side">
           {thrower && (
             <div className="mb-1 shrink-0">
-              <ThrowerBar key={turnToken} thrower={thrower} team={throwerTeam} kit={throwerTeam ? kits[throwerTeam.name] : null} stood={throwerStood} run={throwerRun} animate={throwerAnimate} onPickMate={choiceInteractive && !rewound ? setSwitchTo : undefined} compact />
+              <ThrowerBar key={turnToken} thrower={thrower} team={throwerTeam} kit={throwerTeam ? kits[throwerTeam.name] : null} stood={throwerStood} run={throwerRun} fire={fxFire} animate={throwerAnimate} onPickMate={choiceInteractive && !rewound ? setSwitchTo : undefined} compact />
             </div>
           )}
           {/* The question lives in this column in landscape. It floated over the top of the board

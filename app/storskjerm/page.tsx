@@ -1,9 +1,11 @@
 "use client";
 
-import { Fragment } from "react";
+import { Fragment, useEffect, useRef } from "react";
 import Link from "next/link";
 import { STEPS, STEP_LABELS } from "@/lib/game";
-import { useLiveMatch } from "@/lib/liveMatch";
+import { useLiveMatch, type LiveMatchState } from "@/lib/liveMatch";
+import { emitFx } from "@/lib/fxBus";
+import { FxStage } from "@/components/FxStage";
 import { RULES, baseOf } from "@/lib/rules";
 import { avatarAccent } from "@/lib/avatarAccent";
 import { DartboardGlyph } from "@/components/DartboardGlyph";
@@ -49,6 +51,40 @@ export default function StorskjermPage() {
   // This page is not the one playing the match, so it reads the variant off the snapshot rather
   // than from the module-wide rules (which are whatever this browser last set — nothing).
   const target = RULES[baseOf(live?.variant)].target;
+
+  // The big screen plays the same effects as the board, worked out from what changed since the last
+  // poll — so they are exactly what happened: a cross that appeared is a dart that scored, a row
+  // that reached the target is a closed row, a new active player is a new thrower, and a different
+  // player with the fewest crosses left is a new leader. (Triples, runs and records are not in the
+  // snapshot, so those stay on the board's own screen.) Which of them play is this device's level.
+  const prev = useRef<LiveMatchState | null>(null);
+  const leader = useRef<string | null>(null);
+  useEffect(() => {
+    const before = prev.current;
+    prev.current = live;
+    if (!live || live.screen !== "game") {
+      leader.current = null;
+      return;
+    }
+    const left = live.players.map((p) => ({ p, r: STEPS.reduce((sum, s) => sum + (target - Math.min(target, live.progress[p]?.[s] ?? 0)), 0) }));
+    const best = Math.min(...left.map((x) => x.r));
+    const ahead = left.filter((x) => x.r === best);
+    const nowLeader = ahead.length === 1 && live.players.length > 1 ? ahead[0].p : null;
+    const sameMatch = before && before.screen === "game" && before.players.join("|") === live.players.join("|");
+    if (sameMatch) {
+      for (const p of live.players) {
+        for (const s of STEPS) {
+          const a = before.progress[p]?.[s] ?? 0, b = live.progress[p]?.[s] ?? 0;
+          if (b <= a) continue;
+          emitFx({ type: "dart", step: s, player: p });
+          if (b >= target && a < target) emitFx({ type: "rowClosed", step: s, player: p });
+        }
+      }
+      if (live.activePlayer !== before.activePlayer || live.turnToken !== before.turnToken) emitFx({ type: "walkOn" });
+      if (nowLeader && leader.current && nowLeader !== leader.current) emitFx({ type: "lead", name: nowLeader });
+    }
+    if (nowLeader) leader.current = nowLeader;
+  }, [live, target]);
 
   if (!live || live.screen === "setup" || live.players.length === 0) {
     return (
@@ -114,6 +150,7 @@ export default function StorskjermPage() {
   return (
     <div className="min-h-screen w-full flex items-center justify-center p-4 sm:p-6 md:p-10" style={{ background: "var(--color-bg)" }}>
       <HomeLink />
+      <FxStage />
       <h1 className="sr-only">Kampoversikt – storskjerm</h1>
       <div className="shadow-panel rounded-xl overflow-x-auto overflow-y-hidden w-full" style={{ background: "var(--color-panel)" }}>
         <div
@@ -131,6 +168,7 @@ export default function StorskjermPage() {
             return (
               <div
                 key={p}
+                data-col-active={isActive ? "" : undefined}
                 className="text-center pb-4"
                 style={{ borderBottom: isActive ? "4px solid var(--color-teal)" : "4px solid var(--color-border)" }}
               >
@@ -174,6 +212,8 @@ export default function StorskjermPage() {
                 return (
                   <div key={`${s}-${p}`} className="flex items-center justify-center p-2">
                     <div
+                      data-step={s}
+                      data-player={p}
                       className="rounded-md flex items-center justify-center"
                       style={{
                         width: "clamp(3.2rem, 12vw, 5rem)",
