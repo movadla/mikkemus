@@ -34,6 +34,14 @@ export type BetRow = {
 
 export type MatchRow = { match_id: string; sides: string[]; winner: string | null; status: "open" | "done" | "void"; created_at: string };
 
+/**
+ * The price of a side between two people: one divided by the chance, with no margin. The odds on the
+ * big screen carry a bookmaker's cut, which makes both sides worse than fair; with no bank to take a
+ * cut, that would make the price depend on who put the bet out. At the fair price, backing Vadla at
+ * 1,89 and taking the other side of a bet on Monge are the same bet.
+ */
+export const fairPrice = (p: number): number => Math.max(1.01, Math.round(100 / Math.max(p, 0.01)) / 100);
+
 /** What the other side risks: the backer's profit if the pick wins, whole coins, rounded down. */
 export const liabilityFor = (stake: number, odds: number): number => Math.floor(stake * (odds - 1) + 1e-9);
 

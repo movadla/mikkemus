@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ScreenTop } from "@/components/ScreenTop";
 import { useLiveMatch } from "@/lib/liveMatch";
 import { addUser, marketOpen, newNight, offerBet, removeUser, settleMatch, takeBet, withdrawBet } from "@/lib/bet/api";
-import { atStake, balances, liabilityFor, lifetimeNet, netByUser, settleUp, stakeProblem, START_COINS, type BetRow, type BetUser } from "@/lib/bet/ledger";
+import { atStake, balances, fairPrice, liabilityFor, lifetimeNet, netByUser, settleUp, stakeProblem, START_COINS, type BetRow, type BetUser } from "@/lib/bet/ledger";
 import { useBet } from "@/lib/bet/useBet";
 
 const FOCUS_RING = "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
@@ -209,7 +209,8 @@ function PlayTab({ bet, live, me, balance }: { bet: ReturnType<typeof useBet>; l
 
   const stakeNum = Number(stake.replace(/\s/g, ""));
   const problem = stakeProblem(stakeNum, balance);
-  const chosen = live?.odds?.find((o) => o.name === pick) ?? null;
+  const sides = (live?.odds ?? []).map((o) => ({ ...o, odds: fairPrice(o.p) }));
+  const chosen = sides.find((o) => o.name === pick) ?? null;
   const liability = chosen && problem === "none" ? liabilityFor(stakeNum, chosen.odds) : 0;
 
   const offer = async () => {
@@ -243,7 +244,7 @@ function PlayTab({ bet, live, me, balance }: { bet: ReturnType<typeof useBet>; l
   const running = here.filter((b) => b.status === "matched");
   const mine = books.bets.filter((b) => me && (b.backer_id === me.id || b.layer_id === me.id)).slice(0, 10);
   const stale = books.matches.filter((m) => (m.status === "open" || m.status === "done") && m.match_id !== live?.matchId && books.bets.some((b) => b.match_id === m.match_id && b.status === "matched"));
-  const otherSide = (s: string) => live?.odds?.find((o) => o.name !== s)?.name ?? "motstanderen";
+  const otherSide = (s: string) => sides.find((o) => o.name !== s)?.name ?? "motstanderen";
 
   return (
     <>
@@ -253,8 +254,8 @@ function PlayTab({ bet, live, me, balance }: { bet: ReturnType<typeof useBet>; l
         ) : (
           <>
             <p className="mb-2" style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>Hvem tror du vinner? Oddsen er prisen på spillet ditt.</p>
-            <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.min(live.odds!.length, 2)}, minmax(0, 1fr))` }}>
-              {live.odds!.map((o) => {
+            <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.min(sides.length, 2)}, minmax(0, 1fr))` }}>
+              {sides.map((o) => {
                 const active = pick === o.name;
                 return (
                   <button

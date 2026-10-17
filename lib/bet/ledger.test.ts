@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { START_COINS, atStake, balances, currentNight, lifetimeNet, liabilityFor, netByUser, potFor, settleUp, stakeProblem, type BetRow, type LedgerRow } from "./ledger";
+import { START_COINS, atStake, balances, currentNight, fairPrice, lifetimeNet, liabilityFor, netByUser, potFor, settleUp, stakeProblem, type BetRow, type LedgerRow } from "./ledger";
 
 const row = (user_id: string, delta: number, reason: LedgerRow["reason"] = "adjust", night = 1): LedgerRow => ({ id: `${user_id}${delta}${Math.random()}`, user_id, night, delta, reason, bet_id: null, created_at: "2026-10-17T12:00:00Z" });
 
@@ -10,6 +10,17 @@ describe("the books", () => {
     expect(liabilityFor(10, 1.01)).toBe(0);
     expect(liabilityFor(1000, 2.1)).toBe(1100); // no floating-point shortfall
     expect(potFor(100, 1.87)).toBe(187);
+  });
+
+  it("the price is the same from both sides: backing one is laying the other", () => {
+    const pA = 0.53;
+    const oA = fairPrice(pA);
+    const oB = fairPrice(1 - pA);
+    expect(oA).toBe(1.89);
+    expect(oB).toBe(2.13);
+    // Backing A with 100 puts 89 at risk for the other side. Backing B with 89 would put 100 at risk, within a coin.
+    expect(Math.abs(liabilityFor(89, oB) - 100)).toBeLessThanOrEqual(1);
+    expect(fairPrice(0.999)).toBe(1.01);
   });
 
   it("a balance is the sum of the entries, per night", () => {

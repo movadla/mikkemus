@@ -1,6 +1,6 @@
 import type { LiveMatchState } from "../liveMatch";
 import { supabase } from "../supabaseClient";
-import { START_COINS, liabilityFor, potFor, stakeProblem, type BetRow, type BetUser, type LedgerRow, type MatchRow } from "./ledger";
+import { START_COINS, fairPrice, liabilityFor, potFor, stakeProblem, type BetRow, type BetUser, type LedgerRow, type MatchRow } from "./ledger";
 
 export type Books = { users: BetUser[]; ledger: LedgerRow[]; bets: BetRow[]; matches: MatchRow[] };
 export type LoadResult = { ok: true; books: Books } | { ok: false; setupNeeded: boolean; message: string };
@@ -93,8 +93,9 @@ export async function offerBet(args: { userId: string; night: number; matchId: s
   const live = await freshLive();
   if (!marketOpen(live) || !live) return { ok: false, reason: "Spillene er stengt akkurat nå. De åpner igjen mellom rundene." };
   if (live.matchId !== args.matchId || live.turnToken !== args.shownTurn) return { ok: false, reason: STALE };
-  const side = live.odds!.find((o) => o.name === args.pick);
-  if (!side) return { ok: false, reason: "Fant ikke laget." };
+  const raw = live.odds!.find((o) => o.name === args.pick);
+  if (!raw) return { ok: false, reason: "Fant ikke laget." };
+  const side = { ...raw, odds: fairPrice(raw.p) };
   if (Math.abs(side.odds - args.shownOdds) > 0.001) return { ok: false, reason: STALE };
 
   const balance = await balanceOf(args.userId, args.night);
