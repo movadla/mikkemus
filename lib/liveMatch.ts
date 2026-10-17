@@ -23,6 +23,8 @@ export type LiveMatchState = {
   /** Which game is being played — the spectator view draws a row as closed at this variant's
    *  target. Absent from snapshots published before variants existed: standard. */
   variant?: GameVariant;
+  /** The odds on the match after the last turn, for the big screen. */
+  odds?: { name: string; odds: number; p: number }[];
 };
 
 type LiveMatchRow = { id: string; state: LiveMatchState | null; updated_at: string };

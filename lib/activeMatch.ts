@@ -39,7 +39,7 @@ export type ActiveMatchSnapshot = {
    */
   matchThrows?: Record<string, [number, number][]>;
   luckTotals?: Record<string, Record<Step, { sum: number; count: number }>>;
-  accuracyTotals?: Record<string, { distance: number; horizontal: number; vertical: number; throws: number }>;
+  accuracyTotals?: Record<string, { distance: number; horizontal: number; vertical: number; throws: number; sumSq?: number; byMember?: Record<string, { throws: number; sumR: number; sumR2: number }> }>;
   ringHits?: Record<string, { triple: Record<string, number>; double: Record<string, number> }>;
   /** D/T crosses banked while the player was NOT on that row — see MikkeMusApp's preBanked. */
   preBanked?: Record<string, { D: number; T: number }>;

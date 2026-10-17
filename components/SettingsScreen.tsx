@@ -2,6 +2,7 @@
 
 import { FxPicker } from "./FxPicker";
 import { KitSettings } from "./KitSettings";
+import { useShowOdds, setShowOdds } from "@/lib/oddsSetting";
 import { QrCode } from "./QrCode";
 import { ScreenTop } from "./ScreenTop";
 
@@ -12,11 +13,31 @@ import { ScreenTop } from "./ScreenTop";
  * address, not from here.
  */
 export function SettingsScreen({ onBack }: { onBack: () => void }) {
+  const showOdds = useShowOdds();
   return (
     <div className="animate-screen-enter screen" style={{ background: "var(--color-bg)" }}>
       <div className="screen-inner">
         <ScreenTop title="Innstillinger" onBack={onBack} />
         <FxPicker />
+        <div className="mb-6">
+          <p className="section-label text-center mb-2">ODDS</p>
+          <div className="flex gap-2" role="radiogroup" aria-label="Odds">
+            {([true, false] as const).map((on) => (
+              <button
+                key={String(on)}
+                type="button"
+                role="radio"
+                aria-checked={showOdds === on}
+                onClick={() => setShowOdds(on)}
+                className="tactile flex-1 rounded-lg font-medium"
+                style={{ minHeight: "2.75rem", background: showOdds === on ? "rgba(47, 180, 194, 0.18)" : "var(--color-surface)", color: showOdds === on ? "var(--color-teal)" : "var(--color-muted)", border: showOdds === on ? "1px solid var(--color-teal)" : "1px solid var(--color-border)", fontSize: "0.9rem" }}
+              >
+                {on ? "Vis odds" : "Skjul odds"}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <KitSettings />
 
         {/* The big-screen page, one scan away: no address to type on the TV. */}

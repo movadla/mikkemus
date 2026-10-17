@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { avatarAccent } from "@/lib/avatarAccent";
 import type { Kit } from "@/lib/teamKit";
 import { TeamKit } from "./TeamKit";
+import { formatOdds } from "@/lib/odds/price";
 
 export type LineupSide = {
   name: string;
@@ -14,6 +15,8 @@ export type LineupSide = {
   isBot?: boolean;
   /** «7 seire på 12 kamper», or nothing for someone who has not played yet. */
   record?: string;
+  /** The odds on this side to win, before the first dart. */
+  odds?: number;
 };
 
 const COUNT = ["3", "2", "1", "Kast!"];
@@ -85,6 +88,11 @@ export function LineupIntro({ sides, onDone }: { sides: LineupSide[]; onDone: ()
                 {s.name}
               </p>
               {s.record && <p style={{ color: "var(--color-muted)", fontSize: "0.85rem" }}>{s.record}</p>}
+              {s.odds !== undefined && (
+                <p className="font-display" style={{ color: "var(--color-gold)", fontSize: "1.3rem" }}>
+                  Odds {formatOdds(s.odds)}
+                </p>
+              )}
             </div>
           ))}
         </div>
@@ -95,6 +103,7 @@ export function LineupIntro({ sides, onDone }: { sides: LineupSide[]; onDone: ()
               {picture(s, 52)}
               <span className="font-display flex-1 truncate" style={{ fontSize: "1.3rem" }}>{s.name}</span>
               {s.record && <span style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>{s.record}</span>}
+              {s.odds !== undefined && <span className="font-display" style={{ color: "var(--color-gold)" }}>{formatOdds(s.odds)}</span>}
             </div>
           ))}
         </div>

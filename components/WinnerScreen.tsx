@@ -15,7 +15,8 @@ import { generateConfetti, generateConfettiRain } from "@/lib/confetti";
 import { DartboardHeatmap } from "./DartboardHeatmap";
 import { ShirtRain } from "./ShirtRain";
 import { ReplayCard } from "./ReplayCard";
-import { AwardsCard, RowCostCard, buildAwards } from "./MatchInsights";
+import { AwardsCard, OddsChart, RowCostCard, buildAwards } from "./MatchInsights";
+import type { OddsSnapshot } from "@/lib/oddsLog";
 
 type LuckByStep = Record<Step, { sum: number; count: number }>;
 
@@ -73,6 +74,7 @@ export function WinnerScreen({
   turnLogByPlayer,
   progressByPlayer,
   winnerKit = null,
+  oddsHistory = [],
 }: {
   winner: string;
   players: string[];
@@ -97,6 +99,8 @@ export function WinnerScreen({
   progressByPlayer: PlayerProgress;
   /** The winning team's shirt, when the winner is a team — shown where a person's photo would be. */
   winnerKit?: Kit | null;
+  /** What the odds said after every turn, for the chart of how the match turned. */
+  oddsHistory?: OddsSnapshot[];
   onHome: () => void;
   /** Overridden by tournament mode to "Til turnering" — see MikkeMusApp's onMatchComplete prop. */
   homeLabel?: string;
@@ -423,6 +427,8 @@ export function WinnerScreen({
         <AwardsCard awards={awards} />
 
         <RowCostCard players={players} turnLog={turnLogByPlayer} />
+
+        <OddsChart history={oddsHistory} winner={winner} />
 
         {replayThrows && <ReplayCard throws={replayThrows} />}
 

@@ -33,6 +33,14 @@ export type MatchHistoryEntry = {
   med: number | null;
   mhd: number | null;
   mvd: number | null;
+  /** What the odds are built on (lib/odds): the darts measured, their summed distance and summed
+   *  squared distance. Absent on matches from before they were kept. */
+  throws?: number;
+  sumR?: number;
+  sumR2?: number;
+  /** In a team's match, the same per member — the team's record is where the match lives, but each
+   *  member's own skill is what the odds need. */
+  byMember?: Record<string, { throws: number; sumR: number; sumR2: number }>;
 };
 
 /**

@@ -27,7 +27,7 @@ import {
   type TurnShot,
   type PendingAmbiguous,
 } from "@/lib/game";
-import { recordBestRun, ensureTeam, getPlayerRecord, playPlayerSound, recordAccuracyTotals, recordLuckTotals, recordMatchHistory, recordMatchResult, recordRingHits, useTeamRecords, type RingHits } from "@/lib/storage";
+import { recordBestRun, ensureTeam, getPlayerRecord, playPlayerSound, recordAccuracyTotals, recordLuckTotals, recordMatchHistory, recordMatchResult, recordRingHits, useRoster, useTeamRecords, type RingHits } from "@/lib/storage";
 import { announce } from "@/lib/announcer";
 import { reportError } from "@/lib/errorReporting";
 import { clearActiveMatch, loadActiveMatch, saveActiveMatch } from "@/lib/activeMatch";
@@ -39,6 +39,11 @@ import { currentRun, throwerStats } from "@/lib/turnStats";
 import { emitFx } from "@/lib/fxBus";
 import { FxStage } from "./FxStage";
 import { LineupIntro } from "./LineupIntro";
+import type { OddsRow } from "./OddsBar";
+import { buildOddsInput } from "@/lib/odds/match";
+import { computeOdds } from "@/lib/odds";
+import { logOddsMatch, type OddsSnapshot } from "@/lib/oddsLog";
+import { useShowOdds } from "@/lib/oddsSetting";
 import { haptics } from "@/lib/haptics";
 import { crowdForStreak, playCrowd, playFanfare, playHitStreakSound, playMatchDartSound, playTapSound, playWalkOnTune, playWinBoom, primeAudio } from "@/lib/fanfare";
 import { fxFlags, getFxLevel, useFxLevel } from "@/lib/fxLevel";
@@ -216,7 +221,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   const [matchThrows, setMatchThrows] = useState<Record<string, [number, number][]>>({});
   // Running MED/MHD/MVD sums this match, per player — a ref (not state) since it's
   // only ever read once, at match end, and shouldn't trigger a re-render per dart.
-  const accuracyTotalsRef = useRef<Record<string, { distance: number; horizontal: number; vertical: number; throws: number }>>({});
+  const accuracyTotalsRef = useRef<Record<string, { distance: number; horizontal: number; vertical: number; throws: number; sumSq?: number; byMember?: Record<string, { throws: number; sumR: number; sumR2: number }> }>>({});
   // Running "Expected Goals" sums this match, per player AND per section —
   // same ref-not-state reasoning as accuracyTotalsRef above. Only real
   // Scolia darts with an inferrable target contribute (see lib/dartboard.ts:
@@ -322,6 +327,13 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   const recordAnnouncedRef = useRef<Set<string>>(new Set());
   // The saved teams, for their shirts — see kitAssignment below.
   const teamRecords = useTeamRecords();
+  // The odds on the match (lib/odds): worked out after every turn and when the match starts, from the
+  // board, who throws next, and how well each of them throws — their records and tonight's darts.
+  const rosterRecords = useRoster();
+  const showOdds = useShowOdds();
+  const [odds, setOdds] = useState<OddsRow[] | null>(null);
+  const oddsHistoryRef = useRef<OddsSnapshot[]>([]);
+  const [oddsHistory, setOddsHistory] = useState<OddsSnapshot[]>([]);
   // Which players in this match are bots, and at what difficulty — set once at
   // startGame from SetupScreen's picks. Bots are never written via ensurePlayer and
   // are excluded from finalizeMatch's persistence calls (see there).
@@ -381,6 +393,51 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   // One row from winning for whoever is up — the red pulsing edge, the word, and a line in the
   // ticker. Read off the board itself, so it is true exactly when the thrower has one row left.
   const openSteps = activePlayer && progress[activePlayer] ? STEPS.filter((st) => progress[activePlayer][st] < getRules().target) : [];
+  useEffect(() => {
+    if (screen !== "game" || !hydratedFromStorage || players.length < 2 || rewound !== null || winner) return;
+    // After the render, so the board it reads is the settled one — and never in the middle of a turn.
+    const id = setTimeout(() => {
+      try {
+        const rules = getRules();
+        const result = computeOdds(
+          buildOddsInput({
+            rules: { target: rules.target, ringChoice: rules.ringOnOwnNumberIsChoice },
+            players,
+            currentIdx,
+            progress,
+            teamRosters,
+            teamMemberIdx,
+            botLevels,
+            roster: rosterRecords,
+            live: accuracyTotalsRef.current,
+          }),
+        );
+        const key = `${turnToken}|${currentIdx}`;
+        const history = oddsHistoryRef.current;
+        const last = history[history.length - 1];
+        const sameTurn = last?.key === key;
+        const before = sameTurn ? history[history.length - 2] : last;
+        const sides = players.map((p) => {
+          const o = result.find((r) => r.name === p)!;
+          return { name: p, p: o.p, odds: o.odds };
+        });
+        oddsHistoryRef.current = sameTurn ? [...history.slice(0, -1), { key, sides }] : [...history, { key, sides }];
+        setOddsHistory(oddsHistoryRef.current);
+        setOdds(
+          players.map((p) => {
+            const o = result.find((r) => r.name === p)!;
+            return { name: p, odds: o.odds, p: o.p, lo: o.lo, hi: o.hi, before: before?.sides.find((x) => x.name === p)?.p, active: p === activePlayer };
+          }),
+        );
+      } catch (err) {
+        console.error("Kunne ikke regne ut odds:", err);
+      }
+    }, 0);
+    return () => clearTimeout(id);
+    // Only at a turn boundary (or when the people or the records change) — not on every dart.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [turnToken, currentIdx, screen, hydratedFromStorage, players.length, winner === null, rosterRecords]);
+
   const matchDartOn = screen === "game" && !!activePlayer && rewound === null && openSteps.length === 1;
   const matchDartStep = openSteps[0] ?? null;
   useEffect(() => {
@@ -604,7 +661,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
           : a,
       ),
     });
-    const snapshot = { screen, players, progress, activePlayer, turnToken, winner, botLevels, guestPlayers, variant };
+    const snapshot = { screen, players, progress, activePlayer, turnToken, winner, botLevels, guestPlayers, variant, odds: odds ? odds.map((o) => ({ name: o.name, odds: o.odds, p: o.p })) : undefined };
     if (publishTimerRef.current) clearTimeout(publishTimerRef.current);
     publishTimerRef.current = setTimeout(() => publishLiveMatch(snapshot), LIVE_PUBLISH_DEBOUNCE_MS);
   }, [
@@ -633,6 +690,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     // The stats above are read off refs, which can't trigger this. This is the one state value
     // that changes on the same beat they do, so it stands in for all of them.
     matchThrows,
+    odds,
   ]);
 
   /** Clears the shot boxes and the "just placed" mark highlight — see the call sites below for when. */
@@ -915,6 +973,10 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     const accuracy = activeStepAtThrow ? throwAccuracy(activeStepAtThrow, payload.coordinates) : null;
     if (accuracy) {
       const totals = accuracyTotalsRef.current[activePlayer] ?? { distance: 0, horizontal: 0, vertical: 0, throws: 0 };
+      // Per thrower as well: in a team the match is booked on the team, but the odds need to know how
+      // well each member throws (lib/odds). Squared distances are what the spread is estimated from.
+      const who = whoThrows();
+      const mine = totals.byMember?.[who] ?? { throws: 0, sumR: 0, sumR2: 0 };
       accuracyTotalsRef.current = {
         ...accuracyTotalsRef.current,
         [activePlayer]: {
@@ -922,6 +984,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
           horizontal: totals.horizontal + accuracy.horizontal,
           vertical: totals.vertical + accuracy.vertical,
           throws: totals.throws + 1,
+          sumSq: (totals.sumSq ?? 0) + accuracy.distance ** 2,
+          byMember: { ...totals.byMember, [who]: { throws: mine.throws + 1, sumR: mine.sumR + accuracy.distance, sumR2: mine.sumR2 + accuracy.distance ** 2 } },
         },
       };
     }
@@ -1125,6 +1189,9 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     setStandQuestion(false);
     leaderRef.current = null;
     recordAnnouncedRef.current = new Set();
+    oddsHistoryRef.current = [];
+    setOddsHistory([]);
+    setOdds(null);
     setVariant(startVariant);
     // Called synchronously from a real button tap (SetupScreen/tournament) — the
     // narrow window where the browser actually allows unlocking audio playback, well
@@ -1869,6 +1936,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         med: accuracy && accuracy.throws > 0 ? accuracy.distance / accuracy.throws : null,
         mhd: accuracy && accuracy.throws > 0 ? accuracy.horizontal / accuracy.throws : null,
         mvd: accuracy && accuracy.throws > 0 ? accuracy.vertical / accuracy.throws : null,
+        ...(accuracy && accuracy.throws > 0 ? { throws: accuracy.throws, sumR: accuracy.distance, sumR2: accuracy.sumSq ?? 0, ...(roster && accuracy.byMember ? { byMember: accuracy.byMember } : {}) } : {}),
       });
     });
   }
@@ -1887,6 +1955,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     const pending = pendingResultRef.current;
     if (!pending) return;
     pendingResultRef.current = null;
+    // What the odds said, turn by turn, next to who won — so that they can be checked afterwards.
+    if (pending.winnerName) void logOddsMatch({ winner: pending.winnerName, sides: players, snapshots: oddsHistoryRef.current, variant });
     persistMatchResults(pending.turnLog, pending.winnerName);
   }
 
@@ -2319,6 +2389,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         turnLogByPlayer={turnLog}
         progressByPlayer={progress}
         winnerKit={kits[winner] ?? null}
+        oddsHistory={showOdds ? oddsHistory : []}
         onHome={onMatchComplete ? playAgain : goHome}
         homeLabel={onMatchComplete ? "Til turnering" : "Hjem"}
         onPlayAgain={onMatchComplete ? undefined : rematch}
@@ -2412,6 +2483,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
               kit: kits[p] ?? null,
               photo: teamRosters[p] ? null : rec?.photo ?? null,
               isBot: !!botLevels[p],
+              odds: showOdds ? odds?.find((o) => o.name === p)?.odds : undefined,
               record: rec && rec.matchesPlayed > 0 ? `${rec.matchesWon} ${rec.matchesWon === 1 ? "seier" : "seire"} på ${rec.matchesPlayed} ${rec.matchesPlayed === 1 ? "kamp" : "kamper"}` : undefined,
             };
           })}
@@ -2429,6 +2501,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         fxHeat={fx.heat}
         fxShake={fx.shake}
         fxFire={fx.fire}
+        odds={showOdds ? odds : null}
         kits={kits}
         choiceInteractive={!botIsThrowing}
 

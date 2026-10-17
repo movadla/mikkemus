@@ -25,6 +25,7 @@ import { useCompactLandscape } from "@/lib/useCompactLandscape";
 import { LiveSidePanel } from "./LiveSidePanel";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { PlayerSheet } from "./PlayerSheet";
+import { OddsBar, type OddsRow } from "./OddsBar";
 import { emitFx } from "@/lib/fxBus";
 import { Mark } from "./Mark";
 import { ThrowerBar, type Thrower, type ThrowerTeam } from "./ThrowerBar";
@@ -156,6 +157,8 @@ type Props = {
   fxShake: boolean;
   /** Flames round the thrower while a run of counting darts builds. */
   fxFire: boolean;
+  /** The odds on the match, or null when they are off or not worked out yet. */
+  odds: OddsRow[] | null;
   /** Each team's shirt, by team name — empty in a match with no teams. */
   kits: Record<string, Kit>;
 };
@@ -602,6 +605,7 @@ export function GameScreen({
   fxHeat,
   fxShake,
   fxFire,
+  odds,
   kits,
 }: Props) {
   // Picks the wide variant of the mark glyph — see lib/useCompactLandscape.ts.
@@ -826,6 +830,11 @@ export function GameScreen({
       {!compactLandscape && thrower && (
         <div className="max-w-3xl mx-auto w-full mb-2 shrink-0">
           <ThrowerBar key={turnToken} thrower={thrower} team={throwerTeam} kit={throwerTeam ? kits[throwerTeam.name] : null} stood={throwerStood} run={throwerRun} fire={fxFire} animate={throwerAnimate} onPickMate={choiceInteractive && !rewound ? setSwitchTo : undefined} onOpen={!rewound ? () => setSheetOpen(true) : undefined} />
+        </div>
+      )}
+      {!compactLandscape && odds && (
+        <div className="max-w-3xl mx-auto w-full mb-2 shrink-0">
+          <OddsBar rows={odds.map((o) => ({ ...o, color: kits[o.name]?.primary }))} />
         </div>
       )}
 
@@ -1209,6 +1218,11 @@ export function GameScreen({
           {thrower && (
             <div className="mb-1 shrink-0">
               <ThrowerBar key={turnToken} thrower={thrower} team={throwerTeam} kit={throwerTeam ? kits[throwerTeam.name] : null} stood={throwerStood} run={throwerRun} fire={fxFire} animate={throwerAnimate} onPickMate={choiceInteractive && !rewound ? setSwitchTo : undefined} onOpen={!rewound ? () => setSheetOpen(true) : undefined} compact />
+            </div>
+          )}
+          {odds && (
+            <div className="mb-1 shrink-0">
+              <OddsBar compact rows={odds.map((o) => ({ ...o, color: kits[o.name]?.primary }))} />
             </div>
           )}
           {/* The question lives in this column in landscape. It floated over the top of the board

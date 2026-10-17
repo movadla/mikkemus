@@ -6,6 +6,8 @@ import { STEPS, STEP_LABELS } from "@/lib/game";
 import { useLiveMatch, type LiveMatchState } from "@/lib/liveMatch";
 import { emitFx } from "@/lib/fxBus";
 import { FxStage } from "@/components/FxStage";
+import { OddsBar } from "@/components/OddsBar";
+import { useShowOdds } from "@/lib/oddsSetting";
 import { RULES, baseOf } from "@/lib/rules";
 import { avatarAccent } from "@/lib/avatarAccent";
 import { DartboardGlyph } from "@/components/DartboardGlyph";
@@ -48,6 +50,7 @@ function HomeLink() {
  */
 export default function StorskjermPage() {
   const live = useLiveMatch();
+  const showOdds = useShowOdds();
   // This page is not the one playing the match, so it reads the variant off the snapshot rather
   // than from the module-wide rules (which are whatever this browser last set — nothing).
   const target = RULES[baseOf(live?.variant)].target;
@@ -152,7 +155,14 @@ export default function StorskjermPage() {
       <HomeLink />
       <FxStage />
       <h1 className="sr-only">Kampoversikt – storskjerm</h1>
-      <div className="shadow-panel rounded-xl overflow-x-auto overflow-y-hidden w-full" style={{ background: "var(--color-panel)" }}>
+      {showOdds && live.odds && live.odds.length > 0 && (
+        <div className="fixed left-0 right-0 top-2 z-30 px-16 pointer-events-none" style={{ transform: "scale(1)" }}>
+          <div className="max-w-5xl mx-auto">
+            <OddsBar rows={live.odds.map((o) => ({ ...o, lo: o.p, hi: o.p, active: o.name === live.activePlayer }))} />
+          </div>
+        </div>
+      )}
+      <div className="shadow-panel rounded-xl overflow-x-auto overflow-y-hidden w-full" style={{ background: "var(--color-panel)", marginTop: showOdds && live.odds?.length ? "5rem" : 0 }}>
         <div
           className="grid p-4"
           style={{
