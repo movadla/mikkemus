@@ -379,11 +379,41 @@ export function playFanfareVariant(variant: FanfareVariant) {
  * event). Callers only invoke this while the streak is unbroken from dart 1 — see
  * MikkeMusApp's processDart, which breaks the streak on any miss.
  */
-export function playHitStreakSound(streak: 1 | 2 | 3) {
+export function playHitStreakSound(streak: number) {
   // A deep boom whose tail rings on longer with each dart in the streak — see boomForStreak.
   // This replaced the earlier two-note "dunk-pling" outright; playPerfectRoundVariant is
   // still exported so /lyd can put the old brass cues next to the new ones.
   playBoom(boomForStreak(streak));
+  // Past the fourth dart in a row the boom gets company: a brass chord that climbs a step with every dart.
+  if (streak >= 5) playStreakStab(streak);
+}
+
+/** Semitones above the root for each dart past the fourth: a major pentatonic climb, so it always sounds like going up. */
+const STAB_CLIMB = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21];
+
+/**
+ * A short brass chord that rises with the run: dart 5 in a row is C, dart 6 is D, 7 is E, and on up
+ * the pentatonic scale to dart 14. Louder and longer as it climbs.
+ */
+export function playStreakStab(streak: number) {
+  const ctx = getContext();
+  if (!ctx) return;
+  try {
+    if (ctx.state === "suspended") ctx.resume().catch(() => {});
+    const buses = getBuses(ctx);
+    if (!buses) return;
+    const now = ctx.currentTime + 0.02;
+    const step = Math.max(0, Math.min(STAB_CLIMB.length - 1, streak - 5));
+    const root = C4 * Math.pow(2, STAB_CLIMB[step] / 12);
+    const dur = 0.32 + 0.03 * step;
+    const peak = 0.1 + 0.012 * step;
+    brassNote(ctx, buses, root, now, dur, peak);
+    brassNote(ctx, buses, root * Math.pow(2, 4 / 12), now, dur, peak * 0.8);
+    brassNote(ctx, buses, root * Math.pow(2, 7 / 12), now, dur, peak * 0.8);
+    brassNote(ctx, buses, root * 2, now + 0.01, dur, peak * 0.9);
+  } catch {
+    // Never let a synth glitch break a turn.
+  }
 }
 
 export type PerfectRoundVariant = 1 | 2;
@@ -480,6 +510,13 @@ export type BoomParams = {
    * below it. Defaults to 1, so nothing that doesn't set it changes.
    */
   tailScale?: number;
+  /**
+   * How many darts into a long run this is, past the third: 0 for an ordinary hit, up to 9. Every
+   * step adds weight on top of the boom as it stands: a louder and grittier hit, a brighter crack,
+   * a heavier knock a phone can actually play, and from the third step an echo of the hit. Defaults
+   * to 0, so nothing that does not set it changes.
+   */
+  power?: number;
 };
 
 /** Picked by ear on /lyd: everything at max except the tail, which is what grows per dart. */
@@ -499,10 +536,11 @@ export function playBoom(params: BoomParams = BOOM_DEFAULT) {
     if (!buses) return;
     const t = ctx.currentTime + 0.02;
 
+    const power = Math.max(0, Math.min(9, params.power ?? 0));
     const bodyStart = lerpLevel(params.darkness, 165, 62);
     const bodyEnd = lerpLevel(params.darkness, 62, 24);
     const duration = lerpLevel(params.length, 0.32, 2.2) * (params.tailScale ?? 1);
-    const peak = lerpLevel(params.volume, 0.25, 1.0);
+    const peak = lerpLevel(params.volume, 0.25, 1.0) * (1 + 0.04 * power);
     const gritAmount = (clampLevel(params.grit) - 1) / 4;
     const punchAmount = (clampLevel(params.punch) - 1) / 4;
 
@@ -520,7 +558,7 @@ export function playBoom(params: BoomParams = BOOM_DEFAULT) {
     env.connect(send);
     send.connect(buses.reverb);
 
-    const saturation = makeSaturation(ctx, gritAmount * 0.5 + punchAmount * 0.35);
+    const saturation = makeSaturation(ctx, gritAmount * 0.5 + punchAmount * 0.35 + power * 0.05);
     if (saturation) saturation.connect(env);
     const bodyInput: AudioNode = saturation ?? env;
 
@@ -575,8 +613,8 @@ export function playBoom(params: BoomParams = BOOM_DEFAULT) {
     knock.frequency.exponentialRampToValueAtTime(190, t + 0.07);
     const knockEnv = ctx.createGain();
     knockEnv.gain.setValueAtTime(0.0001, t);
-    knockEnv.gain.linearRampToValueAtTime(peak * 0.32, t + 0.006);
-    knockEnv.gain.exponentialRampToValueAtTime(0.0001, t + 0.19);
+    knockEnv.gain.linearRampToValueAtTime(peak * 0.32 * (1 + 0.3 * power), t + 0.006);
+    knockEnv.gain.exponentialRampToValueAtTime(0.0001, t + 0.19 + 0.018 * power);
     knock.connect(knockEnv);
     knockEnv.connect(buses.master);
     knockEnv.connect(buses.reverb);
@@ -589,16 +627,52 @@ export function playBoom(params: BoomParams = BOOM_DEFAULT) {
       src.buffer = noise;
       const lp = ctx.createBiquadFilter();
       lp.type = "lowpass";
-      lp.frequency.value = lerpLevel(params.grit, 600, 3200);
+      lp.frequency.value = lerpLevel(params.grit, 600, 3200) + 260 * power;
       const nEnv = ctx.createGain();
-      nEnv.gain.setValueAtTime(peak * 0.7 * gritAmount, t);
-      nEnv.gain.exponentialRampToValueAtTime(0.0001, t + lerpLevel(params.grit, 0.05, 0.2));
+      nEnv.gain.setValueAtTime(peak * 0.7 * gritAmount * (1 + 0.1 * power), t);
+      nEnv.gain.exponentialRampToValueAtTime(0.0001, t + lerpLevel(params.grit, 0.05, 0.2) * (1 + 0.1 * power));
       src.connect(lp);
       lp.connect(nEnv);
       nEnv.connect(buses.master);
       nEnv.connect(buses.reverb);
       src.start(t);
       src.stop(t + 0.3);
+    }
+
+    // A long run: the hit comes back as an echo, one more each third step (power 3, 6, 9), each
+    // quieter than the one before — a heavy thing that keeps landing.
+    const echoes = Math.min(3, Math.floor(power / 3));
+    for (let k = 1; k <= echoes; k++) {
+      const at = t + 0.085 * k;
+      const amp = Math.pow(0.6, k);
+      const hit = ctx.createOscillator();
+      hit.type = "triangle";
+      hit.frequency.setValueAtTime(380, at);
+      hit.frequency.exponentialRampToValueAtTime(150, at + 0.09);
+      const hitEnv = ctx.createGain();
+      hitEnv.gain.setValueAtTime(0.0001, at);
+      hitEnv.gain.linearRampToValueAtTime(peak * 0.34 * amp, at + 0.006);
+      hitEnv.gain.exponentialRampToValueAtTime(0.0001, at + 0.22);
+      hit.connect(hitEnv);
+      hitEnv.connect(buses.master);
+      hitEnv.connect(buses.reverb);
+      hit.start(at);
+      hit.stop(at + 0.26);
+      if (noise) {
+        const src = ctx.createBufferSource();
+        src.buffer = noise;
+        const lp = ctx.createBiquadFilter();
+        lp.type = "lowpass";
+        lp.frequency.value = 2400 + 200 * power;
+        const nEnv = ctx.createGain();
+        nEnv.gain.setValueAtTime(peak * 0.5 * amp, at);
+        nEnv.gain.exponentialRampToValueAtTime(0.0001, at + 0.12);
+        src.connect(lp);
+        lp.connect(nEnv);
+        nEnv.connect(buses.master);
+        src.start(at);
+        src.stop(at + 0.2);
+      }
     }
   } catch {
     // Never let a synth glitch break a turn.
@@ -610,12 +684,16 @@ export function playBoom(params: BoomParams = BOOM_DEFAULT) {
  * for 2 and 3 — while darkness, volume, punch and grit stay where they are, so the three
  * read as the same slam ringing on longer rather than as three different sounds.
  */
-export function boomForStreak(streak: 1 | 2 | 3, base: BoomParams = BOOM_DEFAULT): BoomParams {
+export function boomForStreak(streak: number, base: BoomParams = BOOM_DEFAULT): BoomParams {
+  // Past the third dart in a row the run goes on escalating (see BoomParams.power): the tail keeps
+  // growing, and the hit gets heavier, up to the ninth dart past the third.
+  const power = Math.max(0, Math.min(9, streak - 3));
   return {
     ...base,
-    length: Math.min(5, base.length + (streak - 1)),
+    length: Math.min(5, base.length + (Math.min(3, streak) - 1)),
     // Dart three is where the tail runs out of scale to grow on — see tailScale.
-    tailScale: streak === 3 ? 1.55 : 1,
+    tailScale: streak >= 3 ? 1.55 + 0.07 * power : 1,
+    power,
   };
 }
 
@@ -702,6 +780,8 @@ export type CrowdParams = {
   volume: number;
   /** 1 = a few people, 5 = a packed crowd. Drives clap and voice counts, and the length. */
   density: number;
+  /** Past the top of the scale: 0 for none, up to 8. More claps, more voices, louder and longer. */
+  boost?: number;
 };
 
 export const CROWD_DEFAULT: CrowdParams = { darkness: 3, volume: 3, density: 3 };
@@ -726,13 +806,14 @@ export function playCrowd(params: CrowdParams = CROWD_DEFAULT) {
     if (!noise) return;
     const t = ctx.currentTime + 0.02;
 
-    const peak = lerpLevel(params.volume, 0.1, 0.75);
-    const duration = lerpLevel(params.density, 1.0, 3.2);
+    const boost = Math.max(0, Math.min(8, params.boost ?? 0));
+    const peak = lerpLevel(params.volume, 0.1, 0.75) * (1 + 0.07 * boost);
+    const duration = lerpLevel(params.density, 1.0, 3.2) * (1 + 0.06 * boost);
     const swell = lerpLevel(params.density, 0.12, 0.35);
     const dark = (clampLevel(params.darkness) - 1) / 4;
 
     // 1. Applause — the main body of the sound.
-    const clapCount = Math.round(lerpLevel(params.density, 14, 130));
+    const clapCount = Math.round(lerpLevel(params.density, 14, 130) * (1 + 0.22 * boost));
     for (let i = 0; i < clapCount; i++) {
       // Weighted toward the start so the crowd erupts and then thins out.
       const progress = Math.pow(Math.random(), 0.75);
@@ -741,7 +822,7 @@ export function playCrowd(params: CrowdParams = CROWD_DEFAULT) {
     }
 
     // 2. Voices over the top.
-    const voices = Math.round(lerpLevel(params.density, 2, 12));
+    const voices = Math.round(lerpLevel(params.density, 2, 12)) + Math.round(boost * 1.5);
     for (let i = 0; i < voices; i++) {
       const at = t + swell * 0.4 + Math.random() * duration * 0.7;
       const len = 0.35 + Math.random() * 0.6;
@@ -783,11 +864,13 @@ export function playCrowd(params: CrowdParams = CROWD_DEFAULT) {
 }
 
 /** The crowd as it escalates across a turn — louder and denser per hit, same character. */
-export function crowdForStreak(streak: 1 | 2 | 3, base: CrowdParams = CROWD_DEFAULT): CrowdParams {
+export function crowdForStreak(streak: number, base: CrowdParams = CROWD_DEFAULT): CrowdParams {
   return {
     darkness: base.darkness,
-    volume: Math.min(5, base.volume - 2 + streak),
-    density: Math.min(5, base.density - 2 + streak),
+    volume: Math.min(5, base.volume - 2 + Math.min(3, streak)),
+    density: Math.min(5, base.density - 2 + Math.min(3, streak)),
+    // The scale tops out at the fourth dart; from there the crowd just gets bigger and bigger.
+    boost: Math.max(0, Math.min(8, streak - 3)),
   };
 }
 

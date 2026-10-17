@@ -748,6 +748,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   // and the matching shake and heat. Reset at the start of a turn and by any miss, but a miss
   // no longer silences what follows: the next hit sounds again from level one.
   const hitStreakRef = useRef(0);
+  // Darts in a row that counted, per thrower, across turns: a boom that keeps growing with the run (lib/fanfare.ts).
+  const runRef = useRef<Record<string, number>>({});
 
   // Physical triples landing on whatever number was active at the time, this turn. Three of
   // them is the rarest turn there is and triggers TripleCelebration. Counted from where the
@@ -933,18 +935,23 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     if (hit) {
       hitStreakRef.current += 1;
       const streak = Math.min(3, hitStreakRef.current) as 1 | 2 | 3;
+      const runKey = whoThrows();
+      const run = (runRef.current[runKey] ?? 0) + 1;
+      runRef.current[runKey] = run;
       // A replayed dart already had its boom the first time round. How big it gets, and whether
       // a crowd joins the third dart, is the chosen level's call (see lib/fxLevel.ts).
       if (!replayingRef.current) {
         const fx = fxFlags(getFxLevel());
-        playHitStreakSound(Math.min(streak, fx.boomMaxStreak) as 1 | 2 | 3);
-        if (fx.crowd && streak === 3) playCrowd(crowdForStreak(3));
+        // The boom follows the run, not just the turn: dart 4, 5, 6 in a row hit harder and harder.
+        playHitStreakSound(Math.min(run, fx.boomMaxStreak));
+        if (fx.crowd && run >= 3) playCrowd(crowdForStreak(run));
         setHitPulse({ token: ++pulseTokenRef.current, streak });
         emitFx({ type: "dart", step: hitResult![0].step, player: activePlayer });
       }
     } else {
       // A miss breaks the run, but only the run — the next hit still sounds, from the bottom.
       hitStreakRef.current = 0;
+      runRef.current[whoThrows()] = 0;
       // A real dart that did not score bounces off and falls (Full party).
       if (!replayingRef.current) emitFx({ type: "miss" });
     }
@@ -1203,6 +1210,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     setOdds(null);
     setOddsTurn(-1);
     matchIdRef.current = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    runRef.current = {};
     setVariant(startVariant);
     // Called synchronously from a real button tap (SetupScreen/tournament) — the
     // narrow window where the browser actually allows unlocking audio playback, well
@@ -2135,6 +2143,9 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
           recordAnnouncedRef.current.add(activePlayer);
           emitFx({ type: "record", text: `${activePlayer}: lengste serie, ${run} piler` });
         }
+      } else {
+        // A turn that did not count all three ends the run, however many it started with.
+        runRef.current[throwerName ?? activePlayer] = 0;
       }
       // Who is ahead now — fewest crosses left, and alone on it. A change of leader is announced.
       if (players.length > 1) {

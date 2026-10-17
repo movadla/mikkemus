@@ -10,6 +10,7 @@ import {
   playBoom,
   playCrowd,
   playFanfareVariant,
+  playHitStreakSound,
   playPerfectRoundVariant,
   primeAudio,
   type BoomParams,
@@ -250,6 +251,27 @@ export default function LydPage() {
             ))}
             <PlayButton accent={boomAccent} onClick={() => ([1, 2, 3] as const).forEach((s, i) => setTimeout(() => playBoom(boomForStreak(s, boom)), i * 900))}>
               ▶ Bare boomene etter hverandre (1 → 2 → 3)
+            </PlayButton>
+          </div>
+          <p className="mt-5 mb-3" style={{ color: "var(--color-muted)", fontSize: "0.72rem", lineHeight: 1.5 }}>
+            Og videre: piler på rad over flere runder. Fra 4 øker trøkket for hver pil, fra 5 kommer et messingakkord som
+            stiger et trinn for hver, og jubelen vokser. Slik høres det ut i Full party.
+          </p>
+          <div className="space-y-2">
+            {[4, 5, 6, 8, 10, 12].map((run) => (
+              <PlayButton
+                key={run}
+                accent={crowdAccent}
+                onClick={() => {
+                  playHitStreakSound(run);
+                  playCrowd(crowdForStreak(run, crowd));
+                }}
+              >
+                ▶ {run} piler på rad
+              </PlayButton>
+            ))}
+            <PlayButton accent={boomAccent} onClick={() => [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].forEach((s, i) => setTimeout(() => playHitStreakSound(s), i * 650))}>
+              ▶ En serie på 10, pil for pil
             </PlayButton>
           </div>
         </Panel>

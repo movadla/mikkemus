@@ -30,7 +30,7 @@ export const DEFAULT_FX_LEVEL: FxLevel = "party";
 
 export type FxFlags = {
   /** The loudest the hit boom may get, by how many darts in a row have scored. */
-  boomMaxStreak: 1 | 2 | 3;
+  boomMaxStreak: number;
   /** The glow that builds across an unbroken turn. */
   heat: boolean;
   /** The screen shake on a hit (still also behind its own switch in the game's controls). */
@@ -84,7 +84,7 @@ export type FxFlags = {
 const FLAGS: Record<FxLevel, FxFlags> = {
   normal: { boomMaxStreak: 1, heat: false, shake: false, tripleOverlay: false, dives: false, confetti: false, bigConfetti: false, crowd: false, dartFlight: false, ringSlam: false, perfectBurst: false, fire: false, walkOn: false, rowShine: false, shirtRain: false, leadChange: false, matchDart: false, replay: false, recordBanner: false, walkOnTune: false, missBounce: false, lineup: false, manga: false, momentum: false, trophy: false },
   party: { boomMaxStreak: 3, heat: true, shake: true, tripleOverlay: true, dives: true, confetti: true, bigConfetti: false, crowd: false, dartFlight: false, ringSlam: false, perfectBurst: false, fire: false, walkOn: false, rowShine: false, shirtRain: false, leadChange: false, matchDart: false, replay: false, recordBanner: false, walkOnTune: false, missBounce: false, lineup: false, manga: false, momentum: false, trophy: false },
-  full: { boomMaxStreak: 3, heat: true, shake: true, tripleOverlay: true, dives: true, confetti: true, bigConfetti: true, crowd: true, dartFlight: true, ringSlam: true, perfectBurst: true, fire: true, walkOn: true, rowShine: true, shirtRain: true, leadChange: true, matchDart: true, replay: true, recordBanner: true, walkOnTune: true, missBounce: true, lineup: true, manga: true, momentum: true, trophy: true },
+  full: { boomMaxStreak: 12, heat: true, shake: true, tripleOverlay: true, dives: true, confetti: true, bigConfetti: true, crowd: true, dartFlight: true, ringSlam: true, perfectBurst: true, fire: true, walkOn: true, rowShine: true, shirtRain: true, leadChange: true, matchDart: true, replay: true, recordBanner: true, walkOnTune: true, missBounce: true, lineup: true, manga: true, momentum: true, trophy: true },
 };
 
 export function fxFlags(level: FxLevel): FxFlags {
