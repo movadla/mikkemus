@@ -251,3 +251,52 @@ describe("from records to odds", () => {
     expect(off).toBeLessThan(even - 0.05);
   });
 });
+
+describe("without Scolia: from how often the darts counted", () => {
+  const hitMatch = (date: string, hitPct: number, darts = 60) => ({ date, won: true, dartsUsed: darts, hitPct, med: null, mhd: null, mvd: null });
+  const scoliaMatch = (date: string, med: number, throws: number) => ({ date, won: true, dartsUsed: throws, hitPct: 50, med, mhd: med, mvd: med, throws });
+  const rec = (name: string, over: object = {}) => ({ ...emptyRecord(name), ...over });
+
+  it("turns a cross rate into a distance: the more crosses, the sharper", async () => {
+    const { medFromCrossRate } = await import("./hitRate");
+    const a = medFromCrossRate(0.7, RULES);
+    const b = medFromCrossRate(0.5, RULES);
+    const c = medFromCrossRate(0.3, RULES);
+    expect(a).toBeLessThan(b);
+    expect(b).toBeLessThan(c);
+    expect(b).toBeGreaterThan(20);
+    expect(b).toBeLessThan(32); // about half the darts counting is a decent club thrower, near the 30 mm default
+    expect(medFromCrossRate(5, RULES)).toBeCloseTo(14, 6); // clamped to the table, not extrapolated
+    expect(medFromCrossRate(0, RULES)).toBeCloseTo(70, 6);
+  });
+
+  it("uses matches without a measured distance only when asked to", async () => {
+    const { evidenceFor } = await import("./match");
+    const per = rec("Per", { matchHistory: [hitMatch("2026-10-01", 65), hitMatch("2026-10-05", 65)] });
+    expect(evidenceFor("Per", [per])).toBeNull();
+    const e = evidenceFor("Per", [per], RULES)!;
+    expect(e.n).toBeGreaterThan(0);
+    expect(e.n).toBeLessThan(20); // 120 darts count as a handful of measured ones
+    expect(e.meanR).toBeLessThan(25); // 65 % is sharper than average
+  });
+
+  it("measured darts outweigh the rest", async () => {
+    const { evidenceFor } = await import("./match");
+    const only = rec("Per", { matchHistory: [scoliaMatch("2026-10-01", 40, 60)] });
+    const both = rec("Per", { matchHistory: [scoliaMatch("2026-10-01", 40, 60), hitMatch("2026-10-02", 70, 60)] });
+    const a = evidenceFor("Per", [only], RULES)!;
+    const b = evidenceFor("Per", [both], RULES)!;
+    expect(b.meanR).toBeLessThan(a.meanR); // the sharp hit rate does pull
+    expect(a.meanR - b.meanR).toBeLessThan(3); // but 60 hit-rate darts are worth only a few measured ones
+  });
+
+  it("reads a team member's own cross rate from the team record", async () => {
+    const { evidenceFor } = await import("./match");
+    const steps = emptyRecord("x").steps;
+    const team = rec("Per & Ola", { kind: "team", members: ["Per", "Ola"], memberStats: { Per: { matches: 2, turns: 30, darts: 90, hits: 54, misses: 36, steps, bestRun: 3, throws: 0, sumR: 0 } } });
+    const e = evidenceFor("Per", [team], RULES)!;
+    expect(e.n).toBeCloseTo(90 * 0.08, 6);
+    expect(e.meanR).toBeLessThan(30); // 0,6 crosses a dart
+    expect(evidenceFor("Ola", [team], RULES)).toBeNull();
+  });
+});
