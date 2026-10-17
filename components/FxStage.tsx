@@ -172,8 +172,9 @@ export function FxStage({ matchDart = false }: { matchDart?: boolean }) {
     }
 
     // A new thrower: two spotlights from the top corners swing onto the column of whoever is up.
-    function walkOn() {
-      const head = document.querySelector("[data-col-active]");
+    function walkOn(player?: string) {
+      // The column of the side that is up NEXT, found by name: the highlight has not moved yet when this plays.
+      const head = (player && document.querySelector(`[data-col-player="${CSS.escape(player)}"]`)) || document.querySelector("[data-col-active]");
       const r = head?.getBoundingClientRect();
       const tx = r ? r.left + r.width / 2 : innerWidth / 2;
       const ty = r ? r.top + r.height : innerHeight * 0.4;
@@ -237,7 +238,7 @@ export function FxStage({ matchDart = false }: { matchDart?: boolean }) {
       else if (e.type === "matchdart" && f.matchDart) slam("MATCHDART", "#ff5a4a", "224,74,58");
       else if (e.type === "perfect" && f.perfectBurst) perfect(e.run);
       else if (e.type === "rowClosed" && f.rowShine) rowClosed(e.step, e.player);
-      else if (e.type === "walkOn" && f.walkOn) walkOn();
+      else if (e.type === "walkOn" && f.walkOn) walkOn(e.player);
       else if (e.type === "lead" && f.leadChange) lead(e.name);
       else if (e.type === "record" && f.recordBanner) record(e.text);
       else if (e.type === "comment" && f.commentary) comment(e.text);

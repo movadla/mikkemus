@@ -25,6 +25,8 @@ import { useCompactLandscape } from "@/lib/useCompactLandscape";
 import { LiveSidePanel } from "./LiveSidePanel";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { PlayerSheet } from "./PlayerSheet";
+import { FxMenu } from "./FxMenu";
+import { FX_LABELS, useFxLevel } from "@/lib/fxLevel";
 import { OddsBar, type OddsRow } from "./OddsBar";
 import { emitFx } from "@/lib/fxBus";
 import { Mark } from "./Mark";
@@ -180,6 +182,8 @@ function ChromeControls({
   standAvailable,
   standOn,
   onToggleStand,
+  fxLabel,
+  onOpenFx,
 }: {
   stacked?: boolean;
   onHome: () => void;
@@ -193,6 +197,9 @@ function ChromeControls({
   standAvailable: boolean;
   standOn: boolean;
   onToggleStand: () => void;
+  /** The chosen animation level, by name, and the way to change it. */
+  fxLabel: string;
+  onOpenFx: () => void;
 }) {
   const icon = stacked
     ? `tactile w-full h-8 rounded-lg flex items-center justify-center gap-2 text-sm ${FOCUS_RING}`
@@ -248,6 +255,20 @@ function ChromeControls({
           {stacked && <span style={{ fontSize: "0.7rem" }}>{standOn ? "Står ved 3: på" : "Står ved 3: av"}</span>}
         </button>
       )}
+      {/* The animation level, changeable in the match: Vanlig, Party or Full party. */}
+      <button
+        type="button"
+        onClick={onOpenFx}
+        aria-label={`Effekter: ${fxLabel}. Trykk for å endre`}
+        title={`Effekter: ${fxLabel}`}
+        className={icon}
+        style={{ background: "var(--color-surface)", color: fxLabel === "Vanlig" ? "var(--color-muted)" : "var(--color-gold)" }}
+      >
+        <svg viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor" aria-hidden>
+          <path d="M12 2l2.4 6.2L21 9l-5 4.2L17.5 20 12 16.5 6.5 20 8 13.2 3 9l6.6-.8z" />
+        </svg>
+        {stacked && <span style={{ fontSize: "0.7rem" }}>{fxLabel}</span>}
+      </button>
       {/* AirPlay: an audio context created before mirroring started keeps the sound on the
           phone. Only offered inside the panel — it is a recovery action, not something you
           reach for mid-turn. */}
@@ -650,6 +671,9 @@ export function GameScreen({
   const [switchTo, setSwitchTo] = useState<string | null>(null);
   // The thrower's numbers, from the bottom of the screen.
   const [sheetOpen, setSheetOpen] = useState(false);
+  // The animation level can be changed from the controls, in the middle of the match.
+  const [fxMenuOpen, setFxMenuOpen] = useState(false);
+  const fxLevelNow = useFxLevel();
   // A row that has just closed gets its glint and dust (FxStage), on the cells of that row.
   useEffect(() => {
     if (closedStep && activePlayer) emitFx({ type: "rowClosed", step: closedStep.step, player: activePlayer });
@@ -814,6 +838,8 @@ export function GameScreen({
             standAvailable={standAvailable}
             standOn={standOn}
             onToggleStand={onToggleStand}
+            fxLabel={FX_LABELS[fxLevelNow]}
+            onOpenFx={() => setFxMenuOpen(true)}
           />
           {/* Not gold: this is a mode warning, not something earned, and gold only means the
               latter (see globals.css). Red is the app's "careful" colour. */}
@@ -916,10 +942,14 @@ export function GameScreen({
               standAvailable={standAvailable}
               standOn={standOn}
               onToggleStand={onToggleStand}
+              fxLabel={FX_LABELS[fxLevelNow]}
+              onOpenFx={() => setFxMenuOpen(true)}
             />
           </div>
         </>
       )}
+
+      {fxMenuOpen && <FxMenu onClose={() => setFxMenuOpen(false)} />}
 
       {sheetOpen && thrower && <PlayerSheet name={thrower.name} team={throwerTeam?.name ?? null} onClose={() => setSheetOpen(false)} />}
 
@@ -1006,6 +1036,7 @@ export function GameScreen({
                 <div
                   key={p}
                   data-col-active={isActive ? "" : undefined}
+                  data-col-player={p}
                   className={`player-head relative flex flex-col items-center justify-center gap-1.5 p-2 pb-2.5 text-center transition-colors duration-300 grid-rule-left ${isActive ? "column-active" : ""}`}
                   style={{
                     borderBottom: isActive ? `2px solid ${accent}` : "2px solid var(--color-border)",

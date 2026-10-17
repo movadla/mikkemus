@@ -12,8 +12,9 @@ export type FxEvent =
   | { type: "perfect"; run: number }
   /** A row got its last cross, for `player`. */
   | { type: "rowClosed"; step: string; player: string }
-  /** A new thrower is up. */
-  | { type: "walkOn" }
+  /** A new thrower is up: `player` is the side whose column the lights swing onto. Named, because the
+   *  screen has not yet moved the highlight when this is announced. */
+  | { type: "walkOn"; player?: string }
   /** `name` took the lead. */
   | { type: "lead"; name: string }
   /** A line for the ticker. */

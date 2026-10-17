@@ -1322,3 +1322,16 @@ button {
     animation: none !important;
   }
 }
+
+/* Six control buttons share the top row in portrait, so the board status shrinks to its dot there
+   (the colour is what is glanced at; the words are the badge's title). */
+@media (orientation: portrait) {
+  .scolia-badge {
+    max-width: none;
+    padding-left: 0.6rem;
+    padding-right: 0.6rem;
+  }
+  .scolia-badge-label {
+    display: none;
+  }
+}

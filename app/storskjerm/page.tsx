@@ -83,7 +83,7 @@ export default function StorskjermPage() {
           if (b >= target && a < target) emitFx({ type: "rowClosed", step: s, player: p });
         }
       }
-      if (live.activePlayer !== before.activePlayer || live.turnToken !== before.turnToken) emitFx({ type: "walkOn" });
+      if (live.activePlayer !== before.activePlayer || live.turnToken !== before.turnToken) emitFx({ type: "walkOn", player: live.activePlayer ?? undefined });
       if (nowLeader && leader.current && nowLeader !== leader.current) emitFx({ type: "lead", name: nowLeader });
     }
     if (nowLeader) leader.current = nowLeader;
@@ -179,6 +179,7 @@ export default function StorskjermPage() {
               <div
                 key={p}
                 data-col-active={isActive ? "" : undefined}
+                data-col-player={p}
                 className="text-center pb-4"
                 style={{ borderBottom: isActive ? "4px solid var(--color-teal)" : "4px solid var(--color-border)" }}
               >

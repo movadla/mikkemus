@@ -2246,7 +2246,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
 
     haptics.confirm();
     setTurnToken((t) => t + 1);
-    if (!rewound) emitFx({ type: "walkOn" });
+    if (!rewound) emitFx({ type: "walkOn", player: players[(currentIdx + 1) % players.length] });
 
     const nextPlayer = rewound ? players[currentIdx] ?? null : players[(currentIdx + 1) % players.length] ?? null;
     playPlayerSound(nextPlayer);
