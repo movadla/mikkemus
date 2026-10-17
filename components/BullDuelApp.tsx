@@ -6,6 +6,7 @@ import {
   activePlayerFor,
   advanceBullDuelTurn,
   botChooseBullThrow,
+  bustBullDuelTurn,
   isTurnComplete,
   registerBullDart,
   startBullDuel,
@@ -62,6 +63,13 @@ export function BullDuelApp({ onExitToHome }: { onExitToHome: () => void }) {
     const current = duelRef.current;
     if (!current) return;
     setDuelState(registerBullDart(current, sector, coords));
+  }
+
+  /** Bust: all the darts left in the turn missed, in one tap. The turn is then ready for Bekreft. */
+  function bustTurn() {
+    const current = duelRef.current;
+    if (!current) return;
+    setDuelState(bustBullDuelTurn(current));
   }
 
   function advanceTurn() {
@@ -207,6 +215,7 @@ export function BullDuelApp({ onExitToHome }: { onExitToHome: () => void }) {
           scolia={scoliaEnabled ? summarizeScolia(scolia.state) : null}
           isActiveBot={activeBotLevel !== null}
           onManualHit={(sector) => registerDart(sector, null)}
+          onBust={bustTurn}
           onConfirm={advanceTurn}
           onAbort={handleAbort}
         />

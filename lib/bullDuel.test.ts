@@ -3,6 +3,7 @@ import {
   activePlayerFor,
   advanceBullDuelTurn,
   botChooseBullThrow,
+  bustBullDuelTurn,
   isTurnComplete,
   registerBullDart,
   startBullDuel,
@@ -125,6 +126,34 @@ describe("isTurnComplete / advanceBullDuelTurn", () => {
     state = registerBullDart(state, "Bull", BULL_CENTER);
     const afterAdvance = advanceBullDuelTurn(state);
     expect(activePlayerFor(afterAdvance)).toBe("Anna");
+  });
+});
+
+describe("bustBullDuelTurn", () => {
+  it("books a miss for every dart of the turn, so it is complete and ready to confirm", () => {
+    const state = bustBullDuelTurn(startBullDuel(["Anna", "Bjørn"], 10));
+    expect(state.dartsThisTurn).toBe(3);
+    expect(state.turnShots.map((s) => s.label)).toEqual(["Bom", "Bom", "Bom"]);
+    expect(state.points.Anna).toBe(0);
+    expect(state.stats.Anna).toMatchObject({ throws: 3, points: 0, redHits: 0, greenHits: 0 });
+    expect(isTurnComplete(state)).toBe(true);
+    expect(activePlayerFor(state)).toBe("Anna"); // Bekreft moves on, not the bust itself
+  });
+
+  it("only fills in what is left of the turn", () => {
+    let state = startBullDuel(["Anna", "Bjørn"], 10);
+    state = registerBullDart(state, "Bull", BULL_CENTER);
+    state = bustBullDuelTurn(state);
+    expect(state.dartsThisTurn).toBe(3);
+    expect(state.stats.Anna).toMatchObject({ throws: 3, points: 2, redHits: 1 });
+    expect(state.turnShots.map((s) => s.label)).toEqual(["Rødt", "Bom", "Bom"]);
+  });
+
+  it("changes nothing once the turn is over", () => {
+    const full = bustBullDuelTurn(startBullDuel(["Anna", "Bjørn"], 10));
+    expect(bustBullDuelTurn(full)).toEqual(full);
+    const won = registerBullDart(startBullDuel(["Anna"], 2), "Bull", BULL_CENTER);
+    expect(bustBullDuelTurn(won)).toEqual(won);
   });
 });
 

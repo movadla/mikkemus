@@ -50,6 +50,7 @@ export function BullDuelGameScreen({
   scolia,
   isActiveBot,
   onManualHit,
+  onBust,
   onConfirm,
   onAbort,
 }: {
@@ -58,6 +59,8 @@ export function BullDuelGameScreen({
   isActiveBot: boolean;
   /** Manual reserve (no Scolia): the tapped outcome's Scolia-style sector string. */
   onManualHit: (sector: "Bull" | "25" | "None") => void;
+  /** Bust: every dart left in the turn missed. */
+  onBust: () => void;
   onConfirm: () => void;
   onAbort: () => void;
 }) {
@@ -131,7 +134,7 @@ export function BullDuelGameScreen({
         {!isActiveBot && (
           <>
             {!turnComplete && (
-              <div className="grid grid-cols-3 gap-2 mb-4">
+              <div className="grid grid-cols-4 gap-2 mb-4">
                 <button
                   type="button"
                   onClick={() => onManualHit("Bull")}
@@ -155,6 +158,15 @@ export function BullDuelGameScreen({
                   style={{ "--btn-fill": "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)", minHeight: "3.5rem" } as React.CSSProperties}
                 >
                   Bom
+                </button>
+                <button
+                  type="button"
+                  onClick={onBust}
+                  aria-label="Bust: bom på alle pilene som er igjen i runden"
+                  className={`glossy rounded-xl font-semibold ${FOCUS_RING}`}
+                  style={{ "--btn-fill": "var(--color-surface)", color: "var(--color-red)", border: "1px solid var(--color-red)", minHeight: "3.5rem" } as React.CSSProperties}
+                >
+                  Bust
                 </button>
               </div>
             )}

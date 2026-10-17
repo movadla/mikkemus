@@ -96,6 +96,16 @@ export function isTurnComplete(state: BullDuelState): boolean {
   return state.winner !== null || state.dartsThisTurn >= DARTS_PER_TURN;
 }
 
+/**
+ * «Bust»: the active player missed with every dart left in the turn. Books each as a miss, so the throws and
+ * the statistics are the same as for three taps on «Bom», and leaves the turn complete, ready for Bekreft.
+ */
+export function bustBullDuelTurn(state: BullDuelState): BullDuelState {
+  let next = state;
+  while (!isTurnComplete(next)) next = registerBullDart(next, "None", null);
+  return next;
+}
+
 /** Moves to the next player in the rotation. A no-op once there's a winner. */
 export function advanceBullDuelTurn(state: BullDuelState): BullDuelState {
   if (state.winner) return state;
