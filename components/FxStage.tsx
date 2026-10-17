@@ -51,37 +51,6 @@ export function FxStage({ matchDart = false }: { matchDart?: boolean }) {
       return document.querySelector(".cell-tile--active") ?? document.querySelector(".cell-tile");
     };
 
-    // A dart that flies into its cell.
-    function dart(step?: string, player?: string) {
-      const cell = cellFor(step, player);
-      if (!cell) return;
-      const r = cell.getBoundingClientRect();
-      const tx = r.left + r.width / 2 + rnd(-r.width * 0.2, r.width * 0.2);
-      const ty = r.top + r.height / 2;
-      const sx = innerWidth * 0.9, sy = innerHeight + 40;
-      const ang = (Math.atan2(ty - sy, tx - sx) * 180) / Math.PI;
-      const el = box("left:0;top:0;width:120px;height:26px;filter:drop-shadow(0 4px 4px rgba(0,0,0,.5));transform-origin:100% 50%", DART_SVG);
-      const flight = el.animate(
-        [
-          { transform: `translate(${sx - 120}px, ${sy - 13}px) rotate(${ang}deg) scale(1.6)`, opacity: 0 },
-          { opacity: 1, offset: 0.2 },
-          { transform: `translate(${tx - 120}px, ${ty - 13}px) rotate(${ang}deg) scale(.36)`, opacity: 1 },
-        ],
-        { duration: 300, easing: "cubic-bezier(.5,0,.9,.6)", fill: "forwards" },
-      );
-      L.appendChild(el);
-      flight.finished.then(() => {
-        const ring = box(`left:${tx - 8}px;top:${ty - 8}px;width:16px;height:16px;border-radius:50%;border:2px solid ${GOLD}`);
-        add(ring, ring.animate([{ transform: "scale(.3)", opacity: 1 }, { transform: "scale(3.6)", opacity: 0 }], { duration: 460, easing: "ease-out" }));
-        for (let i = 0; i < 10; i++) {
-          const s = box(`left:${tx}px;top:${ty}px;width:5px;height:5px;border-radius:50%;background:${GOLD}`);
-          const a = rnd(0, Math.PI * 2), d = rnd(14, 44);
-          add(s, s.animate([{ transform: "translate(0,0) scale(1)", opacity: 1 }, { transform: `translate(${Math.cos(a) * d}px,${Math.sin(a) * d + 6}px) scale(.2)`, opacity: 0 }], { duration: rnd(280, 480), easing: "ease-out" }));
-        }
-        el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 260, delay: 140, fill: "forwards" }).finished.then(() => el.remove()).catch(() => el.remove());
-      }).catch(() => el.remove());
-    }
-
     // A dart that does not score: it flies in, bounces off the cell and falls away, with «BOM».
     function miss() {
       const cell = cellFor();
@@ -240,8 +209,7 @@ export function FxStage({ matchDart = false }: { matchDart?: boolean }) {
 
     return subscribeFx((e: FxEvent) => {
       const f = flags.current;
-      if (e.type === "dart" && f.dartFlight) dart(e.step, e.player);
-      else if (e.type === "ring" && f.ringSlam) {
+      if (e.type === "ring" && f.ringSlam) {
         if (f.manga && e.label === "TRIPPEL 20") manga("TRIPPEL 20!", "TRE KRYSS PÅ EN PIL");
         else slam(e.label, GOLD, "255,236,170");
       } else if (e.type === "bull" && f.manga) manga("BULL!", "RETT I MIDTEN");

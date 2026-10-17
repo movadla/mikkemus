@@ -960,7 +960,6 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         // Every third dart in a row has a fanfare of its own, bigger the longer the run (Full party).
         if (fx.streakFanfare && run >= 3 && run % 3 === 0) setTimeout(() => playStreakFanfare(run), 20);
         setHitPulse({ token: ++pulseTokenRef.current, streak });
-        emitFx({ type: "dart", step: hitResult![0].step, player: activePlayer });
       }
     } else {
       // A miss breaks the run, but only the run — the next hit still sounds, from the bottom.
@@ -1462,7 +1461,6 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     // Nothing else of the per-dart effects: those ride on real throws (see lib/fxLevel.ts).
     primeAudio();
     playTapSound(Math.min(DARTS_PER_TURN, turnActionsRef.current.filter((a) => a.kind === "tap").length));
-    emitFx({ type: "dart", step: hits[0].step, player: activePlayer ?? undefined });
     // A row closed by hand gets the same slam a Scolia dart gives it, which does not depend on
     // how fast anyone taps.
     const closed = hits.find((h) => h.newCount >= getRules().target && h.prevCount < getRules().target);

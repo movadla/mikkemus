@@ -29,6 +29,9 @@ export const SEED_LOG_OFFSET: Record<string, number> = {
   sondre: 0.48,
 };
 
+/** The seeding as the group gave it, best first. */
+export const SEED_ORDER = ["vadla", "monge", "moen", "lars", "hans", "vegard", "sondre"] as const;
+
 /** How many measured darts the seeding is worth. The spread of the prior follows from it. */
 export const SEED_STRENGTH_DARTS = 25;
 // The mean of n Rayleigh distances has a relative variance of 0.4292 / (π/2) / n; the same in ln σ.

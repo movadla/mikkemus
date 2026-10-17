@@ -83,7 +83,6 @@ export default function StorskjermPage() {
         for (const s of STEPS) {
           const a = before.progress[p]?.[s] ?? 0, b = live.progress[p]?.[s] ?? 0;
           if (b <= a) continue;
-          emitFx({ type: "dart", step: s, player: p });
           if (b >= target && a < target) emitFx({ type: "rowClosed", step: s, player: p });
         }
       }

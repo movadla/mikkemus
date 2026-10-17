@@ -119,7 +119,10 @@ export function AppRoot() {
           <button type="button" onClick={() => setMode("settings")} className={`${shortcut} ${FOCUS_RING}`} style={shortcutStyle}>
             Innstillinger
           </button>
-          <Link href="/bet" className={`${shortcut} ${FOCUS_RING} col-span-2`} style={shortcutStyle}>
+          <Link href="/statistikk" className={`${shortcut} ${FOCUS_RING}`} style={shortcutStyle}>
+            Statistikk
+          </Link>
+          <Link href="/bet" className={`${shortcut} ${FOCUS_RING}`} style={shortcutStyle}>
             Spill på morro
           </Link>
         </div>

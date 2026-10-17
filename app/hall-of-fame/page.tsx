@@ -44,7 +44,7 @@ export default function HallOfFamePage() {
   return (
     <div className="animate-screen-enter screen" style={{ background: "var(--color-bg)" }}>
       <div className="screen-inner">
-        <ScreenTop title="Hall of Fame" backHref="/spillere" backLabel="← Spillere" />
+        <ScreenTop title="Hall of Fame" backHref="/statistikk" backLabel="← Statistikk" />
 
         {ranked.length === 0 ? (
           <p className="text-center py-8" style={{ color: "var(--color-muted)" }}>

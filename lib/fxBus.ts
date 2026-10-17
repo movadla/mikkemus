@@ -4,8 +4,6 @@
  * animation level (lib/fxLevel.ts) wants it shown. Nothing here knows about drawing.
  */
 export type FxEvent =
-  /** A dart that scored, flying to its cell: the one named, or else the active player's active row. */
-  | { type: "dart"; step?: string; player?: string }
   /** A triple or double landed. `label` is what the slam says, e.g. «TRIPPEL 20». */
   | { type: "ring"; label: string }
   /** All three darts of a turn counted. */
