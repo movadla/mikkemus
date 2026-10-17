@@ -27,7 +27,8 @@ import {
   type PendingAmbiguous,
 } from "@/lib/game";
 import { memberDeltas } from "@/lib/memberStats";
-import { recordBestRun, ensureTeam, getPlayerRecord, playPlayerSound, recordAccuracyTotals, recordLuckTotals, recordMatchHistory, recordMatchResult, recordMemberStats, recordRingHits, useRoster, useTeamRecords, meanEuclideanDistance, averagePct, type RingHits } from "@/lib/storage";
+import { fairPrice } from "@/lib/bet/ledger";
+import { recordBestRun, ensureTeam, getPlayerRecord, playPlayerSound, recordAccuracyTotals, recordLuckTotals, recordMatchHistory, recordMatchResult, recordMemberStats, recordRating, recordRingHits, useRoster, useTeamRecords, meanEuclideanDistance, averagePct, type RingHits } from "@/lib/storage";
 import { announce } from "@/lib/announcer";
 import { reportError } from "@/lib/errorReporting";
 import { clearActiveMatch, loadActiveMatch, saveActiveMatch } from "@/lib/activeMatch";
@@ -422,7 +423,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         const before = sameTurn ? history[history.length - 2] : last;
         const sides = players.map((p) => {
           const o = result.find((r) => r.name === p)!;
-          return { name: p, p: o.p, odds: o.odds };
+          return { name: p, p: o.p, odds: fairPrice(o.p) };
         });
         oddsHistoryRef.current = sameTurn ? [...history.slice(0, -1), { key, sides }] : [...history, { key, sides }];
         setOddsHistory(oddsHistoryRef.current);
@@ -430,7 +431,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         setOdds(
           players.map((p) => {
             const o = result.find((r) => r.name === p)!;
-            return { name: p, odds: o.odds, p: o.p, lo: o.lo, hi: o.hi, before: before?.sides.find((x) => x.name === p)?.p, active: p === activePlayer, margin: o.margin };
+            return { name: p, odds: fairPrice(o.p), p: o.p, lo: o.lo, hi: o.hi, before: before?.sides.find((x) => x.name === p)?.p, active: p === activePlayer, margin: o.margin };
           }),
         );
       } catch (err) {
@@ -1950,6 +1951,10 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         ...(accuracy && accuracy.throws > 0 ? { throws: accuracy.throws, sumR: accuracy.distance, sumR2: accuracy.sumSq ?? 0, ...(roster && accuracy.byMember ? { byMember: accuracy.byMember } : {}) } : {}),
       });
     });
+    // The rating (lib/rating.ts): only a match between two sides, both real, with something thrown by each.
+    const loser = players.length === 2 && winnerName ? players.find((p) => p !== winnerName) : undefined;
+    const real = (p: string) => !botLevels[p] && !guestPlayers[p] && !(teamRosters[p] ?? []).some((m) => m.isBot || guestPlayers[m.name]);
+    if (winnerName && loser && real(winnerName) && real(loser) && (aggregateTurns(finalTurnLog[loser] ?? []).darts > 0)) recordRating(winnerName, loser);
   }
 
   /**

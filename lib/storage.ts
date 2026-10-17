@@ -6,6 +6,7 @@ import { defaultKits, type TeamKits } from "./teamKit";
 import { cleanTeamName } from "./teamNames";
 import type { WalkOnChoice } from "./fanfare";
 import { mergeMemberStats } from "./memberStats";
+import { initialRating, ratingChange } from "./rating";
 import {
   emptyRecord,
   recordKey as key,
@@ -440,6 +441,30 @@ export function recordMatchHistory(name: string, entry: MatchHistoryEntry) {
   roster = { ...roster, [k]: record };
   notify();
   upsertRow(k, record);
+}
+
+/** The rating a player or team has now: what the matches have made of it, or where it starts. */
+export const ratingOf = (record: PlayerRecord): number => record.rating ?? initialRating(record.name);
+
+/** What a win does to the two ratings, worked out from the records as they stand. Null if either side has no record. */
+export function previewRating(winner: string, loser: string): { winner: PlayerRecord; loser: PlayerRecord; winnerDelta: number; loserDelta: number } | null {
+  const w = roster[key(winner)];
+  const l = roster[key(loser)];
+  if (!w || !l) return null;
+  const c = ratingChange({ rating: ratingOf(w), rated: w.ratedMatches ?? 0 }, { rating: ratingOf(l), rated: l.ratedMatches ?? 0 });
+  return { winner: w, loser: l, ...c };
+}
+
+/** Books a won match between two sides in their ratings. Does nothing unless both have a record. */
+export function recordRating(winner: string, loser: string) {
+  const p = previewRating(winner, loser);
+  if (!p) return;
+  const w: PlayerRecord = { ...p.winner, rating: ratingOf(p.winner) + p.winnerDelta, ratedMatches: (p.winner.ratedMatches ?? 0) + 1 };
+  const l: PlayerRecord = { ...p.loser, rating: ratingOf(p.loser) + p.loserDelta, ratedMatches: (p.loser.ratedMatches ?? 0) + 1 };
+  roster = { ...roster, [key(winner)]: w, [key(loser)]: l };
+  notify();
+  upsertRow(key(winner), w);
+  upsertRow(key(loser), l);
 }
 
 /** Adds one finished match to what each member of a team has done (see lib/memberStats.ts). */

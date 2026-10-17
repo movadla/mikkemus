@@ -1346,6 +1346,13 @@ button {
   }
 }
 
+/* The rating table of the winner screen (components/RatingCard.tsx). */
+@media (prefers-reduced-motion: reduce) {
+  .rating-row {
+    transition: none !important;
+  }
+}
+
 /* The night's story (components/NightStory.tsx). */
 @keyframes story-seg {
   from {

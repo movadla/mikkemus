@@ -10,3 +10,7 @@ alter table players add column if not exists best_run integer;
 alter table players add column if not exists walk_on text;
 -- Hver spillers egne totaler i et lag (treff, bom, piler, avstand), nøklet på navn. Fylles ved hver lagkamp.
 alter table players add column if not exists member_stats jsonb;
+
+-- Rating (Elo) for spillere og lag, og hvor mange kamper den er regnet ut fra.
+alter table players add column if not exists rating integer;
+alter table players add column if not exists rated_matches integer;

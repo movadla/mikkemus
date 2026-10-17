@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { STEPS, STEP_LABELS } from "@/lib/game";
-import { averageDartsPerWin, averagePct, meanEuclideanDistance, meanHorizontalDistance, meanVerticalDistance, useRoster, type PlayerRecord } from "@/lib/storage";
+import { averageDartsPerWin, averagePct, ratingOf, meanEuclideanDistance, meanHorizontalDistance, meanVerticalDistance, useRoster, type PlayerRecord } from "@/lib/storage";
 import { memberHitPct, memberMed } from "@/lib/memberStats";
 import { avatarAccent } from "@/lib/avatarAccent";
 import { TrophyIcon } from "@/components/icons";
@@ -36,6 +36,7 @@ function RecordCard({ p }: { p: PlayerRecord }) {
           <p className="truncate" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>
             {p.kind === "team" && p.members?.length ? `${p.members.join(", ")} · ` : ""}
             {p.matchesPlayed} {p.matchesPlayed === 1 ? "kamp" : "kamper"}
+            {p.rating !== undefined && ` · rating ${ratingOf(p).toLocaleString("nb-NO").replace(/\s/g, "\u202f")}`}
           </p>
         </div>
         <div className="text-right tabular shrink-0">

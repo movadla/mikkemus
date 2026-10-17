@@ -31,9 +31,8 @@ export type LineupSide = {
 
 const COUNT = ["3", "2", "1", "Kast!"];
 const STEP_MS = 650;
-/** How long the cards and the comparison take before the count down, with and without something to compare. */
-const LEAD_WITH_STATS = 3600;
-const LEAD_PLAIN = 900;
+/** The bars start to grow once the cards have turned in. */
+const GROW_AFTER_MS = 1500;
 
 type Row = { label: string; a: number; b: number; low: boolean; fmt: (n: number) => string };
 
@@ -54,23 +53,30 @@ const share = (r: Row, v: number) => (r.low ? 1 / v / (1 / r.a + 1 / r.b) : r.a 
 
 /**
  * The line-up before the first dart, as on television: each side comes in as a foil card from the left
- * and the right under a «VS», their figures grow towards each other bar by bar, then a count down.
- * Tap anywhere to go straight to the board. Three or more sides are listed instead of split in two.
+ * and the right under a «VS», and their figures grow towards each other bar by bar. It stays up until
+ * «Fortsett» is pressed, so the figures can be read for as long as it takes; then comes the count down,
+ * and a tap during it goes straight to the board. Three or more sides are listed instead of split in two.
  * Full party only — see lib/fxLevel.ts.
  */
 export function LineupIntro({ sides, onDone }: { sides: LineupSide[]; onDone: () => void }) {
   const [count, setCount] = useState(-1);
   const [grow, setGrow] = useState(false);
+  // Fortsett has been pressed: the count down runs and the board follows.
+  const [go, setGo] = useState(false);
   const rows = compareRows(sides);
-  const lead = rows.length > 0 ? LEAD_WITH_STATS : LEAD_PLAIN;
 
   useEffect(() => {
+    const t = setTimeout(() => setGrow(true), rows.length > 0 ? GROW_AFTER_MS : 0);
+    return () => clearTimeout(t);
+    // The bars grow once, for the sides the intro was opened with.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!go) return;
     let cancelled = false;
     const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
     (async () => {
-      await wait(Math.min(1500, lead));
-      if (!cancelled) setGrow(true);
-      await wait(Math.max(0, lead - 1500));
       for (let i = 0; i < COUNT.length && !cancelled; i++) {
         setCount(i);
         await wait(STEP_MS);
@@ -80,9 +86,9 @@ export function LineupIntro({ sides, onDone }: { sides: LineupSide[]; onDone: ()
     return () => {
       cancelled = true;
     };
-    // The intro runs once for the sides it was opened with.
+    // The count down runs once, when Fortsett is pressed.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [go]);
 
   const two = sides.length === 2;
   const picture = (s: LineupSide, size: number) =>
@@ -141,7 +147,7 @@ export function LineupIntro({ sides, onDone }: { sides: LineupSide[]; onDone: ()
       role="dialog"
       aria-modal="true"
       aria-label="Oppstilling"
-      onClick={onDone}
+      onClick={go ? onDone : undefined}
       className="fixed inset-0 z-[58] flex items-center justify-center animate-screen-enter"
       style={{ background: "var(--color-bg)" }}
     >
@@ -196,17 +202,31 @@ export function LineupIntro({ sides, onDone }: { sides: LineupSide[]; onDone: ()
           ))}
         </div>
       )}
-      <p
-        key={count}
-        aria-live="polite"
-        className="absolute font-display"
-        style={{ left: 0, right: 0, bottom: "10%", textAlign: "center", fontSize: "2.4rem", color: "var(--color-gold)", animation: count >= 0 ? "lineup-count 380ms ease-out both" : undefined, minHeight: "3rem" }}
-      >
-        {count >= 0 ? COUNT[count] : ""}
-      </p>
-      <p className="absolute" style={{ left: 0, right: 0, bottom: "4%", textAlign: "center", color: "var(--color-muted)", fontSize: "0.8rem" }}>
-        Trykk for å hoppe over
-      </p>
+      {go ? (
+        <>
+          <p
+            key={count}
+            aria-live="polite"
+            className="absolute font-display"
+            style={{ left: 0, right: 0, bottom: "10%", textAlign: "center", fontSize: "2.4rem", color: "var(--color-gold)", animation: count >= 0 ? "lineup-count 380ms ease-out both" : undefined, minHeight: "3rem" }}
+          >
+            {count >= 0 ? COUNT[count] : ""}
+          </p>
+          <p className="absolute" style={{ left: 0, right: 0, bottom: "4%", textAlign: "center", color: "var(--color-muted)", fontSize: "0.8rem" }}>
+            Trykk for å hoppe over
+          </p>
+        </>
+      ) : (
+        <button
+          type="button"
+          autoFocus
+          onClick={() => setGo(true)}
+          className="glossy absolute rounded-full font-semibold outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]"
+          style={{ "--btn-fill": "var(--color-gold)", color: "var(--color-bg)", left: "50%", bottom: "7%", transform: "translateX(-50%)", minHeight: "3rem", padding: "0 2.5rem", fontSize: "1.1rem", animation: "lineup-count 400ms 900ms ease-out both" } as React.CSSProperties}
+        >
+          Fortsett
+        </button>
+      )}
     </div>
   );
 }

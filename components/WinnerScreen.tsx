@@ -15,6 +15,8 @@ import { generateConfetti, generateConfettiRain } from "@/lib/confetti";
 import { DartboardHeatmap } from "./DartboardHeatmap";
 import { ShirtRain } from "./ShirtRain";
 import { Trophy } from "./Trophy";
+import { TimeMachine } from "./TimeMachine";
+import { RatingCard } from "./RatingCard";
 import { ReplayCard } from "./ReplayCard";
 import { AwardsCard, OddsChart, RowCostCard, buildAwards } from "./MatchInsights";
 import type { OddsSnapshot } from "@/lib/oddsLog";
@@ -432,6 +434,11 @@ export function WinnerScreen({
         <RowCostCard players={players} turnLog={turnLogByPlayer} />
 
         <OddsChart history={oddsHistory} winner={winner} />
+
+        {/* A match that has just been played: the ratings, and the match turn by turn. */}
+        {stats[winner] && <RatingCard players={players} winner={winner} />}
+
+        <TimeMachine players={players} turnLog={turnLogByPlayer} snapshots={oddsHistory} winner={winner} />
 
         {replayThrows && <ReplayCard throws={replayThrows} />}
 

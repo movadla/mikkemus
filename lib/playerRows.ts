@@ -103,6 +103,9 @@ export type PlayerRecord = {
   matchHistory: MatchHistoryEntry[];
   /** A team's members, each with their own totals. Absent on a player and until a team match has been played. */
   memberStats?: Record<string, MemberStat>;
+  /** The Elo rating (lib/rating.ts), and how many matches it has been through. Absent until a rated match; then the start rating applies. */
+  rating?: number;
+  ratedMatches?: number;
 };
 
 export type PlayerRow = {
@@ -144,6 +147,9 @@ export type PlayerRow = {
   best_run?: number | null;
   /** Nullable jsonb column (supabase-setup-teams.sql); written only once a team has member stats. */
   member_stats?: Record<string, MemberStat> | null;
+  /** Nullable columns (supabase-setup-teams.sql); written only once there is a rating. */
+  rating?: number | null;
+  rated_matches?: number | null;
 };
 
 export function emptyStepStats(): Record<Step, HitStat> {
@@ -248,6 +254,7 @@ export function rowToRecord(row: PlayerRow): PlayerRecord {
     doubleHits: row.double_hits ?? {},
     matchHistory: row.match_history ?? [],
     ...(kind === "team" && row.member_stats && typeof row.member_stats === "object" ? { memberStats: row.member_stats } : {}),
+    ...(typeof row.rating === "number" ? { rating: row.rating, ratedMatches: row.rated_matches ?? 0 } : {}),
   };
 }
 
@@ -283,6 +290,7 @@ export function recordToRow(k: string, record: PlayerRecord): PlayerRow {
     ...(record.bestRun ? { best_run: record.bestRun } : {}),
     ...(record.kind === "team" && record.walkOn ? { walk_on: record.walkOn } : {}),
     ...(record.kind === "team" && record.memberStats && Object.keys(record.memberStats).length > 0 ? { member_stats: record.memberStats } : {}),
+    ...(typeof record.rating === "number" ? { rating: record.rating, rated_matches: record.ratedMatches ?? 0 } : {}),
     // Only a team touches the two newer columns — see PlayerRow.
     ...(record.kind === "team" ? { kind: "team", members: record.members ?? [], kits: record.kits ?? null } : {}),
   };
