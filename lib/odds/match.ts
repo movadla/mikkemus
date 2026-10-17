@@ -5,6 +5,7 @@ import type { PlayerRecord } from "../playerRows";
 import type { OddsInput, OddsMember, OddsSide } from "./index";
 import { HIT_WEIGHT, medFromCrossRate } from "./hitRate";
 import type { RuleSet } from "./model";
+import { seededPrior } from "./seeding";
 import { addEvidence, knownSkill, learnPrior, skillNodes, weighEvidence, SCENARIOS, type Evidence, type Prior } from "./skill";
 
 const same = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
@@ -84,7 +85,7 @@ function skillOf(name: string, bot: BotLevel | null | undefined, m: OddsMatch, s
   const liveSide = m.live[side];
   const lm = liveSide?.byMember?.[name] ?? (liveSide?.byMember === undefined && liveSide && !m.teamRosters[side] ? { throws: liveSide.throws, sumR: liveSide.distance } : undefined);
   const today: Evidence | null = lm && lm.throws > 0 ? { n: lm.throws, meanR: lm.sumR / lm.throws } : null;
-  return skillNodes(addEvidence(evidenceFor(name, m.roster, m.rules), today), SCENARIOS, prior);
+  return skillNodes(addEvidence(evidenceFor(name, m.roster, m.rules), today), SCENARIOS, seededPrior(name, prior) ?? prior);
 }
 
 /** The odds engine's input from a match in progress, sides in throwing order starting with whoever is up. */

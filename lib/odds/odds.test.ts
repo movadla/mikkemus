@@ -300,3 +300,43 @@ describe("without Scolia: from how often the darts counted", () => {
     expect(evidenceFor("Ola", [team], RULES)).toBeNull();
   });
 });
+
+describe("the seeding of the regulars", () => {
+  const rec = (name: string, over: object = {}) => ({ ...emptyRecord(name), ...over });
+  const winChance = async (a: string, b: string, roster: ReturnType<typeof rec>[] = []) => {
+    const { buildOddsInput } = await import("./match");
+    const p = emptyProgress();
+    const one = (currentIdx: number) => computeOdds(buildOddsInput({ rules: RULES, players: [a, b], currentIdx, progress: { [a]: p, [b]: p }, teamRosters: {}, teamMemberIdx: {}, botLevels: {}, roster, live: {} }));
+    // The odds of whoever is named first, averaged over who throws first.
+    return (one(0)[0].p + one(1)[1].p) / 2;
+  };
+
+  it("reproduces the chances the group gave, to within a few points", async () => {
+    const wanted: [string, string, number][] = [["Vadla", "Monge", 0.6], ["Monge", "Moen", 0.5], ["Monge", "Lars", 0.5], ["Moen", "Hans", 0.65], ["Hans", "Vegard", 0.8], ["Vegard", "Sondre", 0.75]];
+    for (const [a, b, p] of wanted) expect(Math.abs((await winChance(a, b)) - p)).toBeLessThan(0.04);
+  });
+
+  it("knows nothing of someone outside the seeding, and is not case-sensitive about a name", async () => {
+    expect(Math.abs((await winChance("Ukjent", "Annen")) - 0.5)).toBeLessThan(0.02);
+    expect(await winChance("vadla", "SONDRE")).toBeGreaterThan(0.9);
+  });
+
+  it("fades as darts come in: measured darts take over from the seeding", async () => {
+    // Sondre is seeded as the weakest, but 400 measured darts say he throws sharper than Vadla.
+    const sharp = { matchHistory: [{ date: "2026-10-01", won: true, dartsUsed: 400, hitPct: 50, med: 22, mhd: 22, mvd: 22, throws: 400 }] };
+    const sluggish = { matchHistory: [{ date: "2026-10-01", won: false, dartsUsed: 400, hitPct: 50, med: 40, mhd: 40, mvd: 40, throws: 400 }] };
+    const seeded = await winChance("Sondre", "Vadla");
+    const measured = await winChance("Sondre", "Vadla", [rec("Sondre", sharp), rec("Vadla", sluggish)]);
+    expect(seeded).toBeLessThan(0.1);
+    expect(measured).toBeGreaterThan(0.75);
+  });
+
+  it("lasts longer on the weaker evidence of the cross rate", async () => {
+    // Four matches without Scolia at 60 % (240 darts, worth about 19 measured ones) move the picture, but not all the way.
+    const h = (d: string) => ({ date: d, won: true, dartsUsed: 60, hitPct: 60, med: null, mhd: null, mvd: null });
+    const some = await winChance("Sondre", "Vegard", [rec("Sondre", { matchHistory: [h("1"), h("2"), h("3"), h("4")] })]);
+    const seeded = await winChance("Sondre", "Vegard");
+    expect(some).toBeGreaterThan(seeded + 0.03);
+    expect(some).toBeLessThan(0.5); // still the weaker on paper: the seeding has not been thrown out
+  });
+});
