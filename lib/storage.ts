@@ -5,6 +5,7 @@ import { supabase } from "./supabaseClient";
 import { defaultKits, type TeamKits } from "./teamKit";
 import { cleanTeamName } from "./teamNames";
 import type { WalkOnChoice } from "./fanfare";
+import { mergeMemberStats } from "./memberStats";
 import {
   emptyRecord,
   recordKey as key,
@@ -14,12 +15,13 @@ import {
   type BullDuelStat,
   type HitStat,
   type MatchHistoryEntry,
+  type MemberStat,
   type PlayerRecord,
   type PlayerRow,
   type RingHits,
 } from "./playerRows";
 
-export type { AccuracyStat, BullDuelStat, HitStat, LuckStat, MatchHistoryEntry, PlayerRecord, RecordKind, RingHits } from "./playerRows";
+export type { AccuracyStat, BullDuelStat, HitStat, LuckStat, MatchHistoryEntry, MemberStat, PlayerRecord, RecordKind, RingHits } from "./playerRows";
 
 type Roster = Record<string, PlayerRecord>;
 
@@ -435,6 +437,18 @@ export function recordMatchHistory(name: string, entry: MatchHistoryEntry) {
   const k = key(name);
   const existing = roster[k] ?? ensurePlayer(name);
   const record: PlayerRecord = { ...existing, matchHistory: [...existing.matchHistory, entry] };
+  roster = { ...roster, [k]: record };
+  notify();
+  upsertRow(k, record);
+}
+
+/** Adds one finished match to what each member of a team has done (see lib/memberStats.ts). */
+export function recordMemberStats(team: string, delta: Record<string, MemberStat>) {
+  if (Object.keys(delta).length === 0) return;
+  const k = key(team);
+  const existing = roster[k];
+  if (!existing || existing.kind !== "team") return;
+  const record: PlayerRecord = { ...existing, memberStats: mergeMemberStats(existing.memberStats, delta) };
   roster = { ...roster, [k]: record };
   notify();
   upsertRow(k, record);

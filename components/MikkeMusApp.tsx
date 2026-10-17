@@ -27,7 +27,8 @@ import {
   type TurnShot,
   type PendingAmbiguous,
 } from "@/lib/game";
-import { recordBestRun, ensureTeam, getPlayerRecord, playPlayerSound, recordAccuracyTotals, recordLuckTotals, recordMatchHistory, recordMatchResult, recordRingHits, useRoster, useTeamRecords, type RingHits } from "@/lib/storage";
+import { memberDeltas } from "@/lib/memberStats";
+import { recordBestRun, ensureTeam, getPlayerRecord, playPlayerSound, recordAccuracyTotals, recordLuckTotals, recordMatchHistory, recordMatchResult, recordMemberStats, recordRingHits, useRoster, useTeamRecords, type RingHits } from "@/lib/storage";
 import { announce } from "@/lib/announcer";
 import { reportError } from "@/lib/errorReporting";
 import { clearActiveMatch, loadActiveMatch, saveActiveMatch } from "@/lib/activeMatch";
@@ -1933,6 +1934,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       if (bestRun > 0) recordBestRun(p, bestRun);
       const accuracy = accuracyTotalsRef.current[p];
       if (accuracy) recordAccuracyTotals(p, accuracy);
+      // In a team, each member's own numbers go on the team's record, next to the team's.
+      if (roster) recordMemberStats(p, memberDeltas(finalTurnLog[p] ?? [], roster.map((m) => m.name), accuracy?.byMember));
       const luckTotals = luckTotalsRef.current[p];
       if (luckTotals) recordLuckTotals(p, luckTotals);
       const ringHits = ringHitsRef.current[p];

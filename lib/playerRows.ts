@@ -44,6 +44,24 @@ export type MatchHistoryEntry = {
 };
 
 /**
+ * What one person on a team has done over every match the team has played, kept on the team's record
+ * since that is where the matches live. `throws`/`sumR` are the Scolia-measured darts and their summed
+ * distance from the target (MED = sumR / throws), absent as 0 when a match was played without Scolia.
+ */
+export type MemberStat = {
+  matches: number;
+  turns: number;
+  darts: number;
+  hits: number;
+  misses: number;
+  steps: Record<Step, HitStat>;
+  /** Longest run of counting darts, in darts. */
+  bestRun: number;
+  throws: number;
+  sumR: number;
+};
+
+/**
  * A player, or a team. A team is two or more players who play as one side; it has the same
  * statistics as a player (its matches are recorded against the team, not its members) and
  * remembers who is in it. Before teams had a record of their own, people made a "player" called
@@ -83,6 +101,8 @@ export type PlayerRecord = {
   tripleHits: RingHits;
   doubleHits: RingHits;
   matchHistory: MatchHistoryEntry[];
+  /** A team's members, each with their own totals. Absent on a player and until a team match has been played. */
+  memberStats?: Record<string, MemberStat>;
 };
 
 export type PlayerRow = {
@@ -122,6 +142,8 @@ export type PlayerRow = {
   /** Nullable column added later (supabase-setup-teams.sql); written only once there is a value, so
    *  saving keeps working on a database that does not have it yet. */
   best_run?: number | null;
+  /** Nullable jsonb column (supabase-setup-teams.sql); written only once a team has member stats. */
+  member_stats?: Record<string, MemberStat> | null;
 };
 
 export function emptyStepStats(): Record<Step, HitStat> {
@@ -225,6 +247,7 @@ export function rowToRecord(row: PlayerRow): PlayerRecord {
     tripleHits: row.triple_hits ?? {},
     doubleHits: row.double_hits ?? {},
     matchHistory: row.match_history ?? [],
+    ...(kind === "team" && row.member_stats && typeof row.member_stats === "object" ? { memberStats: row.member_stats } : {}),
   };
 }
 
@@ -259,6 +282,7 @@ export function recordToRow(k: string, record: PlayerRecord): PlayerRow {
     match_history: record.matchHistory,
     ...(record.bestRun ? { best_run: record.bestRun } : {}),
     ...(record.kind === "team" && record.walkOn ? { walk_on: record.walkOn } : {}),
+    ...(record.kind === "team" && record.memberStats && Object.keys(record.memberStats).length > 0 ? { member_stats: record.memberStats } : {}),
     // Only a team touches the two newer columns — see PlayerRow.
     ...(record.kind === "team" ? { kind: "team", members: record.members ?? [], kits: record.kits ?? null } : {}),
   };

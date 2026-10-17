@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { STEPS, STEP_LABELS } from "@/lib/game";
 import { averageDartsPerWin, averagePct, meanEuclideanDistance, meanHorizontalDistance, meanVerticalDistance, useRoster, type PlayerRecord } from "@/lib/storage";
+import { memberHitPct, memberMed } from "@/lib/memberStats";
 import { avatarAccent } from "@/lib/avatarAccent";
 import { TrophyIcon } from "@/components/icons";
 import { ScreenTop } from "@/components/ScreenTop";
@@ -58,6 +59,29 @@ function RecordCard({ p }: { p: PlayerRecord }) {
           </div>
         ))}
       </div>
+      {p.kind === "team" && p.memberStats && Object.keys(p.memberStats).length > 0 && (
+        <div className="mb-4 rounded-lg px-3 py-2" style={{ background: "var(--color-cell)" }}>
+          <div className="grid items-baseline gap-x-2" style={{ gridTemplateColumns: "minmax(0,1fr) 3.5rem 3.5rem 3.5rem" }}>
+            <span className="section-label" style={{ fontSize: "0.75rem" }}>SPILLER</span>
+            <span className="section-label text-right" style={{ fontSize: "0.75rem" }}>TREFF</span>
+            <span className="section-label text-right" style={{ fontSize: "0.75rem" }}>MED</span>
+            <span className="section-label text-right" style={{ fontSize: "0.75rem" }}>PILER</span>
+            {(p.members ?? Object.keys(p.memberStats)).filter((m) => p.memberStats![m]).map((m) => {
+              const s = p.memberStats![m];
+              const pct = memberHitPct(s);
+              const med = memberMed(s);
+              return (
+                <div key={m} className="contents">
+                  <span className="truncate py-1" style={{ color: "var(--color-cream)", fontWeight: 600 }}>{m}</span>
+                  <span className="tabular text-right" style={{ color: "var(--color-teal)", fontWeight: 700 }}>{pct === null ? "–" : `${pct}%`}</span>
+                  <span className="tabular text-right" style={{ color: "var(--color-cream)", fontSize: "0.85rem" }}>{med === null ? "–" : `${Math.round(med)}mm`}</span>
+                  <span className="tabular text-right" style={{ color: "var(--color-muted)", fontSize: "0.85rem" }}>{s.darts}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
       <div className="mt-4 pt-4 flex items-center justify-between" style={{ borderTop: "1px solid var(--color-border)" }}>
         <span className="section-label" style={{ fontSize: "0.75rem" }}>SNITT PILER PR RUNDE</span>
         <span className="tabular" style={{ color: "var(--color-teal)", fontWeight: 700 }}>
