@@ -5,6 +5,7 @@ import { STEPS, STEP_LABELS } from "@/lib/game";
 import { averageDartsPerWin, averagePct, ratingOf, meanEuclideanDistance, meanHorizontalDistance, meanVerticalDistance, useRoster, type PlayerRecord } from "@/lib/storage";
 import { memberHitPct, memberMed } from "@/lib/memberStats";
 import { avatarAccent } from "@/lib/avatarAccent";
+import { PlayerStatsAccordion } from "./PlayerStatsAccordion";
 
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
@@ -105,8 +106,8 @@ function RecordCard({ p }: { p: PlayerRecord }) {
   );
 }
 
-/** Every player with their numbers, then every team with a record of its own. A card opens the player's or the
- *  team's own page, where the name, the picture, the sound and the rest are changed. */
+/** Every player as a line to open (Singel and Lag, by hand or Scolia), then every team with a record of its own.
+ *  A team's card opens its own page, where the name, the picture, the sound and the rest are changed. */
 export function PlayerStatCards() {
   const roster = useRoster();
   const players = roster.filter((p) => p.kind !== "team");
@@ -121,11 +122,7 @@ export function PlayerStatCards() {
       )}
 
       {teams.length > 0 && players.length > 0 && <p className="section-label mb-2">SPILLERE</p>}
-      <div className="space-y-4">
-        {players.map((p) => (
-          <RecordCard key={p.name} p={p} />
-        ))}
-      </div>
+      <PlayerStatsAccordion players={players} all={roster} />
 
       {teams.length > 0 && (
         <>

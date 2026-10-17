@@ -76,6 +76,7 @@ export function WinnerScreen({
   onUndoWin,
   statsOff = false,
   onToggleStats,
+  archive = false,
   turnLogByPlayer,
   progressByPlayer,
   winnerKit = null,
@@ -121,12 +122,15 @@ export function WinnerScreen({
   statsOff?: boolean;
   /** Takes the match out of the statistics, or puts it back. Nothing is written until the screen is left. */
   onToggleStats?: () => void;
+  /** An old match opened from the list: the same page, without the celebration, the rating and what belongs to the moment. */
+  archive?: boolean;
 }) {
   const photo = getPlayerRecord(winner)?.photo;
   const winnerLuck = luckByPlayer[winner] ? overallSumLuck(luckByPlayer[winner]) : null;
   // The celebration follows the chosen level (see lib/fxLevel.ts): none at Vanlig, the usual at
   // Party, twice the rain at Full party. The rest of the screen is the same at every level.
-  const fx = fxFlags(useFxLevel());
+  const chosenLevel = useFxLevel();
+  const fx = fxFlags(archive ? "normal" : chosenLevel);
   // A winning team celebrates with its own shirts (ShirtRain) instead of the generic confetti.
   const shirts = !!winnerKit && fx.shirtRain;
   const confettiCount = fx.confetti && !shirts ? CONFETTI_COUNT * (fx.bigConfetti ? 2 : 1) : 0;
@@ -442,7 +446,7 @@ export function WinnerScreen({
         <OddsChart history={oddsHistory} winner={winner} />
 
         {/* A match that has just been played: the ratings, and the match turn by turn. */}
-        {stats[winner] && !statsOff && <RatingCard players={players} winner={winner} />}
+        {stats[winner] && !statsOff && !archive && <RatingCard players={players} winner={winner} />}
 
         <TimeMachine players={players} turnLog={turnLogByPlayer} snapshots={oddsHistory} winner={winner} />
 

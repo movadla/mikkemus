@@ -26,6 +26,14 @@ export type RingHits = Record<string, number>;
 /** One completed match's own numbers, for the "over time" trend on a player's stats page — separate from the cumulative career totals above. */
 export type MatchHistoryEntry = {
   date: string;
+  /** Which match this was and who the other sides were (also bots and guests, who have no record of their own), so
+   *  the matches can be listed as matches. Absent on matches from before they were kept. */
+  matchId?: string;
+  vs?: string[];
+  /** Crosses this side still lacked when the match ended: the margin of a win, or how far a loss was from it. */
+  left?: number;
+  /** Crosses and misses per row in this match: [hits, misses]. */
+  steps?: Partial<Record<Step, [number, number]>>;
   won: boolean;
   dartsUsed: number;
   hitPct: number;

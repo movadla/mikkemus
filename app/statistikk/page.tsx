@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { PlayerStatCards } from "@/components/StatsCards";
 import { SeedingTab } from "@/components/SeedingTab";
+import { MatchLogTab } from "@/components/MatchLogTab";
+import { RecordsTab } from "@/components/RecordsTab";
 import { ScreenTop } from "@/components/ScreenTop";
 import { TrophyIcon } from "@/components/icons";
 import Link from "next/link";
@@ -10,7 +12,7 @@ import Link from "next/link";
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
 
-type Tab = "spillere" | "seeding";
+type Tab = "spillere" | "seeding" | "rekorder" | "kamper";
 
 /** Statistikk: every player's numbers in one tab, and in the other who is best, who is in form and what a
  *  tournament would give. Changing a player or a team is done on Spillere. */
@@ -34,8 +36,8 @@ export default function StatsPage() {
           }
         />
 
-        <div className="grid grid-cols-2 gap-2 mb-5" role="tablist">
-          {(["spillere", "seeding"] as Tab[]).map((t) => (
+        <div className="grid grid-cols-4 gap-2 mb-5" role="tablist">
+          {(["spillere", "seeding", "rekorder", "kamper"] as Tab[]).map((t) => (
             <button
               key={t}
               type="button"
@@ -49,15 +51,15 @@ export default function StatsPage() {
                 color: tab === t ? "var(--color-bg)" : "var(--color-cream)",
                 border: "1px solid var(--color-border)",
                 fontWeight: 600,
-                fontSize: "0.9rem",
+                fontSize: "0.8rem",
               }}
             >
-              {t === "spillere" ? "Spillerstatistikk" : "Seeding"}
+              {t === "spillere" ? "Spillere" : t === "seeding" ? "Seeding" : t === "rekorder" ? "Rekorder" : "Kamper"}
             </button>
           ))}
         </div>
 
-        {tab === "spillere" ? <PlayerStatCards /> : <SeedingTab />}
+        {tab === "spillere" ? <PlayerStatCards /> : tab === "seeding" ? <SeedingTab /> : tab === "rekorder" ? <RecordsTab /> : <MatchLogTab />}
       </div>
     </div>
   );

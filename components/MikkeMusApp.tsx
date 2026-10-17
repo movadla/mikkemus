@@ -29,6 +29,7 @@ import {
 import { memberDeltas } from "@/lib/memberStats";
 import { finishState } from "@/lib/finishState";
 import { computeOddsOffThread } from "@/lib/odds/client";
+import { saveMatchArchive } from "@/lib/matchArchive";
 import type { OddsMatch } from "@/lib/odds/match";
 import { fairPrice } from "@/lib/bet/ledger";
 import { recordBestRun, ensureTeam, getPlayerRecord, playPlayerSound, recordAccuracyTotals, recordLuckTotals, recordMatchHistory, recordMatchResult, recordMemberStats, recordRating, recordRingHits, useRoster, useTeamRecords, meanEuclideanDistance, averagePct, type RingHits } from "@/lib/storage";
@@ -1990,12 +1991,35 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         mhd: accuracy && accuracy.throws > 0 ? accuracy.horizontal / accuracy.throws : null,
         mvd: accuracy && accuracy.throws > 0 ? accuracy.vertical / accuracy.throws : null,
         ...(accuracy && accuracy.throws > 0 ? { throws: accuracy.throws, sumR: accuracy.distance, sumR2: accuracy.sumSq ?? 0, ...(roster && accuracy.byMember ? { byMember: accuracy.byMember } : {}) } : {}),
+        // What the match log needs to list this as one match among others, and its numbers row by row.
+        matchId: matchIdRef.current,
+        vs: players.filter((x) => x !== p),
+        ...(progress[p] ? { left: remainingMarks(progress[p]) } : {}),
+        steps: Object.fromEntries(STEPS.filter((s) => (aggregate.hitsByStep[s] ?? 0) + (aggregate.missesByStep[s] ?? 0) > 0).map((s) => [s, [aggregate.hitsByStep[s] ?? 0, aggregate.missesByStep[s] ?? 0]])),
       });
     });
     // The rating (lib/rating.ts): only a match between two sides, both real, with something thrown by each.
     const loser = players.length === 2 && winnerName ? players.find((p) => p !== winnerName) : undefined;
     const real = (p: string) => !botLevels[p] && !guestPlayers[p] && !(teamRosters[p] ?? []).some((m) => m.isBot || guestPlayers[m.name]);
     if (winnerName && loser && real(winnerName) && real(loser) && (aggregateTurns(finalTurnLog[loser] ?? []).darts > 0)) recordRating(winnerName, loser);
+    // The whole match, as the winner screen showed it, so that it can be opened again from the list of matches.
+    if (winnerName) {
+      void saveMatchArchive({
+        id: matchIdRef.current,
+        date: new Date().toISOString(),
+        variant,
+        winner: winnerName,
+        players,
+        teams: Object.fromEntries(Object.entries(teamRosters).map(([t, members]) => [t, members.map((m) => m.name)])),
+        stats: winnerStats,
+        luck: winnerLuck,
+        preBanked,
+        throws: matchThrows,
+        turnLog: finalTurnLog,
+        progress,
+        odds: oddsHistoryRef.current,
+      });
+    }
   }
 
   /**
