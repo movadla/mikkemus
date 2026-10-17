@@ -145,12 +145,15 @@ export function BullDuelApp({ onExitToHome }: { onExitToHome: () => void }) {
   // The moment someone wins, persist career stats (never on abort — see
   // handleAbort) and haptically celebrate, once per match.
   const recordedWinnerRef = useRef<string | null>(null);
+  // Set from the tick box under Start: a match played without a trace in the statistics.
+  const skipStatsRef = useRef(false);
   useEffect(() => {
     if (!duel?.winner || recordedWinnerRef.current === duel.winner) return;
     recordedWinnerRef.current = duel.winner;
     haptics.win();
     playFanfare();
     duel.players.forEach((p) => {
+      if (skipStatsRef.current) return;
       if (botLevels[p] || teamRosters[p] || guestPlayers[p]) return;
       const stats = duel.stats[p];
       if (stats.throws === 0) return;
@@ -171,8 +174,11 @@ export function BullDuelApp({ onExitToHome }: { onExitToHome: () => void }) {
     players: string[],
     startBotLevels: Record<string, BotLevel>,
     startTeamRosters: Record<string, TeamMember[]> = {},
-    startGuestPlayers: Record<string, true> = {}
+    startGuestPlayers: Record<string, true> = {},
+    _variant?: unknown,
+    statsOff = false
   ) {
+    skipStatsRef.current = statsOff;
     setPendingPlayers(players);
     setBotLevels(startBotLevels);
     setTeamRosters(startTeamRosters);

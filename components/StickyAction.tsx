@@ -19,6 +19,7 @@ export function StickyAction({
   ready,
   summary,
   reason,
+  below,
   children,
 }: {
   onClick: () => void;
@@ -27,6 +28,8 @@ export function StickyAction({
   summary?: ReactNode;
   /** The one thing that stops it, shown instead of the summary when not ready. */
   reason?: ReactNode;
+  /** Something small under the button, such as a tick box about how the match is played. */
+  below?: ReactNode;
   children: ReactNode;
 }) {
   const line = ready ? summary : reason ?? summary;
@@ -50,6 +53,7 @@ export function StickyAction({
         >
           {children}
         </button>
+        {below && <div className="mt-1 flex justify-center">{below}</div>}
       </div>
     </div>
   );

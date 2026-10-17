@@ -88,7 +88,9 @@ export function SetupScreen({
     botLevels: Record<string, BotLevel>,
     teamRosters?: Record<string, TeamMember[]>,
     guestPlayers?: Record<string, true>,
-    variant?: GameVariant
+    variant?: GameVariant,
+    /** Played for fun: nothing from the match is written to the statistics. */
+    statsOff?: boolean
   ) => void;
   onHome?: () => void;
   /** Overridden by other modes (e.g. Bull-duell) that reuse this same player picker. */
@@ -102,6 +104,8 @@ export function SetupScreen({
   const [variant, setVariant] = useState<GameVariant>("standard");
   const [people, setPeople] = useState<Person[]>([]);
   const [teams, setTeams] = useState<PickedTeam[]>([]);
+  // Ticked under the start button: the match is played without a trace in the statistics.
+  const [statsOff, setStatsOff] = useState(false);
 
   // The longer games have no bots — see botsSupported. Bots already added when the length is
   // changed are not removed behind the user's back; the start button waits until they are.
@@ -118,7 +122,7 @@ export function SetupScreen({
     commitPeople(people);
     const { players, botLevels, guestPlayers } = splitPeople(people);
     // The stand rule belongs to team play; a lone player has no one to hand over to.
-    onStart(players, botLevels, undefined, guestPlayers, withStandRule(variant, false));
+    onStart(players, botLevels, undefined, guestPlayers, withStandRule(variant, false), statsOff);
   }
 
   function startTeamGame() {
@@ -133,9 +137,17 @@ export function SetupScreen({
       {},
       teamRosters,
       undefined,
-      variant
+      variant,
+      statsOff
     );
   }
+
+  const noStatsToggle = (
+    <label className="inline-flex items-center gap-3 cursor-pointer" style={{ minHeight: "2.75rem", color: "var(--color-muted)", fontSize: "0.85rem" }}>
+      <input type="checkbox" checked={statsOff} onChange={(e) => setStatsOff(e.target.checked)} style={{ width: 22, height: 22, accentColor: "var(--color-gold)" }} />
+      Spill uten at statistikken teller
+    </label>
+  );
 
   return (
     <div className="animate-screen-enter screen has-sticky-action" style={{ background: "var(--color-bg)" }}>
@@ -163,6 +175,7 @@ export function SetupScreen({
               ready={!individualProblem}
               summary={setupSummary([`${people.length} ${people.length === 1 ? "spiller" : "spillere"}`, crosses])}
               reason={individualProblem}
+              below={noStatsToggle}
             >
               Start kampen
             </StickyAction>
@@ -177,6 +190,7 @@ export function SetupScreen({
               ready={!teamProblem}
               summary={setupSummary([`${teams.length} lag`, crosses])}
               reason={teamProblem}
+              below={noStatsToggle}
             >
               Start kampen
             </StickyAction>

@@ -74,6 +74,8 @@ export function WinnerScreen({
   onPlayAgain,
   onNewMatch,
   onUndoWin,
+  statsOff = false,
+  onToggleStats,
   turnLogByPlayer,
   progressByPlayer,
   winnerKit = null,
@@ -115,6 +117,10 @@ export function WinnerScreen({
   /** Takes the last cross back and returns to the board — for when Scolia read a bounce-out or a
    *  wire as the winning dart. Omitted where there is nothing to go back to. */
   onUndoWin?: () => void;
+  /** The match does not count in the statistics. */
+  statsOff?: boolean;
+  /** Takes the match out of the statistics, or puts it back. Nothing is written until the screen is left. */
+  onToggleStats?: () => void;
 }) {
   const photo = getPlayerRecord(winner)?.photo;
   const winnerLuck = luckByPlayer[winner] ? overallSumLuck(luckByPlayer[winner]) : null;
@@ -436,7 +442,7 @@ export function WinnerScreen({
         <OddsChart history={oddsHistory} winner={winner} />
 
         {/* A match that has just been played: the ratings, and the match turn by turn. */}
-        {stats[winner] && <RatingCard players={players} winner={winner} />}
+        {stats[winner] && !statsOff && <RatingCard players={players} winner={winner} />}
 
         <TimeMachine players={players} turnLog={turnLogByPlayer} snapshots={oddsHistory} winner={winner} />
 
@@ -551,6 +557,23 @@ export function WinnerScreen({
         {/* After a single match there are three things to do next, in the order people want them:
             the same people again, other people, or leave. In tournament mode there is only one —
             back to the tournament — and it is the main button. */}
+        {onToggleStats && (
+          <div className="mb-4 text-center">
+            {statsOff && (
+              <p role="status" className="mb-2" style={{ color: "var(--color-gold-strong)", fontSize: "0.85rem" }}>
+                Denne kampen teller ikke i statistikken.
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={onToggleStats}
+              className={`tactile w-full rounded-xl ${FOCUS_RING}`}
+              style={{ minHeight: "2.75rem", background: "transparent", color: statsOff ? "var(--color-cream)" : "var(--color-red)", border: `1px solid ${statsOff ? "var(--color-border)" : "var(--color-red)"}`, fontSize: "0.9rem" }}
+            >
+              {statsOff ? "Ta kampen med i statistikken likevel" : "Fjern denne kampen fra statistikken"}
+            </button>
+          </div>
+        )}
         {onPlayAgain && (
           <button
             type="button"

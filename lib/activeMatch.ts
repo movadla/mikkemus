@@ -9,6 +9,8 @@ export type ActiveMatchSnapshot = {
   variant?: GameVariant;
   /** Which match this is, for the bets placed on it (/bet) — kept so a reload does not make it a new one. */
   matchId?: string;
+  /** Played without a trace in the statistics: ticked before the start, or chosen on the winner screen. */
+  skipStats?: boolean;
   players: string[];
   progress: PlayerProgress;
   currentIdx: number;

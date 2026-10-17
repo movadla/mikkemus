@@ -337,6 +337,14 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   const oddsHistoryRef = useRef<OddsSnapshot[]>([]);
   // Which turn the odds on show were worked out for, and which match this is (for /bet).
   const [oddsTurn, setOddsTurn] = useState(-1);
+  // The match does not count in the statistics: ticked under Start, or chosen on the winner screen after a match
+  // that was tapped wrong. A ref as well as state, since the result is written from handlers that must see it now.
+  const skipStatsRef = useRef(false);
+  const [skipStats, setSkipStatsState] = useState(false);
+  const setSkipStats = (v: boolean) => {
+    skipStatsRef.current = v;
+    setSkipStatsState(v);
+  };
   const matchIdRef = useRef("");
   const [oddsHistory, setOddsHistory] = useState<OddsSnapshot[]>([]);
   // Which players in this match are bots, and at what difficulty — set once at
@@ -551,6 +559,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       setVariant(restored.variant ?? "standard");
       matchIdRef.current = restored.matchId ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
       setScreen(restored.screen);
+      setSkipStats(restored.skipStats ?? false);
       setPlayers(restored.players);
       writeProgress(restored.progress);
       setCurrentIdx(restored.currentIdx);
@@ -643,6 +652,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       screen,
       variant,
       matchId: matchIdRef.current,
+      skipStats,
       players,
       progress,
       currentIdx,
@@ -684,6 +694,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     hydratedFromStorage,
     screen,
     variant,
+    skipStats,
     players,
     progress,
     currentIdx,
@@ -1218,8 +1229,10 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     startBotLevels: Record<string, BotLevel> = {},
     startTeamRosters: Record<string, TeamMember[]> = {},
     startGuestPlayers: Record<string, true> = {},
-    startVariant: GameVariant = "standard"
+    startVariant: GameVariant = "standard",
+    startStatsOff = false
   ) {
+    setSkipStats(startStatsOff);
     // First, before anything reads a rule: the target, the active step and what a throw means
     // all come from here for the rest of the match.
     setGameVariant(startVariant);
@@ -1999,6 +2012,9 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     const pending = pendingResultRef.current;
     if (!pending) return;
     pendingResultRef.current = null;
+    // A match played for fun, or taken out of the statistics after the fact: nothing is written, and the odds
+    // log (made of the same taps) is left alone too.
+    if (skipStatsRef.current) return;
     // What the odds said, turn by turn, next to who won — so that they can be checked afterwards.
     if (pending.winnerName) void logOddsMatch({ winner: pending.winnerName, sides: players, snapshots: oddsHistoryRef.current, variant });
     persistMatchResults(pending.turnLog, pending.winnerName);
@@ -2372,7 +2388,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
    *  "Til turnering" flow via playAgain/onMatchComplete, so this is never offered there (see the
    *  WinnerScreen call site below). */
   function rematch() {
-    startGame(players, botLevels, teamRosters, guestPlayers, variant);
+    startGame(players, botLevels, teamRosters, guestPlayers, variant, skipStatsRef.current);
     flushMatchResults();
   }
 
@@ -2449,6 +2465,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         onPlayAgain={onMatchComplete ? undefined : rematch}
         onNewMatch={onMatchComplete ? undefined : newMatch}
         onUndoWin={history.length > 0 ? undoWin : undefined}
+        statsOff={skipStats}
+        onToggleStats={() => setSkipStats(!skipStatsRef.current)}
       />
     );
   }
