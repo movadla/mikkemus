@@ -1271,3 +1271,54 @@ button {
     stroke-dashoffset: 0;
   }
 }
+
+/* The line-up before the first dart (components/LineupIntro.tsx). */
+@keyframes lineup-in-left {
+  from {
+    transform: translateX(-120px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+@keyframes lineup-in-right {
+  from {
+    transform: translateX(120px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+@keyframes lineup-vs {
+  from {
+    transform: scale(3);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes lineup-count {
+  from {
+    transform: scale(2);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [role="dialog"][aria-label="Oppstilling"] * {
+    animation: none !important;
+  }
+}

@@ -21,7 +21,9 @@ export type FxEvent =
   /** A personal record was beaten; `text` says which. */
   | { type: "record"; text: string }
   /** The thrower is one row from winning: the word slammed in. */
-  | { type: "matchdart" };
+  | { type: "matchdart" }
+  /** A real dart that did not score: it bounces off and falls. */
+  | { type: "miss" };
 
 type Listener = (event: FxEvent) => void;
 const listeners = new Set<Listener>();

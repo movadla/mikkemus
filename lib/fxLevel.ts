@@ -71,12 +71,16 @@ export type FxFlags = {
   recordBanner: boolean;
   /** A team's own walk-on tune when it is up. */
   walkOnTune: boolean;
+  /** A dart that misses bounces off and falls. */
+  missBounce: boolean;
+  /** The line-up with a count down before the first dart. */
+  lineup: boolean;
 };
 
 const FLAGS: Record<FxLevel, FxFlags> = {
-  normal: { boomMaxStreak: 1, heat: false, shake: false, tripleOverlay: false, dives: false, confetti: false, bigConfetti: false, crowd: false, dartFlight: false, ringSlam: false, perfectBurst: false, fire: false, walkOn: false, rowShine: false, shirtRain: false, leadChange: false, commentary: false, matchDart: false, replay: false, recordBanner: false, walkOnTune: false },
-  party: { boomMaxStreak: 3, heat: true, shake: true, tripleOverlay: true, dives: true, confetti: true, bigConfetti: false, crowd: false, dartFlight: false, ringSlam: false, perfectBurst: false, fire: false, walkOn: false, rowShine: false, shirtRain: false, leadChange: false, commentary: false, matchDart: false, replay: false, recordBanner: false, walkOnTune: false },
-  full: { boomMaxStreak: 3, heat: true, shake: true, tripleOverlay: true, dives: true, confetti: true, bigConfetti: true, crowd: true, dartFlight: true, ringSlam: true, perfectBurst: true, fire: true, walkOn: true, rowShine: true, shirtRain: true, leadChange: true, commentary: true, matchDart: true, replay: true, recordBanner: true, walkOnTune: true },
+  normal: { boomMaxStreak: 1, heat: false, shake: false, tripleOverlay: false, dives: false, confetti: false, bigConfetti: false, crowd: false, dartFlight: false, ringSlam: false, perfectBurst: false, fire: false, walkOn: false, rowShine: false, shirtRain: false, leadChange: false, commentary: false, matchDart: false, replay: false, recordBanner: false, walkOnTune: false, missBounce: false, lineup: false },
+  party: { boomMaxStreak: 3, heat: true, shake: true, tripleOverlay: true, dives: true, confetti: true, bigConfetti: false, crowd: false, dartFlight: false, ringSlam: false, perfectBurst: false, fire: false, walkOn: false, rowShine: false, shirtRain: false, leadChange: false, commentary: false, matchDart: false, replay: false, recordBanner: false, walkOnTune: false, missBounce: false, lineup: false },
+  full: { boomMaxStreak: 3, heat: true, shake: true, tripleOverlay: true, dives: true, confetti: true, bigConfetti: true, crowd: true, dartFlight: true, ringSlam: true, perfectBurst: true, fire: true, walkOn: true, rowShine: true, shirtRain: true, leadChange: true, commentary: true, matchDart: true, replay: true, recordBanner: true, walkOnTune: true, missBounce: true, lineup: true },
 };
 
 export function fxFlags(level: FxLevel): FxFlags {

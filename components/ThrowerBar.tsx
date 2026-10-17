@@ -133,6 +133,7 @@ export function ThrowerBar({
   animate,
   compact = false,
   onPickMate,
+  onOpen,
 }: {
   thrower: Thrower;
   team: ThrowerTeam | null;
@@ -148,12 +149,15 @@ export function ThrowerBar({
   compact?: boolean;
   /** A tap on a teammate's picture: the caller asks whether they should throw now. */
   onPickMate?: (name: string) => void;
+  /** A tap on the thrower's picture or name: the caller opens the thrower's numbers. */
+  onOpen?: () => void;
 }) {
   // The rest of the team in the order they come up next, so the first of them is the next thrower.
   const mates = team ? team.members.map((_, i) => team.members[(team.activeIdx + 1 + i) % team.members.length]).slice(0, team.members.length - 1) : [];
   const photoSize = compact ? 44 : 72;
   const teamPhotoSize = compact ? 18 : 26;
   const kitBadge = compact ? 26 : 40;
+  const Wrap: React.ElementType = onOpen ? "button" : "div";
 
   return (
     <div
@@ -170,6 +174,11 @@ export function ThrowerBar({
         padding: compact ? "0.4rem 0.6rem" : "0.6rem 0.8rem",
       }}
     >
+      <Wrap
+        {...(onOpen ? { type: "button", onClick: onOpen, "aria-label": `Se statistikken til ${thrower.name}` } : {})}
+        className="flex items-center min-w-0 flex-1 text-left"
+        style={{ gap: compact ? "0.6rem" : "0.8rem" }}
+      >
       <span className="thrower-avatar relative shrink-0" style={{ width: photoSize, height: photoSize }}>
         {fire && run >= 2 && <Flames run={run} size={photoSize} />}
         <Avatar who={thrower} size={photoSize} ring={animate} />
@@ -210,6 +219,7 @@ export function ThrowerBar({
           <p className="truncate whitespace-nowrap" style={{ color: "var(--color-gold-strong)", fontSize: "0.72rem", fontWeight: 600 }}>{compact ? "Står igjen" : "Står – kaster igjen"}</p>
         )}
       </div>
+      </Wrap>
       {mates.length > 0 && (
         <div className="flex items-end gap-2 shrink-0" aria-label={`Neste på laget: ${mates.map((m) => m.name).join(", ")}`}>
           {mates.map((m, i) => {
@@ -233,7 +243,10 @@ export function ThrowerBar({
               <button
                 key={m.name}
                 type="button"
-                onClick={() => onPickMate(m.name)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onPickMate(m.name);
+                }}
                 aria-label={`La ${m.name} kaste`}
                 className="tactile flex flex-col items-center justify-center rounded-lg"
                 style={{ maxWidth: compact ? 44 : 60, minWidth: 44, minHeight: 44 }}

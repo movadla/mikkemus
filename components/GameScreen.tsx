@@ -24,6 +24,7 @@ import { reportError } from "@/lib/errorReporting";
 import { useCompactLandscape } from "@/lib/useCompactLandscape";
 import { LiveSidePanel } from "./LiveSidePanel";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { PlayerSheet } from "./PlayerSheet";
 import { emitFx } from "@/lib/fxBus";
 import { Mark } from "./Mark";
 import { ThrowerBar, type Thrower, type ThrowerTeam } from "./ThrowerBar";
@@ -643,6 +644,8 @@ export function GameScreen({
   const [shakeOn, setShakeOn] = useState(() => isShakeEnabled());
   // A teammate whose picture was tapped: the question "skal X kaste nå?" is up for them.
   const [switchTo, setSwitchTo] = useState<string | null>(null);
+  // The thrower's numbers, from the bottom of the screen.
+  const [sheetOpen, setSheetOpen] = useState(false);
   // A row that has just closed gets its glint and dust (FxStage), on the cells of that row.
   useEffect(() => {
     if (closedStep && activePlayer) emitFx({ type: "rowClosed", step: closedStep.step, player: activePlayer });
@@ -822,7 +825,7 @@ export function GameScreen({
           row of its own and carries it in the right-hand column instead (see .live-side below). */}
       {!compactLandscape && thrower && (
         <div className="max-w-3xl mx-auto w-full mb-2 shrink-0">
-          <ThrowerBar key={turnToken} thrower={thrower} team={throwerTeam} kit={throwerTeam ? kits[throwerTeam.name] : null} stood={throwerStood} run={throwerRun} fire={fxFire} animate={throwerAnimate} onPickMate={choiceInteractive && !rewound ? setSwitchTo : undefined} />
+          <ThrowerBar key={turnToken} thrower={thrower} team={throwerTeam} kit={throwerTeam ? kits[throwerTeam.name] : null} stood={throwerStood} run={throwerRun} fire={fxFire} animate={throwerAnimate} onPickMate={choiceInteractive && !rewound ? setSwitchTo : undefined} onOpen={!rewound ? () => setSheetOpen(true) : undefined} />
         </div>
       )}
 
@@ -908,6 +911,8 @@ export function GameScreen({
           </div>
         </>
       )}
+
+      {sheetOpen && thrower && <PlayerSheet name={thrower.name} team={throwerTeam?.name ?? null} onClose={() => setSheetOpen(false)} />}
 
       {switchTo && (
         <ConfirmDialog
@@ -1203,7 +1208,7 @@ export function GameScreen({
         <div className="live-side">
           {thrower && (
             <div className="mb-1 shrink-0">
-              <ThrowerBar key={turnToken} thrower={thrower} team={throwerTeam} kit={throwerTeam ? kits[throwerTeam.name] : null} stood={throwerStood} run={throwerRun} fire={fxFire} animate={throwerAnimate} onPickMate={choiceInteractive && !rewound ? setSwitchTo : undefined} compact />
+              <ThrowerBar key={turnToken} thrower={thrower} team={throwerTeam} kit={throwerTeam ? kits[throwerTeam.name] : null} stood={throwerStood} run={throwerRun} fire={fxFire} animate={throwerAnimate} onPickMate={choiceInteractive && !rewound ? setSwitchTo : undefined} onOpen={!rewound ? () => setSheetOpen(true) : undefined} compact />
             </div>
           )}
           {/* The question lives in this column in landscape. It floated over the top of the board

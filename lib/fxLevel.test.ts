@@ -39,11 +39,13 @@ describe("fx levels", () => {
       replay: false,
       recordBanner: false,
       walkOnTune: false,
+      missBounce: false,
+      lineup: false,
     });
   });
 
   it("every new effect is Full party only: Vanlig and Party have none, Full party has all of them", () => {
-    const keys = ["dartFlight", "ringSlam", "perfectBurst", "fire", "walkOn", "rowShine", "shirtRain", "leadChange", "commentary", "matchDart", "replay", "recordBanner", "walkOnTune"] as const;
+    const keys = ["dartFlight", "ringSlam", "perfectBurst", "fire", "walkOn", "rowShine", "shirtRain", "leadChange", "commentary", "matchDart", "replay", "recordBanner", "walkOnTune", "missBounce", "lineup"] as const;
     for (const level of ["normal", "party"] as const) for (const k of keys) expect(fxFlags(level)[k], `${level}.${k}`).toBe(false);
     for (const k of keys) expect(fxFlags("full")[k], `full.${k}`).toBe(true);
   });

@@ -82,6 +82,30 @@ export function FxStage({ matchDart = false }: { matchDart?: boolean }) {
       }).catch(() => el.remove());
     }
 
+    // A dart that does not score: it flies in, bounces off the cell and falls away, with «BOM».
+    function miss() {
+      const cell = cellFor();
+      if (!cell) return;
+      const r = cell.getBoundingClientRect();
+      const tx = r.left + r.width / 2, ty = r.top + r.height / 2;
+      const sx = innerWidth * 0.9, sy = innerHeight + 40;
+      const ang = (Math.atan2(ty - sy, tx - sx) * 180) / Math.PI;
+      const el = box("left:0;top:0;width:120px;height:26px;filter:drop-shadow(0 4px 4px rgba(0,0,0,.5));transform-origin:100% 50%", DART_SVG);
+      L.appendChild(el);
+      el.animate(
+        [
+          { transform: `translate(${sx - 120}px, ${sy - 13}px) rotate(${ang}deg) scale(1.6)`, opacity: 0 },
+          { opacity: 1, offset: 0.2 },
+          { transform: `translate(${tx - 120}px, ${ty - 13}px) rotate(${ang}deg) scale(.36)`, opacity: 1, offset: 0.4 },
+          { transform: `translate(${tx - 90}px, ${ty - 80}px) rotate(${ang + 70}deg) scale(.42)`, opacity: 1, offset: 0.55 },
+          { transform: `translate(${tx - 150}px, ${ty + 260}px) rotate(${ang + 280}deg) scale(.6)`, opacity: 0 },
+        ],
+        { duration: 1000, easing: "cubic-bezier(.3,0,.8,.6)", fill: "forwards" },
+      ).finished.then(() => el.remove()).catch(() => el.remove());
+      const t = box(`left:${tx - 40}px;top:${ty - 44}px;width:80px;text-align:center;font:800 1.3rem var(--font-display, Georgia),serif;letter-spacing:.1em;color:#e04a3a;text-shadow:0 2px 6px rgba(0,0,0,.7)`, "BOM");
+      add(t, t.animate([{ transform: "scale(2)", opacity: 0 }, { transform: "scale(1)", opacity: 1, offset: 0.3 }, { transform: "translateY(-10px)", opacity: 0 }], { duration: 1100, delay: 350 }));
+    }
+
     // A shockwave and a word slammed in: «TRIPPEL 20», or «MATCHDART» in red.
     function slam(label: string, color: string, glow: string) {
       const cv = document.createElement("canvas");
@@ -217,6 +241,7 @@ export function FxStage({ matchDart = false }: { matchDart?: boolean }) {
       else if (e.type === "lead" && f.leadChange) lead(e.name);
       else if (e.type === "record" && f.recordBanner) record(e.text);
       else if (e.type === "comment" && f.commentary) comment(e.text);
+      else if (e.type === "miss" && f.missBounce) miss();
     });
   }, []);
 

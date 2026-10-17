@@ -2,6 +2,7 @@
 
 import { FxPicker } from "./FxPicker";
 import { KitSettings } from "./KitSettings";
+import { QrCode } from "./QrCode";
 import { ScreenTop } from "./ScreenTop";
 
 /**
@@ -17,6 +18,17 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
         <ScreenTop title="Innstillinger" onBack={onBack} />
         <FxPicker />
         <KitSettings />
+
+        {/* The big-screen page, one scan away: no address to type on the TV. */}
+        <div className="mb-6 text-center">
+          <p className="section-label mb-2">STORSKJERM</p>
+          <div className="flex justify-center">
+            <QrCode text={`${typeof window === "undefined" ? "" : window.location.origin}/storskjerm`} label="QR-kode til storskjermen" />
+          </div>
+          <p className="mt-2" style={{ color: "var(--color-muted)", fontSize: "0.85rem" }}>
+            Skann med TV-en eller en annen skjerm. Sett den til Full party for effektene.
+          </p>
+        </div>
       </div>
     </div>
   );

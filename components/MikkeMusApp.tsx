@@ -38,6 +38,7 @@ import { countingDarts, nextMemberIndex, standsAfterTurn } from "@/lib/teamTurn"
 import { currentRun, throwerStats } from "@/lib/turnStats";
 import { emitFx } from "@/lib/fxBus";
 import { FxStage } from "./FxStage";
+import { LineupIntro } from "./LineupIntro";
 import { haptics } from "@/lib/haptics";
 import { crowdForStreak, playCrowd, playFanfare, playHitStreakSound, playMatchDartSound, playTapSound, playWalkOnTune, playWinBoom, primeAudio } from "@/lib/fanfare";
 import { fxFlags, getFxLevel, useFxLevel } from "@/lib/fxLevel";
@@ -171,6 +172,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   const fx = fxFlags(fxLevel);
   // The rules introduction, shown over the first match started on a device (see lib/rulesIntro.ts).
   const [showRules, setShowRules] = useState(false);
+  // The line-up with the count down, once, as a match starts (Full party).
+  const [showLineup, setShowLineup] = useState(false);
   // Which game this match is (see lib/rules.ts). The module-wide rules are set alongside it in
   // startGame and on restore; this copy is what gets saved, published and shown.
   const [variant, setVariant] = useState<GameVariant>("standard");
@@ -876,6 +879,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     } else {
       // A miss breaks the run, but only the run — the next hit still sounds, from the bottom.
       hitStreakRef.current = 0;
+      // A real dart that did not score bounces off and falls (Full party).
+      if (!replayingRef.current) emitFx({ type: "miss" });
     }
 
     // A row reaching 3/3 gets its own slam — see the step-slam animation in globals.css.
@@ -1174,6 +1179,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     lastTeamTurnRef.current = {};
     scoliaDartsRef.current = 0;
     setScreen("game");
+    setShowLineup(fxFlags(getFxLevel()).lineup && startPlayers.length >= 2);
     if (!hasSeenRulesIntro()) setShowRules(true);
     if (!startBotLevels[startPlayers[0]]) playPlayerSound(startPlayers[0] ?? null);
 
@@ -2396,6 +2402,21 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   return (
     <>
       {showRules && <RulesIntro onDone={() => setShowRules(false)} />}
+      {showLineup && !showRules && (
+        <LineupIntro
+          onDone={() => setShowLineup(false)}
+          sides={players.map((p) => {
+            const rec = getPlayerRecord(p);
+            return {
+              name: p,
+              kit: kits[p] ?? null,
+              photo: teamRosters[p] ? null : rec?.photo ?? null,
+              isBot: !!botLevels[p],
+              record: rec && rec.matchesPlayed > 0 ? `${rec.matchesWon} ${rec.matchesWon === 1 ? "seier" : "seire"} på ${rec.matchesPlayed} ${rec.matchesPlayed === 1 ? "kamp" : "kamper"}` : undefined,
+            };
+          })}
+        />
+      )}
       <FxStage matchDart={matchDartOn} />
       {scoliaEnabled && <ScoliaStatusBadge state={scolia.state} />}
       <CameraImages images={cameraImages} />

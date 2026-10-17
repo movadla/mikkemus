@@ -15,6 +15,7 @@ import { generateConfetti, generateConfettiRain } from "@/lib/confetti";
 import { DartboardHeatmap } from "./DartboardHeatmap";
 import { ShirtRain } from "./ShirtRain";
 import { ReplayCard } from "./ReplayCard";
+import { AwardsCard, RowCostCard, buildAwards } from "./MatchInsights";
 
 type LuckByStep = Record<Step, { sum: number; count: number }>;
 
@@ -144,6 +145,14 @@ export function WinnerScreen({
         return out;
       })
     : [];
+  const awards = buildAwards({
+    players,
+    winner,
+    stats,
+    turnLog: turnLogByPlayer,
+    expected: Object.fromEntries(players.map((p) => [p, luckByPlayer[p] ? overallSumLuck(luckByPlayer[p]) : null])),
+    banked: Object.fromEntries(players.map((p) => [p, (preBankedByPlayer[p]?.D ?? 0) + (preBankedByPlayer[p]?.T ?? 0)])),
+  });
   const confetti = useMemo(() => generateConfetti(confettiCount), [confettiCount]);
   const rain = useMemo(() => generateConfettiRain(rainCount), [rainCount]);
   // The finer statistics (xH per row, where the darts landed) only exist with a board that
@@ -410,6 +419,10 @@ export function WinnerScreen({
             </div>
           </div>
         </div>
+
+        <AwardsCard awards={awards} />
+
+        <RowCostCard players={players} turnLog={turnLogByPlayer} />
 
         {replayThrows && <ReplayCard throws={replayThrows} />}
 
