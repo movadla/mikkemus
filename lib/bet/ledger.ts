@@ -16,12 +16,19 @@ export type LedgerRow = { id: string; user_id: string; night: number; delta: num
 
 /** open: waiting for someone to take the other side. matched: both sides in. won/lost: from the backer's point of view. */
 export type BetStatus = "open" | "matched" | "won" | "lost" | "void" | "cancelled";
+/** What a bet is on: who wins, or who wins and by how many «streker» (crosses the loser still lacks). */
+export type Market = "winner" | "margin";
+
 export type BetRow = {
   id: string;
   backer_id: string;
   layer_id: string | null;
   match_id: string;
+  market: Market;
+  /** The side backed; for a margin bet, the side that must win. */
   pick: string;
+  /** For a margin bet, the bucket of margins backed (a label from MARGIN_BUCKETS). */
+  detail: string | null;
   stake: number;
   odds: number;
   liability: number;
@@ -32,7 +39,50 @@ export type BetRow = {
   settled_at: string | null;
 };
 
-export type MatchRow = { match_id: string; sides: string[]; winner: string | null; status: "open" | "done" | "void"; created_at: string };
+export type MatchRow = { match_id: string; sides: string[]; winner: string | null; margin?: number | null; status: "open" | "done" | "void"; created_at: string };
+
+/**
+ * «Streker» is how many crosses the loser still lacks when the winner has closed the last row, so a
+ * match won by 1 is a close one and one won by 15 is a rout. The prices come from the odds model
+ * (lib/odds), which works out the chance of every margin.
+ */
+export type MarginBucket = { label: string; lo: number; hi: number };
+export const MARGIN_BUCKETS: MarginBucket[] = [
+  { label: "1", lo: 1, hi: 1 },
+  { label: "2", lo: 2, hi: 2 },
+  { label: "3", lo: 3, hi: 3 },
+  { label: "4", lo: 4, hi: 4 },
+  { label: "5–6", lo: 5, hi: 6 },
+  { label: "7–9", lo: 7, hi: 9 },
+  { label: "10+", lo: 10, hi: Infinity },
+];
+export const bucketByLabel = (label: string | null): MarginBucket | undefined => MARGIN_BUCKETS.find((b) => b.label === label);
+
+/** The chance of winning with a margin in the bucket, from the model's chance per margin (index = crosses lacking). */
+export function bucketChance(margin: number[] | undefined, b: MarginBucket): number {
+  if (!margin) return 0;
+  let p = 0;
+  for (let k = b.lo; k <= Math.min(b.hi, margin.length - 1); k++) p += margin[k] ?? 0;
+  return p;
+}
+
+/** Below this chance, nobody can reasonably take the other side, and the price would be silly: not offered. */
+export const MIN_MARGIN_CHANCE = 0.015;
+
+/**
+ * Whether the backer of a bet was right. A winner bet needs the pick to win; a margin bet also needs the
+ * margin to fall in its bucket. `null` when it cannot be told (a margin bet with no margin recorded):
+ * the bet is then handed back.
+ */
+export function betWon(bet: Pick<BetRow, "market" | "pick" | "detail">, winner: string, margin: number | null): boolean | null {
+  if (bet.market !== "margin") return bet.pick === winner;
+  const b = bucketByLabel(bet.detail);
+  if (!b || margin === null) return null;
+  return bet.pick === winner && margin >= b.lo && margin <= b.hi;
+}
+
+/** What a bet is, in words: «Vadla» or «Vadla med 3 streker». */
+export const betText = (bet: Pick<BetRow, "market" | "pick" | "detail">): string => (bet.market === "margin" ? `${bet.pick} med ${bet.detail} ${bet.detail === "1" ? "strek" : "streker"}` : bet.pick);
 
 /**
  * The price of a side between two people: one divided by the chance, with no margin. The odds on the

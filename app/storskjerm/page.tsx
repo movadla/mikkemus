@@ -7,6 +7,9 @@ import { useLiveMatch, type LiveMatchState } from "@/lib/liveMatch";
 import { emitFx } from "@/lib/fxBus";
 import { FxStage } from "@/components/FxStage";
 import { OddsBar } from "@/components/OddsBar";
+import { MomentumWave } from "@/components/MomentumWave";
+import { Trophy } from "@/components/Trophy";
+import { fxFlags, useFxLevel } from "@/lib/fxLevel";
 import { useShowOdds } from "@/lib/oddsSetting";
 import { RULES, baseOf } from "@/lib/rules";
 import { avatarAccent } from "@/lib/avatarAccent";
@@ -51,6 +54,7 @@ function HomeLink() {
 export default function StorskjermPage() {
   const live = useLiveMatch();
   const showOdds = useShowOdds();
+  const fxLevel = useFxLevel();
   // This page is not the one playing the match, so it reads the variant off the snapshot rather
   // than from the module-wide rules (which are whatever this browser last set — nothing).
   const target = RULES[baseOf(live?.variant)].target;
@@ -137,6 +141,7 @@ export default function StorskjermPage() {
               />
             ))}
           </div>
+          {fxFlags(fxLevel).trophy && <div className="relative z-20 mb-2"><Trophy cannons /></div>}
           <div className="card-gold shadow-panel animate-winner-pop relative z-20 rounded-2xl px-16 py-10 text-center">
             <p className="font-display italic" style={{ fontSize: "1.4rem", letterSpacing: "0.04em", marginBottom: "0.5rem" }}>
               Vinner
@@ -162,9 +167,13 @@ export default function StorskjermPage() {
           </div>
         </div>
       )}
-      <div className="shadow-panel rounded-xl overflow-x-auto overflow-y-hidden w-full" style={{ background: "var(--color-panel)", marginTop: showOdds && live.odds?.length ? "5rem" : 0 }}>
+      <div className="shadow-panel rounded-xl overflow-x-auto overflow-y-hidden w-full relative" style={{ background: "var(--color-panel)", marginTop: showOdds && live.odds?.length ? "5rem" : 0 }}>
+        {/* The win chance as a liquid border behind the board — only with two sides and odds on show. */}
+        {showOdds && fxFlags(fxLevel).momentum && live.players.length === 2 && live.odds && live.odds.length === 2 && (
+          <MomentumWave chance={live.odds.find((o) => o.name === live.players[0])?.p ?? 0.5} />
+        )}
         <div
-          className="grid p-4"
+          className="grid p-4 relative"
           style={{
             gridTemplateColumns: `clamp(70px, 18vw, 140px) repeat(${live.players.length}, minmax(64px, 1fr))`,
             gridTemplateRows: `auto repeat(${STEPS.length}, minmax(0, 1fr))`,

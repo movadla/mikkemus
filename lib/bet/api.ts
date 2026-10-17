@@ -1,6 +1,6 @@
 import type { LiveMatchState } from "../liveMatch";
 import { supabase } from "../supabaseClient";
-import { START_COINS, fairPrice, liabilityFor, potFor, stakeProblem, type BetRow, type BetUser, type LedgerRow, type MatchRow } from "./ledger";
+import { MIN_MARGIN_CHANCE, START_COINS, betWon, bucketByLabel, bucketChance, fairPrice, liabilityFor, potFor, stakeProblem, type BetRow, type BetUser, type LedgerRow, type MatchRow } from "./ledger";
 
 export type Books = { users: BetUser[]; ledger: LedgerRow[]; bets: BetRow[]; matches: MatchRow[] };
 export type LoadResult = { ok: true; books: Books } | { ok: false; setupNeeded: boolean; message: string };
@@ -10,7 +10,8 @@ type DbError = { code?: string; message: string };
 /** The tables have not been made (supabase-setup-bet.sql): PostgREST says so with one of these. */
 const isMissingTable = (e: DbError) => e.code === "PGRST205" || e.code === "42P01" || /does not exist|schema cache/i.test(e.message);
 
-const fixBet = (b: BetRow): BetRow => ({ ...b, odds: Number(b.odds) }); // numeric columns may come back as strings
+// numeric columns may come back as strings; a row from before margin bets has no market
+const fixBet = (b: BetRow): BetRow => ({ ...b, odds: Number(b.odds), market: b.market ?? "winner", detail: b.detail ?? null });
 
 export async function loadBooks(): Promise<LoadResult> {
   if (!supabase) return { ok: false, setupNeeded: false, message: "Ingen kobling til databasen." };
@@ -88,14 +89,19 @@ const STALE = "Oddsen har endret seg. Sjekk den nye prisen og prøv igjen.";
  * other side. The price and the turn are checked against the match as it is RIGHT NOW, not as the page
  * last saw it. The stake leaves the balance in the same breath (a ledger row).
  */
-export async function offerBet(args: { userId: string; night: number; matchId: string; pick: string; stake: number; shownOdds: number; shownTurn: number }): Promise<Result<{ bet: BetRow }>> {
+export async function offerBet(args: { userId: string; night: number; matchId: string; pick: string; stake: number; shownOdds: number; shownTurn: number; market?: "winner" | "margin"; detail?: string }): Promise<Result<{ bet: BetRow }>> {
   if (!supabase) return { ok: false, reason: "Ingen kobling til databasen." };
   const live = await freshLive();
   if (!marketOpen(live) || !live) return { ok: false, reason: "Spillene er stengt akkurat nå. De åpner igjen mellom rundene." };
   if (live.matchId !== args.matchId || live.turnToken !== args.shownTurn) return { ok: false, reason: STALE };
   const raw = live.odds!.find((o) => o.name === args.pick);
   if (!raw) return { ok: false, reason: "Fant ikke laget." };
-  const side = { ...raw, odds: fairPrice(raw.p) };
+  const margin = args.market === "margin";
+  const bucket = margin ? bucketByLabel(args.detail ?? null) : undefined;
+  if (margin && !bucket) return { ok: false, reason: "Fant ikke antall streker." };
+  const chance = bucket ? bucketChance(raw.margin, bucket) : raw.p;
+  if (margin && chance < MIN_MARGIN_CHANCE) return { ok: false, reason: "Det utfallet er for usannsynlig til å spille på." };
+  const side = { ...raw, odds: fairPrice(chance) };
   if (Math.abs(side.odds - args.shownOdds) > 0.001) return { ok: false, reason: STALE };
 
   const balance = await balanceOf(args.userId, args.night);
@@ -108,7 +114,7 @@ export async function offerBet(args: { userId: string; night: number; matchId: s
 
   const inserted = await supabase
     .from("bet_bets")
-    .insert({ backer_id: args.userId, match_id: args.matchId, pick: args.pick, stake: args.stake, odds: side.odds, liability, turn: live.turnToken, phase: live.turnToken === 0 ? "pre" : "live" })
+    .insert({ backer_id: args.userId, match_id: args.matchId, ...(margin ? { market: "margin", detail: args.detail } : {}), pick: args.pick, stake: args.stake, odds: side.odds, liability, turn: live.turnToken, phase: live.turnToken === 0 ? "pre" : "live" })
     .select()
     .single();
   if (inserted.error) return { ok: false, reason: inserted.error.message };
@@ -178,7 +184,7 @@ export async function expireOffers(bets: BetRow[], live: LiveMatchState | null, 
  * Safe to run from several phones at once: a bet is only decided by whoever changes it from its
  * current state, and the ledger refuses a second row of the same kind for the same bet and person.
  */
-export async function settleMatch(matchId: string, winner: string | null, night: number): Promise<{ decided: number }> {
+export async function settleMatch(matchId: string, winner: string | null, night: number, margin: number | null = null): Promise<{ decided: number }> {
   if (!supabase) return { decided: 0 };
   const rows = await supabase.from("bet_bets").select("*").eq("match_id", matchId).in("status", ["open", "matched"]);
   if (rows.error) return { decided: 0 };
@@ -189,7 +195,8 @@ export async function settleMatch(matchId: string, winner: string | null, night:
       if (await withdrawBet(bet, night)) decided++;
       continue;
     }
-    const status = winner === null ? "void" : bet.pick === winner ? "won" : "lost";
+    const right = winner === null ? null : betWon(bet, winner, margin);
+    const status = right === null ? "void" : right ? "won" : "lost";
     const changed = await supabase.from("bet_bets").update({ status, settled_at: new Date().toISOString() }).eq("id", bet.id).eq("status", "matched").select("id");
     if (changed.error || !changed.data || changed.data.length === 0) continue; // someone else decided it
     decided++;
@@ -203,7 +210,10 @@ export async function settleMatch(matchId: string, winner: string | null, night:
     }
     if (entries.length) await supabase.from("bet_ledger").insert(entries.map((e) => ({ ...e, night, bet_id: bet.id })));
   }
-  await supabase.from("bet_matches").update({ winner, status: winner === null ? "void" : "done" }).eq("match_id", matchId);
+  const done = { winner, status: winner === null ? "void" : "done" };
+  // The margin column comes with margin bets; a database without it still records who won.
+  const withMargin = await supabase.from("bet_matches").update({ ...done, margin }).eq("match_id", matchId);
+  if (withMargin.error) await supabase.from("bet_matches").update(done).eq("match_id", matchId);
   return { decided };
 }
 

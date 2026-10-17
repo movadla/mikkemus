@@ -14,6 +14,8 @@ export type OddsRow = {
   active?: boolean;
   /** The colour of the team's shirt or the player's accent. */
   color?: string;
+  /** With two sides: the chance of winning with the other short by k crosses, at index k. For /bet. */
+  margin?: number[];
 };
 
 /** The odds are shaky when the band the win chance could be in is wide: a new player, an early match. */

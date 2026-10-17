@@ -1,5 +1,5 @@
 import type { Progress } from "../game";
-import { finishCdf, stateOf } from "./forward";
+import { finishCdf, finishDetail, marginProbs, stateOf } from "./forward";
 import { modelFor, type RuleSet } from "./model";
 import { priceOutcomes, type Priced } from "./price";
 import type { SkillNode } from "./skill";
@@ -31,6 +31,8 @@ export type SideOdds = Priced & {
   /** The 10th and 90th percentile of the win chance over what is unknown about the throwers. */
   lo: number;
   hi: number;
+  /** With two sides: the chance of winning with the other short by k crosses, at index k (0 unused). */
+  margin?: number[];
 };
 
 const quantile = (sorted: number[], q: number) => sorted[Math.min(sorted.length - 1, Math.max(0, Math.round(q * (sorted.length - 1))))];
@@ -48,8 +50,13 @@ export function computeOdds(input: OddsInput): SideOdds[] {
   const { rules, sides } = input;
   const scenarios = Math.min(SCENARIOS, ...sides.flatMap((s) => s.members.map((m) => m.skill.length)));
 
+  // With exactly two sides, how short the loser is when the winner finishes is priced too.
+  const withMargin = sides.length === 2;
+  const rems: Float64Array[][] = sides.map(() => []);
+  let marginK = 0;
+
   // cdfs[side][scenario]
-  const cdfs = sides.map((side) => {
+  const cdfs = sides.map((side, si) => {
     const list: Float64Array[] = [];
     for (let sc = 0; sc < scenarios; sc++) {
       const models = side.members.map((_, i) => {
@@ -59,7 +66,13 @@ export function computeOdds(input: OddsInput): SideOdds[] {
         const node = m.skill[(sc * (2 * idx + 1)) % m.skill.length];
         return modelFor(rules, node.sigma);
       });
-      list.push(finishCdf({ start: stateOf(models[0], side.progress), models, dartsFirstTurn: input.dartsLeft ?? 3 }));
+      const start = stateOf(models[0], side.progress);
+      if (withMargin) {
+        const d = finishDetail({ start, models, dartsFirstTurn: input.dartsLeft ?? 3 });
+        marginK = d.K;
+        rems[si].push(d.rem);
+        list.push(d.cdf);
+      } else list.push(finishCdf({ start, models, dartsFirstTurn: input.dartsLeft ?? 3 }));
     }
     return list;
   });
@@ -67,10 +80,17 @@ export function computeOdds(input: OddsInput): SideOdds[] {
   // Every combination of one scenario per side.
   const n = sides.length;
   const results: number[][] = Array.from({ length: n }, () => []);
+  const marginSum = withMargin ? [new Array<number>(marginK + 1).fill(0), new Array<number>(marginK + 1).fill(0)] : null;
+  let combos = 0;
   const idx = new Array<number>(n).fill(0);
   for (;;) {
     const p = raceWinProbs(idx.map((sc, i) => cdfs[i][sc]));
     p.forEach((v, i) => results[i].push(v));
+    if (marginSum) {
+      const m = marginProbs(idx.map((sc, i) => cdfs[i][sc]), idx.map((sc, i) => rems[i][sc]), marginK);
+      m.forEach((row, i) => row.forEach((v, k) => (marginSum[i][k] += v)));
+      combos++;
+    }
     let k = n - 1;
     while (k >= 0 && ++idx[k] === scenarios) idx[k--] = 0;
     if (k < 0) break;
@@ -82,5 +102,5 @@ export function computeOdds(input: OddsInput): SideOdds[] {
     return { lo: quantile(sorted, 0.1), hi: quantile(sorted, 0.9) };
   });
   const priced = priceOutcomes(means, bands.map((b) => b.hi - b.lo));
-  return sides.map((s, i) => ({ name: s.name, ...priced[i], lo: bands[i].lo, hi: bands[i].hi }));
+  return sides.map((s, i) => ({ name: s.name, ...priced[i], lo: bands[i].lo, hi: bands[i].hi, ...(marginSum ? { margin: marginSum[i].map((v) => v / combos) } : {}) }));
 }

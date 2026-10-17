@@ -24,7 +24,7 @@ export type LiveMatchState = {
    *  target. Absent from snapshots published before variants existed: standard. */
   variant?: GameVariant;
   /** The odds on the match after the last turn, for the big screen and for /bet. */
-  odds?: { name: string; odds: number; p: number }[];
+  odds?: { name: string; odds: number; p: number; margin?: number[] }[];
   /** The turn the odds were worked out for. A bet is only taken when this is the current turn. */
   oddsTurn?: number;
   /** Which match this is, and how many darts of the current turn have been thrown — /bet only takes

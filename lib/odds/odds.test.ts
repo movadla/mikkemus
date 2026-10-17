@@ -340,3 +340,60 @@ describe("the seeding of the regulars", () => {
     expect(some).toBeLessThan(0.5); // still the weaker on paper: the seeding has not been thrown out
   });
 });
+
+describe("the margin of victory", () => {
+  it("adds up to the chance of winning, and a stronger side wins by more", () => {
+    const o = computeOdds({ rules: RULES, sides: [side("A", 26), side("B", 34)] });
+    for (const s of o) {
+      expect(s.margin).toBeDefined();
+      const total = s.margin!.reduce((a, b) => a + b, 0);
+      expect(Math.abs(total - s.p)).toBeLessThan(0.02);
+      expect(s.margin![0]).toBe(0);
+    }
+    const big = (m: number[]) => m.slice(8).reduce((a, b) => a + b, 0) / m.reduce((a, b) => a + b, 0);
+    expect(big(o[0].margin!)).toBeGreaterThan(big(o[1].margin!));
+  });
+
+  it("only for two sides", () => {
+    expect(computeOdds({ rules: RULES, sides: [side("A", 30), side("B", 30), side("C", 30)] })[0].margin).toBeUndefined();
+  });
+
+  it("agrees with playing the match out", () => {
+    const sigma = 30 * Math.sqrt(2 / Math.PI);
+    const model = modelFor(RULES, sigma);
+    const rng2 = rng(7);
+    const total = 6000;
+    const hist = [new Array(31).fill(0), new Array(31).fill(0)];
+    const left = (s: number) => {
+      // Crosses still to get, read from the state the way the engine does.
+      for (let ni = 0; ni <= 7; ni++) for (let nc = 0; nc < (ni < 7 ? 3 : 1); nc++) for (let d = 0; d <= 3; d++) for (let t = 0; t <= 3; t++) for (let b = 0; b <= 3; b++) if (model.encode(ni, nc, d, t, b) === s) return (ni < 7 ? (7 - ni) * 3 - nc : 0) + (3 - d) + (3 - t) + (3 - b);
+      return 0;
+    };
+    const leftCache = new Map<number, number>();
+    const leftOf = (s: number) => { let v = leftCache.get(s); if (v === undefined) { v = left(s); leftCache.set(s, v); } return v; };
+    const play = (s: number) => {
+      for (let k = 0; k < 3; k++) {
+        if (s === model.terminal) return s;
+        const { next, prob } = model.step(s);
+        let r = rng2(), i = 0;
+        while (i < next.length - 1 && r > prob[i]) { r -= prob[i]; i++; }
+        s = next[i];
+      }
+      return s;
+    };
+    for (let n = 0; n < total; n++) {
+      const st = [0, 0];
+      for (let turn = 0; turn < 400; turn++) {
+        const who = turn % 2;
+        st[who] = play(st[who]);
+        if (st[who] === model.terminal) { hist[who][leftOf(st[1 - who])]++; break; }
+      }
+    }
+    const engine = computeOdds({ rules: RULES, sides: [side("A", 30), side("B", 30)] });
+    const bucket = (m: number[], lo: number, hi: number) => m.slice(lo, hi + 1).reduce((a, b) => a + b, 0);
+    for (const [lo, hi] of [[1, 3], [4, 8], [9, 30]]) {
+      const simA = bucket(hist[0], lo, hi) / total;
+      expect(Math.abs(simA - bucket(engine[0].margin!, lo, hi)), `A ${lo}-${hi}`).toBeLessThan(0.03);
+    }
+  });
+});

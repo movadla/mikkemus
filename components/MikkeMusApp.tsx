@@ -15,7 +15,6 @@ import {
   remainingMarks,
   removeOneCross,
   STEPS,
-  STEP_LABELS,
   summarizeTurn,
   totalMarks,
   type HitRecord,
@@ -28,7 +27,7 @@ import {
   type PendingAmbiguous,
 } from "@/lib/game";
 import { memberDeltas } from "@/lib/memberStats";
-import { recordBestRun, ensureTeam, getPlayerRecord, playPlayerSound, recordAccuracyTotals, recordLuckTotals, recordMatchHistory, recordMatchResult, recordMemberStats, recordRingHits, useRoster, useTeamRecords, type RingHits } from "@/lib/storage";
+import { recordBestRun, ensureTeam, getPlayerRecord, playPlayerSound, recordAccuracyTotals, recordLuckTotals, recordMatchHistory, recordMatchResult, recordMemberStats, recordRingHits, useRoster, useTeamRecords, meanEuclideanDistance, averagePct, type RingHits } from "@/lib/storage";
 import { announce } from "@/lib/announcer";
 import { reportError } from "@/lib/errorReporting";
 import { clearActiveMatch, loadActiveMatch, saveActiveMatch } from "@/lib/activeMatch";
@@ -387,7 +386,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
    */
   const botIsThrowing = activeBotLevel !== null && rewound === null;
 
-  /** Who is physically throwing: the team's current member, or the lone player. For the ticker. */
+  /** Who is physically throwing: the team's current member, or the lone player.  */
   function whoThrows(): string {
     if (!activePlayer) return "";
     const roster = teamRosters[activePlayer];
@@ -431,7 +430,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         setOdds(
           players.map((p) => {
             const o = result.find((r) => r.name === p)!;
-            return { name: p, odds: o.odds, p: o.p, lo: o.lo, hi: o.hi, before: before?.sides.find((x) => x.name === p)?.p, active: p === activePlayer };
+            return { name: p, odds: o.odds, p: o.p, lo: o.lo, hi: o.hi, before: before?.sides.find((x) => x.name === p)?.p, active: p === activePlayer, margin: o.margin };
           }),
         );
       } catch (err) {
@@ -448,7 +447,6 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   useEffect(() => {
     if (!matchDartOn || !matchDartStep || !activePlayer) return;
     emitFx({ type: "matchdart" });
-    emitFx({ type: "comment", text: `${activePlayer} mangler bare ${STEP_LABELS[matchDartStep]}` });
   }, [matchDartOn, matchDartStep, turnToken, activePlayer]);
 
   // Always-current mirrors of state/handlers the bot-turn effect below reads from
@@ -668,7 +666,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
           : a,
       ),
     });
-    const snapshot = { screen, players, progress, activePlayer, turnToken, winner, botLevels, guestPlayers, variant, odds: odds ? odds.map((o) => ({ name: o.name, odds: o.odds, p: o.p })) : undefined, oddsTurn, matchId: matchIdRef.current, dartsInTurn: dartsThisTurn };
+    const snapshot = { screen, players, progress, activePlayer, turnToken, winner, botLevels, guestPlayers, variant, odds: odds ? odds.map((o) => ({ name: o.name, odds: o.odds, p: o.p, ...(o.margin ? { margin: o.margin.map((v) => Math.round(v * 10000) / 10000) } : {}) })) : undefined, oddsTurn, matchId: matchIdRef.current, dartsInTurn: dartsThisTurn };
     if (publishTimerRef.current) clearTimeout(publishTimerRef.current);
     publishTimerRef.current = setTimeout(() => publishLiveMatch(snapshot), LIVE_PUBLISH_DEBOUNCE_MS);
   }, [
@@ -954,14 +952,15 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     const closed = hitResult?.find((h) => h.newCount >= getRules().target && h.prevCount < getRules().target);
     if (closed && !replayingRef.current) {
       setClosedStep({ token: ++pulseTokenRef.current, step: closed.step });
-      emitFx({ type: "comment", text: `${whoThrows()} lukket ${STEP_LABELS[closed.step]}` });
     }
 
     // A triple or double has landed: the word and the shockwave (Full party).
     if (hit && !replayingRef.current && parsed.kind === "number" && (parsed.ring === "T" || parsed.ring === "D")) {
       emitFx({ type: "ring", label: `${parsed.ring === "T" ? "TRIPPEL" : "DOBBEL"} ${parsed.number}` });
-      emitFx({ type: "comment", text: `${whoThrows()} treffer ${parsed.ring}${parsed.number}` });
     }
+
+    // The inner bull: a bullseye (Full party).
+    if (hit && !replayingRef.current && parsed.kind === "bull" && parsed.ring === "inner") emitFx({ type: "bull" });
 
     // Three triples on the active number, in one turn.
     if (
@@ -1438,7 +1437,6 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     const closed = hits.find((h) => h.newCount >= getRules().target && h.prevCount < getRules().target);
     if (closed) {
       setClosedStep({ token: ++pulseTokenRef.current, step: closed.step });
-      emitFx({ type: "comment", text: `${whoThrows()} lukket ${STEP_LABELS[closed.step]}` });
     }
   }
 
@@ -2124,8 +2122,6 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       if (countedDarts >= DARTS_PER_TURN) {
         const run = currentRun(nextTurnLog[activePlayer] ?? [], throwerName ?? activePlayer, throwerName ? undefined : activePlayer);
         emitFx({ type: "perfect", run });
-        const who = throwerName ?? activePlayer;
-        if (run >= 6) emitFx({ type: "comment", text: `${who} er på ${run} piler på rad` });
         // A personal record: longer than the best this player or team has ever had (stored, and only
         // updated when the match is accepted), announced once per match.
         const held = getPlayerRecord(activePlayer);
@@ -2153,7 +2149,6 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       // Rotate this team's own "who throws next" pointer independent of the overall players[]
       // turn order — so next time this exact team is up, the next member in line is current.
       // With the stand rule on, three counting darts keep the same thrower for the next turn.
-      if (stands && roster && roster.length > 1) emitFx({ type: "comment", text: `${throwerName ?? activePlayer} står og kaster igjen` });
       if (roster && roster.length > 0) {
         const thrower = teamMemberIdx[activePlayer] ?? 0;
         lastTeamTurnRef.current[activePlayer] = { turnIndex, memberIdx: thrower, stood: stands };
@@ -2497,6 +2492,11 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
               photo: teamRosters[p] ? null : rec?.photo ?? null,
               isBot: !!botLevels[p],
               odds: showOdds ? odds?.find((o) => o.name === p)?.odds : undefined,
+              chance: showOdds ? odds?.find((o) => o.name === p)?.p : undefined,
+              members: teamRosters[p]?.map((m) => m.name),
+              med: rec ? meanEuclideanDistance(rec) : null,
+              hitPct: rec && rec.matchesPlayed > 0 ? averagePct(rec.overall) : null,
+              wins: rec?.matchesWon ?? 0,
               record: rec && rec.matchesPlayed > 0 ? `${rec.matchesWon} ${rec.matchesWon === 1 ? "seier" : "seire"} på ${rec.matchesPlayed} ${rec.matchesPlayed === 1 ? "kamp" : "kamper"}` : undefined,
             };
           })}

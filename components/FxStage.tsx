@@ -139,6 +139,32 @@ export function FxStage({ matchDart = false }: { matchDart?: boolean }) {
       L.appendChild(wrap);
     }
 
+    // The hardest hits, drawn as a comic panel: a hold, a white flash, speed lines from the middle, red
+    // halftone, a hard shake of the whole screen and the word slammed in. For a bull, a triple 20 and a
+    // match dart only — everything else keeps the ordinary slam.
+    function manga(word: string, sub: string) {
+      const h = innerHeight;
+      const size = word.length > 8 ? "clamp(40px,13vw,92px)" : "clamp(64px,22vw,130px)";
+      const root = box("inset:0;overflow:hidden");
+      const fade = "-webkit-mask:radial-gradient(circle,transparent 24%,#000 58%);mask:radial-gradient(circle,transparent 24%,#000 58%)";
+      const lines = box(`inset:-40%;opacity:0;background:repeating-conic-gradient(from 0deg,#f4f0e8 0 1.1deg,transparent 1.1deg 4.6deg);${fade}`);
+      const dots = box(`inset:0;opacity:0;background:radial-gradient(circle,rgba(196,67,46,.9) 24%,transparent 26%) 0 0/11px 11px;${fade.replace("24%", "20%").replace("58%", "90%")}`);
+      const flash = box("inset:0;background:#fff;opacity:0");
+      const text = box(`left:0;right:0;top:${Math.round(h * 0.3)}px;text-align:center;font:900 ${size}/1 var(--font-display, Georgia),serif;color:#e0c471;-webkit-text-stroke:4px #0b0f0b;paint-order:stroke fill;text-shadow:6px 6px 0 #c4432e;opacity:0`, esc(word));
+      const caption = box(`left:0;right:0;top:${Math.round(h * 0.3) + 150}px;text-align:center;font:600 .8rem var(--font-sans, system-ui),sans-serif;letter-spacing:.2em;color:#f4f0e8;text-shadow:0 2px 6px #000;opacity:0`, esc(sub));
+      [dots, lines, text, caption, flash].forEach((el) => root.appendChild(el));
+      add(root, root.animate([{ opacity: 1 }, { opacity: 1, offset: 0.86 }, { opacity: 0 }], { duration: 1750 }));
+      flash.animate([{ opacity: 0 }, { opacity: 0.85, offset: 0.25 }, { opacity: 0 }], { duration: 200, delay: 140 });
+      lines.animate([{ opacity: 1, transform: "scale(.35) rotate(0deg)" }, { opacity: 1, transform: "scale(1.5) rotate(8deg)" }], { duration: 1200, delay: 140, easing: "cubic-bezier(.1,.8,.2,1)", fill: "both" });
+      dots.animate([{ opacity: 0 }, { opacity: 0.85, offset: 0.15 }, { opacity: 0.85, offset: 0.75 }, { opacity: 0 }], { duration: 1500, delay: 140, fill: "both" });
+      text.animate([{ opacity: 0, transform: "scale(3.4) rotate(-14deg)" }, { opacity: 1, transform: "scale(.9) rotate(-6deg)", offset: 0.35 }, { opacity: 1, transform: "scale(1) rotate(-6deg)" }], { duration: 520, delay: 140, easing: "cubic-bezier(.2,.9,.2,1)", fill: "both" });
+      caption.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 400, delay: 500, fill: "both" });
+      document.querySelector(".game-root")?.animate(
+        [{ transform: "translate(0,0)" }, { transform: "translate(14px,-10px)" }, { transform: "translate(-12px,9px)" }, { transform: "translate(9px,6px)" }, { transform: "translate(-6px,-4px)" }, { transform: "translate(3px,2px)" }, { transform: "none" }],
+        { duration: 520, delay: 140 },
+      );
+    }
+
     // Three counting darts: the three light up, a glint crosses.
     function perfect(run: number) {
       const wrap = box(`left:0;right:0;top:20%;display:grid;justify-items:center;gap:10px`);
@@ -212,36 +238,22 @@ export function FxStage({ matchDart = false }: { matchDart?: boolean }) {
       }
     }
 
-    // The ticker: the last few lines about the match, newest at the bottom, each gone after a few seconds.
-    let ticker: HTMLElement | null = null;
-    function comment(text: string) {
-      if (!ticker) {
-        ticker = box("display:grid;gap:6px;z-index:2");
-        L.appendChild(ticker);
-      }
-      // Beside the board in landscape (the left side is empty there), above the buttons in portrait.
-      const landscape = matchMedia("(orientation: landscape)").matches && innerWidth > 640;
-      ticker.style.cssText = `position:absolute;pointer-events:none;display:grid;gap:6px;z-index:2;${landscape ? "left:12px;bottom:12px;width:26%" : "left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom, 0px) + 11.5rem)"}`;
-      const line = document.createElement("div");
-      line.style.cssText = "padding:8px 12px;border-radius:10px;background:rgba(20,36,28,.92);border:1px solid #2b4337;font:700 .9rem var(--font-sans, system-ui),sans-serif;color:#ece8df;box-shadow:0 4px 14px rgba(0,0,0,.4)";
-      line.textContent = text;
-      ticker.appendChild(line);
-      while (ticker.children.length > 3) ticker.firstElementChild?.remove();
-      line.animate([{ transform: "translateY(24px)", opacity: 0 }, { transform: "none", opacity: 1 }], { duration: 380, easing: "cubic-bezier(.2,.9,.3,1.1)" });
-      line.animate([{ opacity: 1 }, { opacity: 1, offset: 0.85 }, { opacity: 0 }], { duration: 4500, fill: "forwards" }).finished.then(() => line.remove()).catch(() => line.remove());
-    }
-
     return subscribeFx((e: FxEvent) => {
       const f = flags.current;
       if (e.type === "dart" && f.dartFlight) dart(e.step, e.player);
-      else if (e.type === "ring" && f.ringSlam) slam(e.label, GOLD, "255,236,170");
-      else if (e.type === "matchdart" && f.matchDart) slam("MATCHDART", "#ff5a4a", "224,74,58");
+      else if (e.type === "ring" && f.ringSlam) {
+        if (f.manga && e.label === "TRIPPEL 20") manga("TRIPPEL 20!", "TRE KRYSS PÅ EN PIL");
+        else slam(e.label, GOLD, "255,236,170");
+      } else if (e.type === "bull" && f.manga) manga("BULL!", "RETT I MIDTEN");
+      else if (e.type === "matchdart" && f.matchDart) {
+        if (f.manga) manga("MATCHDART", "SISTE RAD");
+        else slam("MATCHDART", "#ff5a4a", "224,74,58");
+      }
       else if (e.type === "perfect" && f.perfectBurst) perfect(e.run);
       else if (e.type === "rowClosed" && f.rowShine) rowClosed(e.step, e.player);
       else if (e.type === "walkOn" && f.walkOn) walkOn(e.player);
       else if (e.type === "lead" && f.leadChange) lead(e.name);
       else if (e.type === "record" && f.recordBanner) record(e.text);
-      else if (e.type === "comment" && f.commentary) comment(e.text);
       else if (e.type === "miss" && f.missBounce) miss();
     });
   }, []);

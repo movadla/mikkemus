@@ -1,6 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo, useState } from "react";
+import { nightSlides } from "@/lib/nightStory";
+import { NightStory } from "./NightStory";
 import { formatNightDate, nightAverages, type NightSummary } from "@/lib/nights";
 import { TrophyIcon } from "@/components/icons";
 import { ScreenTop } from "./ScreenTop";
@@ -13,6 +16,8 @@ const FOCUS_RING =
  * date) — the two routes only differ in how they pick `night` out of groupNights(), see there.
  */
 export function NightDetail({ night, otherDates }: { night: NightSummary | null; otherDates: string[] }) {
+  const [story, setStory] = useState(false);
+  const slides = useMemo(() => (night ? nightSlides(night) : []), [night]);
   return (
     <div className="animate-screen-enter screen" style={{ background: "var(--color-bg)" }}>
       <div className="screen-inner">
@@ -24,6 +29,17 @@ export function NightDetail({ night, otherDates }: { night: NightSummary | null;
           </p>
         ) : (
           <>
+            {slides.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setStory(true)}
+                className={`glossy w-full py-3 rounded-xl font-semibold mb-4 ${FOCUS_RING}`}
+                style={{ "--btn-fill": "var(--color-gold)", color: "var(--color-bg)", minHeight: "2.75rem" } as React.CSSProperties}
+              >
+                Se kveldens oppsummering
+              </button>
+            )}
+            {story && <NightStory slides={slides} onClose={() => setStory(false)} />}
             {night.players[0] && night.players[0].wins > 0 && (
               <div className="card-gold shadow-panel rounded-xl p-4 mb-4 text-center">
                 <p className="font-display" style={{ color: "var(--color-bg)", fontStyle: "italic", fontSize: "0.9rem" }}>

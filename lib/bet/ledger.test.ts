@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { START_COINS, atStake, balances, currentNight, fairPrice, lifetimeNet, liabilityFor, netByUser, potFor, settleUp, stakeProblem, type BetRow, type LedgerRow } from "./ledger";
+import { MARGIN_BUCKETS, START_COINS, atStake, balances, betText, betWon, bucketByLabel, bucketChance, currentNight, fairPrice, lifetimeNet, liabilityFor, netByUser, potFor, settleUp, stakeProblem, type BetRow, type LedgerRow } from "./ledger";
 
 const row = (user_id: string, delta: number, reason: LedgerRow["reason"] = "adjust", night = 1): LedgerRow => ({ id: `${user_id}${delta}${Math.random()}`, user_id, night, delta, reason, bet_id: null, created_at: "2026-10-17T12:00:00Z" });
 
@@ -50,10 +50,45 @@ describe("the books", () => {
   });
 
   it("counts what is tied up in undecided bets", () => {
-    const bet = (backer_id: string, layer_id: string | null, stake: number, status: BetRow["status"]): BetRow => ({ id: "x", backer_id, layer_id, match_id: "m", pick: "A", stake, odds: 2, liability: stake, turn: 0, phase: "pre", status, placed_at: "", settled_at: null });
+    const bet = (backer_id: string, layer_id: string | null, stake: number, status: BetRow["status"]): BetRow => ({ id: "x", backer_id, layer_id, match_id: "m", market: "winner", detail: null, pick: "A", stake, odds: 2, liability: stake, turn: 0, phase: "pre", status, placed_at: "", settled_at: null });
     const bets = [bet("a", null, 50, "open"), bet("a", "b", 70, "matched"), bet("b", "a", 30, "matched"), bet("a", "b", 20, "won"), bet("b", null, 5, "cancelled")];
     expect(atStake(bets, "a")).toBe(50 + 70 + 30);
     expect(atStake(bets, "b")).toBe(70 + 30);
+  });
+});
+
+describe("margin bets", () => {
+  // The chance of winning with the other lacking k crosses, at index k (made up, adds to 0,6).
+  const margin = [0, 0.1, 0.1, 0.1, 0.1, 0.05, 0.05, 0.03, 0.03, 0.03, 0.01, 0.0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+  const b = (l: string) => bucketByLabel(l)!;
+
+  it("adds up the chance of the margins in a bucket", () => {
+    expect(bucketChance(margin, b("1"))).toBeCloseTo(0.1, 9);
+    expect(bucketChance(margin, b("5–6"))).toBeCloseTo(0.1, 9);
+    expect(bucketChance(margin, b("7–9"))).toBeCloseTo(0.09, 9);
+    expect(bucketChance(margin, b("10+"))).toBeCloseTo(0.01, 9);
+    expect(bucketChance(undefined, b("1"))).toBe(0);
+    // Every margin is in exactly one bucket.
+    const all = MARGIN_BUCKETS.reduce((s, x) => s + bucketChance(margin, x), 0);
+    expect(all).toBeCloseTo(margin.reduce((a, c) => a + c, 0), 9);
+  });
+
+  it("is won only when the right side wins by a margin in the bucket", () => {
+    const bet = { market: "margin" as const, pick: "Vadla", detail: "5–6" };
+    expect(betWon(bet, "Vadla", 5)).toBe(true);
+    expect(betWon(bet, "Vadla", 6)).toBe(true);
+    expect(betWon(bet, "Vadla", 7)).toBe(false);
+    expect(betWon(bet, "Vadla", 4)).toBe(false);
+    expect(betWon(bet, "Monge", 5)).toBe(false);
+    expect(betWon(bet, "Vadla", null)).toBeNull(); // no margin recorded: hand it back
+    expect(betWon({ ...bet, detail: "10+" }, "Vadla", 22)).toBe(true);
+    expect(betWon({ market: "winner", pick: "Vadla", detail: null }, "Vadla", null)).toBe(true);
+  });
+
+  it("says what it is", () => {
+    expect(betText({ market: "margin", pick: "Vadla", detail: "3" })).toBe("Vadla med 3 streker");
+    expect(betText({ market: "margin", pick: "Vadla", detail: "1" })).toBe("Vadla med 1 strek");
+    expect(betText({ market: "winner", pick: "Vadla", detail: null })).toBe("Vadla");
   });
 });
 

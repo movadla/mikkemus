@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ScreenTop } from "@/components/ScreenTop";
 import { useLiveMatch } from "@/lib/liveMatch";
 import { addUser, marketOpen, newNight, offerBet, removeUser, settleMatch, takeBet, withdrawBet } from "@/lib/bet/api";
-import { atStake, balances, fairPrice, liabilityFor, lifetimeNet, netByUser, settleUp, stakeProblem, START_COINS, type BetRow, type BetUser } from "@/lib/bet/ledger";
+import { MARGIN_BUCKETS, MIN_MARGIN_CHANCE, atStake, balances, betText, bucketChance, fairPrice, liabilityFor, lifetimeNet, netByUser, settleUp, stakeProblem, START_COINS, type BetRow, type BetUser } from "@/lib/bet/ledger";
 import { useBet } from "@/lib/bet/useBet";
 
 const FOCUS_RING = "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
@@ -202,6 +202,8 @@ function PlayTab({ bet, live, me, balance }: { bet: ReturnType<typeof useBet>; l
   const open = marketOpen(live);
   const inMatch = !!live && live.screen !== "setup" && !!live.matchId && !!live.odds?.length;
   const [pick, setPick] = useState<string | null>(null);
+  // For a bet on the margin: the bucket of «streker» (see MARGIN_BUCKETS); null for a bet on who wins.
+  const [bucket, setBucket] = useState<string | null>(null);
   const [stake, setStake] = useState("100");
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -210,17 +212,22 @@ function PlayTab({ bet, live, me, balance }: { bet: ReturnType<typeof useBet>; l
   const stakeNum = Number(stake.replace(/\s/g, ""));
   const problem = stakeProblem(stakeNum, balance);
   const sides = (live?.odds ?? []).map((o) => ({ ...o, odds: fairPrice(o.p) }));
-  const chosen = sides.find((o) => o.name === pick) ?? null;
+  const chosenSide = sides.find((o) => o.name === pick) ?? null;
+  const bucketDef = bucket ? MARGIN_BUCKETS.find((b) => b.label === bucket) : undefined;
+  // The price of what is picked: the side winning, or the side winning by a margin in the bucket.
+  const chosen = chosenSide ? (bucketDef ? { ...chosenSide, odds: fairPrice(bucketChance(chosenSide.margin, bucketDef)) } : chosenSide) : null;
+  const what = chosen ? betText({ market: bucket ? "margin" : "winner", pick: chosen.name, detail: bucket }) : "";
   const liability = chosen && problem === "none" ? liabilityFor(stakeNum, chosen.odds) : 0;
 
   const offer = async () => {
     if (!me || !live?.matchId || !chosen) return;
     setBusy(true);
-    const r = await offerBet({ userId: me.id, night: bet.night, matchId: live.matchId, pick: chosen.name, stake: stakeNum, shownOdds: chosen.odds, shownTurn: live.turnToken });
+    const r = await offerBet({ userId: me.id, night: bet.night, matchId: live.matchId, pick: chosen.name, stake: stakeNum, shownOdds: chosen.odds, shownTurn: live.turnToken, market: bucket ? "margin" : "winner", detail: bucket ?? undefined });
     setBusy(false);
     if (r.ok) {
-      setMsg({ ok: true, text: `Lagt ut: ${coins(stakeNum)} på ${chosen.name} til ${oddsText(chosen.odds)}. Spillet gjelder når noen tar imot.` });
+      setMsg({ ok: true, text: `Lagt ut: ${coins(stakeNum)} på ${what} til ${oddsText(chosen.odds)}. Spillet gjelder når noen tar imot.` });
       setPick(null);
+      setBucket(null);
       await bet.refresh();
     } else setMsg({ ok: false, text: r.reason });
   };
@@ -256,7 +263,7 @@ function PlayTab({ bet, live, me, balance }: { bet: ReturnType<typeof useBet>; l
             <p className="mb-2" style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>Hvem tror du vinner? Oddsen er prisen på spillet ditt.</p>
             <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.min(sides.length, 2)}, minmax(0, 1fr))` }}>
               {sides.map((o) => {
-                const active = pick === o.name;
+                const active = pick === o.name && !bucket;
                 return (
                   <button
                     key={o.name}
@@ -264,6 +271,7 @@ function PlayTab({ bet, live, me, balance }: { bet: ReturnType<typeof useBet>; l
                     disabled={!open || !me}
                     onClick={() => {
                       setPick(active ? null : o.name);
+                      setBucket(null);
                       setMsg(null);
                     }}
                     aria-pressed={active}
@@ -283,13 +291,49 @@ function PlayTab({ bet, live, me, balance }: { bet: ReturnType<typeof useBet>; l
                 );
               })}
             </div>
+            {sides.length === 2 && sides.some((s) => s.margin) && (
+              <div className="mt-4">
+                <p className="mb-2" style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>
+                  Eller spill på hvor mye det vinnes med. Streker er hvor mange kryss taperen mangler når kampen er over.
+                </p>
+                {sides.map((s) => (
+                  <div key={s.name} className="mb-2">
+                    <p className="mb-1" style={{ color: "var(--color-cream)", fontSize: "0.8rem", fontWeight: 600 }}>{s.name} vinner med</p>
+                    <div className="flex flex-wrap gap-2">
+                      {MARGIN_BUCKETS.filter((b) => bucketChance(s.margin, b) >= MIN_MARGIN_CHANCE).map((b) => {
+                        const on = pick === s.name && bucket === b.label;
+                        const price = fairPrice(bucketChance(s.margin, b));
+                        return (
+                          <button
+                            key={b.label}
+                            type="button"
+                            disabled={!open || !me}
+                            aria-pressed={on}
+                            onClick={() => {
+                              setPick(on ? null : s.name);
+                              setBucket(on ? null : b.label);
+                              setMsg(null);
+                            }}
+                            className={`tactile rounded-lg px-3 text-center ${FOCUS_RING}`}
+                            style={{ minHeight: "2.75rem", minWidth: "3.6rem", background: on ? "var(--color-gold)" : "var(--color-cell)", color: on ? "var(--color-bg)" : "var(--color-cream)", border: "1px solid var(--color-border)", opacity: open && me ? 1 : 0.6 }}
+                          >
+                            <span className="block" style={{ fontWeight: 600, lineHeight: 1.1 }}>{b.label}</span>
+                            <span className="block tabular" style={{ fontSize: "0.75rem", opacity: 0.85 }}>{oddsText(price)}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
             {!me && <p className="mt-3" style={{ color: "var(--color-muted)", fontSize: "0.85rem" }}>Velg navnet ditt øverst for å spille.</p>}
             {me && !open && <p className="mt-3" style={{ color: "var(--color-muted)", fontSize: "0.85rem" }}>{live.screen === "winner" ? "Kampen er ferdig." : "Spillet åpner igjen mellom rundene, når alle tre pilene er kastet."}</p>}
 
             {me && open && chosen && (
               <div className="mt-4">
                 <p className="mb-2" style={{ color: "var(--color-cream)", fontSize: "0.9rem" }}>
-                  {me.name}, hvor mye på <strong>{chosen.name}</strong>? Du har {coins(balance)}.
+                  {me.name}, hvor mye på <strong>{what}</strong>? Du har {coins(balance)}.
                 </p>
                 <div className="flex flex-wrap gap-2 mb-2">
                   {[50, 100, 250, 500].map((n) => (
@@ -316,7 +360,7 @@ function PlayTab({ bet, live, me, balance }: { bet: ReturnType<typeof useBet>; l
                 </div>
                 {problem === "none" && liability >= 1 && (
                   <p className="mt-2" style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>
-                    Vinner {chosen.name}, får du {coins(stakeNum + liability)} (gevinst {coins(liability)}). Vinner {otherSide(chosen.name)}, mister du {coins(stakeNum)}. Spillet gjelder først når noen andre tar imot, og trekkes tilbake av seg selv hvis ingen gjør det før neste runde.
+                    {bucket ? `Går det som du tror (${what}), får du ${coins(stakeNum + liability)} (gevinst ${coins(liability)}). Ellers mister du ${coins(stakeNum)}.` : `Vinner ${chosen.name}, får du ${coins(stakeNum + liability)} (gevinst ${coins(liability)}). Vinner ${otherSide(chosen.name)}, mister du ${coins(stakeNum)}.`} Spillet gjelder først når noen andre tar imot, og trekkes tilbake av seg selv hvis ingen gjør det før neste runde.
                   </p>
                 )}
               </div>
@@ -339,7 +383,7 @@ function PlayTab({ bet, live, me, balance }: { bet: ReturnType<typeof useBet>; l
               {offers.map((b) => (
                 <li key={b.id} className="rounded-lg px-3 py-3" style={{ background: "var(--color-cell)" }}>
                   <p style={{ color: "var(--color-cream)", fontSize: "0.9rem" }}>
-                    <strong>{name(b.backer_id)}</strong> satser {coins(b.stake)} på <strong>{b.pick}</strong> til {oddsText(b.odds)}
+                    <strong>{name(b.backer_id)}</strong> satser {coins(b.stake)} på <strong>{betText(b)}</strong> til {oddsText(b.odds)}
                   </p>
                   {me && b.backer_id === me.id ? (
                     <button type="button" disabled={busy} onClick={() => void withdraw(b)} className={`tactile mt-2 rounded-lg px-4 ${FOCUS_RING}`} style={{ minHeight: "2.75rem", background: "transparent", color: "var(--color-muted)", border: "1px solid var(--color-border)" }}>
@@ -347,7 +391,7 @@ function PlayTab({ bet, live, me, balance }: { bet: ReturnType<typeof useBet>; l
                     </button>
                   ) : (
                     <button type="button" disabled={busy || !me || !open} onClick={() => void take(b)} className={`glossy mt-2 w-full rounded-lg ${FOCUS_RING}`} style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", minHeight: "2.75rem", fontWeight: 700, opacity: busy || !me || !open ? 0.5 : 1 } as React.CSSProperties}>
-                      {me ? `Ta imot: ${otherSide(b.pick)} vinner. Risiker ${coins(b.liability)}, vinn ${coins(b.stake)}` : "Velg navn først"}
+                      {me ? `Ta imot: ${b.market === "margin" ? "ikke " + betText(b) : otherSide(b.pick) + " vinner"}. Risiker ${coins(b.liability)}, vinn ${coins(b.stake)}` : "Velg navn først"}
                     </button>
                   )}
                 </li>
@@ -363,7 +407,7 @@ function PlayTab({ bet, live, me, balance }: { bet: ReturnType<typeof useBet>; l
             {running.map((b) => (
               <li key={b.id} className="flex items-center justify-between gap-3 rounded-lg px-3 py-2" style={{ background: "var(--color-cell)" }}>
                 <span style={{ color: "var(--color-cream)", fontSize: "0.9rem" }}>
-                  <strong>{name(b.backer_id)}</strong> på {b.pick} mot <strong>{name(b.layer_id)}</strong>
+                  <strong>{name(b.backer_id)}</strong> på {betText(b)} mot <strong>{name(b.layer_id)}</strong>
                 </span>
                 <span className="tabular shrink-0" style={{ color: "var(--color-gold-strong)", fontWeight: 700 }}>{coins(b.stake + b.liability)}</span>
               </li>
@@ -403,7 +447,7 @@ function BetLine({ b, meId, name }: { b: BetRow; meId: string; name: (id: string
     <li className="flex items-center justify-between gap-3 rounded-lg px-3 py-2" style={{ background: "var(--color-cell)" }}>
       <span className="min-w-0">
         <span className="block truncate" style={{ color: "var(--color-cream)", fontWeight: 600 }}>
-          {backer ? b.pick : `Mot ${b.pick}`}
+          {backer ? betText(b) : `Mot ${betText(b)}`}
         </span>
         <span className="block" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>
           {coins(risked)} til {oddsText(b.odds)}
@@ -418,9 +462,12 @@ function BetLine({ b, meId, name }: { b: BetRow; meId: string; name: (id: string
 /** Bets whose match ended without /bet being open to see who won: decide them by hand. */
 function Stale({ matches, bets, night, refresh, name }: { matches: { match_id: string; sides: string[] }[]; bets: BetRow[]; night: number; refresh: () => Promise<void>; name: (id: string | null) => string }) {
   const [busy, setBusy] = useState(false);
+  // For bets on the margin: how many crosses the loser lacked. Left empty, those bets are handed back.
+  const [margins, setMargins] = useState<Record<string, string>>({});
   const decide = async (id: string, winner: string | null) => {
     setBusy(true);
-    await settleMatch(id, winner, night);
+    const raw = margins[id]?.trim();
+    await settleMatch(id, winner, night, raw ? Number(raw) : null);
     setBusy(false);
     await refresh();
   };
@@ -436,6 +483,18 @@ function Stale({ matches, bets, night, refresh, name }: { matches: { match_id: s
               <p className="mb-2" style={{ color: "var(--color-cream)", fontSize: "0.85rem" }}>
                 {sides.join(" mot ")} · {list.length} spill ({list.map((b) => `${name(b.backer_id)}–${name(b.layer_id)}`).join(", ")})
               </p>
+              {list.some((b) => b.market === "margin") && (
+                <label className="mb-2 flex items-center gap-2" style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>
+                  Streker taperen manglet
+                  <input
+                    inputMode="numeric"
+                    value={margins[m.match_id] ?? ""}
+                    onChange={(e) => setMargins((p) => ({ ...p, [m.match_id]: e.target.value.replace(/[^\d]/g, "") }))}
+                    className={`w-16 rounded-lg px-2 tabular ${FOCUS_RING}`}
+                    style={{ minHeight: "2.75rem", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
+                  />
+                </label>
+              )}
               <div className="flex flex-wrap gap-2">
                 {sides.map((s) => (
                   <button key={s} type="button" disabled={busy} onClick={() => void decide(m.match_id, s)} className={`tactile rounded-full px-4 ${FOCUS_RING}`} style={{ minHeight: "2.75rem", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}>

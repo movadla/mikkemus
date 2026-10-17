@@ -71,3 +71,9 @@ create policy "public delete" on bet_bets for delete using (true);
 
 create policy "public read" on bet_ledger for select using (true);
 create policy "public insert" on bet_ledger for insert with check (true);
+
+-- Spill på antall streker (seiersmargin): hvor mange kryss taperen mangler når vinneren er ferdig.
+-- Kjøres også om du allerede har laget tabellene over. Trygt å kjøre flere ganger.
+alter table bet_bets add column if not exists market text not null default 'winner';
+alter table bet_bets add column if not exists detail text;
+alter table bet_matches add column if not exists margin integer;

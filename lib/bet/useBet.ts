@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { LiveMatchState } from "../liveMatch";
 import { ensureMatch, expireOffers, loadBooks, settleMatch, type Books } from "./api";
+import { RULES, baseOf } from "../rules";
+import { crossesLeft } from "./margin";
 import { currentNight } from "./ledger";
 
 const POLL_MS = 2500;
@@ -103,7 +105,11 @@ export function useBet(live: LiveMatchState | null): BetState {
         clearInterval(tick);
         settled.current.add(id);
         setSettlingIn(null);
-        void settleMatch(id, winner, night).then(() => refresh());
+        // With two sides, the margin is how many crosses the loser still lacks.
+        const now = liveRef.current;
+        const loser = now && now.players.length === 2 ? now.players.find((p) => p !== winner) : undefined;
+        const margin = now && loser ? crossesLeft(now.progress[loser], RULES[baseOf(now.variant)].target) : null;
+        void settleMatch(id, winner, night, margin).then(() => refresh());
       } else setSettlingIn(Math.ceil((WINNER_SETTLE_MS - waited) / 1000));
     }, 500);
     return () => clearInterval(tick);

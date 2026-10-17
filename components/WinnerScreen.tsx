@@ -14,6 +14,7 @@ import { getPlayerRecord } from "@/lib/storage";
 import { generateConfetti, generateConfettiRain } from "@/lib/confetti";
 import { DartboardHeatmap } from "./DartboardHeatmap";
 import { ShirtRain } from "./ShirtRain";
+import { Trophy } from "./Trophy";
 import { ReplayCard } from "./ReplayCard";
 import { AwardsCard, OddsChart, RowCostCard, buildAwards } from "./MatchInsights";
 import type { OddsSnapshot } from "@/lib/oddsLog";
@@ -220,6 +221,8 @@ export function WinnerScreen({
         ))}
       </div>
       <div className="relative z-10 w-full max-w-md text-center">
+        {/* The trophy rises above the winner; a team's own shirts rain instead of confetti cannons. */}
+        {fx.trophy && <Trophy cannons={!shirts} />}
         <div className="relative">
           <div
             className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none"

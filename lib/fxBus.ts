@@ -17,12 +17,12 @@ export type FxEvent =
   | { type: "walkOn"; player?: string }
   /** `name` took the lead. */
   | { type: "lead"; name: string }
-  /** A line for the ticker. */
-  | { type: "comment"; text: string }
   /** A personal record was beaten; `text` says which. */
   | { type: "record"; text: string }
   /** The thrower is one row from winning: the word slammed in. */
   | { type: "matchdart" }
+  /** The inner bull: a bullseye. */
+  | { type: "bull" }
   /** A real dart that did not score: it bounces off and falls. */
   | { type: "miss" };
 
