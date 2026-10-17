@@ -23,8 +23,14 @@ export type LiveMatchState = {
   /** Which game is being played — the spectator view draws a row as closed at this variant's
    *  target. Absent from snapshots published before variants existed: standard. */
   variant?: GameVariant;
-  /** The odds on the match after the last turn, for the big screen. */
+  /** The odds on the match after the last turn, for the big screen and for /bet. */
   odds?: { name: string; odds: number; p: number }[];
+  /** The turn the odds were worked out for. A bet is only taken when this is the current turn. */
+  oddsTurn?: number;
+  /** Which match this is, and how many darts of the current turn have been thrown — /bet only takes
+   *  bets between turns, before the first dart. */
+  matchId?: string;
+  dartsInTurn?: number;
 };
 
 type LiveMatchRow = { id: string; state: LiveMatchState | null; updated_at: string };

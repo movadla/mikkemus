@@ -333,6 +333,9 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   const showOdds = useShowOdds();
   const [odds, setOdds] = useState<OddsRow[] | null>(null);
   const oddsHistoryRef = useRef<OddsSnapshot[]>([]);
+  // Which turn the odds on show were worked out for, and which match this is (for /bet).
+  const [oddsTurn, setOddsTurn] = useState(-1);
+  const matchIdRef = useRef("");
   const [oddsHistory, setOddsHistory] = useState<OddsSnapshot[]>([]);
   // Which players in this match are bots, and at what difficulty — set once at
   // startGame from SetupScreen's picks. Bots are never written via ensurePlayer and
@@ -423,6 +426,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         });
         oddsHistoryRef.current = sameTurn ? [...history.slice(0, -1), { key, sides }] : [...history, { key, sides }];
         setOddsHistory(oddsHistoryRef.current);
+        setOddsTurn(turnToken);
         setOdds(
           players.map((p) => {
             const o = result.find((r) => r.name === p)!;
@@ -535,6 +539,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       // Before the board is put back: every rule the render below reads comes from this.
       setGameVariant(restored.variant);
       setVariant(restored.variant ?? "standard");
+      matchIdRef.current = restored.matchId ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
       setScreen(restored.screen);
       setPlayers(restored.players);
       writeProgress(restored.progress);
@@ -627,6 +632,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     saveActiveMatch({
       screen,
       variant,
+      matchId: matchIdRef.current,
       players,
       progress,
       currentIdx,
@@ -661,7 +667,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
           : a,
       ),
     });
-    const snapshot = { screen, players, progress, activePlayer, turnToken, winner, botLevels, guestPlayers, variant, odds: odds ? odds.map((o) => ({ name: o.name, odds: o.odds, p: o.p })) : undefined };
+    const snapshot = { screen, players, progress, activePlayer, turnToken, winner, botLevels, guestPlayers, variant, odds: odds ? odds.map((o) => ({ name: o.name, odds: o.odds, p: o.p })) : undefined, oddsTurn, matchId: matchIdRef.current, dartsInTurn: dartsThisTurn };
     if (publishTimerRef.current) clearTimeout(publishTimerRef.current);
     publishTimerRef.current = setTimeout(() => publishLiveMatch(snapshot), LIVE_PUBLISH_DEBOUNCE_MS);
   }, [
@@ -691,6 +697,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     // that changes on the same beat they do, so it stands in for all of them.
     matchThrows,
     odds,
+    oddsTurn,
+    dartsThisTurn,
   ]);
 
   /** Clears the shot boxes and the "just placed" mark highlight — see the call sites below for when. */
@@ -1192,6 +1200,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     oddsHistoryRef.current = [];
     setOddsHistory([]);
     setOdds(null);
+    setOddsTurn(-1);
+    matchIdRef.current = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
     setVariant(startVariant);
     // Called synchronously from a real button tap (SetupScreen/tournament) — the
     // narrow window where the browser actually allows unlocking audio playback, well

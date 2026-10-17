@@ -7,6 +7,8 @@ export type ActiveMatchSnapshot = {
   screen: "game" | "winner";
   /** Which game this is — see lib/rules.ts. Absent in snapshots from before variants: standard. */
   variant?: GameVariant;
+  /** Which match this is, for the bets placed on it (/bet) — kept so a reload does not make it a new one. */
+  matchId?: string;
   players: string[];
   progress: PlayerProgress;
   currentIdx: number;
