@@ -175,6 +175,13 @@ export type TurnResult = {
    *  and the "tre tellende" statistic go by. With manual entry a tap is a mark, so this is the
    *  marks unless the thrower was asked (see MikkeMusApp's standQuestionDue). */
   counted?: number;
+  /**
+   * How many counting darts in a row the turn ENDED with, when Scolia saw all three darts and so knows the
+   * order they landed in (a miss, a hit and a hit ends on two). Absent on a turn entered by hand: there a miss
+   * can be any of the darts, and an unrecorded one cannot be placed, so only a turn of three counting
+   * darts can carry a run on (see currentRun in lib/turnStats.ts).
+   */
+  tail?: number;
 };
 
 export function emptyProgress(): Progress {

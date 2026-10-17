@@ -106,7 +106,7 @@ export function FxStage({ matchDart = false }: { matchDart?: boolean }) {
       add(t, t.animate([{ transform: "scale(2)", opacity: 0 }, { transform: "scale(1)", opacity: 1, offset: 0.3 }, { transform: "translateY(-10px)", opacity: 0 }], { duration: 1100, delay: 350 }));
     }
 
-    // A shockwave and a word slammed in: «TRIPPEL 20», or «MATCHDART» in red.
+    // A shockwave and a word slammed in: «TRIPPEL 20», or «MATCHDART» and «OUT» in red.
     function slam(label: string, color: string, glow: string) {
       const cv = document.createElement("canvas");
       const dpr = Math.min(2, devicePixelRatio || 1);
@@ -246,8 +246,10 @@ export function FxStage({ matchDart = false }: { matchDart?: boolean }) {
         else slam(e.label, GOLD, "255,236,170");
       } else if (e.type === "bull" && f.manga) manga("BULL!", "RETT I MIDTEN");
       else if (e.type === "matchdart" && f.matchDart) {
-        if (f.manga) manga("MATCHDART", "SISTE RAD");
-        else slam("MATCHDART", "#ff5a4a", "224,74,58");
+        // The same animation for both; only the word differs.
+        const out = e.word === "OUT";
+        if (f.manga) manga(out ? "OUT!" : "MATCHDART", out ? "TRE PILER ELLER FÆRRE" : "BULL TIL SLUTT");
+        else slam(out ? "OUT" : "MATCHDART", "#ff5a4a", "224,74,58");
       }
       else if (e.type === "perfect" && f.perfectBurst) perfect(e.run);
       else if (e.type === "rowClosed" && f.rowShine) rowClosed(e.step, e.player);

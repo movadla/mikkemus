@@ -61,7 +61,7 @@ export type FxFlags = {
   shirtRain: boolean;
   /** The glint and the crown when a team or player takes the lead. */
   leadChange: boolean;
-  /** The red pulsing edge and «MATCHDART» while the thrower has one row left. */
+  /** The red pulsing edge and «MATCHDART» (the bull is all that is left) or «OUT» (the rest takes three darts or fewer). */
   matchDart: boolean;
   /** The last turn played back in slow motion on the winner screen, from the real dart positions. */
   replay: boolean;

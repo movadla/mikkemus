@@ -68,7 +68,10 @@ export function Mark({
   const glyph = glyphFor(rawCount, target);
   const confirmed = glyphFor(rawCount - pendingCount, target);
   const previewed = glyphFor(rawCount + ghostCount, target);
-  const strokeMs = slowMotion ? 650 : 190;
+  // A cross must read as registered the moment it is tapped: it is there in the frame that follows the tap, not
+  // drawn over a fifth of a second.
+  // The slow version is for Angre, where the point is to watch it come off.
+  const strokeMs = slowMotion ? 650 : 0;
   const g = compact ? GEOMETRY.compact : GEOMETRY.normal;
   const cx = CENTRE;
   const x1 = INSET;
@@ -115,7 +118,7 @@ export function Mark({
         y2={yTop}
         strokeWidth={g.cross}
         strokeLinecap="round"
-        style={{ transition: "opacity 190ms ease-out", ...ghostStrokeProps(!glyph.slash && previewed.slash) }}
+        style={{ transition: "opacity 80ms ease-out", ...ghostStrokeProps(!glyph.slash && previewed.slash) }}
       />
       <line
         x1={x1}
@@ -124,7 +127,7 @@ export function Mark({
         y2={yBottom}
         strokeWidth={g.cross}
         strokeLinecap="round"
-        style={{ transition: "opacity 190ms ease-out", ...ghostStrokeProps(!glyph.cross && previewed.cross) }}
+        style={{ transition: "opacity 80ms ease-out", ...ghostStrokeProps(!glyph.cross && previewed.cross) }}
       />
       <ellipse
         cx={cx}
@@ -133,7 +136,7 @@ export function Mark({
         ry={RADIUS}
         fill="none"
         strokeWidth={g.ring}
-        style={{ transition: "opacity 150ms ease-out", ...ghostStrokeProps(previewed.ring > glyph.ring) }}
+        style={{ transition: "opacity 70ms ease-out", ...ghostStrokeProps(previewed.ring > glyph.ring) }}
       />
       <line
         x1={x1}
@@ -164,7 +167,7 @@ export function Mark({
           strokeDasharray: 1,
           strokeDashoffset: glyph.cross ? 0 : 1,
           opacity: glyph.cross ? 1 : 0,
-          transition: `stroke-dashoffset ${strokeMs}ms ease-out 65ms, opacity ${strokeMs}ms ease-out 65ms`,
+          transition: `stroke-dashoffset ${strokeMs}ms ease-out ${slowMotion ? 65 : 0}ms, opacity ${strokeMs}ms ease-out ${slowMotion ? 65 : 0}ms`,
         }}
       />
       <ellipse
@@ -180,7 +183,7 @@ export function Mark({
           strokeDasharray: 1,
           strokeDashoffset: 1 - glyph.ring,
           opacity: glyph.ring > 0 ? 1 : 0,
-          transition: `stroke-dashoffset ${strokeMs}ms ease-out 55ms, opacity ${strokeMs}ms ease-out 55ms`,
+          transition: `stroke-dashoffset ${strokeMs}ms ease-out ${slowMotion ? 55 : 0}ms, opacity ${strokeMs}ms ease-out ${slowMotion ? 55 : 0}ms`,
         }}
       />
     </svg>

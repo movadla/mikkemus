@@ -71,7 +71,8 @@ export function throwerStats(turns: readonly (TurnResult | undefined)[], fallbac
 
 /**
  * Darts in a row that counted for one thrower, over their finished turns: three for each
- * unbroken turn of three counting darts, counted back from their latest turn. In team play the
+ * unbroken turn of three counting darts, counted back from their latest turn, and on top of that the
+ * counting darts the turn before them ended on when Scolia saw its order (TurnResult.tail). In team play the
  * log is the team's, so `thrower` picks out the member's own turns; for a lone player pass
  * `undefined` as `only` semantics are the same — every turn is theirs. The turn in progress is
  * the caller's to add.
@@ -79,6 +80,10 @@ export function throwerStats(turns: readonly (TurnResult | undefined)[], fallbac
 export function currentRun(turns: readonly (TurnResult | undefined)[], thrower: string, only?: string): number {
   const mine = turns.filter((t): t is TurnResult => !!t && (only ? true : (t.thrower ?? thrower) === thrower));
   let run = 0;
-  for (let i = mine.length - 1; i >= 0 && perfect(mine[i]); i--) run += DARTS_PER_TURN;
+  let i = mine.length - 1;
+  for (; i >= 0 && perfect(mine[i]); i--) run += DARTS_PER_TURN;
+  // The turn that broke the run can still have ended on some counting darts, but only when every dart of
+  // it was seen, so the order is known (a miss then two hits ends on two). By hand it ends the run.
+  if (i >= 0) run += Math.min(DARTS_PER_TURN - 1, mine[i].tail ?? 0);
   return run;
 }

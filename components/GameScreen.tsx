@@ -1177,10 +1177,24 @@ export function GameScreen({
                             ? `Sett ${pendingChoice!.ringStep}${STEP_LABELS[pendingChoice!.number]} på ${choiceRole === "redirect" ? STEP_LABELS[s] : ringLabel}`
                             : undefined
                         }
-                        onPointerDown={() => startHold(s)}
-                        onPointerUp={cancelHold}
-                        onPointerLeave={cancelHold}
-                        onPointerCancel={cancelHold}
+                        onPointerDown={(e) => {
+                          // Pressed at once, so a tap is never in doubt: the cell dips and brightens under the finger
+                          // before the cross has been registered (set on the element, not in state: no re-render).
+                          e.currentTarget.dataset.pressed = "1";
+                          startHold(s);
+                        }}
+                        onPointerUp={(e) => {
+                          delete e.currentTarget.dataset.pressed;
+                          cancelHold();
+                        }}
+                        onPointerLeave={(e) => {
+                          delete e.currentTarget.dataset.pressed;
+                          cancelHold();
+                        }}
+                        onPointerCancel={(e) => {
+                          delete e.currentTarget.dataset.pressed;
+                          cancelHold();
+                        }}
                         onContextMenu={(e) => e.preventDefault()}
                         data-step={s}
                         data-player={p}

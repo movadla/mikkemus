@@ -40,6 +40,22 @@ describe("currentRun", () => {
     expect(currentRun([full(), turn(2, { counted: 2 })], "Per")).toBe(0);
     expect(currentRun([], "Per")).toBe(0);
   });
+  it("lets the counting darts a seen turn ended on carry the run on", () => {
+    // Scolia saw a miss, a hit and a hit (ending on two), then a turn of three: five in a row.
+    expect(currentRun([turn(2, { counted: 2, tail: 2 }), full()], "Per")).toBe(5);
+    // Two hits and then a miss ends on none, so the turn before it counts for nothing.
+    expect(currentRun([full(), turn(2, { counted: 2, tail: 0 }), full()], "Per")).toBe(3);
+    // The latest turn itself ended on two.
+    expect(currentRun([full(), full(), turn(2, { counted: 2, tail: 2 })], "Per")).toBe(2);
+  });
+  it("ends the run on a turn entered by hand that did not count all three", () => {
+    // By hand the miss could be any dart, and nothing records it, so there is no tail to carry.
+    expect(currentRun([turn(2, { counted: 2 }), full()], "Per")).toBe(3);
+    expect(currentRun([full(), turn(2, { counted: 2 })], "Per")).toBe(0);
+  });
+  it("never carries more than two from a turn that was not perfect", () => {
+    expect(currentRun([turn(2, { counted: 2, tail: 3 })], "Per")).toBe(2);
+  });
   it("follows one member's own turns in a team log", () => {
     const log = [full("Per"), full("Ola"), full("Per"), turn(0, { thrower: "Ola", counted: 0 })];
     expect(currentRun(log, "Per")).toBe(6);

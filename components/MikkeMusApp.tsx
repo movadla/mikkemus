@@ -27,6 +27,9 @@ import {
   type PendingAmbiguous,
 } from "@/lib/game";
 import { memberDeltas } from "@/lib/memberStats";
+import { finishState } from "@/lib/finishState";
+import { computeOddsOffThread } from "@/lib/odds/client";
+import type { OddsMatch } from "@/lib/odds/match";
 import { fairPrice } from "@/lib/bet/ledger";
 import { recordBestRun, ensureTeam, getPlayerRecord, playPlayerSound, recordAccuracyTotals, recordLuckTotals, recordMatchHistory, recordMatchResult, recordMemberStats, recordRating, recordRingHits, useRoster, useTeamRecords, meanEuclideanDistance, averagePct, type RingHits } from "@/lib/storage";
 import { announce } from "@/lib/announcer";
@@ -35,18 +38,16 @@ import { clearActiveMatch, loadActiveMatch, saveActiveMatch } from "@/lib/active
 import { publishLiveMatch } from "@/lib/liveMatch";
 import { coordinatesForSector, luckForThrow, sectorAt, throwAccuracy } from "@/lib/dartboard";
 import { getRules, hasStandRule, isPerfectClose, setGameVariant, withStandRule, type GameVariant } from "@/lib/rules";
-import { countingDarts, nextMemberIndex, standsAfterTurn } from "@/lib/teamTurn";
+import { countingDarts, nextMemberIndex, standsAfterTurn, trailingRun } from "@/lib/teamTurn";
 import { currentRun, throwerStats } from "@/lib/turnStats";
 import { emitFx } from "@/lib/fxBus";
 import { FxStage } from "./FxStage";
 import { LineupIntro } from "./LineupIntro";
 import type { OddsRow } from "./OddsBar";
-import { buildOddsInput } from "@/lib/odds/match";
-import { computeOdds } from "@/lib/odds";
 import { logOddsMatch, type OddsSnapshot } from "@/lib/oddsLog";
 import { useShowOdds } from "@/lib/oddsSetting";
 import { haptics } from "@/lib/haptics";
-import { crowdForStreak, playCrowd, playFanfare, playHitStreakSound, playStreakFanfare, playMatchDartSound, playTapSound, playWalkOnTune, playWinBoom, primeAudio } from "@/lib/fanfare";
+import { crowdForStreak, playCrowd, playFanfare, playHitStreakSound, playStreakFanfare, playMatchDartSound, playTapSound, playWalkOnTune, playWinBoom, primeAudio, warmAudio } from "@/lib/fanfare";
 import { fxFlags, getFxLevel, useFxLevel } from "@/lib/fxLevel";
 import { classifyThrow, formatSectorLabel, parseSector } from "@/lib/scoliaMapping";
 import {
@@ -394,61 +395,70 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     return roster && roster.length > 0 ? roster[(teamMemberIdx[activePlayer] ?? 0) % roster.length].name : activePlayer;
   }
 
-  // One row from winning for whoever is up — the red pulsing edge, the word, and a line in the
-  // ticker. Read off the board itself, so it is true exactly when the thrower has one row left.
-  const openSteps = activePlayer && progress[activePlayer] ? STEPS.filter((st) => progress[activePlayer][st] < getRules().target) : [];
   useEffect(() => {
     if (screen !== "game" || !hydratedFromStorage || players.length < 2 || rewound !== null || winner) return;
-    // After the render, so the board it reads is the settled one — and never in the middle of a turn.
+    // After the render, so the board it reads is the settled one — and never in the middle of a turn. The
+    // calculation takes tens of milliseconds, several times that on a phone, so it is done in a thread of its
+    // own (lib/odds/client.ts): a tap is never held up by it.
+    let cancelled = false;
     const id = setTimeout(() => {
-      try {
-        const rules = getRules();
-        const result = computeOdds(
-          buildOddsInput({
-            rules: { target: rules.target, ringChoice: rules.ringOnOwnNumberIsChoice },
-            players,
-            currentIdx,
-            progress,
-            teamRosters,
-            teamMemberIdx,
-            botLevels,
-            roster: rosterRecords,
-            live: accuracyTotalsRef.current,
-          }),
-        );
-        const key = `${turnToken}|${currentIdx}`;
-        const history = oddsHistoryRef.current;
-        const last = history[history.length - 1];
-        const sameTurn = last?.key === key;
-        const before = sameTurn ? history[history.length - 2] : last;
-        const sides = players.map((p) => {
-          const o = result.find((r) => r.name === p)!;
-          return { name: p, p: o.p, odds: fairPrice(o.p) };
-        });
-        oddsHistoryRef.current = sameTurn ? [...history.slice(0, -1), { key, sides }] : [...history, { key, sides }];
-        setOddsHistory(oddsHistoryRef.current);
-        setOddsTurn(turnToken);
-        setOdds(
-          players.map((p) => {
+      const rules = getRules();
+      // Only what the odds read of a record: the pictures in it would be copied to the thread for nothing.
+      const roster = rosterRecords.map((r) => ({ name: r.name, kind: r.kind, matchHistory: r.matchHistory, accuracy: r.accuracy, memberStats: r.memberStats })) as unknown as OddsMatch["roster"];
+      computeOddsOffThread(
+        {
+          rules: { target: rules.target, ringChoice: rules.ringOnOwnNumberIsChoice },
+          players,
+          currentIdx,
+          progress,
+          teamRosters,
+          teamMemberIdx,
+          botLevels,
+          roster,
+          live: accuracyTotalsRef.current,
+        },
+        variant,
+      )
+        .then((result) => {
+          if (cancelled) return;
+          const key = `${turnToken}|${currentIdx}`;
+          const history = oddsHistoryRef.current;
+          const last = history[history.length - 1];
+          const sameTurn = last?.key === key;
+          const before = sameTurn ? history[history.length - 2] : last;
+          const sides = players.map((p) => {
             const o = result.find((r) => r.name === p)!;
-            return { name: p, odds: fairPrice(o.p), p: o.p, lo: o.lo, hi: o.hi, before: before?.sides.find((x) => x.name === p)?.p, active: p === activePlayer, margin: o.margin };
-          }),
-        );
-      } catch (err) {
-        console.error("Kunne ikke regne ut odds:", err);
-      }
+            return { name: p, p: o.p, odds: fairPrice(o.p) };
+          });
+          oddsHistoryRef.current = sameTurn ? [...history.slice(0, -1), { key, sides }] : [...history, { key, sides }];
+          setOddsHistory(oddsHistoryRef.current);
+          setOddsTurn(turnToken);
+          setOdds(
+            players.map((p) => {
+              const o = result.find((r) => r.name === p)!;
+              return { name: p, odds: fairPrice(o.p), p: o.p, lo: o.lo, hi: o.hi, before: before?.sides.find((x) => x.name === p)?.p, active: p === activePlayer, margin: o.margin };
+            }),
+          );
+        })
+        .catch((err) => console.error("Kunne ikke regne ut odds:", err));
     }, 0);
-    return () => clearTimeout(id);
+    return () => {
+      cancelled = true;
+      clearTimeout(id);
+    };
     // Only at a turn boundary (or when the people or the records change) — not on every dart.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [turnToken, currentIdx, screen, hydratedFromStorage, players.length, winner === null, rosterRecords]);
 
-  const matchDartOn = screen === "game" && !!activePlayer && rewound === null && openSteps.length === 1;
-  const matchDartStep = openSteps[0] ?? null;
+  // «Matchdart» when the bull is all that is left and an inner bull finishes it; «out» when the rest can
+  // be taken with the three darts of one turn (a double or a triple, two or three on the last number, or a
+  // double, a 25 and a bull). The same animation, a different word (lib/finishState.ts).
+  const finish = screen === "game" && !!activePlayer && rewound === null ? finishState(progress[activePlayer], getRules().target) : null;
+  const matchDartOn = finish !== null;
   useEffect(() => {
-    if (!matchDartOn || !matchDartStep || !activePlayer) return;
-    emitFx({ type: "matchdart" });
-  }, [matchDartOn, matchDartStep, turnToken, activePlayer]);
+    if (!finish || !activePlayer) return;
+    emitFx({ type: "matchdart", word: finish === "out" ? "OUT" : "MATCHDART" });
+  }, [finish, turnToken, activePlayer]);
 
   // Always-current mirrors of state/handlers the bot-turn effect below reads from
   // inside setTimeout callbacks, where a closure over this render's `progress`/
@@ -944,9 +954,11 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         const fx = fxFlags(getFxLevel());
         // The boom follows the run, not just the turn: dart 4, 5, 6 in a row hit harder and harder.
         playHitStreakSound(Math.min(run, fx.boomMaxStreak));
-        if (fx.crowd && run >= 3) playCrowd(crowdForStreak(run));
+        // The crowd and the fanfare are built from hundreds of audio nodes: started a moment after the boom, so
+        // the board has drawn the dart before the sound engine is busy with them.
+        if (fx.crowd && run >= 3) setTimeout(() => playCrowd(crowdForStreak(run)), 40);
         // Every third dart in a row has a fanfare of its own, bigger the longer the run (Full party).
-        if (fx.streakFanfare && run >= 3 && run % 3 === 0) playStreakFanfare(run);
+        if (fx.streakFanfare && run >= 3 && run % 3 === 0) setTimeout(() => playStreakFanfare(run), 20);
         setHitPulse({ token: ++pulseTokenRef.current, streak });
         emitFx({ type: "dart", step: hitResult![0].step, player: activePlayer });
       }
@@ -1166,6 +1178,14 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     else if (prevRelay === "stale" && scolia.state.relay === "live") announce("Brettet er tilbake.");
   }, [scolia.state.relay, screen]);
 
+  // The sound engine is built while the board comes up and the browser is idle, not on the first tap (see warmAudio).
+  useEffect(() => {
+    if (screen !== "game") return;
+    const idle = typeof requestIdleCallback === "function";
+    const id = idle ? requestIdleCallback(warmAudio, { timeout: 2000 }) : window.setTimeout(warmAudio, 500);
+    return () => (idle ? cancelIdleCallback(id) : clearTimeout(id));
+  }, [screen]);
+
   // "Matchdart": the moment someone — a player or a team — is one cross from winning, a held-breath
   // sound tells the table. Watched on the board itself rather than hooked into each way a cross can
   // land, so it covers darts, taps, redirects and Angre alike. It fires when the state BECOMES
@@ -1184,7 +1204,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     let fresh = false;
     for (const p of players) {
       const board = progress[p];
-      const oneToGo = !!board && remainingMarks(board) === 1;
+      const oneToGo = !!board && finishState(board, getRules().target) === "matchdart";
       now[p] = oneToGo;
       if (oneToGo && !matchDartSeenRef.current[p]) fresh = true;
     }
@@ -2097,6 +2117,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     // Read before the turn's action list is emptied just below: the stand rule is decided by
     // how many of this turn's darts counted — or by the thrower's own answer (see answerStandQuestion).
     const countedDarts = countedOverride ?? countingDarts(turnActionsRef.current);
+    // How the turn ended, in the order the darts landed — read before the actions are cleared below.
+    const tailNow = trailingRun(turnActionsRef.current);
     dartsOnStepRef.current = {};
     writeTurnActions([]);
     turnStartRef.current = null;
@@ -2126,16 +2148,27 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       : rosterNow && rosterNow.length > 0
         ? rosterNow[(teamMemberIdx[activePlayer] ?? 0) % rosterNow.length].name
         : undefined;
-    const turn: TurnResult = { ...summarizeTurn(effectivePendingHits, activeStepNow, dartsForTurn), counted: countedDarts, ...(throwerName ? { thrower: throwerName } : {}) };
+    const turn: TurnResult = {
+      ...summarizeTurn(effectivePendingHits, activeStepNow, dartsForTurn),
+      counted: countedDarts,
+      // Scolia saw every dart, so the counting ones the turn ended on can carry the run into the next turn.
+      // By hand an unrecorded miss could be any of the darts, so only a turn of three counting darts carries.
+      ...(scoliaDarts >= DARTS_PER_TURN && countedDarts < DARTS_PER_TURN ? { tail: tailNow } : {}),
+      ...(throwerName ? { thrower: throwerName } : {}),
+    };
     const nextTurnLog = {
       ...turnLog,
       [activePlayer]: setTurnAt(turnLog[activePlayer] ?? [], turnIndex, turn),
     };
     setTurnLog(nextTurnLog);
     if (!rewound) {
+      // The run as the turn leaves it: three counting darts carry it on, so does a turn Scolia saw end on some
+      // (a miss, a hit and a hit ends on two), and any other turn ends it. The boom of the next dart starts from here.
+      const runNow = currentRun(nextTurnLog[activePlayer] ?? [], throwerName ?? activePlayer, throwerName ? undefined : activePlayer);
+      runRef.current[throwerName ?? activePlayer] = runNow;
       // All three darts counted: the three lit darts, with the run so far when it is a long one.
       if (countedDarts >= DARTS_PER_TURN) {
-        const run = currentRun(nextTurnLog[activePlayer] ?? [], throwerName ?? activePlayer, throwerName ? undefined : activePlayer);
+        const run = runNow;
         emitFx({ type: "perfect", run });
         // A personal record: longer than the best this player or team has ever had (stored, and only
         // updated when the match is accepted), announced once per match.
@@ -2145,9 +2178,6 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
           recordAnnouncedRef.current.add(activePlayer);
           emitFx({ type: "record", text: `${activePlayer}: lengste serie, ${run} piler` });
         }
-      } else {
-        // A turn that did not count all three ends the run, however many it started with.
-        runRef.current[throwerName ?? activePlayer] = 0;
       }
       // Who is ahead now — fewest crosses left, and alone on it. A change of leader is announced.
       if (players.length > 1) {

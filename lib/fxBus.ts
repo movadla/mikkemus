@@ -20,7 +20,8 @@ export type FxEvent =
   /** A personal record was beaten; `text` says which. */
   | { type: "record"; text: string }
   /** The thrower is one row from winning: the word slammed in. */
-  | { type: "matchdart" }
+  /** The thrower can finish: «MATCHDART» when the last dart is a bull, «OUT» when the rest can be taken in this turn. */
+  | { type: "matchdart"; word?: "MATCHDART" | "OUT" }
   /** The inner bull: a bullseye. */
   | { type: "bull" }
   /** A real dart that did not score: it bounces off and falls. */

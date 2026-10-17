@@ -1,4 +1,5 @@
 import { STEPS, type Step, type TurnResult } from "./game";
+import { finishState } from "./finishState";
 import type { OddsSnapshot } from "./oddsLog";
 
 /** The board and the odds after some number of turns, for stepping through a finished match. */
@@ -48,7 +49,6 @@ export function buildTimeline(args: {
   const { players, turnLog, snapshots, target, winner } = args;
   const per = players.map((p) => (turnLog[p] ?? []).filter((t): t is TurnResult => !!t));
   const rounds = Math.max(0, ...per.map((x) => x.length));
-  const board = 10 * target;
 
   const progress: Record<string, Record<Step, number>> = {};
   players.forEach((p) => (progress[p] = zero()));
@@ -82,6 +82,7 @@ export function buildTimeline(args: {
 
   const events: TimeEvent[] = [];
   const warned = new Set<string>();
+  const outSeen = new Set<string>();
   for (let i = 1; i < frames.length; i++) {
     const f = frames[i];
     const prev = frames[i - 1];
@@ -91,9 +92,14 @@ export function buildTimeline(args: {
     const now = leader(f.total);
     if (before && now && before !== now) events.push({ turn: i, kind: "lead", text: `Ledelsen bytter til ${now}` });
     for (const p of players) {
-      if (!warned.has(p) && board - f.total[p] <= target && board - f.total[p] > 0) {
+      // The same two moments the board announces: the bull is all that is left, or the rest takes one turn.
+      const state = finishState(f.progress[p], target);
+      if (state === "matchdart" && !warned.has(p)) {
         warned.add(p);
         events.push({ turn: i, kind: "matchdart", text: `Matchdart: ${p}` });
+      } else if (state === "out" && !outSeen.has(p) && !warned.has(p)) {
+        outSeen.add(p);
+        events.push({ turn: i, kind: "matchdart", text: `Out: ${p}` });
       }
     }
   }

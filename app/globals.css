@@ -402,6 +402,14 @@ button {
     box-shadow var(--duration-base) var(--ease-standard);
 }
 
+/* Under the finger: the cell dips and brightens the instant it is touched, so a tap is acknowledged before
+   anything has been registered (components/GameScreen.tsx sets data-pressed on pointer down). */
+.cell-tile[data-pressed] {
+  transform: translateY(0) scale(0.95) !important;
+  filter: brightness(1.35);
+  transition: transform 40ms ease-out, filter 40ms ease-out, background var(--duration-base) var(--ease-standard);
+}
+
 /* Closed: the gold payoff. Warmer surface, a gold inner rim, and a low outer bloom so a
    finished row is visible at a glance from across the room. */
 .cell-tile--done {
@@ -1343,6 +1351,26 @@ button {
   }
   50% {
     background-position: 0 0, 100% 100%;
+  }
+}
+
+/* The code screen (components/PinGate.tsx): the dots shake when the code is wrong. */
+@keyframes pin-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-10px);
+  }
+  40% {
+    transform: translateX(9px);
+  }
+  60% {
+    transform: translateX(-6px);
+  }
+  80% {
+    transform: translateX(4px);
   }
 }
 

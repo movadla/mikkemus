@@ -140,8 +140,27 @@ export function primeAudio() {
     if (ctx.state === "suspended") ctx.resume().catch(() => {});
     getBuses(ctx);
     getBrassWave(ctx);
+    getNoise(ctx);
   } catch {
     // Never let a synth glitch break the interaction that triggered priming.
+  }
+}
+
+/**
+ * Builds the audio engine ahead of the first tap, without asking it to play (that has to wait for a real tap).
+ * Creating the engine, the reverb and the noise takes a couple of hundred milliseconds on a phone, and it used
+ * to be done on the first tap of a resumed match: the first cross then showed up late. Called when the board
+ * is up and the browser has nothing else to do.
+ */
+export function warmAudio() {
+  const ctx = getContext();
+  if (!ctx) return;
+  try {
+    getBuses(ctx);
+    getBrassWave(ctx);
+    getNoise(ctx);
+  } catch {
+    // Warming is only a head start.
   }
 }
 

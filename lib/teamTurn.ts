@@ -25,6 +25,21 @@ export function countingDarts(actions: readonly TurnAction[]): number {
   return counted;
 }
 
+/**
+ * Counting darts in a row at the END of a turn, in the order they were thrown. Only meaningful when
+ * every dart of the turn was seen (Scolia): a dart that scored adds one, a dart that did not resets it,
+ * a tap adds one and a take-back takes one off. A miss then two hits ends on two, two hits then a miss ends on none.
+ */
+export function trailingRun(actions: readonly TurnAction[]): number {
+  let run = 0;
+  for (const a of actions) {
+    if (a.kind === "dart") run = a.scored ? run + 1 : 0;
+    else if (a.kind === "tap") run += 1;
+    else run = Math.max(0, run - 1);
+  }
+  return run;
+}
+
 /** True when the thrower keeps their place for the team's next turn. */
 export function standsAfterTurn(standOnThree: boolean, counted: number): boolean {
   return standOnThree && counted >= DARTS_PER_TURN;
