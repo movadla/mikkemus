@@ -10,7 +10,9 @@ import { PhotoButton } from "@/components/PhotoButton";
 import { TEAM_NAME_MAX } from "@/lib/teamNames";
 import { ScreenTop } from "@/components/ScreenTop";
 import { SoundClipButton } from "@/components/SoundClipButton";
-import { TeamKitEditor, WalkOnPicker } from "@/components/KitSettings";
+import { PlayerKitEditor, TeamKitEditor, WalkOnPicker } from "@/components/KitSettings";
+import { TeamKit } from "@/components/TeamKit";
+import { teamKitsOf } from "@/lib/storage";
 import { TrashIcon } from "@/components/icons";
 
 const RULES = { target: 3, ringChoice: true };
@@ -118,6 +120,9 @@ export default function PlayerDetailPage() {
           <h1 className="font-display" style={{ color: "var(--color-cream)", fontSize: "2rem", lineHeight: 1.1 }}>
             {player.name}
           </h1>
+          <div className="flex justify-center mt-2">
+            <TeamKit kit={teamKitsOf(player).home} size={44} title="Drakt" />
+          </div>
           {isTeam && (
             <p className="mt-1" style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>
               {(player.members ?? []).map((m, i) => (
@@ -233,7 +238,9 @@ export default function PlayerDetailPage() {
         )}
         {!isTeam && (
           <div className="shadow-panel rounded-xl p-4 mb-4" style={{ background: "var(--color-surface)" }}>
+            <p className="mb-4 section-label">DRAKT OG INNMARSJ</p>
             <WalkOnPicker record={player} />
+            <PlayerKitEditor player={player} />
           </div>
         )}
 

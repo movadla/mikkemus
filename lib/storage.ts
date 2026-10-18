@@ -271,7 +271,7 @@ export function renameTeam(oldName: string, newName: string): { ok: true; name: 
 
 /** The two shirts a team plays in — its own if it has them, otherwise the default for its people. */
 export function teamKitsOf(record: PlayerRecord): TeamKits {
-  return record.kits ?? defaultKits(record.members ?? []);
+  return record.kits ?? defaultKits(record.kind === "team" ? record.members ?? [] : [record.name]);
 }
 
 /** Chooses the tune a player or a team walks on to, from their own page. */
@@ -284,10 +284,10 @@ export function setWalkOn(name: string, walkOn: WalkOnChoice) {
   upsertRow(k, record);
 }
 
-/** Changes a team's shirts — from the settings. */
-export function setTeamKits(name: string, kits: TeamKits) {
+/** Changes the shirts of a player or a team, from their own page. A player has one shirt, kept as both. */
+export function setKits(name: string, kits: TeamKits) {
   const k = key(name);
-  if (roster[k]?.kind !== "team") return;
+  if (!roster[k]) return;
   const record = { ...roster[k], kits };
   roster = { ...roster, [k]: record };
   notify();

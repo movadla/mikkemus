@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { setTeamKits, setWalkOn, teamKitsOf, type PlayerRecord } from "@/lib/storage";
+import { setKits, setWalkOn, teamKitsOf, type PlayerRecord } from "@/lib/storage";
 import { WALK_ON_LABELS, playWalkOnTune, primeAudio } from "@/lib/fanfare";
 import { KIT_COLOURS, PATTERNS, PATTERN_LABELS, colourName, defaultKits, makeKit, usesSecondColour, type Kit, type TeamKits } from "@/lib/teamKit";
 import { TeamKit } from "./TeamKit";
@@ -138,6 +138,24 @@ export function WalkOnPicker({ record }: { record: PlayerRecord }) {
   );
 }
 
+/** A player's one shirt: the style and the two colours. Kept as both of the pair a team has. */
+export function PlayerKitEditor({ player }: { player: PlayerRecord }) {
+  const kit = teamKitsOf(player).home;
+  return (
+    <div>
+      <KitEditor label="DRAKT" kit={kit} onChange={(next) => setKits(player.name, { home: next, away: next })} />
+      <button
+        type="button"
+        onClick={() => setKits(player.name, defaultKits([player.name]))}
+        className={`tactile w-full rounded-lg text-sm ${FOCUS_RING}`}
+        style={{ minHeight: "2.75rem", background: "var(--color-surface)", color: "var(--color-muted)", border: "1px solid var(--color-border)" }}
+      >
+        Standard
+      </button>
+    </div>
+  );
+}
+
 /**
  * One team's walk-on tune and its two shirts, with the places to change them. A team's shirts are its own and the
  * same on every device (lib/playerRows.ts). Every tap is saved at once; «Standard» puts the two default shirts back.
@@ -145,7 +163,7 @@ export function WalkOnPicker({ record }: { record: PlayerRecord }) {
  */
 export function TeamKitEditor({ team }: { team: PlayerRecord }) {
   const kits = teamKitsOf(team);
-  const save = (next: TeamKits) => setTeamKits(team.name, next);
+  const save = (next: TeamKits) => setKits(team.name, next);
   return (
     <div>
       <WalkOnPicker record={team} />
