@@ -19,7 +19,7 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
         <ScreenTop title="Innstillinger" onBack={onBack} />
         <FxPicker />
         <div className="mb-6">
-          <p className="section-label text-center mb-2">ODDS</p>
+          <p className="section-label text-center mb-2">ODDS · VISES IKKE I VANLIG</p>
           <div className="flex gap-2" role="radiogroup" aria-label="Odds">
             {([true, false] as const).map((on) => (
               <button

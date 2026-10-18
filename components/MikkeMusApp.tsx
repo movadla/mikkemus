@@ -333,7 +333,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   // The odds on the match (lib/odds): worked out after every turn and when the match starts, from the
   // board, who throws next, and how well each of them throws — their records and tonight's darts.
   const rosterRecords = useRoster();
-  const showOdds = useShowOdds();
+  // Vanlig leaves the odds out: they belong to Party and Full party.
+  const showOdds = useShowOdds() && fxLevel !== "normal";
   const [odds, setOdds] = useState<OddsRow[] | null>(null);
   const oddsHistoryRef = useRef<OddsSnapshot[]>([]);
   // Which turn the odds on show were worked out for, and which match this is (for /bet).

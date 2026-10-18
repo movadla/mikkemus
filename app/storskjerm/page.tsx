@@ -53,8 +53,9 @@ function HomeLink() {
  */
 export default function StorskjermPage() {
   const live = useLiveMatch();
-  const showOdds = useShowOdds();
   const fxLevel = useFxLevel();
+  // Vanlig leaves the odds out: they belong to Party and Full party.
+  const showOdds = useShowOdds() && fxLevel !== "normal";
   // This page is not the one playing the match, so it reads the variant off the snapshot rather
   // than from the module-wide rules (which are whatever this browser last set — nothing).
   const target = RULES[baseOf(live?.variant)].target;
