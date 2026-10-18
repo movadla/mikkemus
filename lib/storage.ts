@@ -109,8 +109,12 @@ async function deleteRow(k: string) {
 }
 
 let initialized = false;
+/** The roster has been fetched (or there is nothing to fetch it from). */
+let rosterLoaded = false;
+/** People added before the roster had arrived: written once it has, and only if the database does not have them. */
+const addedBeforeLoad = new Map<string, PlayerRecord>();
 
-const CACHE_KEY = "mikke-mus-roster-cache";
+const CACHE_KEY = "mikke-mus-roster-cache-v2";
 
 /** The roster as it was the last time it was fetched, kept on this device so the setup screen has
  *  the players the moment it opens instead of waiting for the network. It is only what to show
@@ -122,7 +126,10 @@ function readRosterCache(): Roster | null {
     if (!raw) return null;
     const parsed: unknown = JSON.parse(raw);
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
-    return parsed as Roster;
+    // Through the same door as a row from the database, so that a field added since the cache was written is filled in.
+    const out: Roster = {};
+    for (const [k, r] of Object.entries(parsed as Record<string, PlayerRecord>)) out[k] = rowToRecord(recordToRow(k, r));
+    return out;
   } catch {
     return null;
   }
@@ -168,7 +175,16 @@ function ensureInitialized() {
       (data as PlayerRow[]).forEach((row) => {
         next[row.id] = rowToRecord(row);
       });
+      // What was added while waiting: kept if the database does not have it, dropped if it does.
+      addedBeforeLoad.forEach((record, k) => {
+        if (!next[k]) {
+          next[k] = record;
+          upsertRow(k, record);
+        }
+      });
+      addedBeforeLoad.clear();
       roster = next;
+      rosterLoaded = true;
       rebuildRatings();
       notify();
       writeRosterCache();
@@ -190,6 +206,9 @@ function ensureInitialized() {
         roster = next;
       } else {
         const row = payload.new as PlayerRow;
+        // Our own writes echo back, older ones after newer: while this row has writes of ours on their way, what is
+        // here is the newer, and the echo would only put it back.
+        if (writeChains.has(row.id)) return;
         roster = { ...roster, [row.id]: rowToRecord(row) };
       }
       notify();
@@ -216,6 +235,18 @@ function cachedRecordsSnapshot(): PlayerRecord[] {
 /** Client-only read of the roster names, safe to call during render (no effect/setState needed). */
 export function useRosterNames(): string[] {
   return useSyncExternalStore(subscribe, cachedNamesSnapshot, () => EMPTY_ARRAY);
+}
+
+/** Whether the roster has arrived from the database: before that a name that is not in it may only be missing so far. */
+export function useRosterLoaded(): boolean {
+  return useSyncExternalStore(
+    subscribe,
+    () => {
+      ensureInitialized();
+      return rosterLoaded || !supabase;
+    },
+    () => false,
+  );
 }
 
 /** Client-only read of the full roster — players and teams — safe to call during render. */
@@ -245,7 +276,10 @@ export function ensurePlayer(name: string): PlayerRecord {
     const record = emptyRecord(name);
     roster = { ...roster, [k]: record };
     notify();
-    upsertRow(k, record);
+    // Before the roster has arrived a name that looks new may be one the database has, and writing an empty record
+    // over it would wipe that player's statistics: it waits for the roster.
+    if (rosterLoaded || !supabase) upsertRow(k, record);
+    else addedBeforeLoad.set(k, record);
   }
   return roster[k];
 }

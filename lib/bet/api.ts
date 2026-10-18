@@ -141,7 +141,7 @@ export async function offerBet(args: { userId: string; night: number; matchId: s
   const after = await balanceOf(args.userId, args.night);
   if (after !== null && after < 0) {
     await supabase.from("bet_bets").delete().eq("id", bet.id);
-    return { ok: false, reason: `Du har bare ${balance} mynter.` };
+    return { ok: false, reason: "Du har ikke nok mynter igjen." };
   }
   return { ok: true, bet };
 }
@@ -177,9 +177,10 @@ export async function takeBet(args: { userId: string; night: number; betId: stri
   // Two bets taken at once can both have passed the check above: read the balance again, now with this one in it.
   const after = await balanceOf(args.userId, args.night);
   if (after !== null && after < 0) {
-    await supabase.from("bet_ledger").delete().eq("bet_id", bet.id).eq("reason", "lay").eq("user_id", args.userId);
+    // The ledger is insert-only (no row can be deleted from it), so the stake is given back by a row that cancels it.
+    await supabase.from("bet_ledger").insert({ user_id: args.userId, night: args.night, delta: bet.liability, reason: "adjust", bet_id: bet.id });
     await supabase.from("bet_bets").update({ layer_id: null, status: "open" }).eq("id", bet.id);
-    return { ok: false, reason: `Du må ha ${bet.liability} mynter for å ta imot, og har ${balance}.` };
+    return { ok: false, reason: "Du har ikke nok mynter igjen til å ta imot." };
   }
   return { ok: true, bet: { ...bet, layer_id: args.userId, status: "matched" } };
 }
@@ -260,6 +261,7 @@ export async function newNight(users: BetUser[], night: number): Promise<Result<
   const next = night + 1;
   // Someone else may have started it a moment ago (two phones, or a double tap): nobody gets the coins twice.
   const started = await supabase.from("bet_ledger").select("user_id").eq("night", next).eq("reason", "start");
+  if (started.error) return { ok: false, reason: started.error.message };
   const already = new Set(((started.data ?? []) as { user_id: string }[]).map((r) => r.user_id));
   const fresh = users.filter((u) => !already.has(u.id));
   if (fresh.length === 0) return { ok: true, night: next };

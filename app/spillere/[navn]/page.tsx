@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { deletePlayer, renameTeam, useRoster } from "@/lib/storage";
+import { deletePlayer, renameTeam, useRoster, useRosterLoaded } from "@/lib/storage";
 import { buildSeedTable, formOf, type FormInfo } from "@/lib/seedingTable";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { PhotoButton } from "@/components/PhotoButton";
@@ -19,6 +19,15 @@ const RULES = { target: 3, ringChoice: true };
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
 const FORM_COLOR: Record<FormInfo["label"], string> = { "På gang": "var(--color-green)", Jevn: "var(--color-cream)", Svak: "var(--color-red)", "For få kamper": "var(--color-muted)" };
+
+/** A name from the address, which may already be decoded and hold a percent sign: that must not throw. */
+function safeDecode(raw: string): string {
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
+}
 
 function Dots({ results }: { results: boolean[] }) {
   const pad = Math.max(0, 10 - results.length);
@@ -51,8 +60,9 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
 export default function PlayerDetailPage() {
   const params = useParams<{ navn: string }>();
   const router = useRouter();
-  const name = decodeURIComponent(params.navn ?? "");
+  const name = safeDecode(params.navn ?? "");
   const roster = useRoster();
+  const loaded = useRosterLoaded();
   const player = roster.find((p) => p.name.toLowerCase() === name.toLowerCase());
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [newName, setNewName] = useState<string | null>(null);
@@ -65,7 +75,7 @@ export default function PlayerDetailPage() {
         <div className="screen-inner">
           <ScreenTop title="Spiller" backHref="/spillere" backLabel="← Tilbake" />
           <p className="text-center py-8" style={{ color: "var(--color-muted)" }}>
-            Fant ikke «{name}»
+            {loaded ? `Fant ikke «${name}»` : "Henter …"}
           </p>
         </div>
       </div>

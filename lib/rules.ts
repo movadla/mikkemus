@@ -139,6 +139,11 @@ export function getRules(): Rules {
   return current;
 }
 
+/** Puts back rules that were read with getRules: a page that borrows another match's rules gives them back. */
+export function restoreRules(rules: Rules): void {
+  current = rules;
+}
+
 /**
  * Whether a row closed this turn was closed "the hard way": three separate darts, one cross
  * each, starting from nothing. It is drawn as a ring with a dot (see Mark). Only exists at three

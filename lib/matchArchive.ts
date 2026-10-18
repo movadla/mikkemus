@@ -39,7 +39,24 @@ export async function loadMatchArchive(id: string): Promise<MatchArchive | null>
   if (!supabase) return null;
   const { data, error } = await supabase.from("match_log").select("data").eq("id", id).maybeSingle();
   if (error || !data) return null;
-  return (data as { data: MatchArchive }).data;
+  // An archive from before a field existed, or a partial one, is given what it lacks: the page draws from all of it.
+  const a = (data as { data: Partial<MatchArchive> }).data;
+  if (!a || !Array.isArray(a.players) || typeof a.winner !== "string") return null;
+  return {
+    id: a.id ?? id,
+    date: a.date ?? "",
+    variant: a.variant,
+    winner: a.winner,
+    players: a.players,
+    teams: a.teams ?? {},
+    stats: a.stats ?? {},
+    luck: a.luck ?? {},
+    preBanked: a.preBanked ?? {},
+    throws: a.throws ?? {},
+    turnLog: a.turnLog ?? {},
+    progress: a.progress ?? {},
+    odds: a.odds ?? [],
+  };
 }
 
 /** The ids of the matches that have a full archive, so the list knows which ones can be opened. */

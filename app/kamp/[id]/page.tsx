@@ -5,7 +5,15 @@ import { useEffect, useState } from "react";
 import { WinnerScreen } from "@/components/WinnerScreen";
 import { ScreenTop } from "@/components/ScreenTop";
 import { loadMatchArchive, type MatchArchive } from "@/lib/matchArchive";
-import { setGameVariant } from "@/lib/rules";
+import { getRules, restoreRules, setGameVariant } from "@/lib/rules";
+
+function safeDecode(raw: string): string {
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
+}
 
 const two = (n: number) => String(n).padStart(2, "0");
 const when = (iso: string) => {
@@ -17,20 +25,25 @@ const when = (iso: string) => {
 export default function MatchPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const id = decodeURIComponent(params.id);
+  const id = safeDecode(params.id);
   // undefined: loading; null: there is no such match.
-  const [archive, setArchive] = useState<MatchArchive | null | undefined>(undefined);
+  const [loaded, setLoaded] = useState<{ id: string; archive: MatchArchive | null } | null>(null);
+  // Nothing yet for this id (a new one after another match): loading, not the match before.
+  const archive = loaded && loaded.id === id ? loaded.archive : undefined;
 
   useEffect(() => {
     let cancelled = false;
+    const before = getRules();
     void loadMatchArchive(id).then((a) => {
       if (cancelled) return;
       // The rules of that match (how many crosses a row takes) are read from here while the page is drawn.
       if (a) setGameVariant(a.variant);
-      setArchive(a);
+      setLoaded({ id, archive: a });
     });
     return () => {
       cancelled = true;
+      // The rest of the app plays by the rules it had.
+      restoreRules(before);
     };
   }, [id]);
 

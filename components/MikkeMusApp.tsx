@@ -1110,7 +1110,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     // the bot's own throwNext loop above already stops early on a mid-turn finish.
     if (hitResult && pendingAmbiguousRef.current.length === 0 && isFinished(finalProgress[activePlayer])) {
       scoliaDartsRef.current = 0;
-      advanceTurn(finalProgress, finalPendingHits, dartIndex + 1);
+      advanceTurn(finalProgress, finalPendingHits, Math.min(DARTS_PER_TURN, Math.max(dartIndex + 1, finalPendingHits.length)));
       return;
     }
 
@@ -1139,7 +1139,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         return;
       }
       scoliaDartsRef.current = 0;
-      finishTurn(finalProgress, finalPendingHits, dartIndex + 1);
+      finishTurn(finalProgress, finalPendingHits, Math.min(DARTS_PER_TURN, Math.max(dartIndex + 1, finalPendingHits.length)));
     }
   }
 
@@ -2066,7 +2066,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
    */
   function flushMatchResults() {
     const pending = pendingResultRef.current;
-    if (!pending) return;
+    if (!pending || players.length === 0) return;
     pendingResultRef.current = null;
     // Written already (a flush on leaving the page, then Angre and a new win after a reload): once per match.
     if (resultWritten(matchIdRef.current)) return;
@@ -2405,6 +2405,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     // only a match that actually finishes counts as a "kamp", same principle
     // Bull-duell was built with from the start (see lib/bullDuel.ts).
     clearActiveMatch();
+    publishLiveMatch(null);
     setScreen("setup");
     setPlayers([]);
     // A tournament match (onMatchComplete set) has nowhere sensible to land on the generic,
@@ -2428,6 +2429,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   function goHome() {
     flushMatchResults();
     clearActiveMatch();
+    publishLiveMatch(null);
     if (onExitToHome) {
       onExitToHome();
       return;
@@ -2438,7 +2440,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
 
   function playAgain() {
     if (onMatchComplete && winner) {
-    flushMatchResults();
+      flushMatchResults();
+      clearActiveMatch();
       onMatchComplete({ winner, placements, stats: winnerStats });
       return;
     }
@@ -2470,6 +2473,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     setScreen("game");
     // The whole point of the button: the win was never accepted, so it is never recorded.
     pendingResultRef.current = null;
+    // Already written (the page was left and came back): the corrected match is another result, not the first again.
+    if (resultWritten(matchIdRef.current)) matchIdRef.current = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
     setWinner(null);
     setWinnerStats({});
     setWinnerLuck({});
