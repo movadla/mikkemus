@@ -92,8 +92,48 @@ export const betText = (bet: Pick<BetRow, "market" | "pick" | "detail">): string
  */
 export const fairPrice = (p: number): number => Math.max(1.01, Math.round(100 / Math.max(p, 0.01)) / 100);
 
-/** What the other side risks: the backer's profit if the pick wins, whole coins, rounded down. */
-export const liabilityFor = (stake: number, odds: number): number => Math.floor(stake * (odds - 1) + 1e-9);
+/** What the other side risks: the backer's profit if the pick wins, in whole coins, to the nearest. (It used to be
+ *  rounded down, which gave whoever took the other side up to a coin on every bet, and most on the small ones: a
+ *  stake of 2 at 1,99 risked 1 to win 2. Rounding to the nearest is not enough either, since the backer picks the
+ *  stake: see priceIsExact.) */
+export const liabilityFor = (stake: number, odds: number): number => Math.round(stake * (odds - 1) + 1e-9);
+
+/** How far from the fair risk a bet may be, as a share of the stake, because of whole coins. */
+export const MAX_PRICE_ERROR = 0.03;
+
+/** Whether the price survives being put in whole coins: the other side's risk is within MAX_PRICE_ERROR of the stake
+ *  from what the price says, and at least one coin. Whoever chooses the stake could otherwise choose one where the
+ *  rounding is in their favour; at 17 coins or more every price passes. */
+export function priceIsExact(stake: number, odds: number): boolean {
+  const risk = liabilityFor(stake, odds);
+  return risk >= 1 && Math.abs(risk - stake * (odds - 1)) <= MAX_PRICE_ERROR * stake + 1e-9;
+}
+
+/** The stakes nearest to `around` that make the price exact: what to suggest when it is not. */
+export function exactStakes(odds: number, around: number, count = 3): number[] {
+  const out: number[] = [];
+  for (let d = 0; d <= 400 && out.length < count; d++) {
+    for (const s of d === 0 ? [around] : [around - d, around + d]) if (s >= 1 && out.length < count && priceIsExact(s, odds)) out.push(s);
+  }
+  return out.sort((a, b) => a - b);
+}
+
+/** A match that is as good as decided is not offered: the price would be 1,02 or 50, and only someone who knows more than the model
+ *  would take either side. */
+export const MIN_WINNER_CHANCE = 0.02;
+
+/**
+ * The side a person plays on in a match, or null if they are not in it. People in the match may bet on their own
+ * side and no other, and not on the margin: they decide how it goes, and could otherwise bet against themselves
+ * and throw badly, or hold back their form to get a longer price, which the odds read from what they have thrown.
+ */
+export function participantSide(live: { players: string[]; teams?: Record<string, string[]> }, name: string): string | null {
+  const n = name.trim().toLowerCase();
+  const direct = live.players.find((p) => p.trim().toLowerCase() === n);
+  if (direct) return direct;
+  for (const [team, members] of Object.entries(live.teams ?? {})) if (members.some((m) => m.trim().toLowerCase() === n)) return team;
+  return null;
+}
 
 /** What the winner takes home: both stakes. */
 export const potFor = (stake: number, odds: number): number => stake + liabilityFor(stake, odds);

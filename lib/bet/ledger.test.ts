@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { MARGIN_BUCKETS, START_COINS, atStake, balances, betText, betWon, bucketByLabel, bucketChance, currentNight, fairPrice, lifetimeNet, liabilityFor, netByUser, potFor, settleUp, stakeProblem, type BetRow, type LedgerRow } from "./ledger";
+import { MAX_PRICE_ERROR, exactStakes, participantSide, priceIsExact, MARGIN_BUCKETS, START_COINS, atStake, balances, betText, betWon, bucketByLabel, bucketChance, currentNight, fairPrice, lifetimeNet, liabilityFor, netByUser, potFor, settleUp, stakeProblem, type BetRow, type LedgerRow } from "./ledger";
 
 const row = (user_id: string, delta: number, reason: LedgerRow["reason"] = "adjust", night = 1): LedgerRow => ({ id: `${user_id}${delta}${Math.random()}`, user_id, night, delta, reason, bet_id: null, created_at: "2026-10-17T12:00:00Z" });
 
 describe("the books", () => {
   it("the other side risks the profit of the backer, whole coins, rounded down", () => {
     expect(liabilityFor(100, 1.87)).toBe(87);
-    expect(liabilityFor(33, 1.5)).toBe(16); // 16,5 → 16
+    expect(liabilityFor(33, 1.5)).toBe(17); // 16,5 → 17, to the nearest
     expect(liabilityFor(10, 1.01)).toBe(0);
     expect(liabilityFor(1000, 2.1)).toBe(1100); // no floating-point shortfall
     expect(potFor(100, 1.87)).toBe(187);
@@ -120,5 +120,37 @@ describe("who owes whom", () => {
     const { after } = apply([{ id: "a", net: 100 }, { id: "b", net: 0 }, { id: "c", net: 0 }]);
     const values = Object.values(after);
     expect(Math.max(...values) - Math.min(...values)).toBeLessThanOrEqual(1);
+  });
+});
+
+describe("the price in whole coins", () => {
+  it("refuses a stake where the rounding is worth more than a few per cent", () => {
+    expect(priceIsExact(2, 1.99)).toBe(true); // risks 2, as the price says (it used to risk 1)
+    expect(priceIsExact(2, 1.4)).toBe(false); // 0,8 would be 1
+    expect(priceIsExact(3, 1.49)).toBe(false);
+    expect(priceIsExact(100, 1.87)).toBe(true);
+    expect(priceIsExact(10, 1.01)).toBe(false); // nothing to risk
+  });
+
+  it("lets every price through from 17 coins up, so that it is only the smallest bets that are held back", () => {
+    for (let odds = 1.05; odds < 20; odds += 0.01) {
+      const o = Math.round(odds * 100) / 100;
+      for (let s = 40; s <= 60; s++) expect(Math.abs(liabilityFor(s, o) - s * (o - 1))).toBeLessThanOrEqual(MAX_PRICE_ERROR * s + 1e-9);
+    }
+  });
+
+  it("suggests stakes that work, nearest first", () => {
+    const near = exactStakes(1.49, 3);
+    expect(near.length).toBe(3);
+    near.forEach((s) => expect(priceIsExact(s, 1.49)).toBe(true));
+  });
+});
+
+describe("who plays in the match", () => {
+  const live = { players: ["Vadla", "Moen & Hans"], teams: { "Moen & Hans": ["Moen", "Hans"] } };
+  it("finds a player by name, and a team member by the team", () => {
+    expect(participantSide(live, "vadla")).toBe("Vadla");
+    expect(participantSide(live, " Hans ")).toBe("Moen & Hans");
+    expect(participantSide(live, "Monge")).toBeNull();
   });
 });

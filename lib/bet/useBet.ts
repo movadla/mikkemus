@@ -9,7 +9,8 @@ import { currentNight } from "./ledger";
 
 const POLL_MS = 2500;
 /** The win screen has an Angre for a misread last dart; a result is only paid out once it has stood this long. */
-export const WINNER_SETTLE_MS = 8000;
+// Long enough for Angre on a win that was not one: a bet decided on the first winner stays decided.
+export const WINNER_SETTLE_MS = 20000;
 
 export type BetState = {
   books: Books | null;

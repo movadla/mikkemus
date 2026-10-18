@@ -1,6 +1,6 @@
 import type { LiveMatchState } from "../liveMatch";
 import { supabase } from "../supabaseClient";
-import { MIN_MARGIN_CHANCE, START_COINS, betWon, bucketByLabel, bucketChance, fairPrice, liabilityFor, potFor, stakeProblem, type BetRow, type BetUser, type LedgerRow, type MatchRow } from "./ledger";
+import { MIN_MARGIN_CHANCE, MIN_WINNER_CHANCE, START_COINS, betWon, bucketByLabel, bucketChance, exactStakes, fairPrice, liabilityFor, participantSide, potFor, priceIsExact, stakeProblem, type BetRow, type BetUser, type LedgerRow, type MatchRow } from "./ledger";
 
 export type Books = { users: BetUser[]; ledger: LedgerRow[]; bets: BetRow[]; matches: MatchRow[] };
 export type LoadResult = { ok: true; books: Books } | { ok: false; setupNeeded: boolean; message: string };
@@ -88,6 +88,12 @@ async function nightOfBet(betId: string, fallback: number): Promise<number> {
   return row.error || !row.data ? fallback : (row.data as { night: number }).night;
 }
 
+async function nameOfUser(id: string): Promise<string | null> {
+  if (!supabase) return null;
+  const row = await supabase.from("bet_users").select("name").eq("id", id).maybeSingle();
+  return row.error || !row.data ? null : (row.data as { name: string }).name;
+}
+
 async function balanceOf(userId: string, night: number): Promise<number | null> {
   if (!supabase) return null;
   const rows = await supabase.from("bet_ledger").select("delta").eq("user_id", userId).eq("night", night);
@@ -110,6 +116,12 @@ export async function offerBet(args: { userId: string; night: number; matchId: s
   const raw = live.odds!.find((o) => o.name === args.pick);
   if (!raw) return { ok: false, reason: "Fant ikke laget." };
   const margin = args.market === "margin";
+  // Whoever plays in the match backs their own side or nothing.
+  const who = await nameOfUser(args.userId);
+  const mine = who ? participantSide(live, who) : null;
+  if (mine && margin) return { ok: false, reason: "Du spiller selv i kampen, og kan ikke spille på antall streker." };
+  if (mine && args.pick !== mine) return { ok: false, reason: "Du spiller selv i kampen, og kan bare satse på din egen side." };
+  if (!margin && (raw.p < MIN_WINNER_CHANCE || raw.p > 1 - MIN_WINNER_CHANCE)) return { ok: false, reason: "Kampen er så godt som avgjort. Det tilbys ingen spill nå." };
   const bucket = margin ? bucketByLabel(args.detail ?? null) : undefined;
   if (margin && !bucket) return { ok: false, reason: "Fant ikke antall streker." };
   const chance = bucket ? bucketChance(raw.margin, bucket) : raw.p;
@@ -124,6 +136,11 @@ export async function offerBet(args: { userId: string; night: number; matchId: s
   if (problem !== "none") return { ok: false, reason: "Innsatsen må være et helt tall fra 1 og oppover." };
   const liability = liabilityFor(args.stake, side.odds);
   if (liability < 1) return { ok: false, reason: "Innsatsen er for liten til at noen kan ta imot. Legg inn litt mer." };
+  // The price in whole coins must be the price: a stake where the rounding goes someone's way is not accepted.
+  if (!priceIsExact(args.stake, side.odds)) {
+    const near = exactStakes(side.odds, args.stake);
+    return { ok: false, reason: `Prisen ${side.odds.toFixed(2).replace(".", ",")} går ikke opp i hele mynter med ${args.stake}.${near.length ? ` Prøv ${near.join(", ")}.` : ""}` };
+  }
 
   const inserted = await supabase
     .from("bet_bets")
@@ -161,6 +178,10 @@ export async function takeBet(args: { userId: string; night: number; betId: stri
   const live = await freshLive();
   if (!marketOpen(live) || !live) return { ok: false, reason: "Spillene er stengt akkurat nå. De åpner igjen mellom rundene." };
   if (live.matchId !== bet.match_id || live.turnToken !== bet.turn) return { ok: false, reason: STALE };
+  // Someone in the match does not take the other side of a bet on their own: that is a bet against themselves.
+  const who = await nameOfUser(args.userId);
+  const mine = who ? participantSide(live, who) : null;
+  if (mine && (bet.market === "margin" || bet.pick === mine)) return { ok: false, reason: "Du spiller selv i kampen, og kan ikke ta imot et spill mot din egen side." };
 
   const balance = await balanceOf(args.userId, args.night);
   if (balance === null) return { ok: false, reason: "Fikk ikke lest saldoen. Prøv igjen." };

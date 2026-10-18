@@ -714,9 +714,11 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
           : a,
       ),
     });
-    const snapshot = { screen, players, progress, activePlayer, turnToken, winner, botLevels, guestPlayers, variant, odds: odds ? odds.map((o) => ({ name: o.name, odds: o.odds, p: o.p, ...(o.margin ? { margin: o.margin.map((v) => Math.round(v * 10000) / 10000) } : {}) })) : undefined, oddsTurn, matchId: matchIdRef.current, dartsInTurn: dartsThisTurn, rewound: rewound !== null };
+    const snapshot = { screen, players, progress, activePlayer, turnToken, winner, botLevels, guestPlayers, variant, odds: odds ? odds.map((o) => ({ name: o.name, odds: o.odds, p: o.p, ...(o.margin ? { margin: o.margin.map((v) => Math.round(v * 10000) / 10000) } : {}) })) : undefined, oddsTurn, matchId: matchIdRef.current, dartsInTurn: dartsThisTurn, rewound: rewound !== null, teams: Object.fromEntries(Object.entries(teamRosters).map(([t, members]) => [t, members.map((m) => m.name)])) };
     if (publishTimerRef.current) clearTimeout(publishTimerRef.current);
-    publishTimerRef.current = setTimeout(() => publishLiveMatch(snapshot), LIVE_PUBLISH_DEBOUNCE_MS);
+    // Not held back once a dart is in the air: /bet closes its market on the first dart of a turn, and a snapshot that
+    // comes 700 ms late is a window in which someone at the board has seen the dart and still takes the old price.
+    publishTimerRef.current = setTimeout(() => publishLiveMatch(snapshot), dartsThisTurn > 0 ? 0 : LIVE_PUBLISH_DEBOUNCE_MS);
   }, [
     hydratedFromStorage,
     screen,

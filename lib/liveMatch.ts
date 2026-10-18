@@ -33,6 +33,8 @@ export type LiveMatchState = {
   dartsInTurn?: number;
   /** A turn has been taken back for a correction: the odds shown belong to the board before it. */
   rewound?: boolean;
+  /** The people in each team, by side name: who is in the match, for /bet, where they may only back their own side. */
+  teams?: Record<string, string[]>;
 };
 
 type LiveMatchRow = { id: string; state: LiveMatchState | null; updated_at: string };
