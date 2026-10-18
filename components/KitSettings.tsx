@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { setTeamKits, setTeamWalkOn, teamKitsOf, type PlayerRecord } from "@/lib/storage";
+import { setTeamKits, setWalkOn, teamKitsOf, type PlayerRecord } from "@/lib/storage";
 import { WALK_ON_LABELS, playWalkOnTune, primeAudio } from "@/lib/fanfare";
 import { KIT_COLOURS, PATTERNS, PATTERN_LABELS, colourName, defaultKits, makeKit, usesSecondColour, type Kit, type TeamKits } from "@/lib/teamKit";
 import { TeamKit } from "./TeamKit";
@@ -105,21 +105,14 @@ function KitEditor({ label, kit, onChange }: { label: string; kit: Kit; onChange
   );
 }
 
-/**
- * One team's walk-on tune and its two shirts, with the places to change them. A team's shirts are its own and the
- * same on every device (lib/playerRows.ts). Every tap is saved at once; «Standard» puts the two default shirts back.
- * It sits on the team's own page (Spillere).
- */
-export function TeamKitEditor({ team }: { team: PlayerRecord }) {
-  const kits = teamKitsOf(team);
-  const save = (next: TeamKits) => setTeamKits(team.name, next);
+/** The tune a player or a team walks on to when it becomes their turn (full party only). Every tap is saved, and the tune plays once. */
+export function WalkOnPicker({ record }: { record: PlayerRecord }) {
   return (
-    <div>
       <div className="mb-6">
         <p className="section-label mb-2">INNMARSJ</p>
         <div className="grid grid-cols-4 gap-2" role="radiogroup" aria-label="Innmarsj">
           {(["none", "fanfare", "rock", "disco"] as const).map((w) => {
-            const selected = (team.walkOn ?? "none") === w;
+            const selected = (record.walkOn ?? "none") === w;
             return (
               <button
                 key={w}
@@ -127,7 +120,7 @@ export function TeamKitEditor({ team }: { team: PlayerRecord }) {
                 role="radio"
                 aria-checked={selected}
                 onClick={() => {
-                  setTeamWalkOn(team.name, w);
+                  setWalkOn(record.name, w);
                   if (w !== "none") {
                     primeAudio();
                     playWalkOnTune(w);
@@ -142,6 +135,20 @@ export function TeamKitEditor({ team }: { team: PlayerRecord }) {
           })}
         </div>
       </div>
+  );
+}
+
+/**
+ * One team's walk-on tune and its two shirts, with the places to change them. A team's shirts are its own and the
+ * same on every device (lib/playerRows.ts). Every tap is saved at once; «Standard» puts the two default shirts back.
+ * It sits on the team's own page (Spillere).
+ */
+export function TeamKitEditor({ team }: { team: PlayerRecord }) {
+  const kits = teamKitsOf(team);
+  const save = (next: TeamKits) => setTeamKits(team.name, next);
+  return (
+    <div>
+      <WalkOnPicker record={team} />
       <KitEditor label="HJEMME" kit={kits.home} onChange={(home) => save({ ...kits, home })} />
       <KitEditor label="BORTE" kit={kits.away} onChange={(away) => save({ ...kits, away })} />
       <button

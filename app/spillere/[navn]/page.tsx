@@ -10,7 +10,7 @@ import { PhotoButton } from "@/components/PhotoButton";
 import { TEAM_NAME_MAX } from "@/lib/teamNames";
 import { ScreenTop } from "@/components/ScreenTop";
 import { SoundClipButton } from "@/components/SoundClipButton";
-import { TeamKitEditor } from "@/components/KitSettings";
+import { TeamKitEditor, WalkOnPicker } from "@/components/KitSettings";
 import { TrashIcon } from "@/components/icons";
 
 const RULES = { target: 3, ringChoice: true };
@@ -229,6 +229,11 @@ export default function PlayerDetailPage() {
           <div className="shadow-panel rounded-xl p-4 mb-4" style={{ background: "var(--color-surface)" }}>
             <p className="mb-4 section-label">LYDKLIPP</p>
             <SoundClipButton name={player.name} />
+          </div>
+        )}
+        {!isTeam && (
+          <div className="shadow-panel rounded-xl p-4 mb-4" style={{ background: "var(--color-surface)" }}>
+            <WalkOnPicker record={player} />
           </div>
         )}
 

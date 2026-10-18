@@ -274,10 +274,10 @@ export function teamKitsOf(record: PlayerRecord): TeamKits {
   return record.kits ?? defaultKits(record.members ?? []);
 }
 
-/** Chooses a team's walk-on tune — from the settings. */
-export function setTeamWalkOn(name: string, walkOn: WalkOnChoice) {
+/** Chooses the tune a player or a team walks on to, from their own page. */
+export function setWalkOn(name: string, walkOn: WalkOnChoice) {
   const k = key(name);
-  if (roster[k]?.kind !== "team") return;
+  if (!roster[k]) return;
   const record = { ...roster[k], walkOn };
   roster = { ...roster, [k]: record };
   notify();

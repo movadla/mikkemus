@@ -225,7 +225,7 @@ export function rowToRecord(row: PlayerRow): PlayerRecord {
     name: row.name,
     kind,
     ...(kind === "team" ? { members: Array.isArray(row.members) ? row.members.filter((m) => typeof m === "string") : [] } : {}),
-    ...(kind === "team" && (row.walk_on === "fanfare" || row.walk_on === "rock" || row.walk_on === "disco" || row.walk_on === "none") ? { walkOn: row.walk_on } : {}),
+    ...((row.walk_on === "fanfare" || row.walk_on === "rock" || row.walk_on === "disco" || row.walk_on === "none") ? { walkOn: row.walk_on } : {}),
     ...(kind === "team" && row.kits?.home && row.kits?.away ? { kits: { home: row.kits.home, away: row.kits.away } } : {}),
     photo: row.photo ?? undefined,
     sound: row.sound ?? undefined,
@@ -296,7 +296,7 @@ export function recordToRow(k: string, record: PlayerRecord): PlayerRow {
     double_hits: record.doubleHits,
     match_history: record.matchHistory,
     ...(record.bestRun ? { best_run: record.bestRun } : {}),
-    ...(record.kind === "team" && record.walkOn ? { walk_on: record.walkOn } : {}),
+    ...(record.walkOn ? { walk_on: record.walkOn } : {}),
     ...(record.kind === "team" && record.memberStats && Object.keys(record.memberStats).length > 0 ? { member_stats: record.memberStats } : {}),
     ...(typeof record.rating === "number" ? { rating: record.rating, rated_matches: record.ratedMatches ?? 0 } : {}),
     // Only a team touches the two newer columns — see PlayerRow.
