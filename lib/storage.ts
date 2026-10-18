@@ -6,7 +6,7 @@ import { defaultKits, type TeamKits } from "./teamKit";
 import { cleanTeamName } from "./teamNames";
 import type { WalkOnChoice } from "./fanfare";
 import { mergeMemberStats } from "./memberStats";
-import { initialRating, ratingChange } from "./rating";
+import { START_RATING, ratingChange, replayRatings } from "./rating";
 import {
   emptyRecord,
   recordKey as key,
@@ -142,6 +142,7 @@ function ensureInitialized() {
         next[row.id] = rowToRecord(row);
       });
       roster = next;
+      rebuildRatings();
       notify();
       writeRosterCache();
     });
@@ -443,8 +444,22 @@ export function recordMatchHistory(name: string, entry: MatchHistoryEntry) {
   upsertRow(k, record);
 }
 
+/** Works every rating out again from the matches on record, and writes those that differ from what is stored: a
+ *  rating always follows the matches, so a change of rules, or a match that came in late, corrects itself. */
+function rebuildRatings() {
+  const replayed = replayRatings(Object.values(roster));
+  for (const [k, record] of Object.entries(roster)) {
+    const r = replayed.get(record.name) ?? { rating: START_RATING, rated: 0 };
+    if (record.rating === r.rating && (record.ratedMatches ?? 0) === r.rated) continue;
+    if (record.rating === undefined && r.rated === 0) continue;
+    const next: PlayerRecord = { ...record, rating: r.rating, ratedMatches: r.rated };
+    roster = { ...roster, [k]: next };
+    upsertRow(k, next);
+  }
+}
+
 /** The rating a player or team has now: what the matches have made of it, or where it starts. */
-export const ratingOf = (record: PlayerRecord): number => record.rating ?? initialRating(record.name);
+export const ratingOf = (record: PlayerRecord): number => record.rating ?? START_RATING;
 
 /** What a win does to the two ratings, worked out from the records as they stand. Null if either side has no record. */
 export function previewRating(winner: string, loser: string): { winner: PlayerRecord; loser: PlayerRecord; winnerDelta: number; loserDelta: number } | null {

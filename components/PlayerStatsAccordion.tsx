@@ -107,7 +107,7 @@ function Panel({ player, all, source, onSource }: { player: PlayerRecord; all: P
               {source === "both" && <Tile label="RATING" value={String(ratingOf(player))} />}
             </div>
             <div className="flex items-center gap-3 mt-3" style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>
-              <span>Siste fem</span>
+              <span>Siste ti</span>
               <Dots results={single.results} />
               {single.results.length === 0 && <span>–</span>}
             </div>
@@ -130,7 +130,7 @@ function Panel({ player, all, source, onSource }: { player: PlayerRecord; all: P
             <Tile label="REKKE" value={source === "both" ? num(team.bestRun) : "–"} />
           </div>
           <div className="flex items-center gap-3 mt-3" style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>
-            <span>Siste fem</span>
+            <span>Siste ti</span>
             <Dots results={team.results} />
             {team.results.length === 0 && <span>–</span>}
           </div>

@@ -52,7 +52,7 @@ export type View = {
   mhd: number | null;
   mvd: number | null;
   dartsPerWin: number | null;
-  /** The last five results of these matches, oldest first. */
+  /** The last ten results of these matches, oldest first. */
   results: boolean[];
   /** Only for «Begge»: kept as totals, not per match. Null when a source is chosen. */
   bestRun: number | null;
@@ -80,7 +80,7 @@ function viewOf(entries: MatchHistoryEntry[], source: Source, totals: { matches:
     mhd: source === "manual" ? null : weightedDistance(sel, "mhd") ?? (both ? totals.mhd : null),
     mvd: source === "manual" ? null : weightedDistance(sel, "mvd") ?? (both ? totals.mvd : null),
     dartsPerWin: wonDarts.length > 0 ? wonDarts.reduce((s, m) => s + m.dartsUsed, 0) / wonDarts.length : both ? totals.dartsPerWin : null,
-    results: [...sel].sort((a, b) => a.date.localeCompare(b.date)).slice(-5).map((m) => m.won),
+    results: [...sel].sort((a, b) => a.date.localeCompare(b.date)).slice(-10).map((m) => m.won),
     bestRun: both ? totals.bestRun : null,
     rows: both ? rowsOf(totals.steps) : null,
     unsorted: both ? 0 : Math.max(0, totals.matches - entries.length),

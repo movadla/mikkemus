@@ -48,9 +48,9 @@ describe("by hand, by Scolia, or both", () => {
     expect(singleView(p, "both").matches).toBe(7);
   });
 
-  it("keeps the last five results, oldest first", () => {
-    const long = Array.from({ length: 7 }, (_, i) => match(i, i % 2 === 0, 50));
-    expect(singleView(rec("Per", long), "both").results).toEqual([true, false, true, false, true]);
+  it("keeps the last ten results, oldest first", () => {
+    const long = Array.from({ length: 12 }, (_, i) => match(i, i % 2 === 0, 50));
+    expect(singleView(rec("Per", long), "both").results).toEqual([true, false, true, false, true, false, true, false, true, false]);
   });
 
   it("copes with a player with no matches", () => {

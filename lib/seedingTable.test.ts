@@ -6,10 +6,10 @@ const RULES = { target: 3, ringChoice: true };
 const match = (i: number, won: boolean, hitPct: number, darts = 60, med: number | null = null) => ({ date: `2026-10-${String(i + 1).padStart(2, "0")}`, won, dartsUsed: darts, hitPct, med, mhd: med, mvd: med, ...(med !== null ? { throws: darts } : {}) });
 const rec = (name: string, matchHistory: ReturnType<typeof match>[] = [], over: object = {}) => ({ ...emptyRecord(name), matchesPlayed: matchHistory.length, matchesWon: matchHistory.filter((m) => m.won).length, matchHistory, ...over });
 
-describe("form over the last five matches", () => {
+describe("form over the last matches", () => {
   it("counts the last five, oldest first, and how the darts go against the usual", () => {
     const history = [match(0, false, 40), match(1, false, 40), match(2, true, 40), match(3, true, 60), match(4, true, 60), match(5, true, 60), match(6, false, 60)];
-    const f = formOf(rec("Per", history));
+    const f = formOf(rec("Per", history), 5);
     expect(f.n).toBe(5);
     expect(f.results).toEqual([true, true, true, true, false]);
     expect([f.wins, f.losses]).toEqual([4, 1]);

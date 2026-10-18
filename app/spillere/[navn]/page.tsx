@@ -10,6 +10,7 @@ import { PhotoButton } from "@/components/PhotoButton";
 import { TEAM_NAME_MAX } from "@/lib/teamNames";
 import { ScreenTop } from "@/components/ScreenTop";
 import { SoundClipButton } from "@/components/SoundClipButton";
+import { TeamKitEditor } from "@/components/KitSettings";
 import { TrashIcon } from "@/components/icons";
 
 const RULES = { target: 3, ringChoice: true };
@@ -18,14 +19,14 @@ const FOCUS_RING =
 const FORM_COLOR: Record<FormInfo["label"], string> = { "På gang": "var(--color-green)", Jevn: "var(--color-cream)", Svak: "var(--color-red)", "For få kamper": "var(--color-muted)" };
 
 function Dots({ results }: { results: boolean[] }) {
-  const pad = Math.max(0, 5 - results.length);
+  const pad = Math.max(0, 10 - results.length);
   return (
-    <span className="inline-flex gap-1.5" aria-label={results.map((r) => (r ? "seier" : "tap")).join(", ")}>
+    <span className="inline-flex gap-1" aria-label={results.map((r) => (r ? "seier" : "tap")).join(", ")}>
       {Array.from({ length: pad }).map((_, i) => (
-        <i key={`p${i}`} style={{ width: 14, height: 14, borderRadius: 999, border: "1px solid var(--color-border)", display: "block" }} />
+        <i key={`p${i}`} style={{ width: 12, height: 12, borderRadius: 999, border: "1px solid var(--color-border)", display: "block" }} />
       ))}
       {results.map((r, i) => (
-        <i key={i} style={{ width: 14, height: 14, borderRadius: 999, background: r ? "var(--color-green)" : "var(--color-red)", display: "block" }} />
+        <i key={i} style={{ width: 12, height: 12, borderRadius: 999, background: r ? "var(--color-green)" : "var(--color-red)", display: "block" }} />
       ))}
     </span>
   );
@@ -140,7 +141,7 @@ export default function PlayerDetailPage() {
 
           <div className="mt-4 rounded-lg p-3" style={{ background: "var(--color-cell)" }}>
             <p className="section-label mb-2" style={{ fontSize: "0.75rem" }}>
-              FORM · SISTE 5
+              FORM · SISTE 10
             </p>
             <div className="flex items-center justify-center gap-3">
               <Dots results={form.results} />
@@ -148,6 +149,14 @@ export default function PlayerDetailPage() {
             </div>
           </div>
         </div>
+
+        {/* The shirts and the tune a team walks on to. */}
+        {isTeam && (
+          <div className="shadow-panel rounded-xl p-4 mb-4" style={{ background: "var(--color-surface)" }}>
+            <p className="mb-4 section-label">DRAKTER OG INNMARSJ</p>
+            <TeamKitEditor team={player} />
+          </div>
+        )}
 
         {/* A team can be called anything — it does not have to be its players' names. */}
         {isTeam && (

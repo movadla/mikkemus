@@ -1,14 +1,13 @@
 "use client";
 
 import { FxPicker } from "./FxPicker";
-import { KitSettings } from "./KitSettings";
 import { useShowOdds, setShowOdds } from "@/lib/oddsSetting";
 import { QrCode } from "./QrCode";
 import { ScreenTop } from "./ScreenTop";
 
 /**
  * The settings, reached from the home screen: how much happens on screen and in the speakers
- * (this device's), and the teams' shirts (everyone's — they are on the team's record). The page
+ * (this device's). The teams' shirts and walk-on tunes are on each team's own page (Spillere). The page
  * for trying out the sounds (/lyd) is a tool for whoever is tuning them and is reached by its
  * address, not from here.
  */
@@ -37,8 +36,6 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
             ))}
           </div>
         </div>
-
-        <KitSettings />
 
         {/* The big-screen page, one scan away: no address to type on the TV. */}
         <div className="mb-6 text-center">

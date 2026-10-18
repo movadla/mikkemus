@@ -30,7 +30,7 @@ function Card({ title, hint, children }: { title: string; hint?: string; childre
 }
 
 function Dots({ results, size = 12 }: { results: boolean[]; size?: number }) {
-  const pad = Math.max(0, 5 - results.length);
+  const pad = Math.max(0, 10 - results.length);
   return (
     <span className="inline-flex gap-1" aria-label={results.map((r) => (r ? "seier" : "tap")).join(", ")}>
       {Array.from({ length: pad }).map((_, i) => (
@@ -96,7 +96,7 @@ function SeedingCard({ rows }: { rows: SeedRow[] }) {
               </span>
               <span className="text-right shrink-0">
                 <span className="block tabular font-display" style={{ color: "var(--color-teal)", fontSize: "1.2rem" }}>{pct(r.strength * 100)}</span>
-                <Dots results={r.form.results} size={9} />
+                <Dots results={r.form.results} size={8} />
               </span>
             </div>
             <div className="mt-2 rounded-full overflow-hidden" style={{ height: 5, background: "rgba(0,0,0,0.3)" }}>
@@ -115,7 +115,7 @@ function SeedingCard({ rows }: { rows: SeedRow[] }) {
 function FormCard({ rows }: { rows: SeedRow[] }) {
   const sorted = [...rows].sort((a, b) => (b.form.score ?? -1) - (a.form.score ?? -1));
   return (
-    <Card title="I FORM" hint="Siste fem kamper">
+    <Card title="I FORM" hint="Siste ti kamper">
       <div className="space-y-2">
         {sorted.map((r) => (
           <div key={r.name} className="rounded-xl px-3 py-2 flex items-center gap-3" style={{ background: "var(--color-cell)" }}>
@@ -132,7 +132,7 @@ function FormCard({ rows }: { rows: SeedRow[] }) {
                 {r.form.med5 !== null && r.form.medAll !== null && ` · MED ${mm(r.form.med5)}`}
               </span>
             </span>
-            <Dots results={r.form.results} />
+            <Dots results={r.form.results} size={10} />
             <span className="shrink-0 text-right" style={{ color: FORM_COLOR[r.form.label], fontSize: "0.8rem", fontWeight: 600, minWidth: "5.2rem" }}>{r.form.label}</span>
           </div>
         ))}

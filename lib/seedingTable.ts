@@ -7,11 +7,11 @@ import { learnPrior, skillNodes, SCENARIOS, type Evidence } from "./odds/skill";
 import { MED_TO_SIGMA } from "./odds/throwModel";
 import { raceWinProbs } from "./odds/winProb";
 import type { MatchHistoryEntry, PlayerRecord } from "./playerRows";
-import { initialRating } from "./rating";
+import { START_RATING } from "./rating";
 
-/** How a player has been doing over their last five matches, next to how they usually do. */
+/** How a player has been doing over their last ten matches, next to how they usually do. */
 export type FormInfo = {
-  /** Matches counted (up to five). */
+  /** Matches counted (up to ten). */
   n: number;
   wins: number;
   losses: number;
@@ -63,7 +63,7 @@ function weightedMed(entries: MatchHistoryEntry[]): number | null {
   return w === 0 ? null : m.reduce((s, e) => s + (e.med as number) * (e.throws ?? e.dartsUsed), 0) / w;
 }
 
-export function formOf(record: PlayerRecord, last = 5): FormInfo {
+export function formOf(record: PlayerRecord, last = 10): FormInfo {
   const all = entriesOf(record);
   const recent = all.slice(-last);
   const wins = recent.filter((m) => m.won).length;
@@ -138,7 +138,7 @@ export function buildSeedTable(records: PlayerRecord[], rules: RuleSet): SeedRow
       seedRank: x.seedRank,
       rank: i + 1,
       move: x.seedRank !== null ? x.seedRank - nowAmongSeeded : null,
-      rating: x.r.rating ?? initialRating(x.r.name),
+      rating: x.r.rating ?? START_RATING,
       ratedMatches: x.r.ratedMatches ?? 0,
       form: formOf(x.r),
       matches: x.r.matchesPlayed,
