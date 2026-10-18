@@ -373,7 +373,7 @@ export function WinnerScreen({
                 >
                   <span role="cell" className="truncate">{p}</span>
                   <span role="cell" className="tabular text-right font-display" style={{ fontSize: "1.4rem" }}>
-                    {treffPct(stats[p])}%
+                    {treffPct(stats[p])} %
                   </span>
                   <span role="cell" className="tabular text-right font-display" style={{ fontSize: "1.4rem" }}>
                     {totalDarts(stats[p])}
@@ -419,7 +419,7 @@ export function WinnerScreen({
                       >
                         <span role="cell" className="truncate text-left">{r.name}</span>
                         <span role="cell" className="tabular text-right font-display" style={{ fontSize: "1.2rem" }}>
-                          {r.hitPct}%
+                          {r.hitPct} %
                         </span>
                         <span role="cell" className="tabular text-right font-display" style={{ fontSize: "1.2rem" }}>
                           {r.darts}

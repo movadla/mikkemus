@@ -32,6 +32,17 @@ export type Prior = { med: number; sdLog: number };
 export const DEFAULT_PRIOR: Prior = { med: PRIOR_MED, sdLog: PRIOR_SD_LOG };
 export const SCENARIOS = 7;
 
+/**
+ * Which of a person's skill nodes a team member plays in scenario `sc`: a different one for each member, so that
+ * "everyone is having a good day" is not the only case. The steps are odd numbers, and 7 is prime, so every member
+ * runs through all seven nodes; the member where the step would be a multiple of 7 (the fourth, the eleventh) gets
+ * the next number instead, or it would sit on the best node in every scenario.
+ */
+export function nodeIndexFor(sc: number, member: number, length: number): number {
+  const step = (2 * member + 1) % SCENARIOS === 0 ? 2 * member + 2 : 2 * member + 1;
+  return (sc * step) % length;
+}
+
 const GRID = Array.from({ length: 56 }, (_, i) => Math.exp(Math.log(9) + (i / 55) * (Math.log(75) - Math.log(9))));
 
 /** ln of the Rayleigh sample mean's density: the mean of n distances is about normal, with the

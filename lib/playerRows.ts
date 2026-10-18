@@ -36,7 +36,12 @@ export type MatchHistoryEntry = {
   steps?: Partial<Record<Step, [number, number]>>;
   won: boolean;
   dartsUsed: number;
+  /** The share of crosses among crosses and misses, 0–100, as every screen reads «treff». Matches from before
+   *  `cpd` existed hold crosses per dart here (use shownHitPct). */
   hitPct: number;
+  /** Crosses per dart, in percent: what the odds read the hit rate as (a triple is three crosses from one dart,
+   *  so it can pass 100). Absent on older matches, where hitPct held it. */
+  cpd?: number;
   /** This match's own MED/MHD/MVD — null if Scolia didn't detect any throws this match (manual-only play). */
   med: number | null;
   mhd: number | null;
@@ -303,3 +308,22 @@ export function recordToRow(k: string, record: PlayerRecord): PlayerRow {
     ...(record.kind === "team" ? { kind: "team", members: record.members ?? [], kits: record.kits ?? null } : record.kits ? { kits: record.kits } : {}),
   };
 }
+
+/** A match's hit share for display, 0–100. Matches from before `cpd` kept crosses per dart in hitPct, which can pass
+ *  100: where the rows are kept, it is worked out from them, and otherwise held to 100. */
+export function shownHitPct(h: MatchHistoryEntry): number {
+  if (h.cpd !== undefined) return h.hitPct;
+  if (h.steps) {
+    let hits = 0;
+    let misses = 0;
+    for (const v of Object.values(h.steps)) {
+      hits += v[0];
+      misses += v[1];
+    }
+    if (hits + misses > 0) return Math.round((hits / (hits + misses)) * 100);
+  }
+  return Math.min(100, h.hitPct);
+}
+
+/** Crosses per dart for a match, in percent: what the odds are built on. */
+export const crossesPerDartPct = (h: MatchHistoryEntry): number => h.cpd ?? h.hitPct;

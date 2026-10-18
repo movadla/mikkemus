@@ -11,7 +11,7 @@ export type ThrowerStats = {
   darts: number;
   hits: number;
   misses: number;
-  /** Crosses per dart, 0–100. */
+  /** Crosses as a share of crosses and misses, 0–100: the figure every screen means by «treff». */
   hitPct: number;
   /** Turns where every dart counted — "tre tellende". */
   perfectTurns: number;
@@ -67,6 +67,22 @@ export function throwerStats(turns: readonly (TurnResult | undefined)[], fallbac
     bestRun: row.bestRun,
     bestTurn: row.bestTurn,
   }));
+}
+
+/**
+ * The longest run of counting darts one thrower has had over a log, in darts: three for each turn where all three
+ * counted, and on top of that the counting darts a turn ended on when Scolia saw its order (TurnResult.tail), which
+ * start the next run. The same reckoning as currentRun, but over the whole match instead of back from the latest turn.
+ */
+export function longestRun(turns: readonly (TurnResult | undefined)[], thrower: string, only?: string): number {
+  const mine = turns.filter((t): t is TurnResult => !!t && (only ? true : (t.thrower ?? thrower) === thrower));
+  let run = 0;
+  let best = 0;
+  for (const t of mine) {
+    run = perfect(t) ? run + DARTS_PER_TURN : Math.min(DARTS_PER_TURN - 1, t.tail ?? 0);
+    best = Math.max(best, run);
+  }
+  return best;
 }
 
 /**

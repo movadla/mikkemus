@@ -69,16 +69,43 @@ async function withRetry(run: () => PromiseLike<{ error: { message: string } | n
   }
 }
 
+/** The writes of one row, one at a time and in the order they were asked for. A finished match writes the same row
+ *  half a dozen times, each with its own retries, and without this an older write that was held up could arrive after
+ *  a newer one and be what the database ends on. */
+const writeChains = new Map<string, Promise<void>>();
+function inOrder(k: string, task: () => Promise<void>): Promise<void> {
+  const next = (writeChains.get(k) ?? Promise.resolve()).then(task, task);
+  writeChains.set(k, next);
+  void next.finally(() => {
+    if (writeChains.get(k) === next) writeChains.delete(k);
+  });
+  return next;
+}
+
 async function upsertRow(k: string, record: PlayerRecord) {
   if (!supabase) return;
   const client = supabase;
-  await withRetry(() => client.from("players").upsert(recordToRow(k, record)), "Kunne ikke lagre spiller i Supabase:");
+  await inOrder(k, async () => {
+    // What the record is by the time its turn comes, not what it was when asked: a later change is in it already.
+    // A record deleted in the meantime is not written back.
+    const latest = roster[k];
+    if (!latest && record) return;
+    await withRetry(() => client.from("players").upsert(recordToRow(k, latest)), "Kunne ikke lagre spiller i Supabase:");
+  });
+}
+
+/** Writes only the rating of a row: a recalculation must not carry a copy of the rest of the row that another
+ *  device may have changed since it was fetched. */
+async function updateRating(k: string, rating: number, rated: number) {
+  if (!supabase) return;
+  const client = supabase;
+  await inOrder(k, () => withRetry(() => client.from("players").update({ rating, rated_matches: rated }).eq("id", k), "Kunne ikke lagre rating i Supabase:"));
 }
 
 async function deleteRow(k: string) {
   if (!supabase) return;
   const client = supabase;
-  await withRetry(() => client.from("players").delete().eq("id", k), "Kunne ikke slette spiller i Supabase:");
+  await inOrder(k, () => withRetry(() => client.from("players").delete().eq("id", k), "Kunne ikke slette spiller i Supabase:"));
 }
 
 let initialized = false;
@@ -454,7 +481,7 @@ function rebuildRatings() {
     if (record.rating === undefined && r.rated === 0) continue;
     const next: PlayerRecord = { ...record, rating: r.rating, ratedMatches: r.rated };
     roster = { ...roster, [k]: next };
-    upsertRow(k, next);
+    void updateRating(k, r.rating, r.rated);
   }
 }
 

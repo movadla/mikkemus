@@ -2,7 +2,7 @@ import { fairPrice } from "./bet/ledger";
 import { emptyProgress } from "./game";
 import { finishCdf, stateOf } from "./odds/forward";
 import { modelFor, type RuleSet } from "./odds/model";
-import { SCENARIOS } from "./odds/skill";
+import { nodeIndexFor, SCENARIOS } from "./odds/skill";
 import { raceWinProbs } from "./odds/winProb";
 
 /**
@@ -26,7 +26,7 @@ export type Entrant = {
 export function entrantFromSigmas(name: string, members: number[][], rules: RuleSet): Entrant {
   const cdfs: Float64Array[] = [];
   for (let sc = 0; sc < SCENARIOS; sc++) {
-    const models = members.map((sigmas, idx) => modelFor(rules, sigmas[(sc * (2 * idx + 1)) % sigmas.length]));
+    const models = members.map((sigmas, idx) => modelFor(rules, sigmas[nodeIndexFor(sc, idx, sigmas.length)]));
     cdfs.push(finishCdf({ start: stateOf(models[0], emptyProgress()), models }));
   }
   return { name, cdfs };

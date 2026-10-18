@@ -9,13 +9,13 @@ const rec = (name: string, matchHistory: ReturnType<typeof match>[] = [], over: 
 describe("form over the last matches", () => {
   it("counts the last five, oldest first, and how the darts go against the usual", () => {
     const history = [match(0, false, 40), match(1, false, 40), match(2, true, 40), match(3, true, 60), match(4, true, 60), match(5, true, 60), match(6, false, 60)];
-    const f = formOf(rec("Per", history), 5);
-    expect(f.n).toBe(5);
-    expect(f.results).toEqual([true, true, true, true, false]);
-    expect([f.wins, f.losses]).toEqual([4, 1]);
-    expect(f.hit5).toBeCloseTo(56, 6); // 40, 60, 60, 60, 60
-    expect(f.hitAll).toBeCloseTo((40 * 3 + 60 * 4) / 7, 6);
-    expect(f.dHit!).toBeGreaterThan(0);
+    const f = formOf(rec("Per", history), 4);
+    expect(f.n).toBe(4);
+    expect(f.results).toEqual([true, true, true, false]);
+    expect([f.wins, f.losses]).toEqual([3, 1]);
+    expect(f.hit5).toBeCloseTo(60, 6); // the last four: 60, 60, 60, 60
+    expect(f.hitAll).toBeCloseTo(40, 6); // the three before them
+    expect(f.dHit!).toBeCloseTo(20, 6);
     expect(f.label).toBe("På gang");
   });
 

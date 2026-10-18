@@ -54,6 +54,11 @@ export async function addUser(name: string, night: number): Promise<Result<{ use
 
 export async function removeUser(id: string): Promise<Result> {
   if (!supabase) return { ok: false, reason: "Ingen kobling til databasen." };
+  // Deleting a person deletes their bets, and with them the other side's win or loss: a person who has played
+  // stays in the books.
+  const played = await supabase.from("bet_bets").select("id").or(`backer_id.eq.${id},layer_id.eq.${id}`).limit(1);
+  if (played.error) return { ok: false, reason: played.error.message };
+  if ((played.data ?? []).length > 0) return { ok: false, reason: "Har spilt, og blir stående i regnskapet. Bare de som ikke har spilt kan slettes." };
   const { error } = await supabase.from("bet_users").delete().eq("id", id);
   return error ? { ok: false, reason: error.message } : { ok: true };
 }
@@ -72,7 +77,15 @@ async function freshLive(): Promise<LiveMatchState | null> {
 
 /** Whether bets can be made on the match right now: between turns, on the odds of this turn. */
 export function marketOpen(live: LiveMatchState | null): boolean {
-  return !!live && live.screen === "game" && !live.winner && !!live.matchId && !!live.odds && live.odds.length > 0 && live.oddsTurn === live.turnToken && live.dartsInTurn === 0;
+  return !!live && live.screen === "game" && !live.winner && !!live.matchId && !!live.odds && live.odds.length === 2 && live.oddsTurn === live.turnToken && live.dartsInTurn === 0 && !live.rewound;
+}
+
+/** The night a bet belongs to: where its stake was booked. A new night can start while a bet is open, and the stake
+ *  must come back, or be paid out, in the night it left. */
+async function nightOfBet(betId: string, fallback: number): Promise<number> {
+  if (!supabase) return fallback;
+  const row = await supabase.from("bet_ledger").select("night").eq("bet_id", betId).eq("reason", "stake").limit(1).maybeSingle();
+  return row.error || !row.data ? fallback : (row.data as { night: number }).night;
 }
 
 async function balanceOf(userId: string, night: number): Promise<number | null> {
@@ -124,6 +137,12 @@ export async function offerBet(args: { userId: string; night: number; matchId: s
     await supabase.from("bet_bets").delete().eq("id", bet.id);
     return { ok: false, reason: took.error.message };
   }
+  // Two offers sent at once can both have passed the check above: read the balance again, now with this stake in it.
+  const after = await balanceOf(args.userId, args.night);
+  if (after !== null && after < 0) {
+    await supabase.from("bet_bets").delete().eq("id", bet.id);
+    return { ok: false, reason: `Du har bare ${balance} mynter.` };
+  }
   return { ok: true, bet };
 }
 
@@ -155,6 +174,13 @@ export async function takeBet(args: { userId: string; night: number; betId: stri
     await supabase.from("bet_bets").update({ layer_id: null, status: "open" }).eq("id", bet.id);
     return { ok: false, reason: took.error.message };
   }
+  // Two bets taken at once can both have passed the check above: read the balance again, now with this one in it.
+  const after = await balanceOf(args.userId, args.night);
+  if (after !== null && after < 0) {
+    await supabase.from("bet_ledger").delete().eq("bet_id", bet.id).eq("reason", "lay").eq("user_id", args.userId);
+    await supabase.from("bet_bets").update({ layer_id: null, status: "open" }).eq("id", bet.id);
+    return { ok: false, reason: `Du må ha ${bet.liability} mynter for å ta imot, og har ${balance}.` };
+  }
   return { ok: true, bet: { ...bet, layer_id: args.userId, status: "matched" } };
 }
 
@@ -163,7 +189,12 @@ export async function withdrawBet(bet: BetRow, night: number, status: "cancelled
   if (!supabase) return false;
   const changed = await supabase.from("bet_bets").update({ status, settled_at: new Date().toISOString() }).eq("id", bet.id).eq("status", "open").select("id");
   if (changed.error || !changed.data || changed.data.length === 0) return false;
-  await supabase.from("bet_ledger").insert({ user_id: bet.backer_id, night, delta: bet.stake, reason: "refund", bet_id: bet.id });
+  const refund = await supabase.from("bet_ledger").insert({ user_id: bet.backer_id, night: await nightOfBet(bet.id, night), delta: bet.stake, reason: "refund", bet_id: bet.id });
+  if (refund.error) {
+    // The stake did not come back: put the bet back on the table, so that the next attempt tries again.
+    await supabase.from("bet_bets").update({ status: "open", settled_at: null }).eq("id", bet.id).eq("status", status);
+    return false;
+  }
   return true;
 }
 
@@ -197,9 +228,6 @@ export async function settleMatch(matchId: string, winner: string | null, night:
     }
     const right = winner === null ? null : betWon(bet, winner, margin);
     const status = right === null ? "void" : right ? "won" : "lost";
-    const changed = await supabase.from("bet_bets").update({ status, settled_at: new Date().toISOString() }).eq("id", bet.id).eq("status", "matched").select("id");
-    if (changed.error || !changed.data || changed.data.length === 0) continue; // someone else decided it
-    decided++;
     const entries: { user_id: string; delta: number; reason: string }[] = [];
     if (status === "void") {
       entries.push({ user_id: bet.backer_id, delta: bet.stake, reason: "refund" });
@@ -208,7 +236,16 @@ export async function settleMatch(matchId: string, winner: string | null, night:
       const winnerId = status === "won" ? bet.backer_id : bet.layer_id;
       if (winnerId) entries.push({ user_id: winnerId, delta: bet.stake + bet.liability, reason: "payout" });
     }
-    if (entries.length) await supabase.from("bet_ledger").insert(entries.map((e) => ({ ...e, night, bet_id: bet.id })));
+    // The ledger first, then the status: if the connection goes in between, the bet is still «matched», and the next
+    // attempt finds the rows there already (ignored as duplicates) and only changes the status.
+    if (entries.length) {
+      const betNight = await nightOfBet(bet.id, night);
+      const written = await supabase.from("bet_ledger").upsert(entries.map((e) => ({ ...e, night: betNight, bet_id: bet.id })), { onConflict: "bet_id,reason,user_id", ignoreDuplicates: true });
+      if (written.error) continue;
+    }
+    const changed = await supabase.from("bet_bets").update({ status, settled_at: new Date().toISOString() }).eq("id", bet.id).eq("status", "matched").select("id");
+    if (changed.error || !changed.data || changed.data.length === 0) continue; // someone else decided it
+    decided++;
   }
   const done = { winner, status: winner === null ? "void" : "done" };
   // The margin column comes with margin bets; a database without it still records who won.
@@ -221,7 +258,12 @@ export async function settleMatch(matchId: string, winner: string | null, night:
 export async function newNight(users: BetUser[], night: number): Promise<Result<{ night: number }>> {
   if (!supabase) return { ok: false, reason: "Ingen kobling til databasen." };
   const next = night + 1;
-  const { error } = await supabase.from("bet_ledger").insert(users.map((u) => ({ user_id: u.id, night: next, delta: START_COINS, reason: "start" })));
+  // Someone else may have started it a moment ago (two phones, or a double tap): nobody gets the coins twice.
+  const started = await supabase.from("bet_ledger").select("user_id").eq("night", next).eq("reason", "start");
+  const already = new Set(((started.data ?? []) as { user_id: string }[]).map((r) => r.user_id));
+  const fresh = users.filter((u) => !already.has(u.id));
+  if (fresh.length === 0) return { ok: true, night: next };
+  const { error } = await supabase.from("bet_ledger").insert(fresh.map((u) => ({ user_id: u.id, night: next, delta: START_COINS, reason: "start" })));
   return error ? { ok: false, reason: error.message } : { ok: true, night: next };
 }
 

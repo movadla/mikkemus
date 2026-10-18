@@ -3,7 +3,7 @@ import { finishCdf, finishDetail, marginProbs, stateOf } from "./forward";
 import { modelFor, type RuleSet } from "./model";
 import { priceOutcomes, type Priced } from "./price";
 import type { SkillNode } from "./skill";
-import { SCENARIOS } from "./skill";
+import { nodeIndexFor, SCENARIOS } from "./skill";
 import { raceWinProbs } from "./winProb";
 
 /** Someone who throws for a side: their name and what is known about how well they throw. */
@@ -63,16 +63,16 @@ export function computeOdds(input: OddsInput): SideOdds[] {
         const idx = (side.nextMember + i) % side.members.length;
         const m = side.members[idx];
         // A different node per member, so the two are not always good or bad together (7 is prime).
-        const node = m.skill[(sc * (2 * idx + 1)) % m.skill.length];
+        const node = m.skill[nodeIndexFor(sc, idx, m.skill.length)];
         return modelFor(rules, node.sigma);
       });
       const start = stateOf(models[0], side.progress);
       if (withMargin) {
-        const d = finishDetail({ start, models, dartsFirstTurn: input.dartsLeft ?? 3 });
+        const d = finishDetail({ start, models, dartsFirstTurn: si === 0 ? input.dartsLeft ?? 3 : 3 });
         marginK = d.K;
         rems[si].push(d.rem);
         list.push(d.cdf);
-      } else list.push(finishCdf({ start, models, dartsFirstTurn: input.dartsLeft ?? 3 }));
+      } else list.push(finishCdf({ start, models, dartsFirstTurn: si === 0 ? input.dartsLeft ?? 3 : 3 }));
     }
     return list;
   });

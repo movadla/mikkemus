@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { buildMatchLog, type MatchRow } from "@/lib/matchLog";
 import { listArchivedIds } from "@/lib/matchArchive";
 import { useRoster } from "@/lib/storage";
+import { shownHitPct } from "@/lib/playerRows";
 
 const PAGE_SIZE = 10;
 const FOCUS_RING = "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
@@ -33,7 +34,7 @@ function Card({ m, archived }: { m: MatchRow; archived: boolean }) {
             {s.entry ? (
               <dl className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 tabular" style={{ fontSize: "0.8rem" }}>
                 <dt style={{ color: "var(--color-muted)" }}>Treff</dt>
-                <dd className="text-right" style={{ color: "var(--color-teal-strong)", fontWeight: 700 }}>{Math.round(s.entry.hitPct)} %</dd>
+                <dd className="text-right" style={{ color: "var(--color-teal-strong)", fontWeight: 700 }}>{Math.round(shownHitPct(s.entry))} %</dd>
                 <dt style={{ color: "var(--color-muted)" }}>Piler</dt>
                 <dd className="text-right" style={{ color: "var(--color-cream)" }}>{s.entry.dartsUsed}</dd>
                 {s.entry.med !== null && (

@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { PROVISIONAL_MATCHES } from "@/lib/rating";
+import { expectedScore, PROVISIONAL_MATCHES } from "@/lib/rating";
 import { previewRating, ratingOf, useRoster } from "@/lib/storage";
 
 const ROW_H = 40;
 const MAX_ROWS = 8;
+/** A win is called an upset when the winner had less than this chance on the ratings beforehand. */
+const UPSET_BELOW = 0.35;
 
 /**
  * The rating table after a match between two sides: both start where they stood, then the winner's row
@@ -102,7 +104,7 @@ export function RatingCard({ players, winner }: { players: string[]; winner: str
       {winnerRow && loserRow && (
         <p className="mt-3" style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>
           {winnerRow.name} +{winnerRow.delta}, {loserRow.name} −{Math.abs(loserRow.delta)}
-          {winnerRow.delta >= 20 ? ". Uventet seier, stor gevinst" : ""}. * Foreløpig rating, den flytter seg raskere de første {PROVISIONAL_MATCHES} kampene.
+          {expectedScore(winnerRow.before, loserRow.before) < UPSET_BELOW ? ". Uventet seier, stor gevinst" : ""}. * Foreløpig rating, den flytter seg raskere de første {PROVISIONAL_MATCHES} kampene.
         </p>
       )}
     </div>

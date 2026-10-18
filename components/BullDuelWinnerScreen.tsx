@@ -158,7 +158,7 @@ export function BullDuelWinnerScreen({
                       {stats.points}
                     </span>
                     <span className="tabular text-right" style={{ color: "var(--color-cream)" }}>
-                      {pct === null ? "–" : `${pct}%`}
+                      {pct === null ? "–" : `${pct} %`}
                     </span>
                     <span className="tabular text-right" style={{ color: luck === null ? "var(--color-muted)" : "var(--color-gold-strong)" }}>
                       {luck === null ? "–" : formatLuck(luck)}

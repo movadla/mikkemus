@@ -1,7 +1,7 @@
 import type { BotLevel } from "../botLevels";
 import { sigmaForLevel } from "../botStrategy";
 import type { PlayerProgress } from "../game";
-import type { PlayerRecord } from "../playerRows";
+import { crossesPerDartPct, type PlayerRecord } from "../playerRows";
 import type { OddsInput, OddsMember, OddsSide } from "./index";
 import { HIT_WEIGHT, medFromCrossRate } from "./hitRate";
 import type { RuleSet } from "./model";
@@ -9,6 +9,10 @@ import { seededPrior } from "./seeding";
 import { addEvidence, knownSkill, learnPrior, skillNodes, weighEvidence, SCENARIOS, type Evidence, type Prior } from "./skill";
 
 const same = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
+
+/** Only matches played by the standard rules are kept in the records (see countsForStats), so their hit rates are
+ *  read through those rules, whichever rules the match being priced is played by. */
+const STANDARD_RULES: RuleSet = { target: 3, ringChoice: true };
 
 /**
  * What the records say about how well someone throws: the mean distance of their darts from the
@@ -29,7 +33,7 @@ export function evidenceFor(name: string, roster: PlayerRecord[], rules?: RuleSe
   let countedSum = 0;
   own?.matchHistory.forEach((h) => {
     if (h.med === null) {
-      if (rules && h.dartsUsed > 0) list.push({ date: h.date, n: h.dartsUsed * HIT_WEIGHT, meanR: medFromCrossRate(Math.max(0, h.hitPct) / 100, rules) });
+      if (rules && h.dartsUsed > 0) list.push({ date: h.date, n: h.dartsUsed * HIT_WEIGHT, meanR: medFromCrossRate(Math.max(0, crossesPerDartPct(h)) / 100, STANDARD_RULES) });
       return;
     }
     const n = h.throws ?? h.dartsUsed;
@@ -52,7 +56,7 @@ export function evidenceFor(name: string, roster: PlayerRecord[], rules?: RuleSe
         const found = team.memberStats && Object.entries(team.memberStats).find(([k]) => same(k, name));
         const s = found?.[1];
         const unmeasured = s ? s.darts - s.throws : 0;
-        if (s && s.darts > 0 && unmeasured >= 1) list.push({ date: "", n: unmeasured * HIT_WEIGHT, meanR: medFromCrossRate(s.hits / s.darts, rules) });
+        if (s && s.darts > 0 && unmeasured >= 1) list.push({ date: "", n: unmeasured * HIT_WEIGHT, meanR: medFromCrossRate(s.hits / s.darts, STANDARD_RULES) });
       });
   }
   list.sort((a, b) => a.date.localeCompare(b.date));

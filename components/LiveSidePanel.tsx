@@ -84,7 +84,7 @@ export function LiveSidePanel({
 
       <div className="grid grid-cols-3 gap-1 w-full">
         <Stat label="Piler" value={String(darts)} />
-        <Stat label="Treff" value={hitPct === null ? "–" : `${hitPct}%`} />
+        <Stat label="Treff" value={hitPct === null ? "–" : `${hitPct} %`} />
         <Stat
           label="xH"
           value={expected === null ? "–" : actual === null ? expected.toFixed(1) : `${expected.toFixed(1)}/${actual}`}

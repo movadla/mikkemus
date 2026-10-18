@@ -40,7 +40,7 @@ function RecordCard({ p }: { p: PlayerRecord }) {
         </div>
         <div className="text-right tabular shrink-0">
           <p style={{ color: "var(--color-teal)", fontSize: "1.3rem", fontWeight: 700 }}>
-            {averagePct(p.overall)}%
+            {p.overall.hits + p.overall.misses === 0 ? "–" : `${averagePct(p.overall)} %`}
           </p>
           <p className="section-label" style={{ fontSize: "0.75rem" }}>TOTALT</p>
         </div>
@@ -54,7 +54,7 @@ function RecordCard({ p }: { p: PlayerRecord }) {
           >
             <p style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>{STEP_LABELS[s]}</p>
             <p style={{ color: "var(--color-cream)", fontSize: "0.75rem", fontWeight: 600 }}>
-              {averagePct(p.steps[s])}%
+              {p.steps[s].hits + p.steps[s].misses === 0 ? "–" : `${averagePct(p.steps[s])} %`}
             </p>
           </div>
         ))}
@@ -83,7 +83,7 @@ function RecordCard({ p }: { p: PlayerRecord }) {
         </div>
       )}
       <div className="mt-4 pt-4 flex items-center justify-between" style={{ borderTop: "1px solid var(--color-border)" }}>
-        <span className="section-label" style={{ fontSize: "0.75rem" }}>SNITT PILER PR RUNDE</span>
+        <span className="section-label" style={{ fontSize: "0.75rem" }}>PILER PER SEIER</span>
         <span className="tabular" style={{ color: "var(--color-teal)", fontWeight: 700 }}>
           {averageDartsPerWin(p) ?? "–"}
         </span>
@@ -97,7 +97,7 @@ function RecordCard({ p }: { p: PlayerRecord }) {
           <div key={label}>
             <p style={{ color: "var(--color-muted)", fontSize: "0.75rem", letterSpacing: "0.05em" }}>{label}</p>
             <p className="tabular" style={{ color: "var(--color-cream)", fontSize: "0.8rem", fontWeight: 600 }}>
-              {value === null ? "–" : `${Math.round(value)}mm`}
+              {value === null ? "–" : `${Math.round(value)} mm`}
             </p>
           </div>
         ))}

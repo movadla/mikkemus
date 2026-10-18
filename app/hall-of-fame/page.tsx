@@ -10,6 +10,9 @@ import { ScreenTop } from "@/components/ScreenTop";
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
 
+/** Matches a player needs to be ranked among the rest. */
+const MIN_MATCHES = 5;
+
 function winPct(p: PlayerRecord): number {
   return p.matchesPlayed === 0 ? 0 : Math.round((p.matchesWon / p.matchesPlayed) * 100);
 }
@@ -38,7 +41,8 @@ export default function HallOfFamePage() {
   // nights are in the list below like anyone else's.
   const ranked = roster
     .filter((p) => p.kind !== "team" && p.matchesPlayed > 0)
-    .sort((a, b) => winPct(b) - winPct(a) || b.matchesWon - a.matchesWon || b.matchesPlayed - a.matchesPlayed);
+    // Those with too few matches to say anything come after the rest, not first on one lucky win.
+    .sort((a, b) => Number(b.matchesPlayed >= MIN_MATCHES) - Number(a.matchesPlayed >= MIN_MATCHES) || winPct(b) - winPct(a) || b.matchesWon - a.matchesWon || b.matchesPlayed - a.matchesPlayed);
   const nights = groupNights(roster);
 
   return (
@@ -91,7 +95,7 @@ export default function HallOfFamePage() {
                       </p>
                     </div>
                     <span className="tabular shrink-0" style={{ color: "var(--color-teal)", fontSize: "1.1rem", fontWeight: 700 }}>
-                      {winPct(p)}%
+                      {winPct(p)} %
                     </span>
                   </div>
                 );

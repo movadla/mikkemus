@@ -1,5 +1,5 @@
 import { buildMatchLog } from "./matchLog";
-import type { PlayerRecord } from "./playerRows";
+import { shownHitPct, type PlayerRecord } from "./playerRows";
 
 export type RecordHolder = { name: string; value: number; /** Shown under the name, e.g. the date or the opponent. */ note?: string };
 export type RecordList = {
@@ -13,7 +13,13 @@ export type RecordList = {
 
 const MIN_DARTS_PCT = 20;
 const MIN_DARTS_ALL = 100;
-const day = (iso: string) => iso.slice(0, 10);
+/** Measured darts a match needs before its MED counts as a record: a handful of darts can be lucky. */
+const MIN_THROWS_MED = 20;
+const MIN_BULL_THROWS = 20;
+const day = (iso: string) => {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
 
 function top(rows: RecordHolder[], low: boolean, n = 3): RecordHolder[] {
   return [...rows].sort((a, b) => (low ? a.value - b.value : b.value - a.value)).slice(0, n);
@@ -42,9 +48,9 @@ export function buildRecords(records: PlayerRecord[]): RecordList[] {
   add("run", "Lengste serie: treff på rad", (v) => `${v} på rad`, people.filter((r) => (r.bestRun ?? 0) > 0).map((r) => ({ name: r.name, value: r.bestRun as number })));
   add("fast", "Seier på færrest piler", (v) => `${v} piler`, people.filter((r) => r.bestDartsToFinish !== null).map((r) => ({ name: r.name, value: r.bestDartsToFinish as number })), true);
 
-  const matches = records.flatMap((r) => r.matchHistory.filter((m) => m.dartsUsed >= MIN_DARTS_PCT).map((m) => ({ r, m })));
-  add("hit", "Høyeste treffprosent i en kamp", (v) => `${n(v)} %`, matches.map(({ r, m }) => ({ name: r.name, value: m.hitPct, note: day(m.date) })));
-  add("med", "Beste presisjon i en kamp (MED)", (v) => `${n(v)} mm`, matches.filter(({ m }) => m.med !== null).map(({ r, m }) => ({ name: r.name, value: m.med as number, note: day(m.date) })), true);
+  const matches = people.flatMap((r) => r.matchHistory.filter((m) => m.dartsUsed >= MIN_DARTS_PCT).map((m) => ({ r, m })));
+  add("hit", "Høyeste treffprosent i en kamp", (v) => `${n(v)} %`, matches.map(({ r, m }) => ({ name: r.name, value: shownHitPct(m), note: day(m.date) })));
+  add("med", "Beste presisjon i en kamp (MED)", (v) => `${n(v)} mm`, matches.filter(({ m }) => m.med !== null && (m.throws ?? 0) >= MIN_THROWS_MED).map(({ r, m }) => ({ name: r.name, value: m.med as number, note: day(m.date) })), true);
 
   add("streak", "Lengste seiersrekke", (v) => `${v} på rad`, people.map((r) => ({ name: r.name, value: winStreak(r.matchHistory) })).filter((h) => h.value >= 2));
   add("wins", "Flest seire", n, people.filter((r) => r.matchesWon > 0).map((r) => ({ name: r.name, value: r.matchesWon })));
@@ -58,7 +64,7 @@ export function buildRecords(records: PlayerRecord[]): RecordList[] {
     "bull",
     "Beste bull-duell",
     (v) => `${n(v)} %`,
-    people.filter((r) => r.bullDuel.throws >= 6).map((r) => ({ name: r.name, value: (r.bullDuel.points / r.bullDuel.throws) * 100 })),
+    people.filter((r) => r.bullDuel.throws >= MIN_BULL_THROWS).map((r) => ({ name: r.name, value: ((r.bullDuel.redHits + r.bullDuel.greenHits) / r.bullDuel.throws) * 100 })),
   );
 
   const margins = buildMatchLog(records)

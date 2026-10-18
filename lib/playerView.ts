@@ -1,5 +1,5 @@
 import { STEPS, type Step } from "./game";
-import type { HitStat, MatchHistoryEntry, MemberStat, PlayerRecord } from "./playerRows";
+import { shownHitPct, type HitStat, type MatchHistoryEntry, type MemberStat, type PlayerRecord } from "./playerRows";
 
 /**
  * A player's numbers as one person alone (Singel) and as a member of a team (Lag), and by where the darts were
@@ -30,7 +30,7 @@ const usable = (entries: MatchHistoryEntry[]) => entries.filter((m) => m.dartsUs
 export function weightedHit(entries: MatchHistoryEntry[]): number | null {
   const e = usable(entries);
   const darts = e.reduce((s, m) => s + m.dartsUsed, 0);
-  return darts === 0 ? null : e.reduce((s, m) => s + m.hitPct * m.dartsUsed, 0) / darts;
+  return darts === 0 ? null : e.reduce((s, m) => s + shownHitPct(m) * m.dartsUsed, 0) / darts;
 }
 
 /** A mean distance over matches with measured darts, weighed by the darts measured. */

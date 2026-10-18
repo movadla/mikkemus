@@ -104,7 +104,7 @@ function Panel({ player, all, source, onSource }: { player: PlayerRecord; all: P
               <Tile label="MHD" value={mm(single.mhd)} />
               <Tile label="MVD" value={mm(single.mvd)} />
               <Tile label="REKKE" value={source === "both" ? num(single.bestRun) : "–"} />
-              {source === "both" && <Tile label="RATING" value={String(ratingOf(player))} />}
+              {source === "both" && <Tile label="RATING" value={ratingOf(player).toLocaleString("nb-NO").replace(/\s/g, " ")} />}
             </div>
             <div className="flex items-center gap-3 mt-3" style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>
               <span>Siste ti</span>

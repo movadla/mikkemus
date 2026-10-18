@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { averagePct, useRoster, type PlayerRecord } from "@/lib/storage";
+import { shownHitPct } from "@/lib/playerRows";
 import { avatarAccent } from "@/lib/avatarAccent";
 
 const same = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
@@ -20,7 +21,7 @@ function Form({ points }: { points: number[] }) {
 }
 
 function Numbers({ rec }: { rec: PlayerRecord }) {
-  const form = rec.matchHistory.slice(-10).map((h) => h.hitPct);
+  const form = rec.matchHistory.slice(-10).map((h) => shownHitPct(h));
   return (
     <>
       <div className="grid grid-cols-3 gap-2 text-center">

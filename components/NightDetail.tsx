@@ -70,7 +70,7 @@ export function NightDetail({ night, otherDates }: { night: NightSummary | null;
                     </div>
                     <div className="text-right tabular">
                       <p style={{ color: "var(--color-teal)", fontWeight: 700 }}>
-                        {stats.hitPct !== null ? `${Math.round(stats.hitPct)}%` : "–"}
+                        {stats.hitPct !== null ? `${Math.round(stats.hitPct)} %` : "–"}
                       </p>
                       <p className="section-label" style={{ fontSize: "0.75rem" }}>TREFF</p>
                     </div>

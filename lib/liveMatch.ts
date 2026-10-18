@@ -31,6 +31,8 @@ export type LiveMatchState = {
    *  bets between turns, before the first dart. */
   matchId?: string;
   dartsInTurn?: number;
+  /** A turn has been taken back for a correction: the odds shown belong to the board before it. */
+  rewound?: boolean;
 };
 
 type LiveMatchRow = { id: string; state: LiveMatchState | null; updated_at: string };

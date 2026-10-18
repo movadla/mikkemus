@@ -6,6 +6,9 @@ import { throwerStats } from "@/lib/turnStats";
 
 type Award = { icon: string; title: string; who: string; detail: string };
 
+/** Darts a thrower needs in a match to be named the most accurate: three darts at a hundred per cent say nothing. */
+const MIN_DARTS_ACCURATE = 15;
+
 /**
  * The prizes of a match, worked out from what was thrown: the best hit percentage, the longest run
  * of counting darts, the fewest darts to win, and — when the board reports where the darts landed —
@@ -25,7 +28,7 @@ export function buildAwards(args: {
   const out: Award[] = [];
   const throwers = players.flatMap((p) => throwerStats(turnLog[p] ?? [], p).map((r) => ({ ...r, side: p })));
 
-  const accurate = throwers.filter((t) => t.darts >= 3).sort((a, b) => b.hitPct - a.hitPct || b.hits - a.hits)[0];
+  const accurate = throwers.filter((t) => t.darts >= MIN_DARTS_ACCURATE).sort((a, b) => b.hitPct - a.hitPct || b.hits - a.hits)[0];
   if (accurate) out.push({ icon: "🎯", title: "Mest treffsikker", who: accurate.name, detail: `${accurate.hitPct} % treff` });
 
   const streak = [...throwers].sort((a, b) => b.bestRun - a.bestRun)[0];
@@ -115,7 +118,7 @@ export function RowCostCard({ players, turnLog }: { players: string[]; turnLog: 
           ))}
         </div>
       )}
-      <svg viewBox="0 0 300 150" className="w-full h-auto" role="img" aria-label="Piler per rad">
+      <svg viewBox="0 0 300 150" className="w-full h-auto" role="img" aria-label="Forsøk per rad">
         {STEPS.map((s, i) => {
           const h = (costs[s] / max) * 100;
           const x = i * 30 + 5;
@@ -137,11 +140,11 @@ export function RowCostCard({ players, turnLog }: { players: string[]; turnLog: 
       <p className="mt-2" style={{ color: "var(--color-muted)", fontSize: "0.85rem" }}>
         {shown === worst ? (
           <>
-            <b style={{ color: "var(--color-cream)" }}>{STEP_LABELS[worst]}</b> var tregest for {who}: {costs[worst]} piler
+            <b style={{ color: "var(--color-cream)" }}>{STEP_LABELS[worst]}</b> var tregest for {who}: {costs[worst]} forsøk
           </>
         ) : (
           <>
-            <b style={{ color: "var(--color-cream)" }}>Rad {STEP_LABELS[shown]}</b>: {costs[shown]} {costs[shown] === 1 ? "pil" : "piler"}
+            <b style={{ color: "var(--color-cream)" }}>Rad {STEP_LABELS[shown]}</b>: {costs[shown]} forsøk
           </>
         )}
       </p>

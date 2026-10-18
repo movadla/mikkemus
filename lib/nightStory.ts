@@ -1,5 +1,6 @@
 import type { NightSummary } from "./nights";
 import { nightAverages } from "./nights";
+import { shownHitPct } from "./playerRows";
 
 /** One card of the night's summary: a small label, a big figure, and two lines under it. */
 export type StorySlide = {
@@ -61,8 +62,8 @@ export function nightSlides(night: NightSummary): StorySlide[] {
 
   const all = players.flatMap((p) => p.matches.filter((m) => m.dartsUsed >= MIN_DARTS).map((m) => ({ name: p.name, m })));
   if (all.length > 0) {
-    const s = all.reduce((a, b) => (b.m.hitPct > a.m.hitPct ? b : a));
-    slides.push({ kind: "sharpest", label: "FLEST TREFF I EN KAMP", big: `${Math.round(s.m.hitPct)} %`, title: `${s.name} traff slik`, sub: `${s.m.dartsUsed} piler i kampen` });
+    const s = all.reduce((a, b) => (shownHitPct(b.m) > shownHitPct(a.m) ? b : a));
+    slides.push({ kind: "sharpest", label: "FLEST TREFF I EN KAMP", big: `${Math.round(shownHitPct(s.m))} %`, title: `${s.name} traff slik`, sub: `${s.m.dartsUsed} piler i kampen` });
   }
 
   const streaks = players.map((p) => ({ name: p.name, n: longestStreak(p.matches) })).filter((s) => s.n >= 2);
@@ -77,8 +78,12 @@ export function nightSlides(night: NightSummary): StorySlide[] {
     slides.push({ kind: "closest", label: "NÆRMEST MIDTEN", big: `${Math.round(c.med)} mm`, title: `${c.name}, snittavstand i en kamp`, sub: "Målt av Scolia" });
   }
 
-  // Every match has one winner on record, so the wins are the matches played.
-  const matches = players.reduce((s, p) => s + p.wins, 0);
+  // A match has the id its sides share, so those are counted by id (a loss to a bot has no winner row to count). The
+  // older matches have none, and every one of those has one winner on record, so there the wins are the matches.
+  const ids = new Set<string>();
+  let legacyWins = 0;
+  players.forEach((p) => p.matches.forEach((m) => (m.matchId ? ids.add(m.matchId) : m.won && legacyWins++)));
+  const matches = ids.size + legacyWins;
   if (matches > 0) slides.push({ kind: "matches", label: "KVELDEN", big: String(matches), title: plural(matches, "kamp spilt", "kamper spilt"), sub: `${players.length} ${plural(players.length, "spiller eller lag", "spillere og lag")}` });
 
   return slides;

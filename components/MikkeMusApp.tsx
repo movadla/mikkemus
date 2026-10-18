@@ -40,7 +40,7 @@ import { publishLiveMatch } from "@/lib/liveMatch";
 import { coordinatesForSector, luckForThrow, sectorAt, throwAccuracy } from "@/lib/dartboard";
 import { getRules, hasStandRule, isPerfectClose, setGameVariant, withStandRule, type GameVariant } from "@/lib/rules";
 import { countingDarts, nextMemberIndex, standsAfterTurn, trailingRun } from "@/lib/teamTurn";
-import { currentRun, throwerStats } from "@/lib/turnStats";
+import { currentRun, longestRun, throwerStats } from "@/lib/turnStats";
 import { emitFx } from "@/lib/fxBus";
 import { FxStage } from "./FxStage";
 import { LineupIntro } from "./LineupIntro";
@@ -170,6 +170,23 @@ type MikkeMusAppProps = {
    *  disconnected SetupScreen instead of back where they actually came from). */
   onExitToHome?: () => void;
 };
+
+const RESULT_WRITTEN_KEY = "mikke-mus-result-written";
+/** Whether this match's result has been written to the records already (kept on this device, which is where it is written from). */
+function resultWritten(matchId: string): boolean {
+  try {
+    return !!matchId && localStorage.getItem(RESULT_WRITTEN_KEY) === matchId;
+  } catch {
+    return false;
+  }
+}
+function markResultWritten(matchId: string): void {
+  try {
+    localStorage.setItem(RESULT_WRITTEN_KEY, matchId);
+  } catch {
+    // Without it a reload on the winner screen can write once more; nothing else is lost.
+  }
+}
 
 export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRosters, initialVariant, onMatchComplete, onExitToHome }: MikkeMusAppProps = {}) {
   const [screen, setScreen] = useState<Screen>("setup");
@@ -407,6 +424,9 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
 
   useEffect(() => {
     if (screen !== "game" || !hydratedFromStorage || players.length < 2 || rewound !== null || winner) return;
+    // The odds of this turn are already up and a dart has been thrown: a change in the records (another phone saving)
+    // must not price the turn again from a board that is half way through it, as if three darts were left.
+    if (dartsThisTurn > 0 && oddsTurn === turnToken && odds !== null) return;
     // After the render, so the board it reads is the settled one — and never in the middle of a turn. The
     // calculation takes tens of milliseconds, several times that on a phone, so it is done in a thread of its
     // own (lib/odds/client.ts): a tap is never held up by it.
@@ -560,6 +580,11 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       setGameVariant(restored.variant);
       setVariant(restored.variant ?? "standard");
       matchIdRef.current = restored.matchId ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+      // Reloaded on the winner screen: the result was held, not written (unless it was, which the marker says),
+      // so it is held again from the turn log the snapshot kept.
+      if (restored.screen === "winner" && restored.winner && !resultWritten(matchIdRef.current)) {
+        pendingResultRef.current = { turnLog: restored.turnLog, winnerName: restored.winner };
+      }
       setScreen(restored.screen);
       setSkipStats(restored.skipStats ?? false);
       setPlayers(restored.players);
@@ -689,7 +714,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
           : a,
       ),
     });
-    const snapshot = { screen, players, progress, activePlayer, turnToken, winner, botLevels, guestPlayers, variant, odds: odds ? odds.map((o) => ({ name: o.name, odds: o.odds, p: o.p, ...(o.margin ? { margin: o.margin.map((v) => Math.round(v * 10000) / 10000) } : {}) })) : undefined, oddsTurn, matchId: matchIdRef.current, dartsInTurn: dartsThisTurn };
+    const snapshot = { screen, players, progress, activePlayer, turnToken, winner, botLevels, guestPlayers, variant, odds: odds ? odds.map((o) => ({ name: o.name, odds: o.odds, p: o.p, ...(o.margin ? { margin: o.margin.map((v) => Math.round(v * 10000) / 10000) } : {}) })) : undefined, oddsTurn, matchId: matchIdRef.current, dartsInTurn: dartsThisTurn, rewound: rewound !== null };
     if (publishTimerRef.current) clearTimeout(publishTimerRef.current);
     publishTimerRef.current = setTimeout(() => publishLiveMatch(snapshot), LIVE_PUBLISH_DEBOUNCE_MS);
   }, [
@@ -1900,7 +1925,11 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         ...progressRef.current,
         [last.player]: { ...progressRef.current[last.player], [last.step]: last.prevCount },
       });
-      setHistory((prev) => prev.slice(0, -1));
+      // The rest of that turn's darts are still on the board. They come back as the turn's own darts, so that
+      // confirming the turn again builds it from all of them and not from the new tap alone.
+      const sameTurn = history.slice(0, -1).filter((h) => h.player === last.player && h.turnIndex === last.turnIndex);
+      writePendingHits([...pendingHitsRef.current, ...sameTurn]);
+      setHistory((prev) => prev.slice(0, -1).filter((h) => !(h.player === last.player && h.turnIndex === last.turnIndex)));
       clearPerfectClose(last.player, last.step);
       if (!last.ownNumberRing && isPreBank(last.step, currentStepFor({ ...progressRef.current[last.player], [last.step]: last.prevCount }))) {
         bumpPreBanked(last.player, last.step, -1);
@@ -1963,16 +1992,16 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       const roster = teamRosters[p];
       if (roster) {
         if (roster.some((m) => m.isBot || guestPlayers[m.name])) return;
-        ensureTeam(p, roster.map((m) => m.name));
       }
       const dartsUsed = aggregate.darts;
       // A match aborted before this player ever threw a dart isn't a match they played — without
       // this guard, quitting instantly (or a tournament match started and immediately abandoned)
       // still counted as a full "kamp" in their career matchesPlayed, with nothing to show for it.
       if (dartsUsed === 0) return;
+      if (roster) ensureTeam(p, roster.map((m) => m.name));
       recordMatchResult(p, aggregate, p === winnerName);
       // The longest run of counting darts any thrower on this side had — the team's own, in a team.
-      const bestRun = Math.max(0, ...throwerStats(finalTurnLog[p] ?? [], p).map((r) => r.bestRun)) * DARTS_PER_TURN;
+      const bestRun = Math.max(0, ...throwerStats(finalTurnLog[p] ?? [], p).map((r) => longestRun(finalTurnLog[p] ?? [], r.name)));
       if (bestRun > 0) recordBestRun(p, bestRun);
       const accuracy = accuracyTotalsRef.current[p];
       if (accuracy) recordAccuracyTotals(p, accuracy);
@@ -1987,7 +2016,9 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         date: new Date().toISOString(),
         won: p === winnerName,
         dartsUsed,
-        hitPct: Math.round((aggregate.hits / dartsUsed) * 100),
+        hitPct: aggregate.hits + aggregate.misses > 0 ? Math.round((aggregate.hits / (aggregate.hits + aggregate.misses)) * 100) : 0,
+        // Crosses per dart, which the odds read the hit rate as (lib/odds/hitRate.ts); hitPct above is the one shown.
+        cpd: Math.round((aggregate.hits / dartsUsed) * 100),
         med: accuracy && accuracy.throws > 0 ? accuracy.distance / accuracy.throws : null,
         mhd: accuracy && accuracy.throws > 0 ? accuracy.horizontal / accuracy.throws : null,
         mvd: accuracy && accuracy.throws > 0 ? accuracy.vertical / accuracy.throws : null,
@@ -2037,12 +2068,15 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     const pending = pendingResultRef.current;
     if (!pending) return;
     pendingResultRef.current = null;
+    // Written already (a flush on leaving the page, then Angre and a new win after a reload): once per match.
+    if (resultWritten(matchIdRef.current)) return;
     // A match played for fun, or taken out of the statistics after the fact: nothing is written, and the odds
     // log (made of the same taps) is left alone too.
     if (skipStatsRef.current) return;
     // What the odds said, turn by turn, next to who won — so that they can be checked afterwards.
     if (pending.winnerName) void logOddsMatch({ winner: pending.winnerName, sides: players, snapshots: oddsHistoryRef.current, variant });
     persistMatchResults(pending.turnLog, pending.winnerName);
+    markResultWritten(matchIdRef.current);
   }
 
   // Leaving the app counts as accepting the win. `pagehide` rather than `beforeunload`: iOS
@@ -2051,7 +2085,10 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   useEffect(() => {
     const flush = () => flushMatchResultsRef.current();
     window.addEventListener("pagehide", flush);
-    return () => window.removeEventListener("pagehide", flush);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      flush();
+    };
   }, []);
 
   /**
@@ -2155,7 +2192,9 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     if (!activePlayer) return;
     // Read before the turn's action list is emptied just below: the stand rule is decided by
     // how many of this turn's darts counted — or by the thrower's own answer (see answerStandQuestion).
-    const countedDarts = countedOverride ?? countingDarts(turnActionsRef.current);
+    // A turn put back for a correction has its earlier darts among the pending ones, with no actions left to count.
+    const earlierDarts = rewound ? Math.min(DARTS_PER_TURN, (pendingHitsOverride ?? pendingHits).length) : 0;
+    const countedDarts = countedOverride ?? Math.max(countingDarts(turnActionsRef.current), earlierDarts);
     // How the turn ended, in the order the darts landed — read before the actions are cleared below.
     const tailNow = trailingRun(turnActionsRef.current);
     dartsOnStepRef.current = {};
@@ -2413,8 +2452,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
    *  "Til turnering" flow via playAgain/onMatchComplete, so this is never offered there (see the
    *  WinnerScreen call site below). */
   function rematch() {
-    startGame(players, botLevels, teamRosters, guestPlayers, variant, skipStatsRef.current);
     flushMatchResults();
+    startGame(players, botLevels, teamRosters, guestPlayers, variant, skipStatsRef.current);
   }
 
   /**

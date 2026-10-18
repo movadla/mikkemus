@@ -6,7 +6,7 @@ import { SEED_ORDER, seededPrior } from "./odds/seeding";
 import { learnPrior, skillNodes, SCENARIOS, type Evidence } from "./odds/skill";
 import { MED_TO_SIGMA } from "./odds/throwModel";
 import { raceWinProbs } from "./odds/winProb";
-import type { MatchHistoryEntry, PlayerRecord } from "./playerRows";
+import { shownHitPct, type MatchHistoryEntry, type PlayerRecord } from "./playerRows";
 import { START_RATING } from "./rating";
 
 /** How a player has been doing over their last ten matches, next to how they usually do. */
@@ -17,7 +17,7 @@ export type FormInfo = {
   losses: number;
   /** Oldest first: true for a win. */
   results: boolean[];
-  /** Crosses per dart, in percent: over these matches and over every match on record. */
+  /** Hit share in percent: over these matches and over the matches before them (null with fewer than three). */
   hit5: number | null;
   hitAll: number | null;
   /** The difference, in points. */
@@ -54,7 +54,7 @@ const entriesOf = (r: PlayerRecord): MatchHistoryEntry[] => r.matchHistory.filte
 /** Hit rate over matches, each weighed by its darts. */
 function weightedHit(entries: MatchHistoryEntry[]): number | null {
   const darts = entries.reduce((s, m) => s + m.dartsUsed, 0);
-  return darts === 0 ? null : entries.reduce((s, m) => s + m.hitPct * m.dartsUsed, 0) / darts;
+  return darts === 0 ? null : entries.reduce((s, m) => s + shownHitPct(m) * m.dartsUsed, 0) / darts;
 }
 
 function weightedMed(entries: MatchHistoryEntry[]): number | null {
@@ -63,15 +63,22 @@ function weightedMed(entries: MatchHistoryEntry[]): number | null {
   return w === 0 ? null : m.reduce((s, e) => s + (e.med as number) * (e.throws ?? e.dartsUsed), 0) / w;
 }
 
+/** Matches before the recent ones that it takes to say how someone usually does. */
+const MIN_BEFORE = 3;
+
 export function formOf(record: PlayerRecord, last = 10): FormInfo {
   const all = entriesOf(record);
   const recent = all.slice(-last);
   const wins = recent.filter((m) => m.won).length;
+  // The usual is the matches before the recent ones: compared with a figure that contains them, a player with ten
+  // matches or fewer would always be exactly as usual. Needs a few matches behind it to say anything.
+  const before = all.slice(0, all.length - recent.length);
+  const baseline = before.length >= MIN_BEFORE ? before : [];
   const hit5 = weightedHit(recent);
-  const hitAll = weightedHit(all);
+  const hitAll = weightedHit(baseline);
   const dHit = hit5 !== null && hitAll !== null ? hit5 - hitAll : null;
   const med5 = weightedMed(recent);
-  const medAll = weightedMed(all);
+  const medAll = weightedMed(baseline);
   let score: number | null = null;
   if (recent.length >= 3) {
     // Wins count most; how the darts are going against the player's own usual counts for the rest.
