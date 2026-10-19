@@ -1,39 +1,12 @@
-const CREAM = "#f4f0e8";
-const GOLD = "#c9a24b";
-const GREEN = "#11160f";
+import { mouseIconSvg } from "./mouseIconSvg";
 
-function ring(pct: number, background: string, children?: React.ReactNode) {
+/** The app's icon, for ImageResponse: the mouse «M» (lib/mouseIconSvg.ts) drawn as an image the size of the icon. */
+export function dartIcon(opts: { rounded?: boolean; safe?: boolean } = {}) {
+  const src = `data:image/svg+xml;base64,${Buffer.from(mouseIconSvg(opts)).toString("base64")}`;
   return (
-    <div
-      style={{
-        width: `${pct}%`,
-        height: `${pct}%`,
-        borderRadius: "50%",
-        background,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      {children}
-    </div>
-  );
-}
-
-/** A minimal concentric-ring bullseye — the app's icon, favicon, and PWA glyph. */
-export function dartIcon() {
-  return (
-    <div
-      style={{
-        width: "100%",
-        height: "100%",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: GREEN,
-      }}
-    >
-      {ring(86, CREAM, ring(64, GREEN, ring(44, GOLD, ring(24, GREEN, ring(11, CREAM)))))}
+    <div style={{ width: "100%", height: "100%", display: "flex" }}>
+      {/* eslint-disable-next-line @next/next/no-img-element -- rendered by ImageResponse, not shown in a page */}
+      <img src={src} alt="" width="100%" height="100%" />
     </div>
   );
 }
