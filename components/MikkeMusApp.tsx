@@ -32,6 +32,7 @@ import { computeOddsOffThread } from "@/lib/odds/client";
 import { saveMatchArchive } from "@/lib/matchArchive";
 import type { OddsMatch } from "@/lib/odds/match";
 import { fairPrice } from "@/lib/bet/ledger";
+import { chaseFraction, recordChase } from "@/lib/recordChase";
 import { recordBestRun, ensureTeam, getPlayerRecord, playPlayerSound, recordAccuracyTotals, recordLuckTotals, recordMatchHistory, recordMatchResult, recordMemberStats, recordRating, recordRingHits, useRoster, useTeamRecords, meanEuclideanDistance, averagePct, type RingHits } from "@/lib/storage";
 import { announce } from "@/lib/announcer";
 import { reportError } from "@/lib/errorReporting";
@@ -2678,6 +2679,18 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     pendingByStep[h.step] = (pendingByStep[h.step] ?? 0) + 1;
   });
 
+  // Full party: how many darts can still be wasted before the player's own fewest-darts record is out of reach. Only a real,
+  // saved player or team whose match counts (the same test as the record banner), and only for the turn that is theirs.
+  const recordChaseNow = (() => {
+    if (!activePlayer || !fx.recordBar || skipStats || !getRules().countsForStats || rewound !== null || botIsThrowing) return null;
+    if (botLevels[activePlayer] || guestPlayers[activePlayer] || (teamRosters[activePlayer] ?? []).some((m) => m.isBot || guestPlayers[m.name])) return null;
+    const board = progress[activePlayer];
+    if (!board) return null;
+    const used = aggregateTurns(turnLog[activePlayer] ?? []).darts + dartsThisTurn;
+    const chase = recordChase(getPlayerRecord(activePlayer)?.bestDartsToFinish, used, board, getRules().target);
+    return chase ? { record: chase.record, slack: chase.slack, fraction: chaseFraction(chase) } : null;
+  })();
+
   // Feeds the landscape side panel. Treff% is over COMPLETED turns only — the turn in progress
   // has no miss count until it is confirmed, so folding it in would read as a dip after every
   // first dart and recover by the third.
@@ -2744,6 +2757,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         throwerStood={!!activePlayer && rewound === null && stoodByTeam[activePlayer] === true}
         throwerRun={throwerRun}
         throwerAnimate={fxLevel !== "normal"}
+        recordChase={recordChaseNow}
         fxHeat={fx.heat}
         fxShake={fx.shake}
         fxFire={fx.fire}

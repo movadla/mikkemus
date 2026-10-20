@@ -158,6 +158,8 @@ type Props = {
   /** False while a bot throws — it answers its own questions, and a box to tap would be a trap. */
   choiceInteractive: boolean;
   /** Whether the chosen animation level allows the building heat and the shake — see lib/fxLevel. */
+  /** Full party: the chase of the player's fewest-darts record — see lib/recordChase.ts. Null when there is nothing to chase. */
+  recordChase: { record: number; slack: number; fraction: number } | null;
   fxHeat: boolean;
   fxShake: boolean;
   /** Flames round the thrower while a run of counting darts builds. */
@@ -635,6 +637,7 @@ export function GameScreen({
   throwerAnimate,
   awaitingConfirmResolution,
   choiceInteractive,
+  recordChase,
   fxHeat,
   fxShake,
   fxFire,
@@ -1334,6 +1337,25 @@ export function GameScreen({
                 Ta ut pilene for å bekrefte turen
               </p>
             )}
+          </div>
+        )}
+        {recordChase && (
+          <div className="max-w-3xl mx-auto w-full mb-3" role="img" aria-label={recordChase.slack >= 0 ? `Rekordsjanse: ${recordChase.slack} piler å gå` : "Rekorden er utenfor rekkevidde"}>
+            <div className="flex justify-between" style={{ color: "var(--color-muted)", fontSize: "0.68rem", letterSpacing: "0.06em" }}>
+              <span>REKORD {recordChase.record} PILER</span>
+              <span>{recordChase.slack >= 0 ? `${recordChase.slack} ${recordChase.slack === 1 ? "pil" : "piler"} å gå` : "utenfor rekkevidde"}</span>
+            </div>
+            <div className="rounded-full overflow-hidden" style={{ height: "0.3rem", marginTop: "0.2rem", background: "var(--color-cell)" }}>
+              <div
+                className="rounded-full"
+                style={{
+                  height: "100%",
+                  width: `${Math.round(recordChase.fraction * 100)}%`,
+                  background: recordChase.fraction > 0.34 ? "var(--color-gold)" : "var(--color-red)",
+                  transition: "width 400ms ease, background 400ms ease",
+                }}
+              />
+            </div>
           </div>
         )}
         {exactEntry && (
