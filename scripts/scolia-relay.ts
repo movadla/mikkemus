@@ -71,8 +71,11 @@ conn.on("onConnectionChange", (state) => {
 const STUCK_TAKEOUT_MS = 60_000;
 let takeoutSince: number | null = null;
 
+let boardStatusNow: string | null = null;
+
 conn.on("onStatus", (payload) => {
   console.log("[status]", payload);
+  boardStatusNow = payload.boardStatus;
   if (payload.boardPhase === "Takeout") takeoutSince ??= Date.now();
   else takeoutSince = null;
   upsertStatus(payload.boardStatus, payload.boardPhase, payload.errorType ?? null);
@@ -110,7 +113,10 @@ conn.on("onCameraImages", (payload) => {
  * sitting in the table and run them all. That is the same trap the browser side fell into
  * with throw events, so it is worth being explicit about here.
  */
-const COMMAND_POLL_MS = 2_000;
+const COMMAND_POLL_MS = 500;
+/** A second RECALIBRATE while the board is already calibrating restarts it, so the wait starts over. */
+const RECALIBRATE_DEDUPE_MS = 15_000;
+let lastRecalibrateAt = 0;
 let lastCommandId: number | null = null;
 
 async function pollCommands() {
@@ -126,7 +132,12 @@ async function pollCommands() {
   for (const row of data as { id: number; type: string }[]) {
     lastCommandId = Math.max(lastCommandId, row.id);
     if (row.type === "CMD_RECALIBRATE") {
+      if (boardStatusNow === "Calibrating" || Date.now() - lastRecalibrateAt < RECALIBRATE_DEDUPE_MS) {
+        console.log("[command] RECALIBRATE ignorert — brettet kalibrerer allerede");
+        continue;
+      }
       console.log("[command] RECALIBRATE bedt om fra appen");
+      lastRecalibrateAt = Date.now();
       conn.recalibrate();
     }
   }

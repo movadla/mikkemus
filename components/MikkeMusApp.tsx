@@ -1206,6 +1206,13 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     },
   });
 
+  const recalibrateWhenReadyRef = useRef(false);
+  useEffect(() => {
+    if (!recalibrateWhenReadyRef.current || scolia.state.boardStatus === null) return;
+    recalibrateWhenReadyRef.current = false;
+    if (scolia.state.boardStatus === "Ready") void requestRecalibration();
+  }, [scolia.state.boardStatus]);
+
   // Otherwise a dropped relay only shows up as a small badge color change (see
   // ScoliaStatusBadge) that's easy to miss mid-match — speak it instead, but only while a
   // game is actually running, so nobody hears it while just sitting on the setup screen.
@@ -1266,7 +1273,10 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     // A new match starts with a freshly calibrated board. It used to be done by hand with «Kalibrer» before every match: the
     // board can still be part-way through the last visit (a match is won on the first or second dart), and would then count the
     // first throws of the next match against it. Only with a board that is up, so nothing is sent to one that is not.
-    if (scoliaEnabled && scolia.state.boardStatus === "Ready") void requestRecalibration();
+    // When the status isn't known yet (a tournament match starts straight from mount, before the board has reported in),
+    // the request waits in recalibrateWhenReadyRef and goes out the moment the board says Ready.
+    if (scolia.state.boardStatus === "Ready") void requestRecalibration();
+    else if (scolia.state.boardStatus === null) recalibrateWhenReadyRef.current = true;
     // First, before anything reads a rule: the target, the active step and what a throw means
     // all come from here for the rest of the match.
     setGameVariant(startVariant);
