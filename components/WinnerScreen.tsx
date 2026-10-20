@@ -145,6 +145,16 @@ export function WinnerScreen({
   );
   // The last turn played back from where the darts really landed — only when every dart of it has a
   // position (a board that reports them), so the replay never shows a made-up dart.
+  // Every thrower of a team match side by side, highest hit percentage first (more darts first on a tie, since a
+  // percentage over more darts says more). Empty unless a side is a team — a lone-player match has nothing to compare here.
+  const teamRanking = useMemo(() => {
+    const rows = players.flatMap((p) => {
+      const throwers = throwerStats(turnLogByPlayer[p] ?? [], p);
+      return throwers.map((r) => ({ team: p, name: r.name, hitPct: r.hitPct, darts: r.darts, isMember: r.name !== p }));
+    });
+    return rows.some((r) => r.isMember) ? rows.filter((r) => r.darts > 0).sort((a, b) => b.hitPct - a.hitPct || b.darts - a.darts) : [];
+  }, [players, turnLogByPlayer]);
+
   const lastTurn = [...(turnLogByPlayer[winner] ?? [])].filter(Boolean).at(-1);
   const lastDarts = lastTurn?.darts ?? 0;
   const winnerThrows = throwsByPlayer[winner] ?? [];
@@ -438,6 +448,43 @@ export function WinnerScreen({
             </div>
           </div>
         </div>
+
+        {/* Team matches: every thrower of every side in one list, best hit percentage on top. */}
+        {teamRanking.length > 1 && (
+          <div className="shadow-panel rounded-xl p-4 mb-6" style={{ background: "var(--color-surface)" }}>
+            <p className="mb-4 section-label">TREFF % PÅ TVERS AV LAGENE</p>
+            <div role="table" aria-label="Treffprosent per spiller">
+              <div
+                role="row"
+                className="grid items-end pb-1"
+                style={{ gridTemplateColumns: "1.5rem minmax(0, 1fr) 3.2rem 3.2rem", color: "var(--color-label)", fontSize: "0.75rem", letterSpacing: "0.1em" }}
+              >
+                <span role="columnheader" />
+                <span role="columnheader" />
+                <span role="columnheader" className="text-right">TREFF</span>
+                <span role="columnheader" className="text-right">PILER</span>
+              </div>
+              <div className="space-y-2">
+                {teamRanking.map((r, i) => (
+                  <div key={`${r.team}-${r.name}`} role="row">
+                    <div className="grid items-baseline" style={{ gridTemplateColumns: "1.5rem minmax(0, 1fr) 3.2rem 3.2rem", color: r.team === winner ? "var(--color-gold)" : "var(--color-cream)" }}>
+                      <span role="cell" className="tabular text-left" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>{i + 1}</span>
+                      <span role="cell" className="truncate text-left">
+                        {r.name}
+                        <span style={{ color: "var(--color-muted)", fontSize: "0.75rem", marginLeft: "0.4rem" }}>{r.team}</span>
+                      </span>
+                      <span role="cell" className="tabular text-right font-display" style={{ fontSize: "1.2rem" }}>{r.hitPct} %</span>
+                      <span role="cell" className="tabular text-right font-display" style={{ fontSize: "1.2rem" }}>{r.darts}</span>
+                    </div>
+                    <div aria-hidden className="rounded-full mt-1" style={{ height: "0.25rem", marginLeft: "1.5rem", background: "var(--color-cell)" }}>
+                      <div className="rounded-full" style={{ height: "100%", width: `${Math.max(2, r.hitPct)}%`, background: r.team === winner ? "var(--color-gold)" : "var(--color-teal)" }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         <AwardsCard awards={awards} />
 
