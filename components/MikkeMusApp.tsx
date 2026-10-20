@@ -794,6 +794,9 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   // Counts physical darts Scolia has detected this turn (registrable or not) —
   // distinct from pendingHits, which only holds darts that actually scored a cross.
   const scoliaDartsRef = useRef(0);
+  // How many actions the turn had when the last triple/double choice was answered, or -1. Answering is not an action of its
+  // own, so without this Angre straight after an answer would take the last DART off instead of re-opening the choice.
+  const choiceAnsweredAtRef = useRef(-1);
 
   // Consecutive scoring darts, right now — drives how big the boom is (see lib/fanfare.ts)
   // and the matching shake and heat. Reset at the start of a turn and by any miss, but a miss
@@ -1737,6 +1740,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     scoliaDartsRef.current = 0;
     clearTurnDisplay();
     writeTurnActions([]);
+    choiceAnsweredAtRef.current = -1;
     return true;
   }
 
@@ -1836,6 +1840,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   function resolvePendingChoice(choice: "keep" | "redirect") {
     const item = pendingAmbiguousRef.current[pendingAmbiguousRef.current.length - 1];
     if (!item || !activePlayer) return;
+    choiceAnsweredAtRef.current = turnActionsRef.current.length;
 
     let finalProgress = progressRef.current;
     let finalPendingHits = pendingHitsRef.current;
@@ -1907,8 +1912,11 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     // rewindTurn for why it is rebuilt from the start rather than patched.
     if (turnActionsRef.current.length > 0) {
       const actions = turnActionsRef.current;
+      // Nothing happened since a choice was answered: Angre takes the answer back (the turn is rebuilt with the choice open
+      // again), not the dart the choice was about.
+      const undoesChoice = choiceAnsweredAtRef.current === actions.length;
       if (rewindTurn()) {
-        replayActions(actions.slice(0, -1));
+        replayActions(undoesChoice ? actions : actions.slice(0, -1));
         return;
       }
     }
@@ -2581,7 +2589,13 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
 
   // Darts in a row that counted for whoever is throwing: their unbroken run of three-counting turns
   // (3 darts each), plus the darts of this turn so far. By hand a tap is a dart that counted.
-  const throwerRun = thrower ? currentRun(turnLog[activePlayer ?? ""] ?? [], thrower.name, activeRoster ? undefined : thrower.name) + (rewound === null ? countingDarts(turnActionsRef.current) : 0) : 0;
+  // The turn in progress only extends the earlier run while it is unbroken: after a miss it is just the darts since
+  // (hit, miss, hit is one in a row, not two), so the earlier run is dropped once a dart in this turn has missed.
+  const turnBroken = turnActionsRef.current.some((a) => a.kind === "dart" && !a.scored);
+  const throwerRun = thrower
+    ? (turnBroken ? 0 : currentRun(turnLog[activePlayer ?? ""] ?? [], thrower.name, activeRoster ? undefined : thrower.name)) +
+      (rewound === null ? trailingRun(turnActionsRef.current) : 0)
+    : 0;
 
   // Summed from the turns actually played rather than turns x 3 — a leg-winning or
   // taken-out turn is shorter, and now says so.
