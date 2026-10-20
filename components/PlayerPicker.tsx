@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRoster } from "@/lib/storage";
-import { BOT_LEVEL_PICKABLE, BOT_LEVELS, botLevelBadge, type BotLevel } from "@/lib/botLevels";
+import { BOT_LEVEL_PICKABLE, botDisplayName, type BotLevel } from "@/lib/botLevels";
 import { avatarAccent } from "@/lib/avatarAccent";
 import { nextBotName, sameName, type Person } from "@/lib/people";
 import { filterNames, readUsage, sortByRecent } from "@/lib/recentPlayers";
@@ -173,7 +173,7 @@ export function PlayerPicker({
               className={`tactile rounded-lg text-sm truncate px-2 ${FOCUS_RING}`}
               style={{ minHeight: "2.75rem", background: "var(--color-cell)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
             >
-              {BOT_LEVELS[level].name} {botLevelBadge(level)}
+              {botDisplayName(level)}
             </button>
           ))}
         </div>
