@@ -33,6 +33,7 @@ import { saveMatchArchive } from "@/lib/matchArchive";
 import type { OddsMatch } from "@/lib/odds/match";
 import { fairPrice } from "@/lib/bet/ledger";
 import { chaseFraction, recordChase } from "@/lib/recordChase";
+import { rowCosts } from "@/lib/rowCosts";
 import { recordBestRun, ensureTeam, getPlayerRecord, playPlayerSound, recordAccuracyTotals, recordLuckTotals, recordMatchHistory, recordMatchResult, recordMemberStats, recordRating, recordRingHits, useRoster, useTeamRecords, meanEuclideanDistance, averagePct, type RingHits } from "@/lib/storage";
 import { announce } from "@/lib/announcer";
 import { reportError } from "@/lib/errorReporting";
@@ -2119,6 +2120,15 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         vs: players.filter((x) => x !== p),
         ...(progress[p] ? { left: remainingMarks(progress[p]) } : {}),
         steps: Object.fromEntries(STEPS.filter((s) => (aggregate.hitsByStep[s] ?? 0) + (aggregate.missesByStep[s] ?? 0) > 0).map((s) => [s, [aggregate.hitsByStep[s] ?? 0, aggregate.missesByStep[s] ?? 0]])),
+        // Darts per row, for the chart under the player's statistics — the side's, and in a team each member's own.
+        rowDarts: rowCosts(finalTurnLog[p] ?? []),
+        ...(roster
+          ? {
+              rowDartsByMember: Object.fromEntries(
+                roster.map((m) => [m.name, rowCosts((finalTurnLog[p] ?? []).filter((t): t is TurnResult => !!t && t.thrower === m.name))]),
+              ),
+            }
+          : {}),
       });
     });
     // The rating (lib/rating.ts): only a match between two sides, both real, with something thrown by each.

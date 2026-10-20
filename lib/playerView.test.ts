@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { emptyRecord, emptyStepStats, type MatchHistoryEntry, type MemberStat } from "./playerRows";
-import { bySource, singleView, teamView } from "./playerView";
+import { bySource, rowDartsOver, singleView, teamView } from "./playerView";
 
 const match = (i: number, won: boolean, hitPct: number, med: number | null = null, darts = 60): MatchHistoryEntry => ({ date: `2026-10-${String(i + 1).padStart(2, "0")}`, won, dartsUsed: darts, hitPct, med, mhd: med, mvd: med, ...(med !== null ? { throws: darts } : {}) });
 const rec = (name: string, h: MatchHistoryEntry[], over: object = {}) => ({ ...emptyRecord(name), matchesPlayed: h.length, matchesWon: h.filter((m) => m.won).length, matchHistory: h, ...over });
@@ -96,5 +96,36 @@ describe("a person in a team", () => {
     expect(scolia.matches).toBe(1);
     expect(scolia.teams.find((t) => t.name === "Per & Ola")!.matches).toBe(1);
     expect(scolia.med).toBeCloseTo(27, 6);
+  });
+});
+
+describe("darts per row over matches", () => {
+  const withRows = (i: number, med: number | null, rowDarts: Partial<Record<"20" | "D", number>>): MatchHistoryEntry => ({ ...match(i, true, 50, med), rowDarts });
+
+  it("sums the darts per row of the chosen source's matches", () => {
+    const p = rec("Per", [withRows(0, null, { "20": 4 }), withRows(1, 25, { "20": 2, D: 1 }), withRows(2, 30, { "20": 1 })]);
+    expect(singleView(p, "manual").rowDarts?.["20"]).toBe(4);
+    expect(singleView(p, "scolia").rowDarts?.["20"]).toBe(3);
+    expect(singleView(p, "scolia").rowDarts?.D).toBe(1);
+    expect(singleView(p, "both").rowDarts?.["20"]).toBe(7);
+    expect(singleView(p, "both").rowDartsMatches).toBe(3);
+  });
+
+  it("counts an older match that only kept crosses and misses per row as their sum, and says so", () => {
+    const old: MatchHistoryEntry = { ...match(0, true, 50), steps: { "20": [3, 2] } };
+    const v = rowDartsOver([old, withRows(1, null, { "20": 1 })]);
+    expect(v.rowDarts?.["20"]).toBe(6);
+    expect(v.rowDartsMatches).toBe(2);
+    expect(v.rowDartsApprox).toBe(1);
+    expect(rowDartsOver([match(0, true, 50)]).rowDarts).toBeNull();
+  });
+
+  it("in a team gives the player their own darts per row, by name whatever the case", () => {
+    const entry: MatchHistoryEntry = { ...match(0, true, 50), rowDarts: { "20": 9 }, rowDartsByMember: { per: { "20": 4 }, Ola: { "20": 5 } } };
+    const team = rec("Per & Ola", [entry], { kind: "team", members: ["Per", "Ola"] });
+    expect(teamView(rec("Per", []), [team], "both").rowDarts?.["20"]).toBe(4);
+    // An older team match without per-member rows does not fall back to the team's figure.
+    const older = rec("Per & Ola", [{ ...match(1, true, 50), steps: { "20": [3, 3] } }], { kind: "team", members: ["Per", "Ola"] });
+    expect(teamView(rec("Per", []), [older], "both").rowDarts).toBeNull();
   });
 });

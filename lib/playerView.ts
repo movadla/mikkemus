@@ -59,7 +59,36 @@ export type View = {
   rows: RowStat[] | null;
   /** Matches on record that have no date or source (from before the matches were kept one by one): left out when a source is chosen. */
   unsorted: number;
+  /** Darts spent per row over these matches (see lib/rowCosts.ts), or null when none of them kept it. */
+  rowDarts: Record<Step, number> | null;
+  /** How many matches rowDarts covers, and how many of those are older matches reckoned the old way (crosses plus misses). */
+  rowDartsMatches: number;
+  rowDartsApprox: number;
 };
+
+/**
+ * Darts per row summed over matches: the darts per row each match kept, or — for an older match that kept only its crosses
+ * and misses per row — those added up, which is what the chart showed before darts per row were kept. `pick` chooses
+ * what to read off an entry (a member's own figures in a team's match, say).
+ */
+export function rowDartsOver(entries: MatchHistoryEntry[], pick: (m: MatchHistoryEntry) => Partial<Record<Step, number>> | undefined = (m) => m.rowDarts, fallback = true): Pick<View, "rowDarts" | "rowDartsMatches" | "rowDartsApprox"> {
+  const sum = {} as Record<Step, number>;
+  STEPS.forEach((s) => (sum[s] = 0));
+  let matches = 0;
+  let approx = 0;
+  for (const m of entries) {
+    const rows = pick(m);
+    if (rows) {
+      STEPS.forEach((s) => (sum[s] += rows[s] ?? 0));
+      matches++;
+    } else if (fallback && m.steps) {
+      STEPS.forEach((s) => (sum[s] += (m.steps![s]?.[0] ?? 0) + (m.steps![s]?.[1] ?? 0)));
+      matches++;
+      approx++;
+    }
+  }
+  return { rowDarts: matches > 0 ? sum : null, rowDartsMatches: matches, rowDartsApprox: approx };
+}
 
 const rowsOf = (steps: Record<Step, HitStat> | undefined): RowStat[] | null =>
   steps ? STEPS.map((step) => ({ step, pct: steps[step].hits + steps[step].misses > 0 ? (steps[step].hits / (steps[step].hits + steps[step].misses)) * 100 : null })) : null;
@@ -84,6 +113,7 @@ function viewOf(entries: MatchHistoryEntry[], source: Source, totals: { matches:
     bestRun: both ? totals.bestRun : null,
     rows: both ? rowsOf(totals.steps) : null,
     unsorted: both ? 0 : Math.max(0, totals.matches - entries.length),
+    ...rowDartsOver(sel),
   };
 }
 
@@ -147,6 +177,8 @@ export function teamView(player: PlayerRecord, all: PlayerRecord[], source: Sour
       matches: source === "both" ? t.matchesPlayed : bySource(t.matchHistory, source).length,
       wins: source === "both" ? t.matchesWon : bySource(t.matchHistory, source).filter((m) => m.won).length,
     })),
+    // The player's own darts per row in the team's matches. Older matches kept nothing per member, so no fallback here.
+    ...rowDartsOver(bySource(entries, source), (m) => Object.entries(m.rowDartsByMember ?? {}).find(([k]) => same(k, player.name))?.[1], false),
     ownHitPct: source === "both" && hits + misses > 0 ? (hits / (hits + misses)) * 100 : null,
     ownDarts: source === "both" ? memberStats.reduce((s, m) => s + m.darts, 0) : 0,
     ownMatches: memberStats.reduce((s, m) => s + m.matches, 0),

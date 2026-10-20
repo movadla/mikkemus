@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { STEPS, STEP_LABELS, type Step, type TurnAggregate, type TurnResult } from "@/lib/game";
+import { STEPS, type TurnAggregate, type TurnResult } from "@/lib/game";
 import { throwerStats } from "@/lib/turnStats";
 import { rowCosts } from "@/lib/rowCosts";
+import { RowDartsChart } from "./RowDartsChart";
 
 type Award = { icon: string; title: string; who: string; detail: string };
 
@@ -82,12 +83,8 @@ export function AwardsCard({ awards }: { awards: Award[] }) {
  */
 export function RowCostCard({ players, turnLog }: { players: string[]; turnLog: Record<string, TurnResult[]> }) {
   const [who, setWho] = useState(players[0]);
-  const [picked, setPicked] = useState<Step | null>(null);
   const costs = rowCosts(turnLog[who] ?? []);
-  const max = Math.max(1, ...STEPS.map((s) => costs[s]));
-  const worst = STEPS.reduce((a, s) => (costs[s] > costs[a] ? s : a), STEPS[0]);
   if (STEPS.every((s) => costs[s] === 0)) return null;
-  const shown = picked ?? worst;
 
   return (
     <div className="shadow-panel rounded-xl p-4 mb-6" style={{ background: "var(--color-surface)" }}>
@@ -100,10 +97,7 @@ export function RowCostCard({ players, turnLog }: { players: string[]; turnLog: 
               type="button"
               role="radio"
               aria-checked={p === who}
-              onClick={() => {
-                setWho(p);
-                setPicked(null);
-              }}
+              onClick={() => setWho(p)}
               className="tactile px-4 rounded-lg text-sm"
               style={{ minHeight: "2.75rem", background: p === who ? "rgba(47, 180, 194, 0.18)" : "var(--color-cell)", color: p === who ? "var(--color-teal)" : "var(--color-muted)", border: p === who ? "1px solid var(--color-teal)" : "1px solid var(--color-border)" }}
             >
@@ -112,36 +106,7 @@ export function RowCostCard({ players, turnLog }: { players: string[]; turnLog: 
           ))}
         </div>
       )}
-      <svg viewBox="0 0 300 150" className="w-full h-auto" role="img" aria-label="Forsøk per rad">
-        {STEPS.map((s, i) => {
-          const h = (costs[s] / max) * 100;
-          const x = i * 30 + 5;
-          const isWorst = s === worst;
-          return (
-            <g key={s} onClick={() => setPicked(s)} style={{ cursor: "pointer" }}>
-              <rect x={x} y={20} width={24} height={110} fill="transparent" />
-              <rect x={x} y={125 - h} width={20} height={Math.max(2, h)} rx={4} fill={isWorst ? "#e04a3a" : "#2fb4c2"} opacity={shown === s ? 1 : 0.8} stroke={shown === s ? "#fff" : "none"} strokeWidth={1.5} />
-              <text x={x + 10} y={118 - h} textAnchor="middle" fill="var(--color-cream)" fontSize="11" fontWeight="700">
-                {costs[s]}
-              </text>
-              <text x={x + 10} y={145} textAnchor="middle" fill="var(--color-muted)" fontSize="11">
-                {STEP_LABELS[s]}
-              </text>
-            </g>
-          );
-        })}
-      </svg>
-      <p className="mt-2" style={{ color: "var(--color-muted)", fontSize: "0.85rem" }}>
-        {shown === worst ? (
-          <>
-            <b style={{ color: "var(--color-cream)" }}>{STEP_LABELS[worst]}</b> var tregest for {who}: {costs[worst]} forsøk
-          </>
-        ) : (
-          <>
-            <b style={{ color: "var(--color-cream)" }}>Rad {STEP_LABELS[shown]}</b>: {costs[shown]} forsøk
-          </>
-        )}
-      </p>
+      <RowDartsChart key={who} costs={costs} who={who} />
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { STEP_LABELS } from "@/lib/game";
 import { avatarAccent } from "@/lib/avatarAccent";
 import { SOURCES, singleView, teamView, type Source, type View } from "@/lib/playerView";
 import { ratingOf, type PlayerRecord } from "@/lib/storage";
+import { RowDartsChart } from "./RowDartsChart";
 
 const FOCUS_RING = "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
 
@@ -46,6 +47,22 @@ function Rows({ view }: { view: View }) {
           </div>
         ))}
       </div>
+    </>
+  );
+}
+
+/** Darts spent per row over the matches of the chosen source — the winner screen's chart, for a whole career. */
+function RowDarts({ view, who, source }: { view: View; who: string; source: Source }) {
+  if (!view.rowDarts) return null;
+  const n = view.rowDartsMatches;
+  return (
+    <>
+      <p className="section-label mt-4 mb-2" style={{ fontSize: "0.75rem" }}>PILER PER RAD</p>
+      <RowDartsChart key={`${who}-${source}`} costs={view.rowDarts} who={who} />
+      <p className="mt-1" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>
+        Over {n} {n === 1 ? "kamp" : "kamper"}
+        {view.rowDartsApprox > 0 ? ` — ${view.rowDartsApprox} eldre ${view.rowDartsApprox === 1 ? "kamp er" : "kamper er"} regnet som kryss pluss bom, der en trippel teller tre.` : "."}
+      </p>
     </>
   );
 }
@@ -112,6 +129,7 @@ function Panel({ player, all, source, onSource }: { player: PlayerRecord; all: P
               {single.results.length === 0 && <span>–</span>}
             </div>
             <Rows view={single} />
+            <RowDarts view={single} who={player.name} source={source} />
             {single.unsorted > 0 && <p className="mt-3" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>{single.unsorted} eldre {single.unsorted === 1 ? "kamp" : "kamper"} mangler kilde og er ikke med.</p>}
           </>
         )
@@ -147,6 +165,7 @@ function Panel({ player, all, source, onSource }: { player: PlayerRecord; all: P
             ))}
           </div>
           <Rows view={team} />
+          <RowDarts view={team} who={player.name} source={source} />
           <p className="mt-3" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>
             Dine egne tall i lagkamper samles inn fra og med 2026-10-17{team.ownMatches === 0 ? ", så de fylles ut etter hvert som dere spiller." : "."}
             {source === "manual" ? " Lagets treff er fra kampene uten målte kast." : ""}

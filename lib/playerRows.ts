@@ -34,6 +34,11 @@ export type MatchHistoryEntry = {
   left?: number;
   /** Crosses and misses per row in this match: [hits, misses]. */
   steps?: Partial<Record<Step, [number, number]>>;
+  /** Darts spent per row in this match (see lib/rowCosts.ts) — a triple that closes a row is one dart, a dart left on a
+   *  double/triple while a number was active counts against that ring. Absent on matches from before it was kept. */
+  rowDarts?: Partial<Record<Step, number>>;
+  /** In a team's match, the same for each member's own darts. */
+  rowDartsByMember?: Record<string, Partial<Record<Step, number>>>;
   won: boolean;
   dartsUsed: number;
   /** The share of crosses among crosses and misses, 0–100, as every screen reads «treff». Matches from before
