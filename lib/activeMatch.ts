@@ -11,6 +11,8 @@ export type ActiveMatchSnapshot = {
   matchId?: string;
   /** Played without a trace in the statistics: ticked before the start, or chosen on the winner screen. */
   skipStats?: boolean;
+  /** Advanced entry: every dart keyed in by hand, as the bed it hit. */
+  exactEntry?: boolean;
   players: string[];
   progress: PlayerProgress;
   currentIdx: number;

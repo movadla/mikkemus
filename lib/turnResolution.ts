@@ -79,7 +79,13 @@ export type TurnDart = {
  * so a turn in progress survives a reload: the snapshot carries the turn's starting point and
  * this list, and the turn is rebuilt by playing it back.
  */
-export type DartAction = TurnDart & { kind: "dart"; coordinates: [number, number] };
+export type DartAction = TurnDart & {
+  kind: "dart";
+  coordinates: [number, number];
+  /** Keyed in by hand in the advanced entry mode: the coordinates are the middle of the bed that was picked, not a
+   *  measurement, so nothing that is read off coordinates (xH, spread, the heatmap) may count it. */
+  manual?: true;
+};
 export type TapAction = { kind: "tap" | "untap"; step: Step };
 export type TurnAction = DartAction | TapAction;
 

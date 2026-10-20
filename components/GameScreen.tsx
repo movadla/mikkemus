@@ -130,6 +130,9 @@ type Props = {
   /** Whether the stand rule is on now — switchable mid-match from the controls. */
   standOn: boolean;
   onToggleStand: () => void;
+  /** Advanced entry: every dart is keyed in as the bed it hit, a miss included — see MikkeMusApp's enterDartFromUi. */
+  exactEntry: boolean;
+  onEnterDart: (sector: string) => void;
   onRegisterHit: (step: Step) => void;
   /** Long-press on a cell: take one cross back off that row. */
   onRemoveHit: (step: Step) => void;
@@ -515,11 +518,12 @@ function DartPicker({
   onClose,
 }: {
   index: number;
-  current: TurnShot;
+  /** The reading being corrected; absent when the dart is being keyed in from scratch. */
+  current?: TurnShot;
   onPick: (sector: string) => void;
   onClose: () => void;
 }) {
-  const [ring, setRing] = useState<"S" | "D" | "T">(() => ringOfLabel(current.label));
+  const [ring, setRing] = useState<"S" | "D" | "T">(() => (current ? ringOfLabel(current.label) : "T"));
   const chip = (selected: boolean): React.CSSProperties => ({
     "--btn-fill": selected ? "var(--color-teal)" : "var(--color-surface-2, rgba(255,255,255,0.06))",
     color: selected ? "var(--color-bg)" : "var(--color-cream)",
@@ -530,7 +534,7 @@ function DartPicker({
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={`Rett pil ${index + 1}`}
+      aria-label={current ? `Rett pil ${index + 1}` : `Legg inn pil ${index + 1}`}
       className="fixed inset-0 flex items-center justify-center p-4 z-50"
       style={{ background: "rgba(0,0,0,0.6)" }}
       onKeyDown={(e) => {
@@ -539,7 +543,13 @@ function DartPicker({
     >
       <div className="shadow-panel w-full max-w-sm rounded-xl p-4" style={{ background: "var(--color-surface)" }}>
         <p className="text-center mb-3" style={{ color: "var(--color-cream)", fontSize: "1rem" }}>
-          Pil {index + 1} ble lest som <strong>{current.label}</strong>. Hva var det egentlig?
+          {current ? (
+            <>
+              Pil {index + 1} ble lest som <strong>{current.label}</strong>. Hva var det egentlig?
+            </>
+          ) : (
+            <>Pil {index + 1}: hva traff du?</>
+          )}
         </p>
         <div className="grid grid-cols-3 gap-2 mb-2">
           {PICKER_RINGS.map((r) => (
@@ -603,6 +613,8 @@ export function GameScreen({
   standAvailable,
   standOn,
   onToggleStand,
+  exactEntry,
+  onEnterDart,
   onRegisterHit,
   onRemoveHit,
   matchThrows,
@@ -662,6 +674,7 @@ export function GameScreen({
   const [showHomeConfirm, setShowHomeConfirm] = useState(false);
   // Which shot box is being corrected (its dart index), or null — see DartPicker.
   const [editingShot, setEditingShot] = useState<number | null>(null);
+  const [enteringDart, setEnteringDart] = useState(false);
   // Lazy-initialized from localStorage so the button reflects whatever the host last chose,
   // without waiting for an effect — announce() itself reads the same localStorage value
   // directly, so this state only drives the button's own icon/label.
@@ -979,6 +992,16 @@ export function GameScreen({
             onEditShot(editingShot, sector);
           }}
           onClose={() => setEditingShot(null)}
+        />
+      )}
+      {enteringDart && (
+        <DartPicker
+          index={turnShots.filter(Boolean).length}
+          onPick={(sector) => {
+            setEnteringDart(false);
+            onEnterDart(sector);
+          }}
+          onClose={() => setEnteringDart(false)}
         />
       )}
       {showHomeConfirm && (
@@ -1312,6 +1335,17 @@ export function GameScreen({
               </p>
             )}
           </div>
+        )}
+        {exactEntry && (
+          <button
+            type="button"
+            onClick={() => setEnteringDart(true)}
+            disabled={turnShots.filter(Boolean).length >= 3 || showChoiceBox || showStandBox}
+            className={`glossy w-full max-w-3xl mx-auto py-4 rounded-xl font-semibold text-lg mb-3 ${FOCUS_RING}`}
+            style={{ "--btn-fill": "var(--color-gold)", color: "var(--color-bg)", opacity: turnShots.filter(Boolean).length >= 3 || showChoiceBox || showStandBox ? 0.4 : 1 } as React.CSSProperties}
+          >
+            Legg inn pil {Math.min(3, turnShots.filter(Boolean).length + 1)}
+          </button>
         )}
         <div className="action-buttons grid gap-3 max-w-3xl mx-auto w-full" style={{ gridTemplateColumns: "0.7fr 1.3fr" }}>
           <button

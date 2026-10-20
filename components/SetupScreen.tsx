@@ -97,7 +97,9 @@ export function SetupScreen({
     guestPlayers?: Record<string, true>,
     variant?: GameVariant,
     /** Played for fun: nothing from the match is written to the statistics. */
-    statsOff?: boolean
+    statsOff?: boolean,
+    /** Advanced: every dart keyed in by hand as the bed it hit, a miss included. */
+    exactEntry?: boolean
   ) => void;
   onHome?: () => void;
   /** Overridden by other modes (e.g. Bull-duell) that reuse this same player picker. */
@@ -113,6 +115,9 @@ export function SetupScreen({
   const [teams, setTeams] = useState<PickedTeam[]>([]);
   // Ticked under the start button: the match is played without a trace in the statistics.
   const [statsOff, setStatsOff] = useState(false);
+  // Avanserte innstillinger: off by default, and the one thing in it is keying in every dart.
+  const [advanced, setAdvanced] = useState(false);
+  const [exactEntry, setExactEntry] = useState(false);
 
   // The longer games have no bots — see botsSupported. Bots already added when the length is
   // changed are not removed behind the user's back; the start button waits until they are.
@@ -129,7 +134,7 @@ export function SetupScreen({
     commitPeople(people);
     const { players, botLevels, guestPlayers } = splitPeople(people);
     // The stand rule belongs to team play; a lone player has no one to hand over to.
-    onStart(players, botLevels, undefined, guestPlayers, withStandRule(variant, false), statsOff);
+    onStart(players, botLevels, undefined, guestPlayers, withStandRule(variant, false), statsOff, exactEntry);
   }
 
   function startTeamGame() {
@@ -145,15 +150,50 @@ export function SetupScreen({
       teamRosters,
       undefined,
       variant,
-      statsOff
+      statsOff,
+      exactEntry
     );
   }
+
+  const advancedSettings = (
+    <div style={{ color: "var(--color-muted)", fontSize: "0.85rem" }}>
+      <label className="inline-flex items-center gap-3 cursor-pointer" style={{ minHeight: "2.75rem" }}>
+        <input
+          type="checkbox"
+          checked={advanced}
+          onChange={(e) => {
+            setAdvanced(e.target.checked);
+            if (!e.target.checked) setExactEntry(false);
+          }}
+          style={{ width: 22, height: 22, accentColor: "var(--color-gold)" }}
+        />
+        Avanserte innstillinger
+      </label>
+      {advanced && (
+        <label className="flex items-start gap-3 cursor-pointer pl-9 pb-2">
+          <input type="checkbox" checked={exactEntry} onChange={(e) => setExactEntry(e.target.checked)} style={{ width: 22, height: 22, accentColor: "var(--color-gold)", flexShrink: 0 }} />
+          <span>
+            Legg inn hver pil for hånd
+            <span className="block" style={{ fontSize: "0.75rem" }}>Du velger hva hver pil traff, bom, trippel og dobbel inkludert, så vi vet hvor alle treffene er.</span>
+          </span>
+        </label>
+      )}
+    </div>
+  );
 
   const noStatsToggle = (
     <label className="inline-flex items-center gap-3 cursor-pointer" style={{ minHeight: "2.75rem", color: "var(--color-muted)", fontSize: "0.85rem" }}>
       <input type="checkbox" checked={statsOff} onChange={(e) => setStatsOff(e.target.checked)} style={{ width: 22, height: 22, accentColor: "var(--color-gold)" }} />
       Spill uten at statistikken teller
     </label>
+  );
+
+  // Bull-duell reuses this screen and has no keyed-in darts, so the advanced settings are the main game's only.
+  const belowStart = (
+    <>
+      {noStatsToggle}
+      {variantSelectable && advancedSettings}
+    </>
   );
 
   return (
@@ -182,7 +222,7 @@ export function SetupScreen({
               ready={!individualProblem}
               summary={setupSummary([`${people.length} ${people.length === 1 ? "spiller" : "spillere"}`, crosses])}
               reason={individualProblem}
-              below={noStatsToggle}
+              below={belowStart}
             >
               Start kampen
             </StickyAction>
@@ -197,7 +237,7 @@ export function SetupScreen({
               ready={!teamProblem}
               summary={setupSummary([`${teams.length} lag`, crosses])}
               reason={teamProblem}
-              below={noStatsToggle}
+              below={belowStart}
             >
               Start kampen
             </StickyAction>

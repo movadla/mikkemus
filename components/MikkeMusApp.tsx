@@ -398,6 +398,14 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     skipStatsRef.current = v;
     setSkipStatsState(v);
   };
+  // Advanced entry: every dart is keyed in by hand as the bed it hit (a miss included), so the match knows where all of them
+  // landed. Chosen under Avanserte innstillinger before the start. A ref as well as state for the same reason as skipStats.
+  const exactEntryRef = useRef(false);
+  const [exactEntry, setExactEntryState] = useState(false);
+  const setExactEntry = (v: boolean) => {
+    exactEntryRef.current = v;
+    setExactEntryState(v);
+  };
   const matchIdRef = useRef("");
   const [oddsHistory, setOddsHistory] = useState<OddsSnapshot[]>([]);
   // Which players in this match are bots, and at what difficulty — set once at
@@ -621,6 +629,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       }
       setScreen(restored.screen);
       setSkipStats(restored.skipStats ?? false);
+      setExactEntry(restored.exactEntry ?? false);
       setPlayers(restored.players);
       writeProgress(restored.progress);
       setCurrentIdx(restored.currentIdx);
@@ -714,6 +723,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       variant,
       matchId: matchIdRef.current,
       skipStats,
+      exactEntry,
       players,
       progress,
       currentIdx,
@@ -744,7 +754,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       turnStart: turnStartRef.current,
       turnActions: turnActionsRef.current.map((a): TurnAction =>
         a.kind === "dart"
-          ? { kind: "dart", dartIndex: a.dartIndex, sector: a.sector, bounceout: a.bounceout, scored: a.scored, coordinates: a.coordinates }
+          ? { kind: "dart", dartIndex: a.dartIndex, sector: a.sector, bounceout: a.bounceout, scored: a.scored, coordinates: a.coordinates, ...(a.manual ? { manual: true as const } : {}) }
           : a,
       ),
     });
@@ -758,6 +768,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     screen,
     variant,
     skipStats,
+    exactEntry,
     players,
     progress,
     currentIdx,
@@ -909,7 +920,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
    * through exactly the same rules a physical throw would be. Bots reach this via
    * a synthetic payload built from botStrategy's simulated coordinates + sectorAt.
    */
-  function processDart(payload: { sector: string; bounceout: boolean; coordinates: [number, number] }) {
+  function processDart(payload: { sector: string; bounceout: boolean; coordinates: [number, number]; manual?: boolean }) {
     if (!activePlayer) return;
     // The triple/double choice is still open. finishTurn zeroed the dart counter and returned
     // without advancing, so anything arriving now would be scored as dart 1 of a new turn —
@@ -1072,11 +1083,13 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       if (activeTriplesRef.current === 3 && !replayingRef.current && fxFlags(getFxLevel()).tripleOverlay) setTripleCelebration(true);
     }
 
-    setMatchThrows((prev) => ({
-      ...prev,
-      [activePlayer]: [...(prev[activePlayer] ?? []), payload.coordinates],
-    }));
-    const accuracy = activeStepAtThrow ? throwAccuracy(activeStepAtThrow, payload.coordinates) : null;
+    if (!payload.manual) {
+      setMatchThrows((prev) => ({
+        ...prev,
+        [activePlayer]: [...(prev[activePlayer] ?? []), payload.coordinates],
+      }));
+    }
+    const accuracy = activeStepAtThrow && !payload.manual ? throwAccuracy(activeStepAtThrow, payload.coordinates) : null;
     if (accuracy) {
       const totals = accuracyTotalsRef.current[activePlayer] ?? { distance: 0, horizontal: 0, vertical: 0, throws: 0 };
       // Per thrower as well: in a team the match is booked on the team, but the odds need to know how
@@ -1099,7 +1112,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     // cross there); everything else against the active step. Redirecting it later re-judges it
     // against the number — so three T17s in a turn read as 1+1+1 until one becomes 17×3, and
     // the sum always matches the crosses they actually brought.
-    const luck = luckForThrow(payload.coordinates, ownNumberRing ? (parsed.ring as Step) : activeStepAtThrow, boardBefore);
+    const luck = payload.manual ? null : luckForThrow(payload.coordinates, ownNumberRing ? (parsed.ring as Step) : activeStepAtThrow, boardBefore);
     if (luck !== null) {
       const luckByStep = luckTotalsRef.current[activePlayer] ?? emptyLuckByStep();
       const stepTotals = luckByStep[luck.step];
@@ -1124,6 +1137,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         sector: payload.sector,
         bounceout: payload.bounceout,
         coordinates: payload.coordinates,
+        ...(payload.manual ? { manual: true as const } : {}),
         scored: hit,
         luck,
         records: hitResult ?? [],
@@ -1169,7 +1183,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       // Confirming on the third dart instead closed the turn before the player could see what
       // the board made of it. Without a board to report the takeout (manual play, a bot, the
       // board offline) there is nothing to wait for, so the turn ends here as before.
-      if (expectsTakeout()) {
+      // Keyed-in darts (advanced entry) wait the same way, for Bekreft instead of a takeout, so the last dart can still be undone.
+      if (expectsTakeout() || exactEntryRef.current) {
         // The triple/double question, though, is asked now — the player is standing there
         // looking at the dart, not at the takeout. Answering it does not end the turn (see
         // resolvePendingChoice); the takeout still does.
@@ -1195,7 +1210,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
    * there (see the __mikke* hooks) so the deferred path can be exercised without one.
    */
   function expectsTakeout(): boolean {
-    if (activeBotLevel !== null) return false;
+    if (activeBotLevel !== null || exactEntryRef.current) return false;
     return devTakeoutRef.current || (scoliaEnabled && scolia.state.boardStatus === "Ready");
   }
 
@@ -1304,9 +1319,11 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     startTeamRosters: Record<string, TeamMember[]> = {},
     startGuestPlayers: Record<string, true> = {},
     startVariant: GameVariant = "standard",
-    startStatsOff = false
+    startStatsOff = false,
+    startExactEntry = false
   ) {
     setSkipStats(startStatsOff);
+    setExactEntry(startExactEntry);
     // A new match starts with a freshly calibrated board. It used to be done by hand with «Kalibrer» before every match: the
     // board can still be part-way through the last visit (a match is won on the first or second dart), and would then count the
     // first throws of the next match against it. Only with a board that is up, so nothing is sent to one that is not.
@@ -1540,6 +1557,16 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   }
 
   /**
+   * Advanced entry: one dart keyed in by hand as the bed it hit ("T20", "D5", "S17", "25", "Bull", "None" for a miss). It goes
+   * through processDart like a measured dart does, so the rows, the triple/double question, the runs and the turn all work the
+   * same — only what is read off coordinates (xH, spread, the heatmap) is left out, since the coordinates are made up.
+   */
+  function enterDartFromUi(sector: string) {
+    setStandQuestion(false);
+    processDart({ sector, bounceout: sector === "None", coordinates: coordinatesForSector(sector), manual: true });
+  }
+
+  /**
    * What the board's own taps go through. registerHit's second parameter is a cross count, so
    * handing the function itself to a click handler would let an event arrive as one — the same
    * shape of mistake that froze Bekreft (see finishTurn/confirm). Taking only the step here
@@ -1689,6 +1716,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
    * afterwards, or a ring hit on the own number that the player redirects onto the number.
    */
   function rejudgeDart(player: string, dart: LiveDart, activeStep: Step, board: Progress) {
+    if (dart.manual) return; // no measured landing to judge
     const rejudged = luckForThrow(dart.coordinates, activeStep, board);
     const old = dart.luck;
     const luckByStep = luckTotalsRef.current[player] ?? emptyLuckByStep();
@@ -1746,7 +1774,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     const start = turnStartRef.current;
     if (!start || !activePlayer || start.player !== activePlayer) return false;
     const player = start.player;
-    const dartCount = turnDarts().length;
+    // Only the measured darts went onto the heatmap; a keyed-in one never did.
+    const dartCount = turnDarts().filter((d) => !d.manual).length;
 
     writeProgress({ ...progressRef.current, [player]: start.progress });
     writePendingHits(start.pendingHits);
@@ -1785,7 +1814,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     replayingRef.current = true;
     try {
       for (const a of actions) {
-        if (a.kind === "dart") processDart({ sector: a.sector, bounceout: a.bounceout, coordinates: a.coordinates });
+        if (a.kind === "dart") processDart({ sector: a.sector, bounceout: a.bounceout, coordinates: a.coordinates, manual: a.manual });
         else if (a.kind === "tap") registerHitFromUi(a.step);
         else removeHitFromUi(a.step);
       }
@@ -2277,8 +2306,10 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     // with the honest caveat that it under-counts a winning turn that opened with misses.
     const finishedNow = isFinished(effectiveProgress[activePlayer]);
     const scoliaDarts = turnShots.filter(Boolean).length;
+    // Keyed-in darts: a turn that did not win is three darts, so a Bekreft after two entries means one was not entered (a miss
+    // that was forgotten), not a two-dart turn.
     const dartsForTurn =
-      dartsOverride ?? (scoliaDarts || (finishedNow ? Math.max(1, manualTapsThisTurn) : DARTS_PER_TURN));
+      dartsOverride ?? (scoliaDarts ? (exactEntryRef.current && !finishedNow ? DARTS_PER_TURN : scoliaDarts) : finishedNow ? Math.max(1, manualTapsThisTurn) : DARTS_PER_TURN);
     const turnIndex = rewound ? rewoundTurnIndex ?? 0 : turnCounters[activePlayer] ?? 0;
     // Who threw it, for the per-member numbers afterwards: the team's current member, or — on a
     // re-confirmed turn, where the pointer has moved on — whoever the turn already says.
@@ -2519,7 +2550,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
    *  WinnerScreen call site below). */
   function rematch() {
     flushMatchResults();
-    startGame(players, botLevels, teamRosters, guestPlayers, variant, skipStatsRef.current);
+    startGame(players, botLevels, teamRosters, guestPlayers, variant, skipStatsRef.current, exactEntryRef.current);
   }
 
   /**
@@ -2736,7 +2767,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         canUndo={turnActionCount > 0 || pendingHits.length > 0 || history.length > 0}
         shotsEditable={turnActionCount > 0 && !botIsThrowing}
         onEditShot={editDart}
-        awaitingTakeoutToConfirm={turnActionCount > 0 && dartsThisTurn >= DARTS_PER_TURN && !awaitingConfirmResolution}
+        awaitingTakeoutToConfirm={turnActionCount > 0 && dartsThisTurn >= DARTS_PER_TURN && !awaitingConfirmResolution && !exactEntry}
         pendingChoice={rewound === null ? pendingAmbiguous[pendingAmbiguous.length - 1] ?? null : null}
         pendingChoices={rewound === null ? pendingAmbiguous : []}
         awaitingConfirmResolution={awaitingConfirmResolution}
@@ -2751,8 +2782,10 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         onToggleStand={toggleStandRule}
         onAnswerStand={answerStandQuestion}
         // A mark added or taken away while the question is up changes what it is asking about.
+        exactEntry={exactEntry}
+        onEnterDart={botIsThrowing ? () => {} : enterDartFromUi}
         onRegisterHit={
-          botIsThrowing
+          botIsThrowing || exactEntry
             ? () => {}
             : (s) => {
                 setStandQuestion(false);
@@ -2760,7 +2793,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
               }
         }
         onRemoveHit={
-          botIsThrowing
+          botIsThrowing || exactEntry
             ? () => {}
             : (s) => {
                 setStandQuestion(false);
