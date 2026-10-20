@@ -175,8 +175,8 @@ export type TurnResult = {
    *  and the "tre tellende" statistic go by. With manual entry a tap is a mark, so this is the
    *  marks unless the thrower was asked (see MikkeMusApp's standQuestionDue). */
   counted?: number;
-  /** Darts thrown at each row this turn, a dart counted once against the row it was thrown at and not at all when it stayed
-   *  on a double/triple while another number was active. Absent on turns logged before this was tracked and on manual ones. */
+  /** Darts thrown at each row this turn, a dart counted once — against the row it was thrown at, or against the double/triple
+   *  row when it stayed on that ring while a number was active. Absent on turns logged before this was tracked and on manual ones. */
   dartsByStep?: Partial<Record<Step, number>>;
   /** Misses by the row each dart was thrown at, when Scolia saw every dart. Wins over `missStep` for where the misses belong. */
   missesByStep?: Partial<Record<Step, number>>;

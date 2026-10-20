@@ -73,8 +73,9 @@ type LiveAction = LiveDart | TapAction;
 
 /**
  * Darts used per row for «forsøk per rad»: each dart counts once, against the row it was thrown at. A dart that stayed on
- * a double or triple while another number was being worked is a slenger, not an attempt at that number, so it counts
- * nowhere there — and a triple that closes a row is one dart, not three. Left out entirely when any dart lacks its row.
+ * a double or triple while a number was being worked (a slenger) counts against that ring's row, not the number's — three
+ * slengere on D are three darts spent on D — and a triple that closes a row is one dart, not three. Left out entirely
+ * when any dart lacks its row.
  */
 function dartsByRow(
   darts: LiveDart[],
@@ -90,8 +91,10 @@ function dartsByRow(
     if (!d.scored) missed[d.atStep] = (missed[d.atStep] ?? 0) + 1;
     const kept = d.records.filter((r) => pending.includes(r));
     const onlyRing = kept.length > 0 && kept.every((r) => r.step === "D" || r.step === "T");
-    if (onlyRing && !kept.some((r) => r.step === d.atStep)) continue;
-    out[d.atStep] = (out[d.atStep] ?? 0) + 1;
+    // A dart that stayed on the ring is an attempt at THAT ring, whichever number was active: three slengere on D are three
+    // darts spent filling D. It costs the number nothing.
+    const row = onlyRing && !kept.some((r) => r.step === d.atStep) ? kept[0].step : d.atStep;
+    out[row] = (out[row] ?? 0) + 1;
   }
   return { dartsByStep: out, missesByStep: missed };
 }
