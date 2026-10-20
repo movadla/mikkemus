@@ -1,3 +1,4 @@
+import type { BotLevel } from "./botLevels";
 import { cleanTeamName, pairKey, type NamedTeam } from "./teamNames";
 
 /**
@@ -11,7 +12,27 @@ import { cleanTeamName, pairKey, type NamedTeam } from "./teamNames";
  * Per device, like the team names (lib/teamNames.ts) and the shirts (lib/teamKit.ts), which are
  * worked out from the same two things — the members.
  */
-export type TeamCard = { name: string; members: string[]; lastUsed: number };
+export type TeamCard = {
+  name: string;
+  members: string[];
+  lastUsed: number;
+  /** The members that are bots, by name, with their level — so a team with a bot in it comes back as it was. */
+  bots?: Record<string, BotLevel>;
+};
+
+const BOT_LEVEL_KEYS = ["1", "2", "3", "4", "5", "6"];
+
+function parseBots(raw: unknown, members: string[]): Record<string, BotLevel> | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const out: Record<string, BotLevel> = {};
+  for (const [name, level] of Object.entries(raw as Record<string, unknown>)) {
+    if (members.includes(name) && typeof level === "string" && BOT_LEVEL_KEYS.includes(level)) out[name] = level as BotLevel;
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
+/** A team to remember: the named team and, for the bots in it, their levels. */
+export type RememberedTeam = NamedTeam & { bots?: Record<string, BotLevel> };
 
 const STORAGE_KEY = "mikke-mus-team-cards";
 const MAX_CARDS = 40;
@@ -23,10 +44,11 @@ function parseCards(raw: string | null): TeamCard[] {
     const cards: TeamCard[] = [];
     for (const c of parsed) {
       if (!c || typeof c !== "object") continue;
-      const { name, members, lastUsed } = c as Record<string, unknown>;
+      const { name, members, lastUsed, bots } = c as Record<string, unknown>;
       if (typeof name !== "string" || !Array.isArray(members) || !members.every((m) => typeof m === "string")) continue;
       if (members.length === 0) continue;
-      cards.push({ name: cleanTeamName(name), members: members as string[], lastUsed: typeof lastUsed === "number" ? lastUsed : 0 });
+      const parsedBots = parseBots(bots, members as string[]);
+      cards.push({ name: cleanTeamName(name), members: members as string[], lastUsed: typeof lastUsed === "number" ? lastUsed : 0, ...(parsedBots ? { bots: parsedBots } : {}) });
     }
     return cards.sort((a, b) => b.lastUsed - a.lastUsed);
   } catch {
@@ -76,20 +98,20 @@ export function subscribeTeamCards(listener: () => void): () => void {
  * The cards after these teams have played: each team replaces the card for the same people, so a
  * team that changes its name does not leave the old one behind, and the list stays short.
  */
-export function mergeTeamCards(existing: TeamCard[], teams: NamedTeam[], now: number): TeamCard[] {
+export function mergeTeamCards(existing: TeamCard[], teams: RememberedTeam[], now: number): TeamCard[] {
   const byPair = new Map<string, TeamCard>();
   existing.forEach((c) => byPair.set(pairKey(c.members), c));
   for (const t of teams) {
     const key = pairKey(t.members);
     const name = cleanTeamName(t.name);
     if (!key || !name) continue;
-    byPair.set(key, { name, members: t.members, lastUsed: now });
+    byPair.set(key, { name, members: t.members, lastUsed: now, ...(t.bots ? { bots: t.bots } : {}) });
   }
   return [...byPair.values()].sort((a, b) => b.lastUsed - a.lastUsed).slice(0, MAX_CARDS);
 }
 
 /** Remembers the teams of a match that is starting. Never throws. */
-export function rememberTeamCards(teams: NamedTeam[], now: number = Date.now()): void {
+export function rememberTeamCards(teams: RememberedTeam[], now: number = Date.now()): void {
   if (typeof window === "undefined") return;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(mergeTeamCards(readTeamCards(), teams, now)));
@@ -114,7 +136,7 @@ export function withTeamRecords(cards: TeamCard[], records: { name: string; memb
     const name = cleanTeamName(r.name);
     if (!key || !name) continue;
     const local = byPair.get(key);
-    byPair.set(key, { name, members: local?.members ?? members, lastUsed: local?.lastUsed ?? 0 });
+    byPair.set(key, { name, members: local?.members ?? members, lastUsed: local?.lastUsed ?? 0, ...(local?.bots ? { bots: local.bots } : {}) });
   }
   return [...byPair.values()].sort((a, b) => b.lastUsed - a.lastUsed || a.name.localeCompare(b.name, "no"));
 }

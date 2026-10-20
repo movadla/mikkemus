@@ -67,12 +67,19 @@ export function commitPeople(people: Person[]) {
   markPlayersUsed(saved);
 }
 
-/** The same for teams: the names the user chose, the teams as cards, and their people. A team
- *  with a bot in it is not remembered as a card — picking it later would make the bot a person. */
+/** The same for teams: the names the user chose, the teams as cards, and their people. A team with a bot in it is
+ *  remembered as a card only when the user gave it a name, and the card keeps which members are bots. */
 export function commitTeams(teams: PickedTeam[]) {
   const named = teams.map(toNamedTeam);
   rememberTeamNames(named);
-  rememberTeamCards(named.filter((_, i) => !teams[i].members.some((m) => m.isBot)));
+  rememberTeamCards(
+    named.flatMap((t, i) => {
+      const bots = Object.fromEntries(teams[i].members.filter((m) => m.isBot && m.botLevel).map((m) => [m.name, m.botLevel!]));
+      const hasBot = Object.keys(bots).length > 0;
+      if (hasBot && !teams[i].custom) return [];
+      return [hasBot ? { ...t, bots } : t];
+    }),
+  );
   commitPeople(teamPeople(teams));
 }
 

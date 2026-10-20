@@ -41,3 +41,14 @@ describe("mergeTeamCards", () => {
     expect(mergeTeamCards([], many, 1).length).toBeLessThanOrEqual(40);
   });
 });
+
+describe("teams with bots", () => {
+  it("keeps which members are bots, and at what level", () => {
+    const cards = mergeTeamCards([], [{ name: "Gutta og Dave", members: ["Per", "Dave 🥉"], custom: true, bots: { "Dave 🥉": "3" } }], 1);
+    expect(cards[0].bots).toEqual({ "Dave 🥉": "3" });
+  });
+  it("a record with the same people does not lose the bots of the card", () => {
+    const cards: TeamCard[] = [{ name: "Gutta og Dave", members: ["Per", "Dave 🥉"], lastUsed: 5, bots: { "Dave 🥉": "3" } }];
+    expect(withTeamRecords(cards, [{ name: "Gutta og Dave", members: ["Per", "Dave 🥉"] }])[0].bots).toEqual({ "Dave 🥉": "3" });
+  });
+});

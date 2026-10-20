@@ -14,7 +14,7 @@ const FOCUS_RING =
 
 const NO_CARDS: TeamCard[] = [];
 
-type Tile = { name: string; members: string[]; kit: Kit; picked: PickedTeam | null };
+type Tile = { name: string; members: string[]; bots?: TeamCard["bots"]; kit: Kit; picked: PickedTeam | null };
 
 /**
  * Which teams play: every team that has played before, as tiles in two columns — the shirt, the
@@ -45,7 +45,7 @@ export function TeamPicker({ teams, onChange, botsAllowed }: { teams: PickedTeam
   };
   // The known teams, then the teams made just now that are not among them.
   const tiles: Tile[] = [
-    ...known.map((c) => ({ name: c.name, members: c.members, kit: homeKit(c.members), picked: teams[pickedIndex(c.members)] ?? null })),
+    ...known.map((c) => ({ name: c.name, members: c.members, bots: c.bots, kit: homeKit(c.members), picked: teams[pickedIndex(c.members)] ?? null })),
     ...teams
       .filter((t) => !known.some((c) => keyOf(c.members) === keyOf(t.members.map((m) => m.name))))
       .map((t) => ({ name: t.name, members: t.members.map((m) => m.name), kit: firstKit(t.members.map((m) => m.name)), picked: t })),
@@ -57,7 +57,7 @@ export function TeamPicker({ teams, onChange, botsAllowed }: { teams: PickedTeam
       onChange(teams.filter((_, j) => j !== i));
       return;
     }
-    onChange([...teams, { name: tile.name, members: tile.members.map((name) => ({ name, isBot: false })), custom: true }]);
+    onChange([...teams, { name: tile.name, members: tile.members.map((name) => (tile.bots?.[name] ? { name, isBot: true, botLevel: tile.bots[name] } : { name, isBot: false })), custom: true }]);
   }
 
   function openComposer() {
@@ -94,7 +94,8 @@ export function TeamPicker({ teams, onChange, botsAllowed }: { teams: PickedTeam
           {tiles.map((tile) => {
             const order = pickedIndex(tile.members);
             const selected = order !== -1;
-            const blocked = !selected && teams.some((t) => sharesMember(t.members.map((m) => m.name), tile.members));
+            // A team with a bot in it cannot be picked where bots are not allowed (a tournament, say).
+            const blocked = !selected && (teams.some((t) => sharesMember(t.members.map((m) => m.name), tile.members)) || (!!tile.bots && !botsAllowed));
             return (
               <button
                 key={keyOf(tile.members)}
