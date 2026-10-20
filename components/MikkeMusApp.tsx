@@ -68,6 +68,7 @@ type LiveAction = LiveDart | TapAction;
 import { botChooseThrow, botDecideRedirect, solverFor } from "@/lib/botStrategy";
 import { type BotLevel, type TeamMember } from "@/lib/botLevels";
 import { useScolia } from "@/lib/useScolia";
+import { requestRecalibration } from "@/lib/scoliaCommands";
 import { extractImageUrls } from "@/lib/extractImageUrls";
 import { SetupScreen } from "./SetupScreen";
 import { GameScreen } from "./GameScreen";
@@ -1262,6 +1263,10 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     startStatsOff = false
   ) {
     setSkipStats(startStatsOff);
+    // A new match starts with a freshly calibrated board. It used to be done by hand with «Kalibrer» before every match: the
+    // board can still be part-way through the last visit (a match is won on the first or second dart), and would then count the
+    // first throws of the next match against it. Only with a board that is up, so nothing is sent to one that is not.
+    if (scoliaEnabled && scolia.state.boardStatus === "Ready") void requestRecalibration();
     // First, before anything reads a rule: the target, the active step and what a throw means
     // all come from here for the rest of the match.
     setGameVariant(startVariant);
