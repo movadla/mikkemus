@@ -1,6 +1,8 @@
 import { useSyncExternalStore } from "react";
 import { reportError } from "./errorReporting";
 import { STEPS, type Step, type TurnAggregate } from "./game";
+import { fewestDartsToWin } from "./finishState";
+import { getRules } from "./rules";
 import { supabase } from "./supabaseClient";
 import { defaultKits, type TeamKits } from "./teamKit";
 import { cleanTeamName } from "./teamNames";
@@ -415,8 +417,9 @@ export function recordMatchResult(name: string, aggregate: TurnAggregate, won: b
     matchesPlayed: existing.matchesPlayed + 1,
     matchesWon: won ? existing.matchesWon + 1 : existing.matchesWon,
     dartsInWins: won ? existing.dartsInWins + dartsUsed : existing.dartsInWins,
+    // A win on fewer darts than a board can take is not a match that was played (an aborted one, say): never a record.
     bestDartsToFinish:
-      won && (existing.bestDartsToFinish === null || dartsUsed < existing.bestDartsToFinish)
+      won && dartsUsed >= fewestDartsToWin(getRules().target) && (existing.bestDartsToFinish === null || dartsUsed < existing.bestDartsToFinish)
         ? dartsUsed
         : existing.bestDartsToFinish,
     overall: {

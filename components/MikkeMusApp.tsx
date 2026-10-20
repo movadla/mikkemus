@@ -32,6 +32,7 @@ import { computeOddsOffThread } from "@/lib/odds/client";
 import { saveMatchArchive } from "@/lib/matchArchive";
 import type { OddsMatch } from "@/lib/odds/match";
 import { fairPrice } from "@/lib/bet/ledger";
+import { groupBestWin } from "@/lib/bestWin";
 import { chaseFraction, recordChase } from "@/lib/recordChase";
 import { rowCosts } from "@/lib/rowCosts";
 import { recordBestRun, ensureTeam, getPlayerRecord, playPlayerSound, recordAccuracyTotals, recordLuckTotals, recordMatchHistory, recordMatchResult, recordMemberStats, recordRating, recordRingHits, useRoster, useTeamRecords, meanEuclideanDistance, averagePct, type RingHits } from "@/lib/storage";
@@ -2689,7 +2690,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     pendingByStep[h.step] = (pendingByStep[h.step] ?? 0) + 1;
   });
 
-  // Full party: how many darts can still be wasted before the player's own fewest-darts record is out of reach. Only a real,
+  // Full party: how many darts can still be wasted before the fewest-darts record is out of reach. The record is the group's —
+  // the fewest any team has won on in a team match, any player in one played alone — not the side's own. Only for a real,
   // saved player or team whose match counts (the same test as the record banner), and only for the turn that is theirs.
   const recordChaseNow = (() => {
     if (!activePlayer || !fx.recordBar || skipStats || !getRules().countsForStats || rewound !== null || botIsThrowing) return null;
@@ -2697,8 +2699,9 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     const board = progress[activePlayer];
     if (!board) return null;
     const used = aggregateTurns(turnLog[activePlayer] ?? []).darts + dartsThisTurn;
-    const chase = recordChase(getPlayerRecord(activePlayer)?.bestDartsToFinish, used, board, getRules().target);
-    return chase ? { record: chase.record, slack: chase.slack, fraction: chaseFraction(chase) } : null;
+    const group = groupBestWin(teamRosters[activePlayer] ? teamRecords : rosterRecords, teamRosters[activePlayer] ? "team" : "player");
+    const chase = recordChase(group?.darts, used, board, getRules().target);
+    return chase && group ? { record: chase.record, holder: group.who, slack: chase.slack, fraction: chaseFraction(chase) } : null;
   })();
 
   // Feeds the landscape side panel. Treff% is over COMPLETED turns only — the turn in progress

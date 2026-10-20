@@ -1,4 +1,5 @@
 import { buildMatchLog } from "./matchLog";
+import { bestWinDarts } from "./bestWin";
 import { shownHitPct, type PlayerRecord } from "./playerRows";
 
 export type RecordHolder = { name: string; value: number; /** Shown under the name, e.g. the date or the opponent. */ note?: string };
@@ -46,7 +47,7 @@ export function buildRecords(records: PlayerRecord[]): RecordList[] {
   const n = (v: number) => String(Math.round(v));
 
   add("run", "Lengste serie: treff på rad", (v) => `${v} på rad`, people.filter((r) => (r.bestRun ?? 0) > 0).map((r) => ({ name: r.name, value: r.bestRun as number })));
-  add("fast", "Seier på færrest piler", (v) => `${v} piler`, people.filter((r) => r.bestDartsToFinish !== null).map((r) => ({ name: r.name, value: r.bestDartsToFinish as number })), true);
+  add("fast", "Seier på færrest piler", (v) => `${v} piler`, people.map((r) => ({ name: r.name, value: bestWinDarts(r) })).filter((h): h is { name: string; value: number } => h.value !== null), true);
 
   const matches = people.flatMap((r) => r.matchHistory.filter((m) => m.dartsUsed >= MIN_DARTS_PCT).map((m) => ({ r, m })));
   add("hit", "Høyeste treffprosent i en kamp", (v) => `${n(v)} %`, matches.map(({ r, m }) => ({ name: r.name, value: shownHitPct(m), note: day(m.date) })));

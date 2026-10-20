@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { STEPS, STEP_LABELS, totalMarks, type PlayerProgress, type Step, type TurnAggregate, type TurnResult } from "@/lib/game";
 import { getRules } from "@/lib/rules";
 import { buildMatchFacts } from "@/lib/matchSummary";
+import { bestWinDarts } from "@/lib/bestWin";
 import { throwerStats } from "@/lib/turnStats";
 import { MatchSummary } from "./MatchSummary";
 import { TeamKit } from "./TeamKit";
@@ -168,7 +169,8 @@ export function WinnerScreen({
         const out: string[] = [];
         const run = Math.max(0, ...throwerStats(turnLogByPlayer[p] ?? [], p).map((r) => r.bestRun)) * 3;
         if (held.bestRun && run > held.bestRun) out.push(`${p}: lengste serie, ${run} piler`);
-        if (p === winner && held.bestDartsToFinish && stats[p] && stats[p].darts < held.bestDartsToFinish) out.push(`${p}: færrest piler, ${stats[p].darts}`);
+        const bestWin = bestWinDarts(held);
+        if (p === winner && bestWin && stats[p] && stats[p].darts < bestWin) out.push(`${p}: færrest piler, ${stats[p].darts}`);
         return out;
       })
     : [];

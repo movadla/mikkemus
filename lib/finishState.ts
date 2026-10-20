@@ -1,4 +1,4 @@
-import { STEPS, type Progress, type Step } from "./game";
+import { STEPS, emptyProgress, type Progress, type Step } from "./game";
 
 /**
  * How close a board is to being finished, in darts:
@@ -21,6 +21,11 @@ export function dartsToFinish(progress: Progress, target: number): number {
   darts += missing("D") + missing("T");
   darts += Math.ceil(missing("BULL") / 2);
   return darts;
+}
+
+/** The fewest darts a whole board can take — 15 in Standard. A «win» on fewer than this is not a match that was played. */
+export function fewestDartsToWin(target: number): number {
+  return dartsToFinish(emptyProgress(), target);
 }
 
 export function finishState(progress: Progress | undefined, target: number): FinishState {
