@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { finishSpotifyLogin } from "@/lib/spotify";
 import { preloadRoster } from "@/lib/storage";
 import { loadActiveTournamentId } from "@/lib/tournamentStorage";
 import { useScolia } from "@/lib/useScolia";
@@ -49,6 +50,11 @@ export function AppRoot() {
   // The players are fetched while the home screen is up, not when the setup screen first asks.
   useEffect(() => {
     preloadRoster();
+  }, []);
+
+  // Back from Spotify's login with a code in the address: trade it for tokens now, before any menu is open to do it.
+  useEffect(() => {
+    void finishSpotifyLogin();
   }, []);
 
   if (showRules) return <RulesIntro onDone={() => setShowRules(false)} />;

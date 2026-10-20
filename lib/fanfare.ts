@@ -13,6 +13,14 @@ function getContext(): AudioContext | null {
   // returning null on failure rather than throwing, since primeAudio is called directly
   // from startGame's click handler with nothing else catching it.
   if (!sharedContext) {
+    // Sound effects mix with whatever else is playing (Spotify, say) instead of pausing it. iOS Safari otherwise treats a page
+    // that plays sound as the one thing allowed to. "ambient" also follows the ring/silent switch, as Web Audio already did.
+    try {
+      const session = (navigator as unknown as { audioSession?: { type: string } }).audioSession;
+      if (session) session.type = "ambient";
+    } catch {
+      // Not every browser has it, and none of them needs it to play.
+    }
     try {
       sharedContext = new Ctor();
     } catch {

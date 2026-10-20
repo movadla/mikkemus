@@ -1,5 +1,6 @@
 "use client";
 
+import { SpotifyControl } from "./SpotifyControl";
 import { FX_LABELS, FX_LEVELS, setFxLevel, useFxLevel } from "@/lib/fxLevel";
 
 const FOCUS_RING =
@@ -44,6 +45,7 @@ export function FxMenu({ onClose }: { onClose: () => void }) {
             );
           })}
         </div>
+        <SpotifyControl compact />
       </div>
     </div>
   );
