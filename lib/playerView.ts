@@ -56,6 +56,7 @@ export type View = {
   results: boolean[];
   /** Only for «Begge»: kept as totals, not per match. Null when a source is chosen. */
   bestRun: number | null;
+  /** Hit percentage per row: the totals for «Begge», and for a chosen source what its matches kept per row. */
   rows: RowStat[] | null;
   /** Matches on record that have no date or source (from before the matches were kept one by one): left out when a source is chosen. */
   unsorted: number;
@@ -93,6 +94,15 @@ export function rowDartsOver(entries: MatchHistoryEntry[], pick: (m: MatchHistor
 const rowsOf = (steps: Record<Step, HitStat> | undefined): RowStat[] | null =>
   steps ? STEPS.map((step) => ({ step, pct: steps[step].hits + steps[step].misses > 0 ? (steps[step].hits / (steps[step].hits + steps[step].misses)) * 100 : null })) : null;
 
+/** Hit percentage per row over the matches that kept their crosses and misses per row, or null when none of them did. */
+export function rowsOver(entries: MatchHistoryEntry[]): RowStat[] | null {
+  const kept = entries.filter((m) => m.steps);
+  if (kept.length === 0) return null;
+  const steps = {} as Record<Step, HitStat>;
+  STEPS.forEach((s) => (steps[s] = { hits: kept.reduce((a, m) => a + (m.steps![s]?.[0] ?? 0), 0), misses: kept.reduce((a, m) => a + (m.steps![s]?.[1] ?? 0), 0) }));
+  return rowsOf(steps);
+}
+
 function viewOf(entries: MatchHistoryEntry[], source: Source, totals: { matches: number; wins: number; bestRun: number | null; steps: Record<Step, HitStat> | undefined; med: number | null; mhd: number | null; mvd: number | null; dartsPerWin: number | null }): View {
   const sel = bySource(entries, source);
   const both = source === "both";
@@ -111,7 +121,7 @@ function viewOf(entries: MatchHistoryEntry[], source: Source, totals: { matches:
     dartsPerWin: wonDarts.length > 0 ? wonDarts.reduce((s, m) => s + m.dartsUsed, 0) / wonDarts.length : both ? totals.dartsPerWin : null,
     results: [...sel].sort((a, b) => a.date.localeCompare(b.date)).slice(-10).map((m) => m.won),
     bestRun: both ? totals.bestRun : null,
-    rows: both ? rowsOf(totals.steps) : null,
+    rows: both ? rowsOf(totals.steps) : rowsOver(sel),
     unsorted: both ? 0 : Math.max(0, totals.matches - entries.length),
     ...rowDartsOver(sel),
   };
@@ -169,6 +179,8 @@ export function teamView(player: PlayerRecord, all: PlayerRecord[], source: Sour
   });
   return {
     ...base,
+    // Per match, the rows kept are the team's, not the player's own: those exist only as totals, for «Begge».
+    rows: source === "both" ? base.rows : null,
     // The distance is the player's own, measured by Scolia: it exists for «Scolia» and «Begge».
     med: source === "manual" ? null : throws > 0 ? sumR / throws : base.med,
     teams: teams.map((t) => ({

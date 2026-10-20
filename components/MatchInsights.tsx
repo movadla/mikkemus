@@ -106,7 +106,7 @@ export function RowCostCard({ players, turnLog }: { players: string[]; turnLog: 
           ))}
         </div>
       )}
-      <RowDartsChart key={who} costs={costs} who={who} />
+      <RowDartsChart key={who} values={costs} who={who} />
     </div>
   );
 }

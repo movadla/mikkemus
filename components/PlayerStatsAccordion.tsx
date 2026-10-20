@@ -6,7 +6,8 @@ import { STEP_LABELS } from "@/lib/game";
 import { avatarAccent } from "@/lib/avatarAccent";
 import { SOURCES, singleView, teamView, type Source, type View } from "@/lib/playerView";
 import { ratingOf, type PlayerRecord } from "@/lib/storage";
-import { RowDartsChart } from "./RowDartsChart";
+import { RowDartsChart, type RowChartUnit } from "./RowDartsChart";
+import { STEPS, type Step } from "@/lib/game";
 
 const FOCUS_RING = "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
 
@@ -51,18 +52,52 @@ function Rows({ view }: { view: View }) {
   );
 }
 
-/** Darts spent per row over the matches of the chosen source — the winner screen's chart, for a whole career. */
+/**
+ * Per row over the matches of the chosen source — the winner screen's chart, for a whole career — in darts spent or in hit
+ * percentage. The two say different things: D and T take few darts because slengere fill them before they are reached, and
+ * can still be the rows hit least often when actually aimed at.
+ */
 function RowDarts({ view, who, source }: { view: View; who: string; source: Source }) {
-  if (!view.rowDarts) return null;
+  const [unit, setUnit] = useState<RowChartUnit>("darts");
+  if (!view.rowDarts && !view.rows) return null;
+  const pctValues = view.rows ? (Object.fromEntries(view.rows.map((r) => [r.step, r.pct])) as Record<Step, number | null>) : null;
+  const dartValues = view.rowDarts;
+  const shownUnit: RowChartUnit = unit === "pct" && pctValues ? "pct" : dartValues ? "darts" : "pct";
+  const values = shownUnit === "pct" ? pctValues! : dartValues!;
   const n = view.rowDartsMatches;
   return (
     <>
-      <p className="section-label mt-4 mb-2" style={{ fontSize: "0.75rem" }}>PILER PER RAD</p>
-      <RowDartsChart key={`${who}-${source}`} costs={view.rowDarts} who={who} />
-      <p className="mt-1" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>
-        Over {n} {n === 1 ? "kamp" : "kamper"}
-        {view.rowDartsApprox > 0 ? ` — ${view.rowDartsApprox} eldre ${view.rowDartsApprox === 1 ? "kamp er" : "kamper er"} regnet som kryss pluss bom, der en trippel teller tre.` : "."}
-      </p>
+      <div className="flex items-center justify-between mt-4 mb-2 gap-2">
+        <p className="section-label" style={{ fontSize: "0.75rem" }}>{shownUnit === "pct" ? "TREFF PER RAD" : "PILER PER RAD"}</p>
+        <div className="flex rounded-full p-0.5" role="group" aria-label="Piler eller treffprosent" style={{ background: "var(--color-cell)", border: "1px solid var(--color-border)" }}>
+          {(["darts", "pct"] as const).map((u) => {
+            const missing = u === "pct" ? !pctValues : !dartValues;
+            return (
+              <button
+                key={u}
+                type="button"
+                aria-pressed={shownUnit === u}
+                disabled={missing}
+                onClick={() => setUnit(u)}
+                className={`rounded-full px-3 ${FOCUS_RING}`}
+                style={{ minHeight: "2rem", background: shownUnit === u ? "var(--color-teal)" : "transparent", color: shownUnit === u ? "var(--color-bg)" : "var(--color-cream)", fontWeight: 600, fontSize: "0.75rem", opacity: missing ? 0.4 : 1 }}
+              >
+                {u === "darts" ? "Piler" : "Treff %"}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      <RowDartsChart key={`${who}-${source}-${shownUnit}`} values={values} unit={shownUnit} who={who} />
+      {shownUnit === "darts" && (
+        <p className="mt-1" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>
+          Over {n} {n === 1 ? "kamp" : "kamper"}
+          {view.rowDartsApprox > 0 ? ` — ${view.rowDartsApprox} eldre ${view.rowDartsApprox === 1 ? "kamp er" : "kamper er"} regnet som kryss pluss bom, der en trippel teller tre.` : "."}
+        </p>
+      )}
+      {shownUnit === "pct" && STEPS.some((s) => values[s] === null) && (
+        <p className="mt-1" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>En rad uten tall er ikke kastet på i disse kampene.</p>
+      )}
     </>
   );
 }
@@ -71,7 +106,7 @@ function Panel({ player, all, source, onSource }: { player: PlayerRecord; all: P
   const [tab, setTab] = useState<"single" | "team">("single");
   const single = singleView(player, source);
   const team = teamView(player, all, source);
-  const splitNote = source !== "both" ? "Per rad, rekord og rating er ikke delt på kilde, og vises under Begge." : null;
+  const splitNote = source !== "both" ? "Rekord og rating er ikke delt på kilde, og vises under Begge." : null;
 
   return (
     <div className="px-4 pb-4 pt-1">

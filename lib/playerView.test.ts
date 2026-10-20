@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { emptyRecord, emptyStepStats, type MatchHistoryEntry, type MemberStat } from "./playerRows";
-import { bySource, rowDartsOver, singleView, teamView } from "./playerView";
+import { bySource, rowDartsOver, rowsOver, singleView, teamView } from "./playerView";
 
 const match = (i: number, won: boolean, hitPct: number, med: number | null = null, darts = 60): MatchHistoryEntry => ({ date: `2026-10-${String(i + 1).padStart(2, "0")}`, won, dartsUsed: darts, hitPct, med, mhd: med, mvd: med, ...(med !== null ? { throws: darts } : {}) });
 const rec = (name: string, h: MatchHistoryEntry[], over: object = {}) => ({ ...emptyRecord(name), matchesPlayed: h.length, matchesWon: h.filter((m) => m.won).length, matchHistory: h, ...over });
@@ -127,5 +127,17 @@ describe("darts per row over matches", () => {
     // An older team match without per-member rows does not fall back to the team's figure.
     const older = rec("Per & Ola", [{ ...match(1, true, 50), steps: { "20": [3, 3] } }], { kind: "team", members: ["Per", "Ola"] });
     expect(teamView(rec("Per", []), [older], "both").rowDarts).toBeNull();
+  });
+});
+
+describe("hit percentage per row by source", () => {
+  it("adds up what the chosen source's matches kept per row, and is null when none kept it", () => {
+    const manual: MatchHistoryEntry = { ...match(0, true, 50), steps: { "20": [3, 1] } };
+    const scolia: MatchHistoryEntry = { ...match(1, true, 50, 25), steps: { "20": [1, 3], D: [2, 0] } };
+    const p = rec("Per", [manual, scolia]);
+    expect(singleView(p, "manual").rows?.find((r) => r.step === "20")?.pct).toBeCloseTo(75, 6);
+    expect(singleView(p, "scolia").rows?.find((r) => r.step === "20")?.pct).toBeCloseTo(25, 6);
+    expect(singleView(p, "scolia").rows?.find((r) => r.step === "19")?.pct).toBeNull();
+    expect(rowsOver([match(0, true, 50)])).toBeNull();
   });
 });
