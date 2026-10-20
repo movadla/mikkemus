@@ -175,6 +175,11 @@ export type TurnResult = {
    *  and the "tre tellende" statistic go by. With manual entry a tap is a mark, so this is the
    *  marks unless the thrower was asked (see MikkeMusApp's standQuestionDue). */
   counted?: number;
+  /** Darts thrown at each row this turn, a dart counted once against the row it was thrown at and not at all when it stayed
+   *  on a double/triple while another number was active. Absent on turns logged before this was tracked and on manual ones. */
+  dartsByStep?: Partial<Record<Step, number>>;
+  /** Misses by the row each dart was thrown at, when Scolia saw every dart. Wins over `missStep` for where the misses belong. */
+  missesByStep?: Partial<Record<Step, number>>;
   /**
    * How many counting darts in a row the turn ENDED with, when Scolia saw all three darts and so knows the
    * order they landed in (a miss, a hit and a hit ends on two). Absent on a turn entered by hand: there a miss
@@ -265,7 +270,15 @@ export function summarizeTurn(
   // count rather than darts — a triple is three treff from one throw, which is the house rule
   // — so a short turn can end on zero misses, and should: nothing was missed.
   const misses = Math.max(0, dartsThrown - totalHits);
-  const missStep = hits.length > 0 ? hits[hits.length - 1].step : activeStepIfEmpty;
+  // The row the misses were thrown at: the last hit on a number, not a double or triple banked on the side (a slenger).
+  // D and T are only the row being worked once every number is done, so a ring hit only gives its row away then.
+  const isRing = (step: Step | null) => step === "D" || step === "T";
+  const lastNumberHit = [...hits].reverse().find((h) => !isRing(h.step));
+  const missStep = lastNumberHit
+    ? lastNumberHit.step
+    : hits.length > 0 && (activeStepIfEmpty === null || isRing(activeStepIfEmpty))
+      ? hits[hits.length - 1].step
+      : activeStepIfEmpty;
   return { hitsByStep, missStep, misses, darts: dartsThrown };
 }
 
@@ -324,7 +337,9 @@ export function aggregateTurns(turns: TurnResult[]): TurnAggregate {
       hitsByStep[step] = (hitsByStep[step] ?? 0) + count;
       hits += count;
     }
-    if (turn.missStep && turn.misses > 0) {
+    if (turn.missesByStep) {
+      for (const [step, n] of Object.entries(turn.missesByStep) as [Step, number][]) missesByStep[step] = (missesByStep[step] ?? 0) + n;
+    } else if (turn.missStep && turn.misses > 0) {
       missesByStep[turn.missStep] = (missesByStep[turn.missStep] ?? 0) + turn.misses;
     }
     misses += turn.misses;

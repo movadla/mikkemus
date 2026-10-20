@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { STEPS, STEP_LABELS, aggregateTurns, type Step, type TurnAggregate, type TurnResult } from "@/lib/game";
+import { STEPS, STEP_LABELS, type Step, type TurnAggregate, type TurnResult } from "@/lib/game";
 import { throwerStats } from "@/lib/turnStats";
+import { rowCosts } from "@/lib/rowCosts";
 
 type Award = { icon: string; title: string; who: string; detail: string };
 
@@ -73,13 +74,6 @@ export function AwardsCard({ awards }: { awards: Award[] }) {
   );
 }
 
-/** Forsøk per rad: the crosses and the misses that belonged to each row, from the turn log. */
-export function rowCosts(turns: TurnResult[]): Record<Step, number> {
-  const agg = aggregateTurns(turns);
-  const out = {} as Record<Step, number>;
-  STEPS.forEach((s) => (out[s] = (agg.hitsByStep[s] ?? 0) + (agg.missesByStep[s] ?? 0)));
-  return out;
-}
 
 /**
  * Which row took the longest: one bar per row for the chosen side, with the heaviest in red. A row

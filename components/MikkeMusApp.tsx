@@ -63,8 +63,38 @@ import {
 /** A dart in the running turn, with what the component needs on top of the serialisable action:
  *  the records it created (for re-parking a ring dart — see replayAfterRedirect) and what xH made
  *  of it (to take back if it turns out to have been aimed elsewhere). */
-type LiveDart = DartAction & { luck: { step: Step; xg: number } | null; records: HitRecord[] };
+type LiveDart = DartAction & {
+  luck: { step: Step; xg: number } | null;
+  records: HitRecord[];
+  /** The row being worked when the dart was thrown (the one it counts against in «forsøk per rad»). Absent on a dart restored without it. */
+  atStep?: Step | null;
+};
 type LiveAction = LiveDart | TapAction;
+
+/**
+ * Darts used per row for «forsøk per rad»: each dart counts once, against the row it was thrown at. A dart that stayed on
+ * a double or triple while another number was being worked is a slenger, not an attempt at that number, so it counts
+ * nowhere there — and a triple that closes a row is one dart, not three. Left out entirely when any dart lacks its row.
+ */
+function dartsByRow(
+  darts: LiveDart[],
+  pending: HitRecord[],
+): { dartsByStep: Partial<Record<Step, number>>; missesByStep: Partial<Record<Step, number>> } | Record<string, never> {
+  const out: Partial<Record<Step, number>> = {};
+  // Scolia sees every dart, so a miss belongs to the row that was being worked when it was thrown — not to wherever the
+  // turn's last hit happened to land.
+  const missed: Partial<Record<Step, number>> = {};
+  for (const d of darts) {
+    if (d.atStep === undefined) return {};
+    if (d.atStep === null) continue;
+    if (!d.scored) missed[d.atStep] = (missed[d.atStep] ?? 0) + 1;
+    const kept = d.records.filter((r) => pending.includes(r));
+    const onlyRing = kept.length > 0 && kept.every((r) => r.step === "D" || r.step === "T");
+    if (onlyRing && !kept.some((r) => r.step === d.atStep)) continue;
+    out[d.atStep] = (out[d.atStep] ?? 0) + 1;
+  }
+  return { dartsByStep: out, missesByStep: missed };
+}
 import { botChooseThrow, botDecideRedirect, solverFor } from "@/lib/botStrategy";
 import { type BotLevel, type TeamMember } from "@/lib/botLevels";
 import { useScolia } from "@/lib/useScolia";
@@ -1094,6 +1124,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         scored: hit,
         luck,
         records: hitResult ?? [],
+        atStep: activeStepAtThrow,
       },
     ]);
 
@@ -1630,6 +1661,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       const dart = darts.find((t) => t.dartIndex === d.dartIndex);
       if (!dart) continue;
       dart.scored = true;
+      // It counted at the number it turned out to be thrown at, which is where the dart belongs now.
+      dart.atStep = d.step;
       setTurnShots((prev) => {
         if (!prev[d.dartIndex]) return prev;
         const next = prev.slice();
@@ -2222,6 +2255,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     const countedDarts = countedOverride ?? Math.max(countingDarts(turnActionsRef.current), earlierDarts);
     // How the turn ended, in the order the darts landed — read before the actions are cleared below.
     const tailNow = trailingRun(turnActionsRef.current);
+    const liveDarts = turnDarts();
     dartsOnStepRef.current = {};
     writeTurnActions([]);
     turnStartRef.current = null;
@@ -2253,6 +2287,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         : undefined;
     const turn: TurnResult = {
       ...summarizeTurn(effectivePendingHits, activeStepNow, dartsForTurn),
+      ...(scoliaDarts > 0 && liveDarts.length === scoliaDarts ? dartsByRow(liveDarts, effectivePendingHits) : {}),
       counted: countedDarts,
       // Scolia saw every dart, so the counting ones the turn ended on can carry the run into the next turn.
       // By hand an unrecorded miss could be any of the darts, so only a turn of three counting darts carries.
