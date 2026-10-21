@@ -1,21 +1,68 @@
 "use client";
 
 import { Fragment, useMemo, useState } from "react";
-import type { BullDuelState } from "@/lib/bullDuel";
-import { getPlayerRecord } from "@/lib/storage";
+import { meanDistanceFor, type BullDuelState } from "@/lib/bullDuel";
 import { generateConfetti, generateConfettiRain } from "@/lib/confetti";
+import { fxFlags, useFxLevel } from "@/lib/fxLevel";
+import { getPlayerRecord } from "@/lib/storage";
+import { DartboardHeatmap } from "./DartboardHeatmap";
+import { ReplayCard } from "./ReplayCard";
+import { Trophy } from "./Trophy";
 
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
 
 const CONFETTI_COUNT = 40;
 const RAIN_COUNT = 90;
+const SIDE_COLORS = ["#4b8be8", "#e25a45", "#e6bd57", "#34c3d2"];
 
-// xG is an expected-points value (0-2, same unit the game scores in, like
-// football xG) rather than a signed luck delta — always non-negative, so
-// no "+" prefix.
+// xG is an expected-points value (0-2, same unit the game scores in, like football xG) rather than a signed luck delta
+// — always non-negative, so no "+" prefix.
 function formatLuck(luck: number): string {
   return luck.toFixed(1);
+}
+
+/** A tile of the kind the statistics use everywhere: small spaced label, large tabular figure. */
+function Tile({ label, value, unit }: { label: string; value: string; unit?: string }) {
+  return (
+    <div
+      className="rounded-xl px-2 py-3 text-center"
+      style={{ background: "var(--color-surface-2)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06), inset 0 1px 0 rgba(255,255,255,0.07), 0 1px 2px rgba(0,0,0,0.4)" }}
+    >
+      <p style={{ color: "var(--color-muted)", fontSize: "0.65rem", fontWeight: 600, letterSpacing: "0.14em" }}>{label}</p>
+      <p className="tabular" style={{ color: "var(--color-cream)", fontSize: "1.4rem", lineHeight: 1.15, fontWeight: 700, letterSpacing: "-0.01em" }}>
+        {value}
+        {unit && <span style={{ color: "var(--color-muted)", fontSize: "0.75rem", fontWeight: 500 }}> {unit}</span>}
+      </p>
+    </div>
+  );
+}
+
+/** Everyone's points after each of their turns, as lines: who led when, and where it turned. */
+function PointsRace({ duel, winner }: { duel: BullDuelState; winner: string }) {
+  const W = 300;
+  const H = 130;
+  const turns = Math.max(1, ...duel.players.map((p) => duel.pointsByTurn[p].length));
+  const x = (i: number) => 8 + (i / turns) * (W - 16);
+  const y = (pts: number) => 8 + (1 - Math.min(1, pts / duel.target)) * (H - 16);
+  return (
+    <svg viewBox={`0 0 ${W} ${H + 6}`} className="w-full h-auto" role="img" aria-label="Poeng etter hver runde">
+      <line x1={8} x2={W - 8} y1={y(duel.target)} y2={y(duel.target)} stroke="rgba(255,255,255,0.14)" strokeDasharray="3 3" />
+      <line x1={8} x2={W - 8} y1={H - 8} y2={H - 8} stroke="rgba(255,255,255,0.14)" />
+      {duel.players.map((p, i) => {
+        const series = [0, ...duel.pointsByTurn[p]];
+        const color = p === winner ? "#f0d080" : SIDE_COLORS[i % SIDE_COLORS.length];
+        const points = series.map((v, k) => `${x(k)},${y(v)}`).join(" ");
+        const last = series.length - 1;
+        return (
+          <g key={p}>
+            <polyline points={points} fill="none" stroke={color} strokeWidth={p === winner ? 3 : 2} strokeLinecap="round" strokeLinejoin="round" opacity={p === winner ? 1 : 0.85} />
+            <circle cx={x(last)} cy={y(series[last])} r={3.5} fill={color} />
+          </g>
+        );
+      })}
+    </svg>
+  );
 }
 
 export function BullDuelWinnerScreen({
@@ -30,11 +77,38 @@ export function BullDuelWinnerScreen({
   const winner = duel.winner as string;
   const photo = getPlayerRecord(winner)?.photo;
   const [expanded, setExpanded] = useState<string | null>(null);
-  const confetti = useMemo(() => generateConfetti(CONFETTI_COUNT), []);
-  const rain = useMemo(() => generateConfettiRain(RAIN_COUNT), []);
+  const [spreadFor, setSpreadFor] = useState<string>(winner);
+  // The celebration follows the chosen level, as in the main game: none at Vanlig, the usual at Party, twice the rain at Full party.
+  const fx = fxFlags(useFxLevel());
+  const confettiCount = fx.confetti ? CONFETTI_COUNT * (fx.bigConfetti ? 2 : 1) : 0;
+  const rainCount = fx.confetti ? RAIN_COUNT * (fx.bigConfetti ? 2 : 1) : 0;
+  const confetti = useMemo(() => generateConfetti(confettiCount), [confettiCount]);
+  const rain = useMemo(() => generateConfettiRain(rainCount), [rainCount]);
+
+  const winnerStats = duel.stats[winner];
+  const winnerHits = winnerStats.redHits + winnerStats.greenHits;
+  const winnerPct = winnerStats.throws === 0 ? null : Math.round((winnerHits / winnerStats.throws) * 100);
+  const winnerLuck = winnerStats.luckCount === 0 ? null : winnerStats.luckSum / winnerStats.luckCount;
+
+  // The winning turn played back from where its darts really landed — only when every dart of it has a position, so the
+  // replay never shows a made-up dart.
+  const lastDarts = duel.turnShots.length;
+  const winnerThrows = duel.throws[winner] ?? [];
+  const replayThrows = fx.replay && lastDarts > 0 && winnerStats.throws === winnerThrows.length && winnerThrows.length >= lastDarts ? winnerThrows.slice(-lastDarts) : null;
+
+  // What stood out, from the numbers kept per match.
+  const best = <K extends "bestRun" | "bestTurn" | "redHits" | "perfectTurns">(key: K) =>
+    duel.players.reduce((a, p) => (duel.stats[p][key] > duel.stats[a][key] ? p : a), duel.players[0]);
+  const insights = [
+    { title: "Lengste rekke", who: best("bestRun"), detail: `${duel.stats[best("bestRun")].bestRun} piler på rad`, show: duel.stats[best("bestRun")].bestRun >= 2 },
+    { title: "Beste runde", who: best("bestTurn"), detail: `${duel.stats[best("bestTurn")].bestTurn} poeng`, show: duel.stats[best("bestTurn")].bestTurn >= 2 },
+    { title: "Flest røde", who: best("redHits"), detail: `${duel.stats[best("redHits")].redHits} i midten`, show: duel.stats[best("redHits")].redHits >= 1 },
+    { title: "Perfekte runder", who: best("perfectTurns"), detail: `${duel.stats[best("perfectTurns")].perfectTurns} med tre treff`, show: duel.stats[best("perfectTurns")].perfectTurns >= 1 },
+  ].filter((i) => i.show);
+  const measured = duel.players.some((p) => (duel.throws[p]?.length ?? 0) > 0);
 
   return (
-    <div className="animate-screen-enter relative min-h-screen w-full flex items-center justify-center p-4 overflow-hidden" style={{ background: "var(--color-bg)" }}>
+    <div className="animate-screen-enter relative min-h-screen w-full flex items-start justify-center p-4 overflow-hidden" style={{ background: "var(--color-bg)" }}>
       {/* Full-screen rain behind the card — see WinnerScreen for the same treatment. */}
       <div className="absolute inset-0 pointer-events-none z-0" aria-hidden>
         {rain.map((c, i) => (
@@ -56,86 +130,83 @@ export function BullDuelWinnerScreen({
           />
         ))}
       </div>
-      <div className="relative z-10 w-full max-w-md text-center">
+      <div className="relative z-10 w-full max-w-md text-center pt-4 pb-10">
+        {/* The trophy rises above the winner (Full party). */}
+        {fx.trophy && <Trophy cannons />}
         <div className="relative">
-          <div
-            className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none"
-            style={{ transform: "translateY(-10%)" }}
-            aria-hidden
-          >
-            <div
-              className="animate-idle-glow"
-              style={{ width: "240px", height: "240px", borderRadius: "50%", background: "var(--color-gold)", filter: "blur(48px)" }}
-            />
+          <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none" style={{ transform: "translateY(-10%)" }} aria-hidden>
+            <div className="animate-idle-glow" style={{ width: "240px", height: "240px", borderRadius: "50%", background: "var(--color-gold)", filter: "blur(48px)" }} />
           </div>
           <div className="absolute inset-x-0 top-0 h-full overflow-hidden pointer-events-none z-10" aria-hidden>
             {confetti.map((c, i) => (
-              <span
-                key={i}
-                className="confetti-piece"
-                style={{ left: c.left, background: c.color, animationDelay: c.delay, "--r": c.rotate } as React.CSSProperties}
-              />
+              <span key={i} className="confetti-piece" style={{ left: c.left, background: c.color, animationDelay: c.delay, "--r": c.rotate } as React.CSSProperties} />
             ))}
           </div>
-          <div className="relative z-30 flex justify-center" style={{ marginBottom: "-44px" }}>
-            <div
-              className="animate-winner-photo-pulse rounded-full overflow-hidden flex items-center justify-center shrink-0"
-              style={{ width: "88px", height: "88px", border: "4px solid var(--color-gold)", background: "var(--color-surface)", boxShadow: "0 6px 16px rgba(0,0,0,0.45)" }}
-            >
-              {photo ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={photo} alt="" className="w-full h-full object-cover" />
-              ) : (
-                <span className="font-display" style={{ color: "var(--color-gold)", fontSize: "2rem" }}>
-                  {winner.charAt(0).toUpperCase()}
-                </span>
-              )}
+          {/* The winner's face is the headline, as on the main winner screen. */}
+          <div className="relative z-30 flex justify-center" style={{ marginBottom: "-84px" }}>
+            <div className="relative" style={{ width: "168px", height: "168px" }}>
+              <span aria-hidden className="animate-winner-shockwave absolute inset-0 rounded-full pointer-events-none" style={{ border: "3px solid var(--color-gold)" }} />
+              <div
+                className="animate-winner-photo-pulse rounded-full overflow-hidden flex items-center justify-center w-full h-full"
+                style={{ border: "5px solid var(--color-gold)", background: "var(--color-surface)", boxShadow: "0 10px 30px rgba(0,0,0,0.55), 0 0 40px rgba(217, 174, 79, 0.35)" }}
+              >
+                {photo ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={photo} alt={winner} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="font-display" style={{ color: "var(--color-gold)", fontSize: "4rem" }}>
+                    {winner.charAt(0).toUpperCase()}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
-          <div className="animate-winner-pop card-gold shadow-panel relative z-20 rounded-2xl pt-12 pb-8 px-8 mb-6">
+          <div className="animate-winner-pop card-gold shadow-panel relative z-20 rounded-2xl pt-24 pb-8 px-8 mb-6">
             <p className="font-display" style={{ color: "var(--color-bg)", fontSize: "1.05rem", fontStyle: "italic", letterSpacing: "0.04em", marginBottom: "0.4rem" }}>
               Vinner
             </p>
             <h2 className="font-display" style={{ color: "var(--color-bg)", fontSize: "2.2rem" }}>
               {winner}
             </h2>
-            <p className="tabular" style={{ color: "var(--color-bg)", opacity: 0.7, fontSize: "0.85rem", marginTop: "0.4rem" }}>
-              {duel.points[winner]} / {duel.target} poeng
+            <p className="tabular" style={{ color: "var(--color-bg)", opacity: 0.75, fontSize: "0.9rem", marginTop: "0.4rem", fontWeight: 600 }}>
+              {duel.points[winner]} / {duel.target} poeng · {winnerStats.throws} {winnerStats.throws === 1 ? "pil" : "piler"}
+              {winnerPct !== null ? ` · ${winnerPct} % treff` : ""}
             </p>
+            {/* xH up here too, as in the main game: the one number that says whether the win was thrown or fell out of the sky. */}
+            {winnerLuck !== null && (
+              <p className="tabular" style={{ color: "var(--color-bg)", opacity: 0.65, fontSize: "0.8rem", marginTop: "0.2rem" }}>
+                xH {formatLuck(winnerStats.luckSum)} forventet / {winnerStats.points} faktisk
+              </p>
+            )}
           </div>
         </div>
 
+        <div className="grid grid-cols-3 gap-2 mb-6">
+          <Tile label="TREFF" value={winnerPct === null ? "–" : String(winnerPct)} unit={winnerPct === null ? undefined : "%"} />
+          <Tile label="REKKE" value={String(winnerStats.bestRun)} unit="piler" />
+          <Tile label="MED" value={meanDistanceFor(duel, winner) === null ? "–" : String(Math.round(meanDistanceFor(duel, winner) as number))} unit={meanDistanceFor(duel, winner) === null ? undefined : "mm"} />
+        </div>
+
         <div className="shadow-panel rounded-xl p-4 mb-6" style={{ background: "var(--color-surface)" }}>
-          <p className="mb-4 section-label">
-            BULL-DUELL — DENNE KAMPEN
-          </p>
-          <div
-            className="grid gap-x-2 gap-y-4 text-left"
-            style={{ gridTemplateColumns: "1fr repeat(4, auto)" }}
-          >
+          <p className="mb-4 section-label">BULL-DUELL — DENNE KAMPEN</p>
+          <div className="grid gap-x-2 gap-y-4 text-left" style={{ gridTemplateColumns: "1fr repeat(5, auto)" }}>
             <span style={{ color: "var(--color-muted)", fontSize: "0.75rem" }} />
-            <span className="text-right" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>
-              KAST
-            </span>
-            <span className="text-right" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>
-              POENG
-            </span>
-            <span className="text-right" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>
-              %
-            </span>
-            <span className="text-right" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>
-              XG
-            </span>
+            {["KAST", "POENG", "%", "MED", "XG"].map((h) => (
+              <span key={h} className="text-right" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>
+                {h}
+              </span>
+            ))}
             {duel.players.map((p) => {
               const stats = duel.stats[p];
               const hits = stats.redHits + stats.greenHits;
               const pct = stats.throws === 0 ? null : Math.round((hits / stats.throws) * 100);
               const luck = stats.luckCount === 0 ? null : stats.luckSum / stats.luckCount;
+              const med = meanDistanceFor(duel, p);
               const isExpanded = expanded === p;
               return (
                 <Fragment key={p}>
-                  {/* display:contents keeps these cells as direct grid items while still
-                      giving the whole row one click/keyboard target for the drilldown. */}
+                  {/* display:contents keeps these cells as direct grid items while still giving the whole row one
+                      click/keyboard target for the drilldown. */}
                   <div
                     role="button"
                     tabIndex={0}
@@ -145,30 +216,20 @@ export function BullDuelWinnerScreen({
                       e.preventDefault();
                       setExpanded(isExpanded ? null : p);
                     }}
-                    // Not FOCUS_RING: an outline on a display:contents element is never
-                    // painted, since it generates no box. .row-focus draws the ring on the
-                    // cells instead — see globals.css.
+                    // Not FOCUS_RING: an outline on a display:contents element is never painted, since it generates no
+                    // box. .row-focus draws the ring on the cells instead — see globals.css.
                     className="row-focus"
                     style={{ display: "contents", cursor: "pointer" }}
                   >
-                    <span style={{ color: p === winner ? "var(--color-gold)" : "var(--color-cream)", fontWeight: p === winner ? 600 : 400 }}>
-                      {p}
-                    </span>
-                    <span className="tabular text-right" style={{ color: "var(--color-cream)" }}>
-                      {stats.points}
-                    </span>
-                    <span className="tabular text-right" style={{ color: "var(--color-cream)" }}>
-                      {pct === null ? "–" : `${pct} %`}
-                    </span>
-                    <span className="tabular text-right" style={{ color: luck === null ? "var(--color-muted)" : "var(--color-gold-strong)" }}>
-                      {luck === null ? "–" : formatLuck(luck)}
-                    </span>
+                    <span style={{ color: p === winner ? "var(--color-gold)" : "var(--color-cream)", fontWeight: p === winner ? 600 : 400 }}>{p}</span>
+                    <span className="tabular text-right" style={{ color: "var(--color-cream)" }}>{stats.throws}</span>
+                    <span className="tabular text-right" style={{ color: "var(--color-cream)" }}>{stats.points}</span>
+                    <span className="tabular text-right" style={{ color: "var(--color-cream)" }}>{pct === null ? "–" : `${pct} %`}</span>
+                    <span className="tabular text-right" style={{ color: med === null ? "var(--color-muted)" : "var(--color-cream)" }}>{med === null ? "–" : `${Math.round(med)} mm`}</span>
+                    <span className="tabular text-right" style={{ color: luck === null ? "var(--color-muted)" : "var(--color-gold-strong)" }}>{luck === null ? "–" : formatLuck(luck)}</span>
                   </div>
                   {isExpanded && (
-                    <div
-                      className="tabular text-left flex items-center gap-4"
-                      style={{ gridColumn: "1 / -1", fontSize: "0.78rem", color: "var(--color-muted)", paddingBottom: "0.15rem" }}
-                    >
+                    <div className="tabular text-left flex items-center gap-4 flex-wrap" style={{ gridColumn: "1 / -1", fontSize: "0.78rem", color: "var(--color-muted)", paddingBottom: "0.15rem" }}>
                       <span className="flex items-center gap-1">
                         <span style={{ width: "9px", height: "9px", borderRadius: "2px", background: "var(--color-red)", display: "inline-block" }} />
                         {stats.redHits} rød
@@ -178,6 +239,11 @@ export function BullDuelWinnerScreen({
                         {stats.greenHits} grønn
                       </span>
                       <span>· {stats.throws} kast</span>
+                      {stats.luckCount === stats.throws && stats.throws > 0 && (
+                        <span>
+                          · xH {formatLuck(stats.luckSum)} av {stats.points} poeng
+                        </span>
+                      )}
                     </div>
                   )}
                 </Fragment>
@@ -185,6 +251,62 @@ export function BullDuelWinnerScreen({
             })}
           </div>
         </div>
+
+        {insights.length > 0 && (
+          <div className="shadow-panel rounded-xl p-4 mb-6" style={{ background: "var(--color-surface)" }}>
+            <p className="mb-4 section-label">DET SOM STAKK UT</p>
+            <div className="grid grid-cols-2 gap-3">
+              {insights.map((a) => (
+                <div key={a.title} className="rounded-xl p-3 text-left" style={{ background: "var(--color-surface-2)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06), inset 0 1px 0 rgba(255,255,255,0.07)" }}>
+                  <p style={{ color: "var(--color-gold)", fontSize: "0.65rem", letterSpacing: "0.14em", fontWeight: 600, textTransform: "uppercase" }}>{a.title}</p>
+                  <p className="font-display truncate" style={{ color: "var(--color-cream)", fontSize: "1.2rem" }}>{a.who}</p>
+                  <p style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>{a.detail}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {duel.players.some((p) => duel.pointsByTurn[p].length > 0) && (
+          <div className="shadow-panel rounded-xl p-4 mb-6" style={{ background: "var(--color-surface)" }}>
+            <p className="mb-3 section-label">POENG RUNDE FOR RUNDE</p>
+            <PointsRace duel={duel} winner={winner} />
+            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 justify-center" style={{ fontSize: "0.75rem", color: "var(--color-muted)" }}>
+              {duel.players.map((p, i) => (
+                <span key={p} className="flex items-center gap-1.5">
+                  <span aria-hidden style={{ width: 10, height: 3, borderRadius: 2, background: p === winner ? "#f0d080" : SIDE_COLORS[i % SIDE_COLORS.length], display: "inline-block" }} />
+                  {p}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {measured && (
+          <div className="shadow-panel rounded-xl p-4 mb-6" style={{ background: "var(--color-surface)" }}>
+            <p className="mb-3 section-label">KASTSPREDNING</p>
+            {duel.players.length > 1 && (
+              <div className="flex flex-wrap gap-2 mb-3 justify-center" role="radiogroup" aria-label="Spiller">
+                {duel.players.map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    role="radio"
+                    aria-checked={p === spreadFor}
+                    onClick={() => setSpreadFor(p)}
+                    className={`tactile px-4 rounded-lg text-sm ${FOCUS_RING}`}
+                    style={{ minHeight: "2.5rem", background: p === spreadFor ? "var(--teal-soft)" : "var(--color-cell)", color: p === spreadFor ? "var(--color-teal)" : "var(--color-muted)", border: p === spreadFor ? "1px solid var(--color-teal)" : "1px solid var(--color-border)" }}
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
+            )}
+            <DartboardHeatmap throws={duel.throws[spreadFor] ?? []} />
+          </div>
+        )}
+
+        {replayThrows && <ReplayCard throws={replayThrows} />}
 
         <button
           type="button"

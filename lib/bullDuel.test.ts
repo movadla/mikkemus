@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   activePlayerFor,
+  finishStateFor,
+  meanDistanceFor,
+  soleLeader,
   advanceBullDuelTurn,
   botChooseBullThrow,
   bustBullDuelTurn,
@@ -19,7 +22,7 @@ describe("startBullDuel", () => {
   it("initializes every player at 0 points with empty stats, first player active", () => {
     const state = startBullDuel(["Anna", "Bjørn"], 10);
     expect(state.points).toEqual({ Anna: 0, Bjørn: 0 });
-    expect(state.stats.Anna).toEqual({ throws: 0, points: 0, redHits: 0, greenHits: 0, luckSum: 0, luckCount: 0 });
+    expect(state.stats.Anna).toEqual({ throws: 0, points: 0, redHits: 0, greenHits: 0, luckSum: 0, luckCount: 0, bestRun: 0, run: 0, bestTurn: 0, perfectTurns: 0 });
     expect(activePlayerFor(state)).toBe("Anna");
     expect(state.winner).toBeNull();
   });
@@ -162,5 +165,65 @@ describe("botChooseBullThrow", () => {
     const [x, y] = botChooseBullThrow("3");
     expect(Number.isFinite(x)).toBe(true);
     expect(Number.isFinite(y)).toBe(true);
+  });
+});
+
+describe("bull-duell: runs, turns and the finish", () => {
+  const dart = (s: ReturnType<typeof startBullDuel>, sector: string, coords: [number, number] | null = null) => registerBullDart(s, sector, coords);
+
+  it("counts a run of scoring darts across turns, and a miss ends it", () => {
+    let s = startBullDuel(["A", "B"], 21);
+    s = dart(dart(dart(s, "Bull"), "25"), "None");
+    expect(s.stats.A.bestRun).toBe(2);
+    expect(s.stats.A.run).toBe(0);
+    s = advanceBullDuelTurn(s);
+    s = advanceBullDuelTurn(s); // back to A
+    s = dart(dart(s, "25"), "25");
+    expect(s.stats.A.run).toBe(2);
+  });
+
+  it("books the points per turn and the best turn, and a turn of three scoring darts is perfect", () => {
+    let s = startBullDuel(["A", "B"], 99);
+    s = dart(dart(dart(s, "Bull"), "Bull"), "25");
+    expect(s.stats.A.bestTurn).toBe(5);
+    expect(s.stats.A.perfectTurns).toBe(1);
+    expect(s.pointsByTurn.A).toEqual([5]);
+    s = advanceBullDuelTurn(s);
+    s = dart(dart(dart(s, "None"), "25"), "25");
+    expect(s.stats.B.perfectTurns).toBe(0);
+    expect(s.pointsByTurn.B).toEqual([2]);
+  });
+
+  it("keeps the coordinates of measured darts only", () => {
+    let s = startBullDuel(["A"], 21);
+    s = dart(s, "Bull", [1, 2]);
+    s = dart(s, "25", null);
+    expect(s.throws.A).toEqual([[1, 2]]);
+    expect(meanDistanceFor(s, "A")).toBeCloseTo(Math.hypot(1, 2), 6);
+    expect(meanDistanceFor(startBullDuel(["A"], 21), "A")).toBeNull();
+  });
+
+  it("matchdart at two points or less, out when this turn's darts can take it", () => {
+    let s = startBullDuel(["A", "B"], 10);
+    expect(finishStateFor(s, "A")).toBeNull(); // 10 to go, three darts reach 6
+    s = dart(dart(dart(s, "Bull"), "Bull"), "Bull"); // 6 points, 4 to go
+    s = advanceBullDuelTurn(s);
+    expect(finishStateFor(s, "A")).toBe("out"); // 4 to go, A is not up, a fresh turn of three darts reaches it
+    s = advanceBullDuelTurn(s);
+    s = dart(s, "None"); // two darts left in the turn: 4 to go is two inner bulls
+    expect(finishStateFor(s, "A")).toBe("out");
+    s = dart(s, "None");
+    expect(finishStateFor(s, "A")).toBeNull(); // one dart left, 4 to go: out of reach this turn
+    expect(finishStateFor({ ...s, points: { ...s.points, A: 8 } }, "A")).toBe("matchdart");
+  });
+
+  it("names the sole leader", () => {
+    let s = startBullDuel(["A", "B"], 21);
+    expect(soleLeader(s)).toBeNull();
+    s = dart(s, "25");
+    expect(soleLeader(s)).toBe("A");
+    s = advanceBullDuelTurn(s);
+    s = dart(s, "25");
+    expect(soleLeader(s)).toBeNull();
   });
 });

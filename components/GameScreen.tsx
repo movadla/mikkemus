@@ -56,7 +56,7 @@ const SLAM_MS = 560;
  * Linear at that length, because the decay is already written into the keyframes and easing
  * it as well just front-loads everything and leaves the tail limp.
  */
-const SHAKE = [
+export const SHAKE = [
   null,
   { ms: 320, ease: "ease-out" },
   { ms: 340, ease: "ease-out" },
@@ -66,7 +66,7 @@ const SHAKE = [
 /** Heat left on the screen by an unbroken turn, indexed by how many darts have hit. Held
  *  until the turn ends rather than fading per dart — the build across the turn is the
  *  point, mirroring how the boom's tail grows (see lib/fanfare.ts). */
-const HEAT_GLOW = [
+export const HEAT_GLOW = [
   "none",
   "inset 0 0 60px 6px var(--heat-1)",
   "inset 0 0 90px 12px var(--heat-2)",
@@ -75,7 +75,7 @@ const HEAT_GLOW = [
 
 /** Two identical keyframes per level — see the comment where these are used for why the
  *  duplication is the mechanism rather than an oversight. */
-const SHAKE_NAMES = [
+export const SHAKE_NAMES = [
   ["", ""],
   ["hit-shake-soft-a", "hit-shake-soft-b"],
   ["hit-shake-firm-a", "hit-shake-firm-b"],
@@ -175,7 +175,7 @@ type Props = {
  * a stack inside the (i) panel in landscape. Written once so the two can't drift — they are
  * the same three controls, not two similar sets.
  */
-function ChromeControls({
+export function ChromeControls({
   stacked = false,
   onHome,
   announcerOn,
