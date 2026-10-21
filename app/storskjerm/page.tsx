@@ -234,14 +234,14 @@ export default function StorskjermPage() {
                     <div
                       data-step={s}
                       data-player={p}
-                      className="rounded-md flex items-center justify-center"
+                      className="rounded-xl flex items-center justify-center"
                       style={{
                         width: "clamp(3.2rem, 12vw, 5rem)",
                         height: "clamp(3.2rem, 12vw, 5rem)",
-                        background: isDone ? "var(--color-cell-done)" : "var(--color-cell)",
+                        background: isDone ? "linear-gradient(180deg, var(--color-cell-done-top), var(--color-cell-done-bottom))" : "var(--color-cell)",
                         boxShadow: isDone
-                          ? "inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -8px 14px rgba(0,0,0,0.3)"
-                          : "inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -4px 8px rgba(0,0,0,0.18)",
+                          ? "inset 0 0 0 1px rgba(217, 174, 79, 0.6), inset 0 1px 0 rgba(255, 235, 190, 0.25), 0 0 22px rgba(217, 174, 79, 0.22)"
+                          : "inset 0 0 0 1px rgba(255,255,255,0.06), inset 0 1px 0 rgba(255,255,255,0.08), 0 1px 2px rgba(0,0,0,0.35)",
                       }}
                     >
                       <div className="w-full h-full p-2">

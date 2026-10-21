@@ -17,9 +17,9 @@ const num = (v: number | null | undefined, digits = 0) => (v === null || v === u
 
 function Tile({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg px-2 py-3 text-center" style={{ background: "var(--color-cell)" }}>
-      <p style={{ color: "var(--color-muted)", fontSize: "0.7rem", letterSpacing: "0.05em" }}>{label}</p>
-      <p className="tabular" style={{ color: "var(--color-cream)", fontSize: "1.05rem", fontWeight: 700 }}>{value}</p>
+    <div className="rounded-xl px-2 py-3 text-center" style={{ background: "var(--color-surface-2)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06), inset 0 1px 0 rgba(255,255,255,0.07), 0 1px 2px rgba(0,0,0,0.4)" }}>
+      <p style={{ color: "var(--color-muted)", fontSize: "0.65rem", fontWeight: 600, letterSpacing: "0.14em" }}>{label}</p>
+      <p className="tabular" style={{ color: "var(--color-cream)", fontSize: "1.4rem", lineHeight: 1.15, fontWeight: 700, letterSpacing: "-0.01em" }}>{value}</p>
     </div>
   );
 }
@@ -42,7 +42,7 @@ function Rows({ view }: { view: View }) {
       <p className="section-label mt-4 mb-2" style={{ fontSize: "0.75rem" }}>TREFF PER RAD</p>
       <div className="grid grid-cols-5 gap-2">
         {view.rows.map((r) => (
-          <div key={r.step} className="rounded-md py-2 text-center tabular" style={{ background: "var(--color-cell)" }}>
+          <div key={r.step} className="rounded-xl py-2 text-center tabular" style={{ background: "var(--color-surface-2)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06), inset 0 1px 0 rgba(255,255,255,0.07), 0 1px 2px rgba(0,0,0,0.4)" }}>
             <p style={{ color: "var(--color-muted)", fontSize: "0.7rem" }}>{STEP_LABELS[r.step]}</p>
             <p style={{ color: "var(--color-cream)", fontSize: "0.8rem", fontWeight: 600 }}>{pct(r.pct)}</p>
           </div>
@@ -190,7 +190,7 @@ function Panel({ player, all, source, onSource }: { player: PlayerRecord; all: P
           <p className="section-label mt-4 mb-2" style={{ fontSize: "0.75rem" }}>LAGENE</p>
           <div className="space-y-2">
             {team.teams.map((t) => (
-              <div key={t.name} className="rounded-lg px-3 py-2 flex items-center justify-between gap-3" style={{ background: "var(--color-cell)" }}>
+              <div key={t.name} className="rounded-xl px-3 py-2 flex items-center justify-between gap-3" style={{ background: "var(--color-surface-2)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06), inset 0 1px 0 rgba(255,255,255,0.07), 0 1px 2px rgba(0,0,0,0.4)" }}>
                 <span className="min-w-0">
                   <span className="block truncate" style={{ color: "var(--color-cream)", fontWeight: 600 }}>{t.name}</span>
                   <span className="block truncate" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>med {t.partners.join(", ") || "–"}</span>

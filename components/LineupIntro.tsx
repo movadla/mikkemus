@@ -222,7 +222,7 @@ export function LineupIntro({ sides, onDone }: { sides: LineupSide[]; onDone: ()
           autoFocus
           onClick={() => setGo(true)}
           className="glossy absolute rounded-full font-semibold outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]"
-          style={{ "--btn-fill": "var(--color-gold)", color: "var(--color-bg)", left: "50%", bottom: "7%", transform: "translateX(-50%)", minHeight: "3rem", padding: "0 2.5rem", fontSize: "1.1rem", animation: "lineup-count 400ms 900ms ease-out both" } as React.CSSProperties}
+          style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", left: "50%", bottom: "7%", transform: "translateX(-50%)", minHeight: "3rem", padding: "0 2.5rem", fontSize: "1.1rem", animation: "lineup-count 400ms 900ms ease-out both" } as React.CSSProperties}
         >
           Fortsett
         </button>

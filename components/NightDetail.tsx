@@ -34,7 +34,7 @@ export function NightDetail({ night, otherDates }: { night: NightSummary | null;
                 type="button"
                 onClick={() => setStory(true)}
                 className={`glossy w-full py-3 rounded-xl font-semibold mb-4 ${FOCUS_RING}`}
-                style={{ "--btn-fill": "var(--color-gold)", color: "var(--color-bg)", minHeight: "2.75rem" } as React.CSSProperties}
+                style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", minHeight: "2.75rem" } as React.CSSProperties}
               >
                 Se kveldens oppsummering
               </button>

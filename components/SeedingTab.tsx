@@ -321,7 +321,7 @@ function TournamentOdds({ roster }: { roster: PlayerRecord[] }) {
             aria-pressed={kind === k}
             onClick={() => setKind(k)}
             className={`tactile rounded-lg ${FOCUS_RING}`}
-            style={{ minHeight: "2.75rem", background: kind === k ? "var(--color-cell-done)" : "var(--color-cell)", color: "var(--color-cream)", border: "1px solid var(--color-border)", fontSize: "0.85rem" }}
+            style={{ minHeight: "2.75rem", background: kind === k ? "var(--teal-soft)" : "var(--color-cell)", color: kind === k ? "var(--color-teal-strong)" : "var(--color-cream)", border: kind === k ? "1px solid var(--color-teal)" : "1px solid var(--color-border)", fontSize: "0.85rem" }}
           >
             {k === "player" ? "Spillere" : "Lag"}
           </button>

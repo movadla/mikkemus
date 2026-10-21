@@ -140,7 +140,7 @@ export function TimeMachine({ players, turnLog, snapshots, winner }: { players: 
             }
           }}
           className={`tactile shrink-0 rounded-full px-4 ${FOCUS_RING}`}
-          style={{ minHeight: "2.75rem", background: "var(--color-gold)", color: "var(--color-bg)", fontWeight: 600 }}
+          style={{ minHeight: "2.75rem", background: "linear-gradient(180deg, var(--color-teal-strong) 0%, var(--color-teal) 55%, var(--color-teal-deep) 100%)", color: "var(--color-bg)", fontWeight: 600 }}
         >
           {playing ? "Pause" : "Spill av"}
         </button>

@@ -57,7 +57,7 @@ function Card({ m, archived }: { m: MatchRow; archived: boolean }) {
         ))}
       </div>
       {archived ? (
-        <Link href={`/kamp/${encodeURIComponent(m.id)}`} className={`glossy block text-center rounded-xl font-semibold ${FOCUS_RING}`} style={{ "--btn-fill": "var(--color-gold)", color: "var(--color-bg)", minHeight: "2.75rem", lineHeight: "2.75rem" } as React.CSSProperties}>
+        <Link href={`/kamp/${encodeURIComponent(m.id)}`} className={`glossy block text-center rounded-xl font-semibold ${FOCUS_RING}`} style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", minHeight: "2.75rem", lineHeight: "2.75rem" } as React.CSSProperties}>
           Se alle tall om kampen ›
         </Link>
       ) : (

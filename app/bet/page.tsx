@@ -154,9 +154,9 @@ function PeopleBar({ users, bal, meId, onPick, night, onChanged, onAdded }: { us
             className={`tactile rounded-full px-4 ${FOCUS_RING}`}
             style={{
               minHeight: "2.75rem",
-              background: meId === u.id ? "var(--color-gold)" : "var(--color-cell)",
-              color: meId === u.id ? "var(--color-bg)" : "var(--color-cream)",
-              border: "1px solid var(--color-border)",
+              background: meId === u.id ? "var(--teal-soft)" : "var(--color-cell)",
+              color: meId === u.id ? "var(--color-teal-strong)" : "var(--color-cream)",
+              border: meId === u.id ? "1px solid var(--color-teal)" : "1px solid var(--color-border)",
               fontWeight: 600,
             }}
           >
@@ -277,9 +277,9 @@ function PlayTab({ bet, live, me, balance }: { bet: ReturnType<typeof useBet>; l
                     aria-pressed={active}
                     className={`tactile rounded-xl px-3 py-3 text-center ${FOCUS_RING}`}
                     style={{
-                      background: active ? "var(--color-gold)" : "var(--color-cell)",
-                      color: active ? "var(--color-bg)" : "var(--color-cream)",
-                      border: "1px solid var(--color-border)",
+                      background: active ? "var(--teal-soft)" : "var(--color-cell)",
+                      color: active ? "var(--color-teal-strong)" : "var(--color-cream)",
+                      border: active ? "1px solid var(--color-teal)" : "1px solid var(--color-border)",
                       opacity: open && me ? 1 : 0.6,
                       minHeight: "4.5rem",
                     }}
@@ -315,7 +315,7 @@ function PlayTab({ bet, live, me, balance }: { bet: ReturnType<typeof useBet>; l
                               setMsg(null);
                             }}
                             className={`tactile rounded-lg px-3 text-center ${FOCUS_RING}`}
-                            style={{ minHeight: "2.75rem", minWidth: "3.6rem", background: on ? "var(--color-gold)" : "var(--color-cell)", color: on ? "var(--color-bg)" : "var(--color-cream)", border: "1px solid var(--color-border)", opacity: open && me ? 1 : 0.6 }}
+                            style={{ minHeight: "2.75rem", minWidth: "3.6rem", background: on ? "var(--teal-soft)" : "var(--color-cell)", color: on ? "var(--color-teal-strong)" : "var(--color-cream)", border: on ? "1px solid var(--color-teal)" : "1px solid var(--color-border)", opacity: open && me ? 1 : 0.6 }}
                           >
                             <span className="block" style={{ fontWeight: 600, lineHeight: 1.1 }}>{b.label}</span>
                             <span className="block tabular" style={{ fontSize: "0.75rem", opacity: 0.85 }}>{oddsText(price)}</span>
@@ -354,7 +354,7 @@ function PlayTab({ bet, live, me, balance }: { bet: ReturnType<typeof useBet>; l
                     className={`w-28 rounded-lg px-3 tabular ${FOCUS_RING}`}
                     style={{ minHeight: "2.75rem", background: "var(--color-cell)", color: "var(--color-cream)", border: "1px solid var(--color-border)", fontSize: "1.1rem" }}
                   />
-                  <button type="button" disabled={busy || problem !== "none" || liability < 1} onClick={() => void offer()} className={`glossy flex-1 rounded-lg ${FOCUS_RING}`} style={{ "--btn-fill": "var(--color-gold)", color: "var(--color-bg)", minHeight: "2.75rem", fontWeight: 700, opacity: busy || problem !== "none" || liability < 1 ? 0.5 : 1 } as React.CSSProperties}>
+                  <button type="button" disabled={busy || problem !== "none" || liability < 1} onClick={() => void offer()} className={`glossy flex-1 rounded-lg ${FOCUS_RING}`} style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", minHeight: "2.75rem", fontWeight: 700, opacity: busy || problem !== "none" || liability < 1 ? 0.5 : 1 } as React.CSSProperties}>
                     {problem === "none" ? "Legg ut spillet" : problem === "too-high" ? "Mer enn du har" : "Skriv en innsats"}
                   </button>
                 </div>
@@ -617,7 +617,7 @@ function AccountsTab({ bet }: { bet: ReturnType<typeof useBet> }) {
         </p>
         {confirm === "night" ? (
           <div className="flex gap-2">
-            <button type="button" onClick={async () => { const r = await newNight(books.users, bet.night); if (!r.ok) setError(r.reason); setConfirm(null); await bet.refresh(); }} className={`glossy flex-1 rounded-lg ${FOCUS_RING}`} style={{ "--btn-fill": "var(--color-gold)", color: "var(--color-bg)", minHeight: "2.75rem", fontWeight: 700 } as React.CSSProperties}>
+            <button type="button" onClick={async () => { const r = await newNight(books.users, bet.night); if (!r.ok) setError(r.reason); setConfirm(null); await bet.refresh(); }} className={`glossy flex-1 rounded-lg ${FOCUS_RING}`} style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", minHeight: "2.75rem", fontWeight: 700 } as React.CSSProperties}>
               Ja, start kveld {bet.night + 1}
             </button>
             <button type="button" onClick={() => setConfirm(null)} className={`tactile rounded-lg px-4 ${FOCUS_RING}`} style={{ minHeight: "2.75rem", background: "var(--color-cell)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}>

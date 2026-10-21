@@ -49,8 +49,8 @@ function RecordCard({ p }: { p: PlayerRecord }) {
         {STEPS.map((s) => (
           <div
             key={s}
-            className="rounded-md py-2 text-center tabular"
-            style={{ background: "var(--color-cell)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -4px 8px rgba(0,0,0,0.18)" }}
+            className="rounded-xl py-2 text-center tabular"
+            style={{ background: "var(--color-cell)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06), inset 0 1px 0 rgba(255,255,255,0.08), 0 1px 2px rgba(0,0,0,0.35)" }}
           >
             <p style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>{STEP_LABELS[s]}</p>
             <p style={{ color: "var(--color-cream)", fontSize: "0.75rem", fontWeight: 600 }}>

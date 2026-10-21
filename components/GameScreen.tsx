@@ -1364,7 +1364,7 @@ export function GameScreen({
             onClick={() => setEnteringDart(true)}
             disabled={turnShots.filter(Boolean).length >= 3 || showChoiceBox || showStandBox}
             className={`glossy w-full max-w-3xl mx-auto py-4 rounded-xl font-semibold text-lg mb-3 ${FOCUS_RING}`}
-            style={{ "--btn-fill": "var(--color-gold)", color: "var(--color-bg)", opacity: turnShots.filter(Boolean).length >= 3 || showChoiceBox || showStandBox ? 0.4 : 1 } as React.CSSProperties}
+            style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", opacity: turnShots.filter(Boolean).length >= 3 || showChoiceBox || showStandBox ? 0.4 : 1 } as React.CSSProperties}
           >
             Legg inn pil {Math.min(3, turnShots.filter(Boolean).length + 1)}
           </button>
