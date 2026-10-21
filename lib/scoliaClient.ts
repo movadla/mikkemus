@@ -31,6 +31,8 @@ type Listeners = {
   onCameraImages: (payload: CameraImagesPayload) => void;
   /** Connection-level state, distinct from board status — "connecting"/"open" is the WS itself, not the SBC. */
   onConnectionChange: (state: ConnectionState) => void;
+  /** Any message at all arrived, whatever its type. A socket that stays "open" but never says anything is a dead one. */
+  onMessage: () => void;
 };
 
 export type ConnectionState =
@@ -62,6 +64,8 @@ export class ScoliaConnection {
   }
 
   connect(forceConnect = false) {
+    // A connection that is still around is let go of first, with its handlers off, so its late close cannot start a second one.
+    this.release();
     const params = new URLSearchParams({ serialNumber: this.serialNumber, accessToken: this.accessToken });
     if (forceConnect) params.set("forceConnect", "true");
     this.listeners.onConnectionChange?.({ kind: "connecting" });
@@ -79,6 +83,7 @@ export class ScoliaConnection {
     };
 
     ws.onmessage = (event) => {
+      this.listeners.onMessage?.();
       let message: { type: string; payload?: unknown };
       try {
         message = JSON.parse(event.data);
@@ -110,8 +115,21 @@ export class ScoliaConnection {
   }
 
   disconnect() {
-    this.ws?.close();
+    this.release();
+  }
+
+  private release() {
+    const ws = this.ws;
     this.ws = null;
+    if (!ws) return;
+    ws.onopen = null;
+    ws.onclose = null;
+    ws.onmessage = null;
+    try {
+      ws.close();
+    } catch {
+      // Already gone.
+    }
   }
 
   private send(type: string, payload?: Record<string, unknown>) {

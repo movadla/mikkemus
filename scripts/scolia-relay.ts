@@ -43,6 +43,24 @@ async function insertEvent(type: string, payload: unknown) {
 
 const conn = new ScoliaConnection(serialNumber, accessToken);
 
+// The last time anything at all came from Scolia. After a sleep or a network change the socket can stay "open" while
+// nothing arrives any more: no close event, no status, a status row in the database that just gets older. The
+// heartbeat below asks for the status every 30 s and the board answers every time, so a long silence means it is dead.
+let lastMessageAt = Date.now();
+const SILENT_RECONNECT_MS = 120_000;
+let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+function scheduleReconnect(afterMs: number) {
+  if (reconnectTimer) return;
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    lastMessageAt = Date.now();
+    conn.connect();
+  }, afterMs);
+}
+conn.on("onMessage", () => {
+  lastMessageAt = Date.now();
+});
+
 conn.on("onConnectionChange", (state) => {
   console.log("[connection]", state);
   if (state.kind === "open") {
@@ -51,7 +69,7 @@ conn.on("onConnectionChange", (state) => {
   }
   if (state.kind === "closed" && !state.terminal) {
     console.log("Kobler til på nytt om 5 sekunder...");
-    setTimeout(() => conn.connect(), 5000);
+    scheduleReconnect(5000);
   }
   if (state.kind === "closed" && state.terminal) {
     console.error("Terminal feil (ugyldig serienummer/token/suspendert) — stopper.");
@@ -167,6 +185,12 @@ setInterval(() => {
     // Restart the clock rather than clearing it: if RESET_PHASE doesn't take, this retries
     // once a minute instead of firing on every heartbeat.
     takeoutSince = Date.now();
+  }
+  if (Date.now() - lastMessageAt > SILENT_RECONNECT_MS) {
+    console.log(`[watchdog] ingenting fra Scolia på ${Math.round((Date.now() - lastMessageAt) / 1000)} s — kobler til på nytt`);
+    conn.disconnect();
+    scheduleReconnect(1000);
+    return;
   }
   conn.getStatus();
 }, 30_000);
