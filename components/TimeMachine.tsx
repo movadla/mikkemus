@@ -7,7 +7,7 @@ import type { OddsSnapshot } from "@/lib/oddsLog";
 import { buildTimeline } from "@/lib/timeMachine";
 import { Mark } from "./Mark";
 
-const COLORS = ["#4b8be8", "#e04a3a", "#e6bd57", "#2fb4c2"];
+const COLORS = ["#4b8be8", "#e25a45", "#e6bd57", "#34c3d2"];
 const FOCUS_RING = "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
 const STEP_MS = 700;
 

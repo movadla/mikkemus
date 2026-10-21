@@ -126,7 +126,7 @@ function Panel({ player, all, source, onSource }: { player: PlayerRecord; all: P
         ))}
       </div>
 
-      <div className="flex rounded-full p-1 mb-4" role="group" aria-label="Hvor kastene er registrert" style={{ background: "var(--color-cell)", border: "1px solid var(--color-border)" }}>
+      <div className="flex rounded-full p-1 mb-4" role="group" aria-label="Hvor kastene er registrert" style={{ background: "rgba(0, 0, 0, 0.35)", boxShadow: "inset 0 1px 2px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(255, 255, 255, 0.05)" }}>
         {SOURCES.map((s) => (
           <button
             key={s.value}
@@ -134,7 +134,7 @@ function Panel({ player, all, source, onSource }: { player: PlayerRecord; all: P
             aria-pressed={source === s.value}
             onClick={() => onSource(s.value)}
             className={`flex-1 rounded-full ${FOCUS_RING}`}
-            style={{ minHeight: "2.5rem", background: source === s.value ? "var(--color-gold)" : "transparent", color: source === s.value ? "var(--color-bg)" : "var(--color-cream)", fontWeight: 600, fontSize: "0.85rem" }}
+            style={{ minHeight: "2.5rem", background: source === s.value ? "var(--color-surface-2)" : "transparent", color: source === s.value ? "var(--color-cream)" : "var(--color-muted)", boxShadow: source === s.value ? "0 1px 2px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1)" : "none", fontWeight: 600, fontSize: "0.85rem" }}
           >
             {s.label}
           </button>

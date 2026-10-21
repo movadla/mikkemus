@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 
-const COLOURS = ["#c9a24b", "#e0c471", "#2fb4c2", "#5fd0dc", "#c4432e", "#f4f0e8"];
+const COLOURS = ["#d9ae4f", "#f0d080", "#34c3d2", "#7be0ea", "#e25a45", "#f4f0e7"];
 const rnd = (a: number, b: number) => a + Math.random() * (b - a);
 
 type Piece = { x: number; y: number; vx: number; vy: number; r: number; vr: number; c: string; s: number };
@@ -72,7 +72,7 @@ export function Trophy({ cannons = true }: { cannons?: boolean }) {
             <linearGradient id="trophy-gold" x1="0" x2="1">
               <stop offset="0" stopColor="#8e6a1f" />
               <stop offset="0.35" stopColor="#f1d98a" />
-              <stop offset="0.55" stopColor="#c9a24b" />
+              <stop offset="0.55" stopColor="#d9ae4f" />
               <stop offset="1" stopColor="#7a5815" />
             </linearGradient>
           </defs>

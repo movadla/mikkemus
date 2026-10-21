@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Dartsapp for Mikke Mus",
     start_url: "/",
     display: "standalone",
-    background_color: "#11160f",
-    theme_color: "#11160f",
+    background_color: "#0c110e",
+    theme_color: "#0c110e",
     icons: [
       { src: "/pwa-192", sizes: "192x192", type: "image/png" },
       { src: "/pwa-512", sizes: "512x512", type: "image/png" },

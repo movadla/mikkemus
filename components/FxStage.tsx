@@ -71,7 +71,7 @@ export function FxStage({ matchDart = false }: { matchDart?: boolean }) {
         ],
         { duration: 1000, easing: "cubic-bezier(.3,0,.8,.6)", fill: "forwards" },
       ).finished.then(() => el.remove()).catch(() => el.remove());
-      const t = box(`left:${tx - 40}px;top:${ty - 44}px;width:80px;text-align:center;font:800 1.3rem var(--font-display, Georgia),serif;letter-spacing:.1em;color:#e04a3a;text-shadow:0 2px 6px rgba(0,0,0,.7)`, "BOM");
+      const t = box(`left:${tx - 40}px;top:${ty - 44}px;width:80px;text-align:center;font:800 1.3rem var(--font-display, Georgia),serif;letter-spacing:.1em;color:#e25a45;text-shadow:0 2px 6px rgba(0,0,0,.7)`, "BOM");
       add(t, t.animate([{ transform: "scale(2)", opacity: 0 }, { transform: "scale(1)", opacity: 1, offset: 0.3 }, { transform: "translateY(-10px)", opacity: 0 }], { duration: 1100, delay: 350 }));
     }
 
@@ -116,11 +116,11 @@ export function FxStage({ matchDart = false }: { matchDart?: boolean }) {
       const size = word.length > 8 ? "clamp(40px,13vw,92px)" : "clamp(64px,22vw,130px)";
       const root = box("inset:0;overflow:hidden");
       const fade = "-webkit-mask:radial-gradient(circle,transparent 24%,#000 58%);mask:radial-gradient(circle,transparent 24%,#000 58%)";
-      const lines = box(`inset:-40%;opacity:0;background:repeating-conic-gradient(from 0deg,#f4f0e8 0 1.1deg,transparent 1.1deg 4.6deg);${fade}`);
+      const lines = box(`inset:-40%;opacity:0;background:repeating-conic-gradient(from 0deg,#f4f0e7 0 1.1deg,transparent 1.1deg 4.6deg);${fade}`);
       const dots = box(`inset:0;opacity:0;background:radial-gradient(circle,rgba(196,67,46,.9) 24%,transparent 26%) 0 0/11px 11px;${fade.replace("24%", "20%").replace("58%", "90%")}`);
       const flash = box("inset:0;background:#fff;opacity:0");
-      const text = box(`left:0;right:0;top:${Math.round(h * 0.3)}px;text-align:center;font:900 ${size}/1 var(--font-display, Georgia),serif;color:#e0c471;-webkit-text-stroke:4px #0b0f0b;paint-order:stroke fill;text-shadow:6px 6px 0 #c4432e;opacity:0`, esc(word));
-      const caption = box(`left:0;right:0;top:${Math.round(h * 0.3) + 150}px;text-align:center;font:600 .8rem var(--font-sans, system-ui),sans-serif;letter-spacing:.2em;color:#f4f0e8;text-shadow:0 2px 6px #000;opacity:0`, esc(sub));
+      const text = box(`left:0;right:0;top:${Math.round(h * 0.3)}px;text-align:center;font:900 ${size}/1 var(--font-display, Georgia),serif;color:#f0d080;-webkit-text-stroke:4px #0b0f0b;paint-order:stroke fill;text-shadow:6px 6px 0 #e25a45;opacity:0`, esc(word));
+      const caption = box(`left:0;right:0;top:${Math.round(h * 0.3) + 150}px;text-align:center;font:600 .8rem var(--font-sans, system-ui),sans-serif;letter-spacing:.2em;color:#f4f0e7;text-shadow:0 2px 6px #000;opacity:0`, esc(sub));
       [dots, lines, text, caption, flash].forEach((el) => root.appendChild(el));
       add(root, root.animate([{ opacity: 1 }, { opacity: 1, offset: 0.86 }, { opacity: 0 }], { duration: 1750 }));
       flash.animate([{ opacity: 0 }, { opacity: 0.85, offset: 0.25 }, { opacity: 0 }], { duration: 200, delay: 140 });

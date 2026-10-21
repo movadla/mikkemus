@@ -27,7 +27,7 @@ function KitEditor({ label, kit, onChange }: { label: string; kit: Kit; onChange
   }
   const slotStyle = (s: Slot, off = false) => ({
     minHeight: "3.25rem",
-    background: active === s ? "rgba(47, 180, 194, 0.18)" : "var(--color-surface)",
+    background: active === s ? "var(--teal-soft)" : "var(--color-surface)",
     border: active === s ? "1px solid var(--color-teal)" : "1px solid var(--color-border)",
     opacity: off ? 0.5 : 1,
   });
@@ -46,7 +46,7 @@ function KitEditor({ label, kit, onChange }: { label: string; kit: Kit; onChange
               aria-checked={selected}
               onClick={() => onChange(makeKit(p, kit.primary, kit.secondary))}
               className={`tactile rounded-lg flex flex-col items-center justify-center gap-0.5 ${FOCUS_RING}`}
-              style={{ minHeight: "4.25rem", background: selected ? "rgba(47, 180, 194, 0.18)" : "var(--color-surface)", border: selected ? "1px solid var(--color-teal)" : "1px solid var(--color-border)" }}
+              style={{ minHeight: "4.25rem", background: selected ? "var(--teal-soft)" : "var(--color-surface)", border: selected ? "1px solid var(--color-teal)" : "1px solid var(--color-border)" }}
             >
               <TeamKit kit={makeKit(p, kit.primary, kit.secondary)} size={34} />
               <span style={{ color: selected ? "var(--color-teal)" : "var(--color-muted)", fontSize: "0.72rem" }}>{PATTERN_LABELS[p]}</span>
@@ -127,7 +127,7 @@ export function WalkOnPicker({ record }: { record: PlayerRecord }) {
                   }
                 }}
                 className={`tactile rounded-lg text-sm ${FOCUS_RING}`}
-                style={{ minHeight: "2.75rem", background: selected ? "rgba(47, 180, 194, 0.18)" : "var(--color-surface)", color: selected ? "var(--color-teal)" : "var(--color-muted)", border: selected ? "1px solid var(--color-teal)" : "1px solid var(--color-border)" }}
+                style={{ minHeight: "2.75rem", background: selected ? "var(--teal-soft)" : "var(--color-surface)", color: selected ? "var(--color-teal)" : "var(--color-muted)", border: selected ? "1px solid var(--color-teal)" : "1px solid var(--color-border)" }}
               >
                 {WALK_ON_LABELS[w]}
               </button>

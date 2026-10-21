@@ -31,7 +31,7 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
                 aria-checked={showOdds === on}
                 onClick={() => setShowOdds(on)}
                 className="tactile flex-1 rounded-lg font-medium"
-                style={{ minHeight: "2.75rem", background: showOdds === on ? "rgba(47, 180, 194, 0.18)" : "var(--color-surface)", color: showOdds === on ? "var(--color-teal)" : "var(--color-muted)", border: showOdds === on ? "1px solid var(--color-teal)" : "1px solid var(--color-border)", fontSize: "0.9rem" }}
+                style={{ minHeight: "2.75rem", background: showOdds === on ? "var(--teal-soft)" : "var(--color-surface)", color: showOdds === on ? "var(--color-teal)" : "var(--color-muted)", border: showOdds === on ? "1px solid var(--color-teal)" : "1px solid var(--color-border)", fontSize: "0.9rem" }}
               >
                 {on ? "Vis odds" : "Skjul odds"}
               </button>

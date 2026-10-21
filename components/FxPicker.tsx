@@ -28,7 +28,7 @@ export function FxPicker() {
               className={`tactile flex-1 rounded-lg font-medium ${FOCUS_RING}`}
               style={{
                 minHeight: "2.75rem",
-                background: selected ? "rgba(47, 180, 194, 0.18)" : "var(--color-surface)",
+                background: selected ? "var(--teal-soft)" : "var(--color-surface)",
                 color: selected ? "var(--color-teal)" : "var(--color-muted)",
                 border: selected ? "1px solid var(--color-teal)" : "1px solid var(--color-border)",
                 fontSize: "0.9rem",

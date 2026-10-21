@@ -53,8 +53,8 @@ export function MomentumWave({ chance }: { chance: number }) {
       const bx = (y: number) => x * w + Math.sin(y * 0.045 + phase) * A + Math.sin(y * 0.11 - phase * 1.3) * A * 0.45;
       ctx.clearRect(0, 0, w, h);
       const left = ctx.createLinearGradient(0, 0, w, 0);
-      left.addColorStop(0, "rgba(201,162,75,0.10)");
-      left.addColorStop(1, "rgba(201,162,75,0.34)");
+      left.addColorStop(0, "rgba(217, 174, 79,0.10)");
+      left.addColorStop(1, "rgba(217, 174, 79,0.34)");
       ctx.fillStyle = left;
       ctx.fillRect(0, 0, w, h);
       ctx.beginPath();
@@ -64,8 +64,8 @@ export function MomentumWave({ chance }: { chance: number }) {
       ctx.lineTo(w, h);
       ctx.closePath();
       const right = ctx.createLinearGradient(0, 0, w, 0);
-      right.addColorStop(0, "rgba(47,180,194,0.34)");
-      right.addColorStop(1, "rgba(47,180,194,0.10)");
+      right.addColorStop(0, "rgba(52, 195, 210,0.34)");
+      right.addColorStop(1, "rgba(52, 195, 210,0.10)");
       ctx.fillStyle = right;
       ctx.fill();
       ctx.beginPath();

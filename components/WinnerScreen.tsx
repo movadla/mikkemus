@@ -293,7 +293,7 @@ export function WinnerScreen({
                 style={{
                   border: "5px solid var(--color-gold)",
                   background: "var(--color-surface)",
-                  boxShadow: "0 10px 30px rgba(0,0,0,0.55), 0 0 40px rgba(201, 162, 75, 0.35)",
+                  boxShadow: "0 10px 30px rgba(0,0,0,0.55), 0 0 40px rgba(217, 174, 79, 0.35)",
                 }}
               >
                 {photo ? (

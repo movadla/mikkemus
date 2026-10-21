@@ -251,7 +251,7 @@ function ChromeControls({
           title="Stå ved 3 tellende piler"
           className={icon}
           style={{
-            background: standOn ? "rgba(47, 180, 194, 0.18)" : "var(--color-surface)",
+            background: standOn ? "var(--teal-soft)" : "var(--color-surface)",
             color: standOn ? "var(--color-teal)" : "var(--color-muted)",
             border: standOn ? "1px solid var(--color-teal)" : undefined,
           }}
@@ -357,9 +357,9 @@ function ShotIndicator({
               cursor: editable ? "pointer" : "default",
               boxShadow:
                 asked === "active"
-                  ? "0 0 0 2px var(--color-gold), 0 0 16px rgba(201, 162, 75, 0.6)"
+                  ? "0 0 0 2px var(--color-gold), 0 0 16px rgba(217, 174, 79, 0.6)"
                   : asked === "queued"
-                    ? "0 0 0 2px rgba(201, 162, 75, 0.45)"
+                    ? "0 0 0 2px rgba(217, 174, 79, 0.45)"
                     : undefined,
             }}
           >
@@ -429,7 +429,7 @@ function ChoiceBox({
       aria-label={`${ring} ${STEP_LABELS[choice.number]}: velg hvor den skal telle`}
       className={`choice-box rounded-xl ${compact ? "" : "mb-2"}`}
       style={{
-        background: "rgba(201, 162, 75, 0.12)",
+        background: "var(--gold-soft)",
         border: "1px solid var(--color-gold)",
         padding: compact ? "0.4rem" : "0.6rem",
       }}
@@ -480,7 +480,7 @@ function StandBox({ thrower, onAnswer, compact = false }: { thrower: string | nu
       aria-label="Tre tellende piler?"
       className={`choice-box rounded-xl ${compact ? "" : "mb-2"}`}
       style={{
-        background: "rgba(201, 162, 75, 0.12)",
+        background: "var(--gold-soft)",
         border: "1px solid var(--color-gold)",
         padding: compact ? "0.4rem" : "0.6rem",
       }}
@@ -754,7 +754,7 @@ export function GameScreen({
   // Crosses that close a row in this match — 3 in Standard, 1 in 1 treff (see lib/rules.ts).
   const target = getRules().target;
   const accent = "var(--color-teal)";
-  const glowColor = "rgba(47, 180, 194, 0.35)";
+  const glowColor = "var(--teal-ring)";
 
   // What redirecting pendingChoice would look like: how many extra crosses land on
   // its number (ghost preview there) and whether that fully completes it, in which
@@ -1188,7 +1188,7 @@ export function GameScreen({
                         <span
                           aria-hidden
                           className="animate-idle-glow absolute inset-1.5 rounded-md pointer-events-none"
-                          style={{ boxShadow: `0 0 14px ${choiceRole ? "rgba(201, 162, 75, 0.6)" : glowColor}` }}
+                          style={{ boxShadow: `0 0 14px ${choiceRole ? "rgba(217, 174, 79, 0.6)" : glowColor}` }}
                         />
                       )}
                       <button
@@ -1303,7 +1303,7 @@ export function GameScreen({
             <p
               role="status"
               className="text-center mb-1 px-2 py-1 rounded-lg shrink-0"
-              style={{ background: "rgba(201, 162, 75, 0.12)", border: "1px solid var(--color-gold)", color: "var(--color-gold-strong)", fontSize: "0.7rem", fontWeight: 600 }}
+              style={{ background: "var(--gold-soft)", border: "1px solid var(--color-gold)", color: "var(--color-gold-strong)", fontSize: "0.7rem", fontWeight: 600 }}
             >
               {choicePrompt}
             </p>

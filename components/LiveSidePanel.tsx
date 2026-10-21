@@ -53,7 +53,7 @@ export function LiveSidePanel({
           height: "3.6rem",
           border: "2px solid var(--color-teal)",
           background: "var(--color-surface)",
-          boxShadow: "0 0 14px rgba(47, 180, 194, 0.35)",
+          boxShadow: "0 0 14px var(--teal-ring)",
         }}
         title={playerName}
       >

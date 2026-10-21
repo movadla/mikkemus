@@ -3,12 +3,14 @@
 :root {
   /* Layered surfaces — each step a deliberate jump, not eyeballed drift,
      so panels and buttons visibly float above what's behind them. */
-  --color-bg: #161c16;
-  --color-panel: #19291f;
-  --color-surface: #1e3226;
-  --color-cell: #24402f;
-  --color-cell-done: #366449;
-  --color-border: #2e4f39;
+  --color-bg: #0c110e;
+  --color-panel: #121a15;
+  --color-surface: #172219;
+  --color-surface-2: #1d2b21;
+  --color-cell: #22332a;
+  --color-cell-done: #4a3f26;
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-hairline: rgba(255, 255, 255, 0.14);
 
   /* Two accents, two jobs. Gold is earned: it only ever marks a completed
      step or the winner screen. Teal is the everyday interactive accent —
@@ -17,34 +19,53 @@
   /* A closed step is the one thing in the game you actually earn, and gold is the earned
      colour per the rule above — but the grid used to mark it with a slightly lighter green,
      so the payoff never announced itself. These are the gold-tinted surfaces that fixes. */
-  --color-cell-done-top: #554a2f;
-  --color-cell-done-bottom: #3d3926;
-  --color-cell-open-top: #2a4433;
-  --color-cell-open-bottom: #203629;
+  --color-cell-done-top: #4a3f26;
+  --color-cell-done-bottom: #352e1c;
+  --color-cell-open-top: #263a2e;
+  --color-cell-open-bottom: #22332a;
 
-  --color-gold: #c9a24b;
-  --color-gold-strong: #e0c471;
-  --color-teal: #2fb4c2;
-  --color-teal-strong: #5fd0dc;
-  --color-red: #c4432e;
-  --color-green: #4a8b5c;
+  --color-gold: #d9ae4f;
+  --color-gold-strong: #f0d080;
+  --color-gold-deep: #9c7a2c;
+  --color-teal: #34c3d2;
+  --color-teal-strong: #7be0ea;
+  --color-teal-deep: #1e8e9b;
+  --color-red: #e25a45;
+  --color-green: #58b072;
 
-  --color-cream: #f4f0e8;
-  --color-muted: #86a494;
+  /* The two accents at their fixed steps: a faint tint for a chosen tab or a wash, and a hairline ring. */
+  --teal-soft: rgba(52, 195, 210, 0.12);
+  --teal-ring: rgba(52, 195, 210, 0.35);
+  --gold-soft: rgba(217, 174, 79, 0.12);
+  --gold-ring: rgba(217, 174, 79, 0.35);
+
+  --color-cream: #f4f0e7;
+  --color-text-2: #c2d0c5;
+  --color-muted: #90a697;
   /* Section headings — brighter than muted, which is tuned for de-emphasised body text and
      sits too close to the panel behind it for small letterspaced caps. */
-  --color-label: #a3bfae;
+  --color-label: #90a697;
 
   /* The heat that builds across an unbroken turn (see HEAT_GLOW in GameScreen). Tokens
      rather than literals in the component, where they were the only two colours in the app
      that existed nowhere in the palette. */
-  --heat-1: rgba(201, 162, 75, 0.1);
+  --heat-1: rgba(217, 174, 79, 0.1);
   --heat-2: rgba(211, 132, 60, 0.2);
   --heat-3: rgba(214, 92, 58, 0.34);
 
-  --gradient-gold: linear-gradient(135deg, var(--color-gold), #a9812f);
-  --glow-gold: 0 0 24px rgba(201, 162, 75, 0.35);
-  --glow-gold-strong: 0 0 64px rgba(201, 162, 75, 0.5);
+  /* Metallic: four stops, so the gold reads as a surface with light on it rather than a flat fill. */
+  --gradient-gold: linear-gradient(160deg, #f6dc92 0%, #d9ae4f 38%, #b8862e 72%, #d9ae4f 100%);
+  --glow-gold: 0 0 24px rgba(217, 174, 79, 0.3);
+  --glow-gold-strong: 0 0 64px rgba(240, 208, 128, 0.5);
+  --glow-teal: 0 0 0 2px var(--color-teal), 0 0 26px rgba(52, 195, 210, 0.4);
+
+  /* Three levels of depth, each the same three layers: a hairline of light on top, a short contact
+     shadow, and a long soft ambient one. Cards, things floating over the board, and modals. */
+  --elevation-1: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 32px -12px rgba(0, 0, 0, 0.6);
+  --elevation-2: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 2px 4px rgba(0, 0, 0, 0.35), 0 24px 48px -16px rgba(0, 0, 0, 0.7);
+  --elevation-3: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.06), 0 4px 8px rgba(0, 0, 0, 0.4), 0 40px 80px -20px rgba(0, 0, 0, 0.8);
+  /* Frosted glass for what lies over the board: the thrower bar and the action bar. */
+  --glass: rgba(18, 26, 21, 0.66);
 
   --font-display: var(--font-fraunces), Georgia, serif;
   --font-sans: var(--font-geist-sans), system-ui, sans-serif;
@@ -52,8 +73,8 @@
   /* A type scale, because there wasn't one: an audit found 26 distinct font sizes, four
      different sizes for the same page heading, and two for the same section label. Same
      role, same size — that is most of what makes a set of screens read as one app. */
-  --text-page-title: 1.4rem;
-  --text-section-label: 0.8rem;
+  --text-page-title: 1.625rem;
+  --text-section-label: 0.6875rem;
   --text-body: 0.85rem;
   --text-meta: 0.7rem;
 
@@ -78,9 +99,12 @@
 
 html,
 body {
-  background: var(--color-bg);
+  /* A light source above the screen: the top of the page a shade warmer, the rest the deep ground. */
+  background: radial-gradient(130% 70% at 50% -8%, #1a2a1f 0%, var(--color-bg) 58%) fixed, var(--color-bg);
   color: var(--color-cream);
   font-family: var(--font-sans);
+  /* Every number in the app lines up: tellers, columns and the score never jump as digits change. */
+  font-variant-numeric: tabular-nums;
 }
 
 * {
@@ -95,7 +119,7 @@ body::before {
   inset: 0;
   z-index: 9999;
   pointer-events: none;
-  opacity: 0.12;
+  opacity: 0.07;
   mix-blend-mode: overlay;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
@@ -109,7 +133,7 @@ body::after {
   inset: 0;
   z-index: 9998;
   pointer-events: none;
-  background: radial-gradient(ellipse at 50% 35%, transparent 0%, rgba(0, 0, 0, 0.24) 100%);
+  background: radial-gradient(ellipse at 50% 30%, transparent 0%, rgba(0, 0, 0, 0.3) 100%);
 }
 
 button {
@@ -125,6 +149,8 @@ button {
 .page-title {
   font-family: var(--font-display);
   font-size: var(--text-page-title);
+  font-weight: 600;
+  letter-spacing: -0.01em;
   color: var(--color-cream);
 }
 
@@ -134,7 +160,9 @@ button {
    the whole app changes on one line if that call ever gets revisited. */
 .section-label {
   font-size: var(--text-section-label);
-  letter-spacing: 0.1em;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   color: var(--color-label);
 }
 
@@ -166,7 +194,7 @@ button {
 }
 
 .row-focus:focus-visible > * {
-  background: rgba(47, 180, 194, 0.18);
+  background: rgba(52, 195, 210, 0.18);
   box-shadow: inset 0 0 0 1px var(--color-teal);
 }
 
@@ -179,13 +207,13 @@ button {
     box-shadow: 0 0 0 rgba(0, 0, 0, 0);
   }
   12% {
-    box-shadow: 0 0 26px var(--glow-color, rgba(47, 180, 194, 0.65));
+    box-shadow: 0 0 26px var(--glow-color, rgba(52, 195, 210, 0.65));
   }
   32% {
     box-shadow: 0 0 0 rgba(0, 0, 0, 0);
   }
   48% {
-    box-shadow: 0 0 14px var(--glow-color, rgba(47, 180, 194, 0.35));
+    box-shadow: 0 0 14px var(--glow-color, rgba(52, 195, 210, 0.35));
   }
   70%,
   100% {
@@ -262,17 +290,19 @@ button {
    nothing extra. */
 .tactile {
   box-shadow:
-    0 3px 0 rgba(0, 0, 0, 0.4),
-    0 5px 12px rgba(0, 0, 0, 0.35),
-    0 1px 0 rgba(255, 255, 255, 0.15) inset;
-  transition: transform var(--duration-instant) var(--ease-standard);
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    0 10px 24px -12px rgba(0, 0, 0, 0.6);
+  transition:
+    transform var(--duration-instant) var(--ease-standard),
+    box-shadow var(--duration-instant) var(--ease-standard);
 }
 
 .tactile:active {
-  transform: translateY(2px) scale(0.97);
+  transform: scale(0.98);
   box-shadow:
-    0 1px 0 rgba(0, 0, 0, 0.4),
-    0 2px 5px rgba(0, 0, 0, 0.3);
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
 .tactile:disabled {
@@ -280,15 +310,17 @@ button {
 }
 
 .shadow-panel {
-  box-shadow:
-    0 10px 30px rgba(0, 0, 0, 0.4),
-    0 1px 0 rgba(255, 255, 255, 0.06) inset,
-    0 -14px 22px rgba(0, 0, 0, 0.22) inset;
+  box-shadow: var(--elevation-1);
 }
 
 .card-gold {
   background: var(--gradient-gold);
   color: var(--color-bg);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.25),
+    0 2px 4px rgba(0, 0, 0, 0.35),
+    0 30px 60px -18px rgba(217, 174, 79, 0.55);
 }
 
 /* -- glossy premium button --
@@ -300,14 +332,19 @@ button {
    style.background would otherwise silently blank this class's own background out. */
 .glossy {
   --btn-fill: var(--color-teal);
-  background:
-    linear-gradient(155deg, rgba(255, 255, 255, 0.24) 0%, rgba(255, 255, 255, 0) 42%),
-    linear-gradient(0deg, rgba(0, 0, 0, 0.16) 0%, rgba(0, 0, 0, 0) 60%),
-    var(--btn-fill);
+  /* A vertical three-stop of the fill itself — lit on top, shaded at the foot — and a shadow in the
+     button's own colour, instead of the old hard 3px plinth that read as a toy. */
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--btn-fill) 84%, white) 0%,
+    var(--btn-fill) 55%,
+    color-mix(in srgb, var(--btn-fill) 86%, black) 100%
+  );
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.22) inset,
-    0 3px 0 rgba(0, 0, 0, 0.4),
-    0 8px 18px rgba(0, 0, 0, 0.35);
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.2),
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    0 12px 28px -8px color-mix(in srgb, var(--btn-fill) 55%, transparent);
   transition:
     transform var(--duration-instant) var(--ease-standard),
     box-shadow var(--duration-fast) var(--ease-standard),
@@ -316,19 +353,21 @@ button {
 
 .glossy:hover:not(:disabled) {
   transform: translateY(-1px);
-  filter: brightness(1.06);
+  filter: brightness(1.05);
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.22) inset,
-    0 4px 0 rgba(0, 0, 0, 0.4),
-    0 12px 26px rgba(0, 0, 0, 0.4);
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.2),
+    0 2px 4px rgba(0, 0, 0, 0.4),
+    0 16px 32px -8px color-mix(in srgb, var(--btn-fill) 60%, transparent);
 }
 
 .glossy:active:not(:disabled) {
-  transform: translateY(2px) scale(0.97);
+  transform: scale(0.98);
   filter: brightness(0.96);
   box-shadow:
-    0 1px 0 rgba(0, 0, 0, 0.4),
-    0 2px 6px rgba(0, 0, 0, 0.3);
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    0 6px 14px -6px color-mix(in srgb, var(--btn-fill) 45%, transparent);
 }
 
 .glossy:disabled {
@@ -341,32 +380,22 @@ button {
    than invented silver/bronze colors. */
 .rank-glow-1 {
   background:
-    linear-gradient(180deg, rgba(201, 162, 75, 0.1), transparent 60%),
+    linear-gradient(90deg, rgba(217, 174, 79, 0.14), rgba(217, 174, 79, 0) 70%),
     var(--color-surface);
-  border: 1.5px solid var(--color-gold);
-  box-shadow:
-    0 10px 30px rgba(0, 0, 0, 0.4),
-    0 1px 0 rgba(255, 255, 255, 0.06) inset,
-    0 -14px 22px rgba(0, 0, 0, 0.22) inset,
-    var(--glow-gold);
+  border: 1px solid var(--gold-ring);
+  box-shadow: var(--elevation-1), var(--glow-gold);
 }
 
 .rank-glow-2 {
   background: var(--color-surface);
-  border: 1px solid rgba(201, 162, 75, 0.4);
-  box-shadow:
-    0 10px 30px rgba(0, 0, 0, 0.4),
-    0 1px 0 rgba(255, 255, 255, 0.06) inset,
-    0 -14px 22px rgba(0, 0, 0, 0.22) inset;
+  border: 1px solid rgba(217, 174, 79, 0.22);
+  box-shadow: var(--elevation-1);
 }
 
 .rank-glow-3 {
   background: var(--color-surface);
-  border: 1px solid rgba(201, 162, 75, 0.22);
-  box-shadow:
-    0 10px 30px rgba(0, 0, 0, 0.4),
-    0 1px 0 rgba(255, 255, 255, 0.06) inset,
-    0 -14px 22px rgba(0, 0, 0, 0.22) inset;
+  border: 1px solid rgba(217, 174, 79, 0.12);
+  box-shadow: var(--elevation-1);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -386,17 +415,19 @@ button {
    an occlusion shadow at the bottom. Flat fills read as a spreadsheet no matter how good
    the surrounding panel is. */
 .cell-tile {
-  background: linear-gradient(180deg, var(--color-cell-open-top) 0%, var(--color-cell-open-bottom) 100%);
+  border-radius: 12px;
+  background: var(--color-cell);
   /* Four layers, and each is doing a job: a bright top edge for the lit rim, a hairline dark
      bottom edge so the tile ends on a crisp line rather than fading out, the inner floor
      shadow for depth, and a small drop so it sits ON the board instead of in it. The top rim
      had to come up with the surfaces — a highlight tuned against near-black reads as nothing
      once the tile beneath it is lighter. */
+  /* A hairline edge, a lit top rim and a short contact shadow: a tile that sits ON the board. The old
+     7px inner floor shadow made every cell look dirty at the foot. */
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.11),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.3),
-    inset 0 -7px 12px rgba(0, 0, 0, 0.24),
-    0 1px 2px rgba(0, 0, 0, 0.3);
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 1px 2px rgba(0, 0, 0, 0.35);
   transition:
     background var(--duration-base) var(--ease-standard),
     box-shadow var(--duration-base) var(--ease-standard);
@@ -415,39 +446,38 @@ button {
 .cell-tile--done {
   background: linear-gradient(180deg, var(--color-cell-done-top) 0%, var(--color-cell-done-bottom) 100%);
   box-shadow:
-    inset 0 1px 0 rgba(255, 235, 190, 0.22),
-    inset 0 0 0 1px rgba(201, 162, 75, 0.55),
-    inset 0 -8px 14px rgba(0, 0, 0, 0.3),
-    0 0 18px rgba(201, 162, 75, 0.18);
+    inset 0 0 0 1px rgba(217, 174, 79, 0.6),
+    inset 0 1px 0 rgba(255, 235, 190, 0.25),
+    0 0 22px rgba(217, 174, 79, 0.22);
 }
 
 /* The cell you're actually on: full ring plus bloom. D and T are pre-bankable at any time,
    so they are ALSO always clickable — before this split, three rows wore the identical ring
    at once and "what am I aiming at" drowned in it. Only the current target gets this. */
 .cell-tile--active {
+  background: var(--color-cell-open-top);
   box-shadow:
-    0 0 0 2px var(--color-teal),
-    0 0 20px rgba(47, 180, 194, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1),
-    inset 0 -6px 10px rgba(0, 0, 0, 0.22);
+    var(--glow-teal),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 /* Clickable, but not what you're on — the always-open D/T rows. Same colour so the meaning
    is shared ("you may hit this"), a quarter of the weight so it never competes. */
 .cell-tile--open {
+  /* No ring: the always-open D and T rows only get a lighter surface, so the one ring on screen is the row being aimed at. */
+  background: var(--color-cell-open-top);
   box-shadow:
-    0 0 0 1px rgba(47, 180, 194, 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.07),
-    inset 0 -6px 10px rgba(0, 0, 0, 0.22);
+    inset 0 0 0 1px rgba(255, 255, 255, 0.09),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 1px 2px rgba(0, 0, 0, 0.35);
 }
 
 /* Would open next if the pending triple/double choice is redirected — same ring geometry as
    --active, dashed-equivalent weight, so the preview reads as related but not yet real. */
 .cell-tile--preview {
   box-shadow:
-    0 0 0 1.5px rgba(47, 180, 194, 0.55),
-    inset 0 1px 0 rgba(255, 255, 255, 0.07),
-    inset 0 -6px 10px rgba(0, 0, 0, 0.22);
+    0 0 0 1.5px rgba(52, 195, 210, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
 }
 
 /* One of the two places an undecided triple/double can go — tap to put it there. Gold, like
@@ -455,9 +485,8 @@ button {
 .cell-tile--choice {
   box-shadow:
     0 0 0 2px var(--color-gold),
-    0 0 20px rgba(201, 162, 75, 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1),
-    inset 0 -6px 10px rgba(0, 0, 0, 0.22);
+    0 0 22px rgba(217, 174, 79, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 /* Hairline rules between rows and columns. Structure was carried entirely by padding
@@ -476,12 +505,12 @@ button {
    was the hardest question to answer. The band runs the full row so it's found by shape
    rather than by reading. */
 .row-active {
-  background: linear-gradient(90deg, rgba(47, 180, 194, 0.16) 0%, rgba(47, 180, 194, 0.05) 100%);
+  background: linear-gradient(90deg, rgba(52, 195, 210, 0.16) 0%, rgba(52, 195, 210, 0.05) 100%);
 }
 
 /* The label end of that row, plus the caret that points from it into the board. */
 .row-active-label {
-  background: linear-gradient(90deg, rgba(47, 180, 194, 0.28) 0%, rgba(47, 180, 194, 0.12) 100%) !important;
+  background: linear-gradient(90deg, rgba(52, 195, 210, 0.28) 0%, rgba(52, 195, 210, 0.12) 100%) !important;
   color: var(--color-teal-strong) !important;
 }
 
@@ -501,22 +530,24 @@ button {
    measured overflow, deliberately, since measuring would mean state and a resize observer
    for a hint that only matters in the rare big-pod case. */
 .scroll-hint-right {
-  background: linear-gradient(90deg, rgba(18, 33, 26, 0) 0%, rgba(18, 33, 26, 0.9) 100%);
+  background: linear-gradient(90deg, rgba(18, 26, 21, 0) 0%, rgba(18, 26, 21, 0.9) 100%);
 }
 
 /* A wash down the active player's column — the single fastest way to answer "whose turn is
    it" from across a room, which is the actual viewing distance for a phone at the oche. */
 .column-active {
-  background: linear-gradient(180deg, rgba(47, 180, 194, 0.075) 0%, rgba(47, 180, 194, 0.025) 100%);
+  background: linear-gradient(180deg, rgba(52, 195, 210, 0.075) 0%, rgba(52, 195, 210, 0.025) 100%);
 }
 
 /* The action bar reads as docked hardware rather than two buttons floating on the
    background: its own slightly raised surface, a hairline lip, and a shadow it casts up
    into the grid above. */
 .action-bar {
-  background: linear-gradient(180deg, rgba(23, 40, 31, 0.75) 0%, rgba(18, 33, 26, 0.95) 100%);
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  box-shadow: 0 -10px 24px rgba(0, 0, 0, 0.35);
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  backdrop-filter: blur(14px) saturate(1.2);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 -12px 32px -8px rgba(0, 0, 0, 0.5);
 }
 
 /* Centred here rather than with Tailwind's `left-1/2 -translate-x-1/2`, because that utility
@@ -1062,12 +1093,12 @@ button {
    made finishing a number feel like nothing at all. */
 @keyframes step-slam-a {
   0% { transform: scale(1); }
-  22% { transform: scale(1.045); box-shadow: 0 0 0 2px rgba(201, 162, 75, 0.85), 0 0 26px 6px rgba(201, 162, 75, 0.45); }
+  22% { transform: scale(1.045); box-shadow: 0 0 0 2px rgba(217, 174, 79, 0.85), 0 0 26px 6px rgba(217, 174, 79, 0.45); }
   100% { transform: scale(1); box-shadow: none; }
 }
 @keyframes step-slam-b {
   0% { transform: scale(1); }
-  22% { transform: scale(1.045); box-shadow: 0 0 0 2px rgba(201, 162, 75, 0.85), 0 0 26px 6px rgba(201, 162, 75, 0.45); }
+  22% { transform: scale(1.045); box-shadow: 0 0 0 2px rgba(217, 174, 79, 0.85), 0 0 26px 6px rgba(217, 174, 79, 0.45); }
   100% { transform: scale(1); box-shadow: none; }
 }
 
@@ -1088,13 +1119,13 @@ button {
     transform: scale(1);
     box-shadow:
       0 6px 16px rgba(0, 0, 0, 0.45),
-      0 0 0 0 rgba(201, 162, 75, 0.55);
+      0 0 0 0 rgba(217, 174, 79, 0.55);
   }
   50% {
     transform: scale(1.07);
     box-shadow:
       0 8px 24px rgba(0, 0, 0, 0.5),
-      0 0 26px 8px rgba(201, 162, 75, 0.55);
+      0 0 26px 8px rgba(217, 174, 79, 0.55);
   }
 }
 
@@ -1119,7 +1150,7 @@ button {
 @keyframes screen-enter {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(12px);
   }
   to {
     opacity: 1;
@@ -1184,10 +1215,10 @@ button {
 @keyframes thrower-ring {
   0%,
   100% {
-    box-shadow: 0 0 0 0 rgba(47, 180, 194, 0.65);
+    box-shadow: 0 0 0 0 rgba(52, 195, 210, 0.65);
   }
   50% {
-    box-shadow: 0 0 0 7px rgba(47, 180, 194, 0);
+    box-shadow: 0 0 0 7px rgba(52, 195, 210, 0);
   }
 }
 
@@ -1198,7 +1229,7 @@ button {
 @media (prefers-reduced-motion: reduce) {
   .animate-thrower-ring {
     animation: none;
-    box-shadow: 0 0 0 3px rgba(47, 180, 194, 0.35);
+    box-shadow: 0 0 0 3px rgba(52, 195, 210, 0.35);
   }
 }
 

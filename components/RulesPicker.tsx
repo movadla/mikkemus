@@ -44,7 +44,7 @@ export function RulesPicker({
               style={{
                 minHeight: "2.75rem",
                 fontSize: "1.05rem",
-                background: selected ? "rgba(47, 180, 194, 0.18)" : "var(--color-surface)",
+                background: selected ? "var(--teal-soft)" : "var(--color-surface)",
                 color: selected ? "var(--color-teal)" : "var(--color-muted)",
                 border: selected ? "1px solid var(--color-teal)" : "1px solid var(--color-border)",
               }}
@@ -69,7 +69,7 @@ export function RulesPicker({
           className={`tactile w-full mt-4 px-4 rounded-lg flex items-center justify-between gap-4 text-left ${FOCUS_RING}`}
           style={{
             minHeight: "2.75rem",
-            background: stand ? "rgba(47, 180, 194, 0.18)" : "var(--color-surface)",
+            background: stand ? "var(--teal-soft)" : "var(--color-surface)",
             border: stand ? "1px solid var(--color-teal)" : "1px solid var(--color-border)",
           }}
         >

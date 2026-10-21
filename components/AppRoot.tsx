@@ -81,7 +81,7 @@ export function AppRoot() {
             type="button"
             onClick={() => setMode("single")}
             className={`glossy w-full py-4 rounded-xl font-semibold text-lg flex items-center justify-center gap-2 ${FOCUS_RING}`}
-            style={{ "--btn-fill": "var(--color-green)", color: "var(--color-cream)" } as React.CSSProperties}
+            style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)" } as React.CSSProperties}
           >
             <DartIcon className="w-5 h-5" />
             Enkeltkamp
@@ -102,8 +102,9 @@ export function AppRoot() {
           <button
             type="button"
             onClick={() => setMode("bullduel")}
-            className={`glossy w-full py-4 rounded-xl font-semibold text-lg flex items-center justify-center gap-2 ${FOCUS_RING}`}
-            style={{ "--btn-fill": "var(--color-gold)", color: "var(--color-bg)" } as React.CSSProperties}
+            className={`tactile w-full py-4 rounded-xl font-semibold text-lg flex items-center justify-center gap-2 ${FOCUS_RING}`}
+            // Secondary, not gold: gold is earned (a closed row, a win), never a button.
+            style={{ background: "rgba(255, 255, 255, 0.03)", color: "var(--color-cream)", border: "1px solid var(--color-hairline)" }}
           >
             <BullseyeIcon className="w-5 h-5" />
             Bull-duell

@@ -15,7 +15,7 @@ function Form({ points }: { points: number[] }) {
   const up = points[points.length - 1] >= points[0];
   return (
     <svg viewBox="0 0 208 40" className="w-full" height={40} role="img" aria-label="Treffprosent de siste kampene">
-      <polyline points={line} fill="none" stroke={up ? "#3fc06a" : "#e04a3a"} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
+      <polyline points={line} fill="none" stroke={up ? "#58b072" : "#e25a45"} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

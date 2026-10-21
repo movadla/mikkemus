@@ -99,7 +99,7 @@ export function RowCostCard({ players, turnLog }: { players: string[]; turnLog: 
               aria-checked={p === who}
               onClick={() => setWho(p)}
               className="tactile px-4 rounded-lg text-sm"
-              style={{ minHeight: "2.75rem", background: p === who ? "rgba(47, 180, 194, 0.18)" : "var(--color-cell)", color: p === who ? "var(--color-teal)" : "var(--color-muted)", border: p === who ? "1px solid var(--color-teal)" : "1px solid var(--color-border)" }}
+              style={{ minHeight: "2.75rem", background: p === who ? "var(--teal-soft)" : "var(--color-cell)", color: p === who ? "var(--color-teal)" : "var(--color-muted)", border: p === who ? "1px solid var(--color-teal)" : "1px solid var(--color-border)" }}
             >
               {p}
             </button>
@@ -111,7 +111,7 @@ export function RowCostCard({ players, turnLog }: { players: string[]; turnLog: 
   );
 }
 
-const SIDE_COLORS = ["#4b8be8", "#e04a3a", "#e6bd57", "#2fb4c2"];
+const SIDE_COLORS = ["#4b8be8", "#e25a45", "#e6bd57", "#34c3d2"];
 
 /**
  * How the odds moved through the match: each side's chance of winning after every turn, with the

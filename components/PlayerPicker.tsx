@@ -213,7 +213,7 @@ export function PlayerPicker({
                 className={`tactile flex items-center gap-2 pl-2 pr-2 rounded-lg text-left ${FOCUS_RING}`}
                 style={{
                   minHeight: "2.75rem",
-                  background: selected ? "rgba(47, 180, 194, 0.18)" : "var(--color-surface)",
+                  background: selected ? "var(--teal-soft)" : "var(--color-surface)",
                   border: selected ? "1px solid var(--color-teal)" : `1px ${dashed ? "dashed" : "solid"} var(--color-border)`,
                 }}
               >

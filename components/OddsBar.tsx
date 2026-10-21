@@ -49,7 +49,7 @@ export function OddsBar({ rows, compact = false }: { rows: OddsRow[]; compact?: 
                 <span className="font-display tabular" style={{ fontSize: compact ? "1.05rem" : "1.3rem", color: "var(--color-cream)", lineHeight: 1.1 }}>
                   {formatOdds(r.odds)}
                 </span>
-                <span className="tabular" style={{ fontSize: "0.7rem", color: up ? "#3fc06a" : down ? "#e04a3a" : "var(--color-muted)", fontWeight: 700 }} title={`Vinnersjanse ${formatPct(r.p)}`}>
+                <span className="tabular" style={{ fontSize: "0.7rem", color: up ? "#58b072" : down ? "#e25a45" : "var(--color-muted)", fontWeight: 700 }} title={`Vinnersjanse ${formatPct(r.p)}`}>
                   {up ? "▲" : down ? "▼" : "–"} {formatPct(r.p)}
                 </span>
               </p>

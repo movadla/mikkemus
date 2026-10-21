@@ -7,10 +7,10 @@ const SLIDE_MS = 2800;
 
 /** The colours of the cards, in turn: each a gradient with the text colour that reads on it. */
 const LOOKS: { bg: string; fg: string }[] = [
-  { bg: "linear-gradient(160deg,#c9a24b,#7a5815)", fg: "#1a1508" },
-  { bg: "linear-gradient(160deg,#2fb4c2,#124e57)", fg: "#04181b" },
-  { bg: "linear-gradient(160deg,#c4432e,#5c1a10)", fg: "#fff2ee" },
-  { bg: "linear-gradient(160deg,#4a8b5c,#173323)", fg: "#eaf7ee" },
+  { bg: "linear-gradient(160deg,#d9ae4f,#7a5815)", fg: "#1a1508" },
+  { bg: "linear-gradient(160deg,#34c3d2,#124e57)", fg: "#04181b" },
+  { bg: "linear-gradient(160deg,#e25a45,#5c1a10)", fg: "#fff2ee" },
+  { bg: "linear-gradient(160deg,#58b072,#173323)", fg: "#eaf7ee" },
 ];
 
 /**

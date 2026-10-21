@@ -197,7 +197,7 @@ export default function StorskjermPage() {
                     <span
                       aria-hidden
                       className="animate-idle-glow absolute inset-0 rounded-full pointer-events-none"
-                      style={{ boxShadow: "0 0 24px rgba(47, 180, 194, 0.35)" }}
+                      style={{ boxShadow: "0 0 24px var(--teal-ring)" }}
                     />
                   )}
                   <span
@@ -207,8 +207,8 @@ export default function StorskjermPage() {
                       {
                         color: isActive ? "var(--color-teal)" : avatarAccent(p),
                         fontSize: "2rem",
-                        background: isActive ? "rgba(47, 180, 194, 0.16)" : "transparent",
-                        "--glow-color": "rgba(47, 180, 194, 0.35)",
+                        background: isActive ? "rgba(52, 195, 210, 0.16)" : "transparent",
+                        "--glow-color": "var(--teal-ring)",
                       } as React.CSSProperties
                     }
                   >
