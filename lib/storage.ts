@@ -10,6 +10,7 @@ import type { WalkOnChoice } from "./fanfare";
 import { mergeMemberStats } from "./memberStats";
 import { START_RATING, ratingChange, replayRatings } from "./rating";
 import {
+  bullRowAfterDuel,
   emptyRecord,
   recordKey as key,
   recordToRow,
@@ -492,7 +493,11 @@ export function recordBullDuelMatch(name: string, totals: BullDuelStat) {
     luckSum: existing.bullDuel.luckSum + totals.luckSum,
     luckCount: existing.bullDuel.luckCount + totals.luckCount,
   };
-  const record = { ...existing, bullDuel };
+  // The bull-duell darts count in the statistics as one thing only: how often the bull is hit. Nothing else of the match
+  // (no match played, no win, no darts used, no other row) goes into the player's numbers — they stay as enkeltkamp's.
+  // A dart is a hit when it scores, red or green, and a miss when it does not.
+  const steps = { ...existing.steps, BULL: bullRowAfterDuel(existing.steps.BULL, totals) };
+  const record = { ...existing, bullDuel, steps };
   roster = { ...roster, [k]: record };
   notify();
   upsertRow(k, record);

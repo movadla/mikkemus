@@ -191,6 +191,15 @@ export function emptyLuckByStep(): Record<Step, LuckStat> {
   return s;
 }
 
+/**
+ * What a finished bull-duell match adds to the BULL row of the statistics: the darts that scored (red or green) are hits and
+ * the others misses, and nothing else of the match is counted there — the row's hit percentage is how often the bull is hit.
+ */
+export function bullRowAfterDuel(row: HitStat, totals: Pick<BullDuelStat, "throws" | "redHits" | "greenHits">): HitStat {
+  const hits = totals.redHits + totals.greenHits;
+  return { hits: row.hits + hits, misses: row.misses + Math.max(0, totals.throws - hits) };
+}
+
 export function emptyBullDuelStat(): BullDuelStat {
   return { throws: 0, points: 0, redHits: 0, greenHits: 0, luckSum: 0, luckCount: 0 };
 }

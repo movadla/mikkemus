@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { emptyRecord, emptyStepStats, type MatchHistoryEntry, type MemberStat } from "./playerRows";
+import { bullRowAfterDuel, emptyRecord, emptyStepStats, type MatchHistoryEntry, type MemberStat } from "./playerRows";
 import { bySource, rowDartsOver, rowsOver, singleView, teamView } from "./playerView";
 
 const match = (i: number, won: boolean, hitPct: number, med: number | null = null, darts = 60): MatchHistoryEntry => ({ date: `2026-10-${String(i + 1).padStart(2, "0")}`, won, dartsUsed: darts, hitPct, med, mhd: med, mvd: med, ...(med !== null ? { throws: darts } : {}) });
@@ -139,5 +139,12 @@ describe("hit percentage per row by source", () => {
     expect(singleView(p, "scolia").rows?.find((r) => r.step === "20")?.pct).toBeCloseTo(25, 6);
     expect(singleView(p, "scolia").rows?.find((r) => r.step === "19")?.pct).toBeNull();
     expect(rowsOver([match(0, true, 50)])).toBeNull();
+  });
+});
+
+describe("bull-duell and the BULL row", () => {
+  it("adds the scoring darts as hits and the rest as misses, and nothing else", () => {
+    expect(bullRowAfterDuel({ hits: 4, misses: 6 }, { throws: 9, redHits: 2, greenHits: 3 })).toEqual({ hits: 9, misses: 10 });
+    expect(bullRowAfterDuel({ hits: 0, misses: 0 }, { throws: 3, redHits: 0, greenHits: 0 })).toEqual({ hits: 0, misses: 3 });
   });
 });
