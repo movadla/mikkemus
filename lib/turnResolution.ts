@@ -162,3 +162,40 @@ export function replayDiscardedSingles(board: Progress, darts: readonly TurnDart
   }
   return { board: next, added, reopened };
 }
+
+
+/**
+ * A dart on a number further down the line than the one being worked on says what the player meant before it. After a
+ * T20 on 20, a T19 or an S18 is only aimed at while 20 is closed, so the T20 was meant for the number: it is put there now,
+ * the board moves on, and the later dart counts where it landed — with the sound and the picture of a hit, instead of being
+ * thrown away until the end of the turn.
+ *
+ * Returns the parked darts to put on the active number, the most recent first, but only when together they close it:
+ * a D20 on 0/3 leaves 20 open and 19 is still not what the player is on, so nothing is assumed then. Each call looks at
+ * one number; the caller runs it again on the new board, since closing 20 can make 19 the one the next dart is measured
+ * against.
+ *
+ * `dartNumber` is the number the new dart landed on (any ring); `usable` filters out darts that cannot be moved (already put
+ * on their number, or one the player has told us to keep).
+ */
+export function impliedRedirects(
+  pending: readonly PendingAmbiguous[],
+  board: Progress,
+  dartNumber: number,
+  usable: (p: PendingAmbiguous) => boolean = () => true,
+): PendingAmbiguous[] {
+  const active = currentStepFor(board);
+  if (active === null || Number.isNaN(Number(active))) return [];
+  // Only numbers further down the line: 19 and below after 20, never the number itself or one already behind.
+  if (!(dartNumber < Number(active) && dartNumber >= 14)) return [];
+  const need = getRules().target - board[active];
+  const picked: PendingAmbiguous[] = [];
+  let sum = 0;
+  for (let i = pending.length - 1; i >= 0 && sum < need; i--) {
+    const p = pending[i];
+    if (p.number !== active || p.redirected || !usable(p)) continue;
+    picked.push(p);
+    sum += p.multiplier;
+  }
+  return sum >= need ? picked : [];
+}

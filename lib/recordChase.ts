@@ -14,8 +14,11 @@ export type RecordChase = {
   record: number;
   /** Darts that can still be wasted; below 0 means the record is out of reach. */
   slack: number;
-  /** The same figure on a fresh board, the length of the bar. */
+  /** The same figure on a fresh board. */
   slackAtStart: number;
+  /** What the bar and the figure show: the record minus the darts used, so a fresh board says the whole record and every dart
+   *  thrown takes one off. Whether the record can still be beaten is `slack`'s business (red, and «utenfor rekkevidde»). */
+  left: number;
 };
 
 export function recordChase(record: number | null | undefined, dartsUsed: number, progress: Progress, target: number): RecordChase | null {
@@ -23,10 +26,10 @@ export function recordChase(record: number | null | undefined, dartsUsed: number
   const slackAtStart = record - 1 - dartsToFinish(emptyProgress(), target);
   // A record no one could beat even with every dart perfect has nothing to chase.
   if (slackAtStart < 1) return null;
-  return { record, slack: record - 1 - (dartsUsed + dartsToFinish(progress, target)), slackAtStart };
+  return { record, slack: record - 1 - (dartsUsed + dartsToFinish(progress, target)), slackAtStart, left: Math.max(0, record - dartsUsed) };
 }
 
-/** How full the bar is, 0–1. */
+/** How full the bar is, 0–1: the darts left of the record's worth. */
 export function chaseFraction(chase: RecordChase): number {
-  return Math.max(0, Math.min(1, chase.slack / chase.slackAtStart));
+  return Math.max(0, Math.min(1, chase.left / chase.record));
 }

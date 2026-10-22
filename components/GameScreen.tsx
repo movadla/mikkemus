@@ -159,7 +159,7 @@ type Props = {
   choiceInteractive: boolean;
   /** Whether the chosen animation level allows the building heat and the shake — see lib/fxLevel. */
   /** Full party: the chase of the player's fewest-darts record — see lib/recordChase.ts. Null when there is nothing to chase. */
-  recordChase: { record: number; holder: string; slack: number; fraction: number } | null;
+  recordChase: { record: number; holder: string; slack: number; left: number; fraction: number } | null;
   fxHeat: boolean;
   fxShake: boolean;
   /** Flames round the thrower while a run of counting darts builds. */
@@ -435,12 +435,14 @@ function ChoiceBox({
       }}
     >
       <p className="text-center mb-1.5" style={{ color: "var(--color-gold-strong)", fontSize: compact ? "0.72rem" : "0.9rem", fontWeight: 700 }}>
-        {label} – hva skal den telle som?
+        {choice.redirected ? `${label} ble satt på ${STEP_LABELS[choice.number]} – hold den der?` : `${label} – hva skal den telle som?`}
         {queued > 0 && <span style={{ fontWeight: 400 }}> ({queued} til venter)</span>}
       </p>
       <div className={`flex gap-2 ${compact ? "flex-col" : ""}`}>
         {option("keep", `Sett på ${choice.ringStep}`, `${ring}-raden · +1 kryss`)}
-        {option("redirect", `Sett på ${STEP_LABELS[choice.number]}`, gain > 0 ? `+${gain} på ${STEP_LABELS[choice.number]}${closes ? " · lukker raden" : ""}` : "raden er full")}
+        {choice.redirected
+          ? option("redirect", `Behold på ${STEP_LABELS[choice.number]}`, "slik det står nå")
+          : option("redirect", `Sett på ${STEP_LABELS[choice.number]}`, gain > 0 ? `+${gain} på ${STEP_LABELS[choice.number]}${closes ? " · lukker raden" : ""}` : "raden er full")}
       </div>
     </div>
   );
@@ -760,7 +762,8 @@ export function GameScreen({
   // its number (ghost preview there) and whether that fully completes it, in which
   // case the next number's cells preview as "about to open" too.
   const activeProgress = activePlayer ? progress[activePlayer] : undefined;
-  const pendingPreview = pendingChoice
+  // A dart that a later one has already put on its number needs no preview: the board shows it there.
+  const pendingPreview = pendingChoice && !pendingChoice.redirected
     ? (() => {
         const current = activeProgress?.[pendingChoice.number] ?? 0;
         const simulated = Math.min(target, current + pendingChoice.multiplier);
@@ -1340,10 +1343,10 @@ export function GameScreen({
           </div>
         )}
         {recordChase && (
-          <div className="max-w-3xl mx-auto w-full mb-3" role="img" aria-label={recordChase.slack >= 0 ? `Rekordsjanse: ${recordChase.slack} piler å gå` : "Rekorden er utenfor rekkevidde"}>
+          <div className="max-w-3xl mx-auto w-full mb-3" role="img" aria-label={recordChase.slack >= 0 ? `Rekordsjanse: ${recordChase.left} piler å gå` : "Rekorden er utenfor rekkevidde"}>
             <div className="flex justify-between" style={{ color: "var(--color-muted)", fontSize: "0.68rem", letterSpacing: "0.06em" }}>
               <span className="truncate">REKORD {recordChase.record} PILER · {recordChase.holder.toUpperCase()}</span>
-              <span>{recordChase.slack >= 0 ? `${recordChase.slack} ${recordChase.slack === 1 ? "pil" : "piler"} å gå` : "utenfor rekkevidde"}</span>
+              <span>{recordChase.slack >= 0 ? `${recordChase.left} ${recordChase.left === 1 ? "pil" : "piler"} å gå` : "utenfor rekkevidde"}</span>
             </div>
             <div className="rounded-full overflow-hidden" style={{ height: "0.3rem", marginTop: "0.2rem", background: "var(--color-cell)" }}>
               <div
@@ -1351,7 +1354,7 @@ export function GameScreen({
                 style={{
                   height: "100%",
                   width: `${Math.round(recordChase.fraction * 100)}%`,
-                  background: recordChase.fraction > 0.34 ? "var(--color-gold)" : "var(--color-red)",
+                  background: recordChase.slack >= 0 && recordChase.fraction > 0.34 ? "var(--color-gold)" : "var(--color-red)",
                   transition: "width 400ms ease, background 400ms ease",
                 }}
               />

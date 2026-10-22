@@ -3,11 +3,18 @@ import { chaseFraction, recordChase } from "./recordChase";
 import { emptyProgress } from "./game";
 
 describe("recordChase", () => {
-  it("a fresh board has the whole bar: the record minus one, less the fewest darts a clean board takes (15)", () => {
+  it("a fresh board shows the whole record to go, and every dart thrown takes one off", () => {
+    const c = recordChase(39, 0, emptyProgress(), 3)!;
+    expect(c.left).toBe(39);
+    expect(chaseFraction(c)).toBe(1);
+    expect(recordChase(39, 1, emptyProgress(), 3)!.left).toBe(38);
+    expect(recordChase(39, 40, emptyProgress(), 3)!.left).toBe(0);
+  });
+
+  it("whether the record can still be beaten is kept apart from how many darts are left: room is the record minus one, less the fewest darts a clean board takes (15)", () => {
     const c = recordChase(40, 0, emptyProgress(), 3)!;
     expect(c.slackAtStart).toBe(40 - 1 - 15);
     expect(c.slack).toBe(c.slackAtStart);
-    expect(chaseFraction(c)).toBe(1);
   });
 
   it("a wasted dart takes one off; a dart that counts takes nothing off", () => {

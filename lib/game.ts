@@ -70,6 +70,13 @@ export type PendingAmbiguous = {
    *  replayDiscardedSingles in lib/turnResolution.ts. Absent for choices created before this
    *  existed (a resumed match), which simply get no replay. */
   dartIndex?: number;
+  /**
+   * The dart has already been put on its number, by a later dart further down the line: after a T20 on 20, a T19 can only
+   * mean the 20 was meant to close (lib/turnResolution.ts, impliedRedirects). The board shows it that way from then on, so
+   * the later darts count where they landed, and the question is still asked at the end of the turn — «redirect» keeps it
+   * as it stands, «keep» takes the dart back to the ring and re-reads the later darts.
+   */
+  redirected?: true;
 };
 
 /**
@@ -82,7 +89,9 @@ export type PendingAmbiguous = {
  * caps at 3), silently costing a cross.
  */
 export function meaningfulPending(pending: PendingAmbiguous[], progressForPlayer: Progress): PendingAmbiguous[] {
-  return pending.filter((p) => progressForPlayer[p.number] < getRules().target);
+  // A dart already put on its number has filled it, which is exactly why it is still worth asking about: the answer can
+  // take it back to the ring.
+  return pending.filter((p) => p.redirected || progressForPlayer[p.number] < getRules().target);
 }
 
 /**
@@ -150,7 +159,8 @@ export function ambiguousBlockingRing(
   // Most recent first: the freshest parked dart is the one whose ring cross is least likely
   // to be the one the player was consciously banking.
   for (let i = pending.length - 1; i >= 0; i--) {
-    if (pending[i].ringStep === step) return pending[i];
+    // One that has already been put on its number has no cross on the ring to free.
+    if (pending[i].ringStep === step && !pending[i].redirected) return pending[i];
   }
   return null;
 }

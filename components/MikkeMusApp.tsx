@@ -56,6 +56,7 @@ import { fxFlags, getFxLevel, useFxLevel } from "@/lib/fxLevel";
 import { classifyThrow, formatSectorLabel, parseSector } from "@/lib/scoliaMapping";
 import {
   applyDartToBoard,
+  impliedRedirects,
   replayDiscardedSingles,
   type DartAction,
   type TapAction,
@@ -844,6 +845,12 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   // How many actions the turn had when the last triple/double choice was answered, or -1. Answering is not an action of its
   // own, so without this Angre straight after an answer would take the last DART off instead of re-opening the choice.
   const choiceAnsweredAtRef = useRef(-1);
+  // The darts the player has said to keep on their ring, by dart index, for the turn in progress: a later dart further down
+  // the line no longer puts them on their number (see impliedRedirects). Cleared when the turn ends.
+  const forcedKeepRef = useRef<Set<number>>(new Set());
+  // Set while a turn is played over from its start only to take one answer back: the third dart then must not end the turn
+  // on the way, since the answer that caused the replay is still being worked out.
+  const skipFinishRef = useRef(false);
 
   // Consecutive scoring darts, right now — drives how big the boom is (see lib/fanfare.ts)
   // and the matching shake and heat. Reset at the start of a turn and by any miss, but a miss
@@ -957,6 +964,40 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       clearTurnDisplay();
       hitStreakRef.current = 0;
       activeTriplesRef.current = 0;
+    }
+
+    // A dart on a number further down the line says what the earlier one was meant for: after a T20 on 20, a T19 or an S18
+    // only makes sense if the 20 is closed. So the T20 goes on the 20 now — the board moves on, and this dart counts where
+    // it landed, with its own sound and picture — and the question is still asked when the turn is over (see `redirected`
+    // on PendingAmbiguous). A bot's darts land where they land, which says nothing about what it meant, so it is left out.
+    const landed = parseSector(payload.sector, payload.bounceout);
+    if (activeBotLevel === null && landed.kind === "number") {
+      for (let guard = 0; guard < 8; guard++) {
+        const picks = impliedRedirects(
+          pendingAmbiguousRef.current,
+          progressRef.current[activePlayer],
+          landed.number,
+          (p) => p.dartIndex === undefined || !forcedKeepRef.current.has(p.dartIndex),
+        );
+        if (picks.length === 0) break;
+        let moved = false;
+        for (const item of picks) {
+          const done = redirectParked(item);
+          if (!done) continue;
+          moved = true;
+          updatePendingAmbiguous(
+            meaningfulPending(
+              [...pendingAmbiguousRef.current.map((p) => (p.key === item.key ? { ...p, redirected: true as const } : p)), ...done.reopened],
+              done.finalProgress[activePlayer],
+            ),
+          );
+          // A number closed this way gets the slam it would have got from a single dart.
+          if (done.finalProgress[activePlayer][item.number] >= getRules().target && !replayingRef.current) {
+            setClosedStep({ token: ++pulseTokenRef.current, step: item.number });
+          }
+        }
+        if (!moved) break;
+      }
     }
 
     // The board right before this dart — from the ref, not the `progress` state, because a
@@ -1180,6 +1221,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       });
     }
     if (scoliaDartsRef.current >= DARTS_PER_TURN) {
+      if (skipFinishRef.current) return;
       // With a live board, the turn ends the way it does in real darts: when the darts come
       // out. Until then it stays open — the third dart can be undone, a misread box corrected,
       // the choice dialog answered — and the takeout confirms it (see handleTakeoutStarted).
@@ -1399,6 +1441,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     setStoodByTeam({});
     lastTeamTurnRef.current = {};
     scoliaDartsRef.current = 0;
+    forcedKeepRef.current = new Set();
     setScreen("game");
     setShowLineup(fxFlags(getFxLevel()).lineup && startPlayers.length >= 2);
     if (!hasSeenRulesIntro()) setShowRules(true);
@@ -1897,6 +1940,87 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   }
 
   /**
+   * Puts a parked triple/double on its number: its ring cross comes off, the number gets its crosses, and the darts thrown
+   * after it are re-read against the number that may now be the active one. Shared by the answer «redirect» and by a later
+   * dart further down the line (see impliedRedirects). Null when the dart is no longer this turn's to move.
+   */
+  function redirectParked(item: PendingAmbiguous): { finalProgress: PlayerProgress; finalPendingHits: HitRecord[]; reopened: PendingAmbiguous[] } | null {
+    if (!activePlayer) return null;
+    // A redirect rolls a cross back off the board, which is only ever correct while that cross is still this turn's to move.
+    if (!pendingHitsRef.current.includes(item.hitRecord)) return null;
+    // One cross off, not a restore of item.hitRecord.prevCount — see removeOneCross.
+    const rolledBack = {
+      ...progressRef.current[activePlayer],
+      [item.ringStep]: removeOneCross(progressRef.current[activePlayer][item.ringStep]),
+    };
+    let finalPendingHits = pendingHitsRef.current.filter((h) => h !== item.hitRecord);
+    // Off the ring and onto the number. A reopened slenger (see replayAfterRedirect) was pre-banked and now isn't; a ring hit
+    // on the own number never was. Either way the dart is now an attempt at the number, and xH re-judges it as such.
+    if (!item.hitRecord.ownNumberRing) bumpPreBanked(activePlayer, item.ringStep, -1);
+    const redirectedDart = item.dartIndex === undefined ? undefined : turnDarts().find((t) => t.dartIndex === item.dartIndex);
+    if (redirectedDart) rejudgeDart(activePlayer, redirectedDart, item.number, rolledBack);
+
+    // chainCrosses rather than registerHit: registerHit reads `progress` from this component's state and would miss the
+    // rollback above until the next render.
+    const turnIndex = rewound ? rewoundTurnIndex ?? 0 : turnCounters[activePlayer] ?? 0;
+    const newHits: HitRecord[] = chainCrosses(rolledBack[item.number], item.multiplier).map((d) => ({
+      player: activePlayer,
+      step: item.number,
+      prevCount: d.prevCount,
+      newCount: d.newCount,
+      turnIndex,
+    }));
+    const count = newHits.length > 0 ? newHits[newHits.length - 1].newCount : rolledBack[item.number];
+    // If that filled the number, the darts thrown after the parked one were aimed at a number that is now, retroactively,
+    // the active one — see replayAfterRedirect.
+    const replay = replayAfterRedirect(activePlayer, { ...rolledBack, [item.number]: count }, item.dartIndex, turnIndex);
+    const finalProgress = { ...progressRef.current, [activePlayer]: replay.board };
+    finalPendingHits = [...finalPendingHits, ...newHits, ...replay.records];
+
+    if (!replayingRef.current) haptics.hit();
+    writeProgress(finalProgress);
+    writePendingHits(finalPendingHits);
+    return { finalProgress, finalPendingHits, reopened: replay.pending };
+  }
+
+  /**
+   * The answer «keep» to a dart that a later dart had put on its number: the turn is played over from its start with that dart
+   * told to stay on its ring, so the later darts are read against the number the player was really on. Whatever the replay
+   * leaves open is asked as usual; when nothing is, the turn goes on as after any other answer.
+   */
+  function flipRedirectedToKeep(item: PendingAmbiguous) {
+    if (!activePlayer) return;
+    if (item.dartIndex === undefined) {
+      // Nothing to replay it from (a match resumed from before darts were numbered): the dart simply stays where it was put.
+      updatePendingAmbiguous(pendingAmbiguousRef.current.filter((p) => p.key !== item.key));
+      return;
+    }
+    forcedKeepRef.current.add(item.dartIndex);
+    const actions = turnActionsRef.current;
+    skipFinishRef.current = true;
+    try {
+      if (rewindTurn()) replayActions(actions);
+    } finally {
+      skipFinishRef.current = false;
+    }
+    choiceAnsweredAtRef.current = turnActionsRef.current.length;
+    const keptIndex = item.dartIndex;
+    const remaining = meaningfulPending(
+      pendingAmbiguousRef.current.filter((p) => p.dartIndex !== keptIndex),
+      progressRef.current[activePlayer],
+    );
+    updatePendingAmbiguous(remaining);
+    if (remaining.length > 0) {
+      updateAwaitingConfirmResolution(true);
+      return;
+    }
+    updateAwaitingConfirmResolution(false);
+    // Three darts are in and a takeout confirms the turn, as after any other answer.
+    if (scoliaDartsRef.current >= DARTS_PER_TURN) return;
+    advanceTurn(progressRef.current, pendingHitsRef.current);
+  }
+
+  /**
    * Applies the player's choice for the most recent undecided triple/double-on-
    * active-number hit. When this was the last one Confirm was waiting on, it
    * must advance the turn itself — not via an effect watching pendingAmbiguous —
@@ -1908,6 +2032,10 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   function resolvePendingChoice(choice: "keep" | "redirect") {
     const item = pendingAmbiguousRef.current[pendingAmbiguousRef.current.length - 1];
     if (!item || !activePlayer) return;
+    if (item.redirected && choice === "keep") {
+      flipRedirectedToKeep(item);
+      return;
+    }
     choiceAnsweredAtRef.current = turnActionsRef.current.length;
 
     let finalProgress = progressRef.current;
@@ -1915,50 +2043,23 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     // Ring darts on the number this redirect may have just opened — see replayAfterRedirect.
     let reopened: PendingAmbiguous[] = [];
 
-    // Same guard as processDart's: a redirect rolls a cross back off the board, which is only
-    // ever correct while that cross is still this turn's to move.
-    if (choice === "redirect" && pendingHitsRef.current.includes(item.hitRecord)) {
-      // One cross off, not a restore of item.hitRecord.prevCount — see removeOneCross.
-      const rolledBack = {
-        ...progressRef.current[activePlayer],
-        [item.ringStep]: removeOneCross(progressRef.current[activePlayer][item.ringStep]),
-      };
-      finalPendingHits = pendingHitsRef.current.filter((h) => h !== item.hitRecord);
-      // Off the ring and onto the number. A reopened slenger (see replayAfterRedirect) was
-      // pre-banked and now isn't; a ring hit on the own number never was. Either way the dart
-      // is now an attempt at the number, and xH re-judges it as such.
-      if (!item.hitRecord.ownNumberRing) bumpPreBanked(activePlayer, item.ringStep, -1);
-      const redirectedDart = item.dartIndex === undefined ? undefined : turnDarts().find((t) => t.dartIndex === item.dartIndex);
-      if (redirectedDart) rejudgeDart(activePlayer, redirectedDart, item.number, rolledBack);
-
-      // chainCrosses rather than registerHit: registerHit reads `progress` from this
-      // component's state and would miss the rollback above until the next render.
-      const turnIndex = rewound ? rewoundTurnIndex ?? 0 : turnCounters[activePlayer] ?? 0;
-      const newHits: HitRecord[] = chainCrosses(rolledBack[item.number], item.multiplier).map((d) => ({
-        player: activePlayer,
-        step: item.number,
-        prevCount: d.prevCount,
-        newCount: d.newCount,
-        turnIndex,
-      }));
-      const count = newHits.length > 0 ? newHits[newHits.length - 1].newCount : rolledBack[item.number];
-      // If that filled the number, the darts thrown after the parked one were aimed at a number
-      // that is now, retroactively, the active one — see replayAfterRedirect.
-      const replay = replayAfterRedirect(activePlayer, { ...rolledBack, [item.number]: count }, item.dartIndex, turnIndex);
-      finalProgress = { ...progressRef.current, [activePlayer]: replay.board };
-      finalPendingHits = [...finalPendingHits, ...newHits, ...replay.records];
-      reopened = replay.pending;
-
-      haptics.hit();
-      writeProgress(finalProgress);
-      writePendingHits(finalPendingHits);
+    if (choice === "redirect") {
+      const done = redirectParked(item);
+      if (done) {
+        finalProgress = done.finalProgress;
+        finalPendingHits = done.finalPendingHits;
+        reopened = done.reopened;
+      }
     }
 
     // Filtered against finalProgress, not `progress` — this same choice may have just
     // filled the number, which is exactly what makes a sibling choice on that number moot
     // (see meaningfulPending), and the state won't reflect it until the next render.
+    // «Behold» on a dart a later one put on its number accepts the sequence as it stands: the others put there the same way
+    // were part of the same reading of the turn, and are not asked again one by one.
+    const acceptedWith = item.redirected && choice === "redirect";
     const remaining = meaningfulPending(
-      [...pendingAmbiguousRef.current.filter((p) => p.key !== item.key), ...reopened],
+      [...pendingAmbiguousRef.current.filter((p) => p.key !== item.key && !(acceptedWith && p.redirected)), ...reopened],
       finalProgress[activePlayer]
     );
     updatePendingAmbiguous(remaining);
@@ -1983,6 +2084,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       // Nothing happened since a choice was answered: Angre takes the answer back (the turn is rebuilt with the choice open
       // again), not the dart the choice was about.
       const undoesChoice = choiceAnsweredAtRef.current === actions.length;
+      // Taking an answer back also takes back an answer «keep» gave to a dart a later one had put on its number.
+      if (undoesChoice) forcedKeepRef.current = new Set();
       if (rewindTurn()) {
         replayActions(undoesChoice ? actions : actions.slice(0, -1));
         return;
@@ -2301,6 +2404,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     const tailNow = trailingRun(turnActionsRef.current);
     const liveDarts = turnDarts();
     dartsOnStepRef.current = {};
+    forcedKeepRef.current = new Set();
     writeTurnActions([]);
     turnStartRef.current = null;
     // Read before it is cleared for the next turn — the dart count below still needs it.
@@ -2331,9 +2435,15 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       : rosterNow && rosterNow.length > 0
         ? rosterNow[(teamMemberIdx[activePlayer] ?? 0) % rosterNow.length].name
         : undefined;
+    const summary = summarizeTurn(effectivePendingHits, activeStepNow, dartsForTurn);
+    const rows = scoliaDarts > 0 && liveDarts.length === scoliaDarts ? dartsByRow(liveDarts, effectivePendingHits) : {};
     const turn: TurnResult = {
-      ...summarizeTurn(effectivePendingHits, activeStepNow, dartsForTurn),
-      ...(scoliaDarts > 0 && liveDarts.length === scoliaDarts ? dartsByRow(liveDarts, effectivePendingHits) : {}),
+      ...summary,
+      ...rows,
+      // The turn's misses are the darts that really missed when every dart is known, so the total and the rows add up — a
+      // triple and two misses is three crosses and two misses, not three crosses and none, which is what darts minus
+      // crosses says. Without per-dart knowledge it stays the old reckoning (darts minus crosses).
+      ...("missesByStep" in rows ? { misses: Object.values(rows.missesByStep).reduce((a, b) => a + (b ?? 0), 0) } : {}),
       counted: countedDarts,
       // Scolia saw every dart, so the counting ones the turn ended on can carry the run into the next turn.
       // By hand an unrecorded miss could be any of the darts, so only a turn of three counting darts carries.
@@ -2701,7 +2811,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     const used = aggregateTurns(turnLog[activePlayer] ?? []).darts + dartsThisTurn;
     const group = groupBestWin(teamRosters[activePlayer] ? teamRecords : rosterRecords, teamRosters[activePlayer] ? "team" : "player");
     const chase = recordChase(group?.darts, used, board, getRules().target);
-    return chase && group ? { record: chase.record, holder: group.who, slack: chase.slack, fraction: chaseFraction(chase) } : null;
+    return chase && group ? { record: chase.record, holder: group.who, slack: chase.slack, left: chase.left, fraction: chaseFraction(chase) } : null;
   })();
 
   // Feeds the landscape side panel. Treff% is over COMPLETED turns only — the turn in progress
