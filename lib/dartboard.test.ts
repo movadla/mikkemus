@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { aimPointFor, luckForBullDuelThrow, luckForThrow, sectorAt } from "./dartboard";
+import { addAimOffset, aimOffset, aimPointFor, luckForBullDuelThrow, luckForThrow, sectorAt } from "./dartboard";
 import { emptyProgress, type Step } from "./game";
 
 describe("luckForThrow", () => {
@@ -285,5 +285,28 @@ describe("luckForThrow — which step the value is filed under", () => {
       expect(byStep[step]).toBeCloseTo(3, 5);
     }
     expect(Object.values(byStep).reduce((a, b) => a + b, 0)).toBeCloseTo(30, 5);
+  });
+});
+
+describe("aimOffset: which way a dart missed", () => {
+  it("is signed in board axes against the middle of the triple of the number being worked on", () => {
+    // T20 is straight up at 103 mm: a dart at 12 mm to the right and 8 mm too low.
+    const off = aimOffset("20", [12, 95]);
+    expect(off).toEqual({ dx: 12, dy: -8 });
+  });
+  it("uses the middle of the bull for the bull and only the radius for D and T", () => {
+    expect(aimOffset("BULL", [3, -4])).toEqual({ dx: 3, dy: -4 });
+    const t = aimOffset("T", [0, 110]);
+    expect(t && "radial" in t ? t.radial : null).toBeCloseTo(7, 6);
+    const d = aimOffset("D", [0, 160]);
+    expect(d && "radial" in d ? d.radial : null).toBeCloseTo(-6, 6);
+  });
+  it("adds up per kind of row, and ignores a coordinate that is not a number", () => {
+    let total = addAimOffset(undefined, aimOffset("20", [10, 100]));
+    total = addAimOffset(total, aimOffset("20", [-4, 109]));
+    total = addAimOffset(total, aimOffset("T", [0, 113]));
+    expect(total).toEqual({ n: 2, dx: 6, dy: 3, rn: 1, rad: 10 });
+    expect(aimOffset("20", [NaN, 1])).toBeNull();
+    expect(addAimOffset(total, null)).toBe(total);
   });
 });

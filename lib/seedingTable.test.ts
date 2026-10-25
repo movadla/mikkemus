@@ -67,6 +67,16 @@ describe("the seeding table", () => {
     expect(ny.strength).toBeGreaterThan(table.find((r) => r.name === "Hans")!.strength);
   });
 
+  it("puts those without matches last until they have played", () => {
+    const played = [match(0, false, 30, 100), match(1, false, 30, 100)];
+    // Vadla is seeded first but has no matches; Sondre is seeded last but has played.
+    const table = buildSeedTable(regulars.map((r) => (r.name === "Sondre" ? rec("Sondre", played) : r)), RULES);
+    const names = table.map((r) => r.name);
+    expect(names[0]).toBe("Sondre");
+    expect(names.slice(1)[0]).toBe("Vadla");
+    expect(table.map((r) => r.rank)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+  });
+
   it("leaves teams out", () => {
     const table = buildSeedTable([...regulars, rec("Vadla & Monge", [], { kind: "team", members: ["Vadla", "Monge"] })], RULES);
     expect(table.some((r) => r.name === "Vadla & Monge")).toBe(false);

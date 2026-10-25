@@ -133,7 +133,9 @@ export function skillTable(records: PlayerRecord[], rules: RuleSet): { prior: Re
 export function buildSeedTable(records: PlayerRecord[], rules: RuleSet): SeedRow[] {
   const { prior, rows } = skillTable(records, rules);
   const withStrength = rows.map((x) => ({ r: x.record, med: x.med, seedRank: x.seedRank, strength: winChanceAgainst(x.med, prior.med, rules) }));
-  withStrength.sort((a, b) => b.strength - a.strength || a.r.name.localeCompare(b.r.name, "no"));
+  // Those who have not played a match yet go last, whatever the group said about them, until they have.
+  const hasPlayed = (x: (typeof withStrength)[number]) => (x.r.matchesPlayed > 0 ? 1 : 0);
+  withStrength.sort((a, b) => hasPlayed(b) - hasPlayed(a) || b.strength - a.strength || a.r.name.localeCompare(b.r.name, "no"));
   // Among the people on the seeding list: where each stands now, against where the group put them.
   const seededNow = withStrength.filter((x) => x.seedRank !== null);
   return withStrength.map((x, i) => {

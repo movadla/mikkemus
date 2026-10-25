@@ -1,4 +1,5 @@
 import type { Progress, Step } from "./game";
+import type { AimBias } from "./playerRows";
 import { getRules } from "./rules";
 import { parseSector } from "./scoliaMapping";
 
@@ -63,6 +64,28 @@ export function throwAccuracy(step: Step, actual: [number, number]): ThrowAccura
   const dx = ax - target[0];
   const dy = ay - target[1];
   return { distance: Math.hypot(dx, dy), horizontal: Math.abs(dx), vertical: Math.abs(dy) };
+}
+
+/**
+ * Which way a dart missed its aim, in board axes (x to the right, y up), for the dart being thrown at `step`: a number is judged
+ * against the middle of its triple (what a player who wants the most from a dart aims at), the bull against its middle. A
+ * double or triple row has no number to aim at, so only how far in or out of the ring the dart landed is returned. Null for
+ * a coordinate that is not a finite pair.
+ */
+export function aimOffset(step: Step, actual: [number, number]): { dx: number; dy: number } | { radial: number } | null {
+  const [ax, ay] = actual;
+  if (!Number.isFinite(ax) || !Number.isFinite(ay)) return null;
+  if (step === "D") return { radial: Math.hypot(ax, ay) - DOUBLE_RADIUS };
+  if (step === "T") return { radial: Math.hypot(ax, ay) - TRIPLE_RADIUS };
+  const [tx, ty] = step === "BULL" ? [0, 0] : pointAt(TRIPLE_RADIUS, angleForNumber(Number(step)));
+  return { dx: ax - tx, dy: ay - ty };
+}
+
+/** The totals with one more dart's offset added; a missing total starts from nothing. */
+export function addAimOffset(total: AimBias | undefined, offset: ReturnType<typeof aimOffset>): AimBias | undefined {
+  if (!offset) return total;
+  const t = total ?? { n: 0, dx: 0, dy: 0, rn: 0, rad: 0 };
+  return "radial" in offset ? { ...t, rn: t.rn + 1, rad: t.rad + offset.radial } : { ...t, n: t.n + 1, dx: t.dx + offset.dx, dy: t.dy + offset.dy };
 }
 
 export type AimTarget = { ring: "S" | "D" | "T"; number: number } | { ring: "BULL" };

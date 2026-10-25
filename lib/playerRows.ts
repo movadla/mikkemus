@@ -23,6 +23,14 @@ export type BullDuelStat = { throws: number; points: number; redHits: number; gr
 /** Keyed by the number (1–20) as a string — how many times a Triple or Double of that number has landed, regardless of how the game ended up scoring it. */
 export type RingHits = Record<string, number>;
 
+/**
+ * Where a player's darts land against where they were aimed, as signed sums over some darts (board axes: x to the right, y up),
+ * so a mean says which way they miss. Numbers are judged against the middle of the triple of the number being worked on and the
+ * bull against its middle (`n` darts, `dx`/`dy` summed); a double or triple row has no number to aim at, so only how far
+ * in or out of the ring they land is kept (`rn` darts, `rad` summed: positive is outside the ring's middle).
+ */
+export type AimBias = { n: number; dx: number; dy: number; rn: number; rad: number };
+
 /** One completed match's own numbers, for the "over time" trend on a player's stats page — separate from the cumulative career totals above. */
 export type MatchHistoryEntry = {
   date: string;
@@ -56,6 +64,8 @@ export type MatchHistoryEntry = {
   throws?: number;
   sumR?: number;
   sumR2?: number;
+  /** Which way the measured darts of this match missed their aim (see AimBias). Absent on matches from before it was kept. */
+  bias?: AimBias;
   /** In a team's match, the same per member — the team's record is where the match lives, but each
    *  member's own skill is what the odds need. */
   byMember?: Record<string, { throws: number; sumR: number; sumR2: number }>;

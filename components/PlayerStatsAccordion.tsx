@@ -6,6 +6,8 @@ import { STEP_LABELS } from "@/lib/game";
 import { avatarAccent } from "@/lib/avatarAccent";
 import { SOURCES, singleView, teamView, type Source, type View } from "@/lib/playerView";
 import { ratingOf, type PlayerRecord } from "@/lib/storage";
+import { coachTips, sumBias } from "@/lib/coach";
+import { memberHitPct, memberMed } from "@/lib/memberStats";
 import { RowDartsChart, type RowChartUnit } from "./RowDartsChart";
 import { STEPS, type Step } from "@/lib/game";
 
@@ -102,14 +104,85 @@ function RowDarts({ view, who, source }: { view: View; who: string; source: Sour
   );
 }
 
+/**
+ * What a darts trainer would say to someone who has thrown on Scolia: which way the darts miss, what is strong and what to work
+ * on. Only for those with measured darts, and only what the numbers support (lib/coach.ts).
+ */
+function CoachBox({ player, all }: { player: PlayerRecord; all: PlayerRecord[] }) {
+  const { tips, darts } = coachTips(player, all);
+  if (darts === 0 || (tips.length === 0 && player.accuracy.throws < 30)) return null;
+  const bias = sumBias(player);
+  const hasDirection = !!bias && bias.n >= 30;
+  return (
+    <div className="mt-4 rounded-xl p-3" style={{ background: "var(--color-surface-2)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06), inset 0 1px 0 rgba(255,255,255,0.07)" }}>
+      <p className="section-label mb-2" style={{ fontSize: "0.75rem" }}>TRENEREN SIER</p>
+      {tips.length === 0 ? (
+        <p style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>Ingen råd ennå: tallene sier ikke noe tydelig, og det er et godt tegn.</p>
+      ) : (
+        <ul className="space-y-2.5">
+          {tips.map((t) => (
+            <li key={t.title} className="flex gap-2.5">
+              <span
+                aria-hidden
+                className="shrink-0 rounded-full"
+                style={{ width: 8, height: 8, marginTop: "0.4rem", background: t.tone === "good" ? "var(--color-green)" : "var(--color-gold)", boxShadow: `0 0 8px ${t.tone === "good" ? "rgba(88,176,114,0.6)" : "rgba(217,174,79,0.6)"}` }}
+              />
+              <span>
+                <span className="block" style={{ color: "var(--color-cream)", fontWeight: 600, fontSize: "0.9rem" }}>{t.title}</span>
+                <span className="block" style={{ color: "var(--color-text-2)", fontSize: "0.8rem", lineHeight: 1.45 }}>{t.text}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className="mt-2.5" style={{ color: "var(--color-muted)", fontSize: "0.7rem" }}>
+        Bygget på {darts} kast målt av Scolia.{hasDirection ? "" : " Retning (for høyt, lavt, venstre eller høyre) kommer etter noen kamper med Scolia fra nå."}
+      </p>
+    </div>
+  );
+}
+
+/** What each member of a team has thrown in its matches: hit rate, mean distance and darts. */
+function MemberTable({ team }: { team: PlayerRecord }) {
+  const stats = team.memberStats;
+  const members = (team.members ?? Object.keys(stats ?? {})).filter((m) => stats?.[m]);
+  if (!stats || members.length === 0) return null;
+  return (
+    <div className="mt-4 rounded-xl px-3 py-2" style={{ background: "var(--color-surface-2)" }}>
+      <div className="grid items-baseline gap-x-2" style={{ gridTemplateColumns: "minmax(0,1fr) 3.5rem 3.5rem 3.5rem" }}>
+        <span className="section-label" style={{ fontSize: "0.75rem" }}>SPILLER</span>
+        <span className="section-label text-right" style={{ fontSize: "0.75rem" }}>TREFF</span>
+        <span className="section-label text-right" style={{ fontSize: "0.75rem" }}>MED</span>
+        <span className="section-label text-right" style={{ fontSize: "0.75rem" }}>PILER</span>
+        {members.map((m) => {
+          const pct = memberHitPct(stats[m]);
+          const med = memberMed(stats[m]);
+          return (
+            <div key={m} className="contents">
+              <span className="truncate py-1" style={{ color: "var(--color-cream)", fontWeight: 600 }}>{m}</span>
+              <span className="tabular text-right" style={{ color: "var(--color-teal)", fontWeight: 700 }}>{pct === null ? "–" : `${pct}%`}</span>
+              <span className="tabular text-right" style={{ color: "var(--color-cream)", fontSize: "0.85rem" }}>{med === null ? "–" : `${Math.round(med)}mm`}</span>
+              <span className="tabular text-right" style={{ color: "var(--color-muted)", fontSize: "0.85rem" }}>{stats[m].darts}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function Panel({ player, all, source, onSource }: { player: PlayerRecord; all: PlayerRecord[]; source: Source; onSource: (s: Source) => void }) {
-  const [tab, setTab] = useState<"single" | "team">("single");
+  const [pickedTab, setTab] = useState<"single" | "team">("single");
+  // A team record is one thing, not a person who plays alone and in teams: it has the single view and nothing else.
+  const isTeamRecord = player.kind === "team";
+  const tab = isTeamRecord ? "single" : pickedTab;
   const single = singleView(player, source);
   const team = teamView(player, all, source);
   const splitNote = source !== "both" ? "Rekord og rating er ikke delt på kilde, og vises under Begge." : null;
 
   return (
     <div className="px-4 pb-4 pt-1">
+      {!isTeamRecord && (
       <div className="grid grid-cols-2 gap-2 mb-3" role="tablist">
         {(["single", "team"] as const).map((t) => (
           <button
@@ -125,6 +198,7 @@ function Panel({ player, all, source, onSource }: { player: PlayerRecord; all: P
           </button>
         ))}
       </div>
+      )}
 
       <div className="flex rounded-full p-1 mb-4" role="group" aria-label="Hvor kastene er registrert" style={{ background: "rgba(0, 0, 0, 0.35)", boxShadow: "inset 0 1px 2px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(255, 255, 255, 0.05)" }}>
         {SOURCES.map((s) => (
@@ -143,7 +217,7 @@ function Panel({ player, all, source, onSource }: { player: PlayerRecord; all: P
 
       {tab === "single" ? (
         single.matches === 0 && source === "both" ? (
-          <p style={{ color: "var(--color-muted)", fontSize: "0.9rem" }}>Ingen singelkamper ennå.</p>
+          <p style={{ color: "var(--color-muted)", fontSize: "0.9rem" }}>{isTeamRecord ? "Ingen kamper ennå." : "Ingen singelkamper ennå."}</p>
         ) : (
           <>
             <div className="grid grid-cols-3 gap-2">
@@ -165,6 +239,7 @@ function Panel({ player, all, source, onSource }: { player: PlayerRecord; all: P
             </div>
             <Rows view={single} />
             <RowDarts view={single} who={player.name} source={source} />
+            {isTeamRecord ? <MemberTable team={player} /> : <CoachBox player={player} all={all} />}
             {single.unsorted > 0 && <p className="mt-3" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>{single.unsorted} eldre {single.unsorted === 1 ? "kamp" : "kamper"} mangler kilde og er ikke med.</p>}
           </>
         )
@@ -211,7 +286,7 @@ function Panel({ player, all, source, onSource }: { player: PlayerRecord; all: P
       {tab === "single" && splitNote && <p className="mt-1" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>{splitNote}</p>}
 
       <Link href={`/spillere/${encodeURIComponent(player.name)}`} className={`block mt-4 text-center rounded-lg ${FOCUS_RING}`} style={{ color: "var(--color-teal-strong)", fontSize: "0.85rem", minHeight: "2.75rem", lineHeight: "2.75rem" }}>
-        Åpne spillersiden ›
+        {isTeamRecord ? "Åpne lagsiden ›" : "Åpne spillersiden ›"}
       </Link>
     </div>
   );
@@ -228,8 +303,9 @@ export function PlayerStatsAccordion({ players, all }: { players: PlayerRecord[]
     <div className="space-y-2">
       {players.map((p) => {
         const isOpen = open === p.name;
+        const isTeamRecord = p.kind === "team";
         const s = singleView(p, "both");
-        const t = teamView(p, all, "both");
+        const t = isTeamRecord ? null : teamView(p, all, "both");
         return (
           <div key={p.name} className="shadow-panel rounded-xl overflow-hidden" style={{ background: "var(--color-surface)" }}>
             <button
@@ -250,7 +326,7 @@ export function PlayerStatsAccordion({ players, all }: { players: PlayerRecord[]
               <span className="flex-1 min-w-0">
                 <span className="block truncate" style={{ color: "var(--color-cream)", fontWeight: 600 }}>{p.name}</span>
                 <span className="block truncate" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>
-                  Singel {s.matches} · Lag {t.matches}
+                  {t ? `Singel ${s.matches} · Lag ${t.matches}` : `${p.members?.length ? `${p.members.join(", ")} · ` : ""}${s.matches} ${s.matches === 1 ? "kamp" : "kamper"}`}
                 </span>
               </span>
               <span aria-hidden style={{ color: "var(--color-muted)", fontSize: "1.2rem", transform: isOpen ? "rotate(90deg)" : "none", transition: "transform 150ms" }}>›</span>

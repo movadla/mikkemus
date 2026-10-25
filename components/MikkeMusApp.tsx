@@ -40,7 +40,8 @@ import { announce } from "@/lib/announcer";
 import { reportError } from "@/lib/errorReporting";
 import { clearActiveMatch, loadActiveMatch, saveActiveMatch } from "@/lib/activeMatch";
 import { publishLiveMatch } from "@/lib/liveMatch";
-import { coordinatesForSector, luckForThrow, sectorAt, throwAccuracy } from "@/lib/dartboard";
+import { addAimOffset, aimOffset, coordinatesForSector, luckForThrow, sectorAt, throwAccuracy } from "@/lib/dartboard";
+import type { AimBias } from "@/lib/playerRows";
 import { getRules, hasStandRule, isPerfectClose, setGameVariant, withStandRule, type GameVariant } from "@/lib/rules";
 import { countingDarts, nextMemberIndex, standsAfterTurn, trailingRun } from "@/lib/teamTurn";
 import { currentRun, longestRun, throwerStats } from "@/lib/turnStats";
@@ -279,7 +280,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   const [matchThrows, setMatchThrows] = useState<Record<string, [number, number][]>>({});
   // Running MED/MHD/MVD sums this match, per player — a ref (not state) since it's
   // only ever read once, at match end, and shouldn't trigger a re-render per dart.
-  const accuracyTotalsRef = useRef<Record<string, { distance: number; horizontal: number; vertical: number; throws: number; sumSq?: number; byMember?: Record<string, { throws: number; sumR: number; sumR2: number }> }>>({});
+  const accuracyTotalsRef = useRef<Record<string, { distance: number; horizontal: number; vertical: number; throws: number; sumSq?: number; byMember?: Record<string, { throws: number; sumR: number; sumR2: number }>; bias?: AimBias }>>({});
   // Running "Expected Goals" sums this match, per player AND per section —
   // same ref-not-state reasoning as accuracyTotalsRef above. Only real
   // Scolia darts with an inferrable target contribute (see lib/dartboard.ts:
@@ -1148,6 +1149,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
           vertical: totals.vertical + accuracy.vertical,
           throws: totals.throws + 1,
           sumSq: (totals.sumSq ?? 0) + accuracy.distance ** 2,
+          // Which way the dart missed its aim — the coach reads this (lib/coach.ts).
+          bias: addAimOffset(totals.bias, aimOffset(activeStepAtThrow as Step, payload.coordinates)),
           byMember: { ...totals.byMember, [who]: { throws: mine.throws + 1, sumR: mine.sumR + accuracy.distance, sumR2: mine.sumR2 + accuracy.distance ** 2 } },
         },
       };
@@ -2218,6 +2221,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         med: accuracy && accuracy.throws > 0 ? accuracy.distance / accuracy.throws : null,
         mhd: accuracy && accuracy.throws > 0 ? accuracy.horizontal / accuracy.throws : null,
         mvd: accuracy && accuracy.throws > 0 ? accuracy.vertical / accuracy.throws : null,
+        ...(accuracy?.bias && accuracy.bias.n + accuracy.bias.rn > 0 ? { bias: accuracy.bias } : {}),
         ...(accuracy && accuracy.throws > 0 ? { throws: accuracy.throws, sumR: accuracy.distance, sumR2: accuracy.sumSq ?? 0, ...(roster && accuracy.byMember ? { byMember: accuracy.byMember } : {}) } : {}),
         // What the match log needs to list this as one match among others, and its numbers row by row.
         matchId: matchIdRef.current,
