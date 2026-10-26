@@ -106,14 +106,14 @@ export function DrawScreen({
       </button>
     ) : (
       <span className="flex-1 px-3 flex items-center" style={{ minHeight: "2.75rem", color: "var(--color-muted)", fontStyle: "italic", fontSize: "0.85rem", opacity: shown ? 1 : 0, transition: "opacity 260ms ease" }}>
-        walkover videre
+        Walkover
       </span>
     );
 
   return (
     <div className="animate-screen-enter screen has-sticky-action" style={{ background: "var(--color-bg)" }}>
       <div className="screen-inner">
-        <ScreenTop title="Trekningen" onBack={onBack} backLabel="← Tilbake" />
+        <ScreenTop title="Trekning" onBack={onBack} backLabel="← Tilbake" />
         <StepStrip step={1} />
         {summary && (
           <button type="button" onClick={onBack} className={`tactile w-full rounded-lg px-4 flex items-center justify-between gap-3 mb-4 ${FOCUS_RING}`} style={{ minHeight: "2.75rem", background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-cream)", fontSize: "0.9rem" }}>
@@ -132,13 +132,13 @@ export function DrawScreen({
               className={`tactile flex-1 rounded-lg font-medium ${FOCUS_RING}`}
               style={{ minHeight: "2.75rem", background: mode === m ? "var(--teal-soft)" : "var(--color-surface)", color: mode === m ? "var(--color-teal)" : "var(--color-muted)", border: mode === m ? "1px solid var(--color-teal)" : "1px solid var(--color-border)" }}
             >
-              {m === "seeded" ? "Seedet" : "Åpen trekning"}
+              {m === "seeded" ? "Seedet" : "Tilfeldig"}
             </button>
           ))}
         </div>
         {mode === "open" && (
           <p className="mb-3" style={{ color: "var(--color-muted)", fontSize: "0.85rem" }}>
-            Trykk på to navn for å bytte plass
+            Trykk to navn for å bytte
           </p>
         )}
         <div className="space-y-2 mb-4">
@@ -159,8 +159,8 @@ export function DrawScreen({
             </button>
           </div>
         )}
-        <StickyAction onClick={() => onStart(order)} ready summary={`${order.length} med${mode === "seeded" ? ", seedet" : ", åpen trekning"}`} reason={null}>
-          Start turneringen
+        <StickyAction onClick={() => onStart(order)} ready reason={null}>
+          Start
         </StickyAction>
       </div>
     </div>

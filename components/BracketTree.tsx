@@ -118,7 +118,7 @@ export function BracketTree({
         )}
         {match.simulated && (
           <span className="absolute" style={{ top: -8, left: 8, background: "var(--color-surface)", padding: "0 4px", color: "var(--color-muted)", fontSize: "0.55rem", letterSpacing: "0.08em" }}>
-            SPILT ANNET STED
+            AUTO
           </span>
         )}
       </>

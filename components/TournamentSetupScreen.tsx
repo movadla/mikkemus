@@ -3,10 +3,9 @@
 import { useState } from "react";
 import { type Participant, type TournamentMode } from "@/lib/tournament";
 import { DEFAULT_CUP_LEVEL, MAX_CUP_SIZE, TEAM_CUP_MAX, buildCupParticipants, cupType, makeCup, type CupConfig } from "@/lib/botCup";
-import { BOT_LEVELS } from "@/lib/botLevels";
-import { RULES, baseOf, botsSupported, hasStandRule, withStandRule, type GameVariant } from "@/lib/rules";
+import { botsSupported, withStandRule, type GameVariant } from "@/lib/rules";
 import { splitPeople, toMember, type PickedTeam, type Person } from "@/lib/people";
-import { individualSetupProblem, setupSummary, teamSetupProblem } from "@/lib/setupProblem";
+import { individualSetupProblem, teamSetupProblem } from "@/lib/setupProblem";
 import { PeopleIcon, PersonIcon, TrophyIcon } from "./icons";
 import { PlayerPicker } from "./PlayerPicker";
 import { RulesPicker } from "./RulesPicker";
@@ -95,7 +94,7 @@ export function TournamentSetupScreen({
   const maxSize = mode === "team" ? TEAM_CUP_MAX : MAX_CUP_SIZE;
   const cupSize = Math.min(cup.size, maxSize);
   // Against bots, the house needs only itself; the bots make up the rest, and the longer games have none.
-  const cupProblem = !botsAllowed ? "Botene spiller bare 1–3 kryss" : ownCount >= cupSize ? "For mange spillere til dette antallet" : null;
+  const cupProblem = !botsAllowed ? "Boter bare på 1–3 kryss" : ownCount >= cupSize ? "For mange" : null;
   const problem = cupMode
     ? mode === "team"
       ? (teamSetupProblem(teams, true, 1) ?? cupProblem)
@@ -104,10 +103,7 @@ export function TournamentSetupScreen({
       ? teamSetupProblem(teams, botsAllowed, MIN_TEAMS)
       : individualSetupProblem(people.map((p) => p.name), !botsAllowed && people.some((p) => p.isBot), MIN_INDIVIDUAL);
 
-  const crosses = `${RULES[baseOf(variant)].target} kryss`;
   const trimmedName = name.trim();
-  // What is behind "Flere valg", in a line, so closed does not mean hidden.
-  const moreSummary = [crosses, mode === "team" && hasStandRule(variant) ? "stå ved 3" : null, cupMode ? BOT_LEVELS[cup.level].name : null, trimmedName || null].filter(Boolean).join(" · ");
 
   function handleNext() {
     if (problem) return;
@@ -154,13 +150,13 @@ export function TournamentSetupScreen({
         />
         <StepStrip step={0} />
 
-        <Step n={1} aside={ownCount > 0 ? `${ownCount} valgt` : undefined}>Hvem skal være med?</Step>
+        <Step n={1}>Hvem</Step>
         <ModeToggle
           label="Hvem spiller"
           value={mode}
           onChange={setMode}
           options={[
-            { value: "individual", label: "Hver for seg", icon: <PersonIcon className="w-4 h-4" /> },
+            { value: "individual", label: "Spillere", icon: <PersonIcon className="w-4 h-4" /> },
             { value: "team", label: "Lag", icon: <PeopleIcon className="w-4 h-4" /> },
           ]}
         />
@@ -170,20 +166,20 @@ export function TournamentSetupScreen({
           <PlayerPicker people={people} onChange={setPeople} botsAllowed={botsAllowed && !cupMode} bulk />
         )}
 
-        <Step n={2}>Hvilken turnering?</Step>
+        <Step n={2}>Turnering</Step>
         <ModeToggle
           label="Type turnering"
           value={cupMode ? "cup" : "plain"}
           onChange={(v) => setCupMode(v === "cup")}
           options={[
             { value: "plain", label: "Vanlig", icon: <PeopleIcon className="w-4 h-4" /> },
-            { value: "cup", label: "Pokal mot botter", icon: <TrophyIcon className="w-4 h-4" /> },
+            { value: "cup", label: "Mot boter", icon: <TrophyIcon className="w-4 h-4" /> },
           ]}
         />
         {cupMode && (
           <>
             <CupTypePicker value={{ ...cup, size: cupSize }} onChange={setCup} maxSize={maxSize} />
-            <Step n={3}>Hvor mange deltakere?</Step>
+            <Step n={3}>Antall</Step>
             <CupSizePicker value={{ ...cup, size: cupSize }} onChange={setCup} own={ownCount} maxSize={maxSize} />
           </>
         )}
@@ -196,9 +192,7 @@ export function TournamentSetupScreen({
           style={{ minHeight: "2.75rem", background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
         >
           <span style={{ color: "var(--color-cream)", fontWeight: 600, fontSize: "0.9rem" }}>Flere valg</span>
-          <span className="truncate" style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>
-            {moreSummary} {moreOpen ? "⌃" : "›"}
-          </span>
+          <span aria-hidden style={{ color: "var(--color-muted)" }}>{moreOpen ? "⌃" : "›"}</span>
         </button>
         {moreOpen && (
           <div className="mb-6">
@@ -206,7 +200,7 @@ export function TournamentSetupScreen({
               value={name}
               onChange={(e) => setName(e.target.value)}
               maxLength={40}
-              placeholder="Navn på turneringen"
+              placeholder="Navn (valgfritt)"
               aria-label="Navn på turneringen"
               className={`w-full px-4 rounded-lg mb-4 ${FOCUS_RING}`}
               style={{ minHeight: "2.75rem", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
@@ -219,10 +213,9 @@ export function TournamentSetupScreen({
         <StickyAction
           onClick={handleNext}
           ready={!problem}
-          summary={setupSummary([cupMode ? `${cupType(cup.kind).name}: ${ownCount} av ${cupSize}` : mode === "team" ? `${teams.length} lag` : `${people.length} spillere`, crosses])}
           reason={problem}
         >
-          Neste: trekning
+          Neste
         </StickyAction>
       </div>
     </div>

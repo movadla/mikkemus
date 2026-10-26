@@ -159,7 +159,7 @@ export function SetupScreen({
   }
 
   const advancedSettings = (
-    <div style={{ color: "var(--color-muted)", fontSize: "0.85rem" }}>
+    <div className="w-full flex flex-col items-center" style={{ color: "var(--color-muted)", fontSize: "0.85rem" }}>
       <label className="inline-flex items-center gap-3 cursor-pointer" style={{ minHeight: "2.75rem" }}>
         <input
           type="checkbox"
@@ -173,11 +173,17 @@ export function SetupScreen({
         Avanserte innstillinger
       </label>
       {advanced && (
+        <div className="w-full pb-1">
+          {/* Enkel, Vanlig, Party, Full party: the same device setting as in Innstillinger, chosen here before the match. */}
+          <FxPicker />
+        </div>
+      )}
+      {advanced && (
         <label className="flex items-start gap-3 cursor-pointer pl-9 pb-2">
           <input type="checkbox" checked={exactEntry} onChange={(e) => setExactEntry(e.target.checked)} style={{ width: 22, height: 22, accentColor: "var(--color-gold)", flexShrink: 0 }} />
           <span>
             Legg inn hver pil for hånd
-            <span className="block" style={{ fontSize: "0.75rem" }}>Du velger hva hver pil traff, bom, trippel og dobbel inkludert, så vi vet hvor alle treffene er.</span>
+            <span className="block" style={{ fontSize: "0.75rem" }}>Velg hva hver pil traff</span>
           </span>
         </label>
       )}
@@ -193,10 +199,10 @@ export function SetupScreen({
 
   // Bull-duell reuses this screen and has no keyed-in darts, so the advanced settings are the main game's only.
   const belowStart = (
-    <>
+    <div className="w-full flex flex-col items-center">
       {noStatsToggle}
       {variantSelectable && advancedSettings}
-    </>
+    </div>
   );
 
   return (
@@ -216,8 +222,7 @@ export function SetupScreen({
         {/* Which game. Shared by both modes, with the stand rule offered only where a team has
             several members to alternate between. */}
         {variantSelectable && <RulesPicker variant={variant} onChange={setVariant} teamPlay={mode === "team"} />}
-        {/* Enkel is chosen here, before the match: the same device setting as in Innstillinger. */}
-        <FxPicker />
+
 
         {mode === "individual" && (
           <>

@@ -36,16 +36,15 @@ export function TournamentHistoryScreen({ onBack }: { onBack: () => void }) {
   return (
     <div className="animate-screen-enter screen" style={{ background: "var(--color-bg)" }}>
       <div className="screen-inner">
-        <ScreenTop title="Pokalskapet" onBack={onBack} backLabel="← Tilbake" />
-        {list === null && <p className="text-center" style={{ color: "var(--color-muted)" }}>Henter pokaler …</p>}
+        <ScreenTop title="Pokaler" onBack={onBack} backLabel="← Tilbake" />
+        {list === null && <p className="text-center" style={{ color: "var(--color-muted)" }}>Henter …</p>}
         {list !== null && list.length === 0 && (
           <p className="text-center py-8" style={{ color: "var(--color-muted)" }}>
-            Ingen ferdigspilte turneringer ennå. Den første pokalen havner her.
+            Ingen pokaler ennå
           </p>
         )}
         {counts.length > 0 && (
           <section className="shadow-panel rounded-xl p-4 mb-4" style={{ background: "var(--color-panel)", border: "1px solid var(--color-border)" }}>
-            <p className="section-label mb-2">FLEST POKALER</p>
             <ol className="space-y-1">
               {counts.map((c, i) => (
                 <li key={c.name} className="flex items-center justify-between gap-3" style={{ color: "var(--color-cream)" }}>

@@ -23,7 +23,7 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
         <FxPicker />
         <SpotifyControl />
         <div className="mb-6">
-          <p className="section-label text-center mb-2">ODDS · VISES IKKE I VANLIG</p>
+          <p className="section-label text-center mb-2">ODDS</p>
           <div className="flex gap-2" role="radiogroup" aria-label="Odds">
             {([true, false] as const).map((on) => (
               <button
@@ -48,16 +48,10 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
           <div className="flex justify-center">
             <QrCode text={`${typeof window === "undefined" ? "" : window.location.origin}/storskjerm`} label="QR-kode til storskjermen" />
           </div>
-          <p className="mt-2" style={{ color: "var(--color-muted)", fontSize: "0.85rem" }}>
-            Skann med TV-en eller en annen skjerm. Sett den til Full party for effektene.
-          </p>
-          <p className="section-label mt-5 mb-2">TURNERINGSBRAKETT PÅ STORSKJERM</p>
+          <p className="section-label mt-5 mb-2">STORSKJERM · TURNERING</p>
           <div className="flex justify-center">
             <QrCode text={`${typeof window === "undefined" ? "" : window.location.origin}/storskjerm/turnering`} label="QR-kode til turneringsbraketten på storskjermen" />
           </div>
-          <p className="mt-2" style={{ color: "var(--color-muted)", fontSize: "0.85rem" }}>
-            Viser braketten til den siste turneringen og følger den fra resultat til resultat.
-          </p>
         </div>
         )}
       </div>

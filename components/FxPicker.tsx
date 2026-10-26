@@ -13,7 +13,7 @@ const FOCUS_RING =
 export function FxPicker() {
   const level = useFxLevel();
   return (
-    <div className="mb-6">
+    <div className="mb-6 w-full">
       <p className="section-label text-center mb-2">ANIMASJON OG LYD</p>
       <div className="flex gap-2" role="radiogroup" aria-label="Animasjon og lyd">
         {FX_LEVELS.map((l) => {
@@ -41,7 +41,7 @@ export function FxPicker() {
       </div>
       {level === "simple" && (
         <p className="text-center mt-2" style={{ color: "var(--color-red)", fontSize: "0.8rem" }}>
-          Enkel er en krittavle: bare brettet, med trykk der du vil og uten bekreftelse. Kampene teller ikke i statistikken.
+          Teller ikke i statistikken
         </p>
       )}
     </div>

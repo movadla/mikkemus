@@ -596,6 +596,93 @@ function DartPicker({
   );
 }
 
+/**
+ * Keying in the darts by hand: the three darts across the top, and under them what the dart that is up did to the number being
+ * thrown at — Enkel, Dobbel, Trippel or Bom. The sheet stays up from one dart to the next, so a whole turn is three taps.
+ * "Annen plass" is the way to the full board for a dart that hit something else.
+ */
+function DartEntry({
+  index,
+  target,
+  entered,
+  onPick,
+  onOther,
+  onClose,
+}: {
+  /** The dart being keyed in, 0 to 2. */
+  index: number;
+  /** The row the thrower is on now. */
+  target: Step;
+  /** The darts already keyed in this turn, as the board reads them. */
+  entered: string[];
+  onPick: (sector: string) => void;
+  onOther: () => void;
+  onClose: () => void;
+}) {
+  // The numbered rows are thrown at by their number; Dobbel and Trippel rows take any double or triple, so 20 stands for them.
+  const bull = target === "BULL";
+  const number = /^d+$/.test(target) ? target : "20";
+  const choices: { label: string; sector: string }[] = bull
+    ? [{ label: "Enkel", sector: "25" }, { label: "Dobbel", sector: "Bull" }, { label: "Bom", sector: "None" }]
+    : [{ label: "Enkel", sector: `S${number}` }, { label: "Dobbel", sector: `D${number}` }, { label: "Trippel", sector: `T${number}` }, { label: "Bom", sector: "None" }];
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Legg inn pil ${index + 1}`}
+      className="fixed inset-0 flex items-end sm:items-center justify-center p-4 z-50"
+      style={{ background: "rgba(0,0,0,0.6)" }}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") onClose();
+      }}
+    >
+      <div className="shadow-panel w-full max-w-sm rounded-xl p-4" style={{ background: "var(--color-surface)" }}>
+        <div className="grid grid-cols-3 gap-2 mb-3">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              aria-current={i === index ? "step" : undefined}
+              className="rounded-lg text-center py-2"
+              style={{
+                background: i === index ? "var(--teal-soft)" : "var(--color-cell)",
+                border: i === index ? "1px solid var(--color-teal)" : "1px solid var(--color-border)",
+                color: i === index ? "var(--color-teal)" : i < index ? "var(--color-cream)" : "var(--color-muted)",
+                fontWeight: 600,
+              }}
+            >
+              {i + 1}. pil
+              <span className="block tabular" style={{ fontSize: "0.75rem", fontWeight: 400, minHeight: "1.1rem" }}>
+                {entered[i] ?? ""}
+              </span>
+            </div>
+          ))}
+        </div>
+        <div className="grid gap-2 mb-3" style={{ gridTemplateColumns: `repeat(${choices.length === 4 ? 2 : 3}, minmax(0, 1fr))` }}>
+          {choices.map((c) => (
+            <button
+              key={c.label}
+              type="button"
+              onClick={() => onPick(c.sector)}
+              className={`glossy py-4 rounded-xl font-semibold text-lg ${FOCUS_RING}`}
+              style={{ "--btn-fill": c.label === "Bom" ? "var(--color-surface-2, rgba(255,255,255,0.06))" : "var(--color-teal)", color: c.label === "Bom" ? "var(--color-cream)" : "var(--color-bg)", border: c.label === "Bom" ? "1px solid var(--color-border)" : "none" } as React.CSSProperties}
+            >
+              {c.label}
+            </button>
+          ))}
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <button type="button" onClick={onOther} className={`tactile py-2.5 rounded-lg text-sm ${FOCUS_RING}`} style={{ background: "var(--color-surface)", color: "var(--color-muted)", border: "1px solid var(--color-border)" }}>
+            Annen plass
+          </button>
+          <button type="button" onClick={onClose} className={`tactile py-2.5 rounded-lg text-sm ${FOCUS_RING}`} style={{ background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}>
+            Lukk
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function GameScreen({
   players,
   progress,
@@ -680,7 +767,9 @@ export function GameScreen({
   const [showHomeConfirm, setShowHomeConfirm] = useState(false);
   // Which shot box is being corrected (its dart index), or null — see DartPicker.
   const [editingShot, setEditingShot] = useState<number | null>(null);
-  const [enteringDart, setEnteringDart] = useState(false);
+  // The turn the entry sheet was opened for: it follows that turn dart by dart and is gone when the turn is.
+  const [enteringTurn, setEnteringTurn] = useState<number | null>(null);
+  const [enteringOther, setEnteringOther] = useState(false);
   // Lazy-initialized from localStorage so the button reflects whatever the host last chose,
   // without waiting for an effect — announce() itself reads the same localStorage value
   // directly, so this state only drives the button's own icon/label.
@@ -789,6 +878,16 @@ export function GameScreen({
   const showChoiceBox = !!pendingChoice && choiceInteractive && roundOver;
   // The stand question takes the same spot; it is never up at the same time as the other.
   const showStandBox = standQuestion && !showChoiceBox && rewound === false;
+  // The row the thrower is on, counting the crosses of this turn that are not yet confirmed.
+  const entryTarget: Step = (() => {
+    const base = activePlayer ? progress[activePlayer] : null;
+    if (!base) return STEPS[0];
+    const now = { ...base };
+    (Object.keys(pendingByStep) as Step[]).forEach((s) => {
+      now[s] = (now[s] ?? 0) + (pendingByStep[s] ?? 0);
+    });
+    return currentStepFor(now) ?? STEPS[0];
+  })();
   const choiceBox = (compact: boolean) =>
     showStandBox ? (
       <StandBox thrower={thrower?.name ?? null} onAnswer={onAnswerStand} compact={compact} />
@@ -1003,16 +1102,26 @@ export function GameScreen({
           onClose={() => setEditingShot(null)}
         />
       )}
-      {enteringDart && (
-        <DartPicker
-          index={turnShots.filter(Boolean).length}
-          onPick={(sector) => {
-            setEnteringDart(false);
-            onEnterDart(sector);
-          }}
-          onClose={() => setEnteringDart(false)}
-        />
-      )}
+      {enteringTurn === turnToken && turnShots.filter(Boolean).length < 3 && !showChoiceBox && !showStandBox &&
+        (enteringOther ? (
+          <DartPicker
+            index={turnShots.filter(Boolean).length}
+            onPick={(sector) => {
+              setEnteringOther(false);
+              onEnterDart(sector);
+            }}
+            onClose={() => setEnteringOther(false)}
+          />
+        ) : (
+          <DartEntry
+            index={turnShots.filter(Boolean).length}
+            target={entryTarget}
+            entered={turnShots.filter((s): s is TurnShot => !!s).map((s) => s.label)}
+            onPick={onEnterDart}
+            onOther={() => setEnteringOther(true)}
+            onClose={() => setEnteringTurn(null)}
+          />
+        ))}
       {showHomeConfirm && (
         <ConfirmDialog
           message="Avslutte kampen?"
@@ -1367,7 +1476,7 @@ export function GameScreen({
         {exactEntry && (
           <button
             type="button"
-            onClick={() => setEnteringDart(true)}
+            onClick={() => setEnteringTurn(turnToken)}
             disabled={turnShots.filter(Boolean).length >= 3 || showChoiceBox || showStandBox}
             className={`glossy w-full max-w-3xl mx-auto py-4 rounded-xl font-semibold text-lg mb-3 ${FOCUS_RING}`}
             style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", opacity: turnShots.filter(Boolean).length >= 3 || showChoiceBox || showStandBox ? 0.4 : 1 } as React.CSSProperties}

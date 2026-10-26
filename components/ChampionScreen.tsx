@@ -80,7 +80,7 @@ export function ChampionScreen({
 
         {road.length > 0 && (
           <section className="shadow-panel rounded-xl p-4 mt-6" style={card} aria-label="Veien til pokalen">
-            <p className="section-label mb-3">VEIEN TIL POKALEN</p>
+            <p className="section-label mb-3">VEIEN</p>
             <ol className="space-y-2">
               {road.map((r) => {
                 const mine = r.match.stats?.[winner];
@@ -106,7 +106,7 @@ export function ChampionScreen({
 
         {prizes.length > 0 && (
           <section className="shadow-panel rounded-xl p-4 mt-4" style={card} aria-label="Utmerkelser">
-            <p className="section-label mb-3">UTMERKELSER</p>
+            <p className="section-label mb-3">PRISER</p>
             <div className="space-y-2">
               {prizes.map((a) => (
                 <div key={a.title} className="flex items-baseline justify-between gap-3">
@@ -125,7 +125,6 @@ export function ChampionScreen({
 
         {places && (
           <section className="shadow-panel rounded-xl p-4 mt-4" style={card} aria-label="Pallen">
-            <p className="section-label mb-3">PALLEN</p>
             <ol className="space-y-1" style={{ color: "var(--color-cream)" }}>
               <li>1. {places.first}</li>
               {places.second && <li>2. {places.second}</li>}
@@ -135,7 +134,7 @@ export function ChampionScreen({
         )}
 
         <button type="button" onClick={() => setShowBracket((v) => !v)} className={`tactile w-full rounded-lg mt-4 ${FOCUS_RING}`} style={{ minHeight: "2.75rem", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}>
-          {showBracket ? "Skjul brakett" : "Se hele braketten"}
+          Brakett
         </button>
         {showBracket && (
           <div className="shadow-panel rounded-xl p-3 mt-3" style={card}>
@@ -146,12 +145,12 @@ export function ChampionScreen({
         <div className="space-y-2 mt-6">
           {onNewWithSame && (
             <button type="button" onClick={onNewWithSame} className={`glossy w-full rounded-xl font-semibold text-lg ${FOCUS_RING}`} style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", minHeight: "3.25rem" } as React.CSSProperties}>
-              {tournament.cup ? "Ny pokalturnering med de samme" : "Ny turnering med samme deltakere"}
+              Spill igjen
             </button>
           )}
           {onUndo && undoableMatch(tournament) && (
             <button type="button" onClick={onUndo} className={`tactile w-full rounded-lg text-sm ${FOCUS_RING}`} style={{ minHeight: "2.75rem", background: "transparent", color: "var(--color-muted)", border: "1px solid var(--color-border)" }}>
-              Feil vinner? Angre finalen
+              Angre finalen
             </button>
           )}
           {onHome && (

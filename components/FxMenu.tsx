@@ -55,7 +55,7 @@ export function FxMenu({ onClose }: { onClose: () => void }) {
         </div>
         {askSimple && (
           <div className="mt-3 rounded-lg p-3 text-center" style={{ background: "var(--color-cell)", border: "1px solid var(--color-red)" }}>
-            <p style={{ color: "var(--color-cream)", fontSize: "0.9rem" }}>Bytte til krittavle? Denne kampen teller ikke.</p>
+            <p style={{ color: "var(--color-cream)", fontSize: "0.9rem" }}>Bytt til Enkel? Kampen teller ikke.</p>
             <div className="flex gap-2 mt-2">
               <button type="button" onClick={() => setAskSimple(false)} className={`tactile flex-1 rounded-lg ${FOCUS_RING}`} style={{ minHeight: "2.75rem", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}>
                 Avbryt

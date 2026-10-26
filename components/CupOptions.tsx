@@ -72,9 +72,9 @@ export function CupSizePicker({ value, onChange, own, maxSize }: { value: CupCho
           </button>
         ))}
       </div>
-      <p style={{ color: own >= value.size ? "var(--color-red)" : "var(--color-muted)", fontSize: "0.8rem" }}>
-        {own >= value.size ? "For mange spillere til dette antallet" : `${own} av dere + ${value.size - own} botter`}
-      </p>
+      {own >= value.size && (
+        <p style={{ color: "var(--color-red)", fontSize: "0.8rem" }}>For mange</p>
+      )}
     </div>
   );
 }
@@ -83,7 +83,7 @@ export function CupSizePicker({ value, onChange, own, maxSize }: { value: CupCho
 export function CupDetails({ value, onChange }: { value: CupChoice; onChange: (v: CupChoice) => void }) {
   return (
     <div className="mb-5">
-      <p className="section-label mb-2">BOTNIVÅ</p>
+      <p className="section-label mb-2">NIVÅ</p>
       <div className="flex flex-wrap gap-2 mb-3">
         {BOT_LEVEL_PICKABLE.map((l) => (
           <Chip key={l} selected={l === value.level} onClick={() => onChange({ ...value, level: l })} label={`${BOT_LEVELS[l].name}, ${BOT_LEVELS[l].targetMed} mm`}>
@@ -99,7 +99,7 @@ export function CupDetails({ value, onChange }: { value: CupChoice; onChange: (v
         className={`tactile w-full rounded-lg px-4 flex items-center justify-between gap-3 text-left ${FOCUS_RING}`}
         style={{ minHeight: "2.75rem", background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
       >
-        <span style={{ color: "var(--color-cream)", fontWeight: 600, fontSize: "0.9rem" }}>Botene blir bedre underveis</span>
+        <span style={{ color: "var(--color-cream)", fontWeight: 600, fontSize: "0.9rem" }}>Boter vokser</span>
         <span aria-hidden style={{ color: value.growth ? "var(--color-green)" : "var(--color-muted)", fontWeight: 700 }}>{value.growth ? "På" : "Av"}</span>
       </button>
     </div>

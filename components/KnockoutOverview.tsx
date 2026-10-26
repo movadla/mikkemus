@@ -72,7 +72,7 @@ function NextUpCard({ tournament, match, onPlay }: { tournament: Tournament; mat
   const side = (name: string, p: number | null) => (
     <div className="flex-1 min-w-0 text-center">
       <p className="tabular" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>
-        {seedOf(tournament, name) ? `Seedet ${seedOf(tournament, name)}` : ""}
+        {seedOf(tournament, name) ? `#${seedOf(tournament, name)}` : ""}
       </p>
       <p className="font-display truncate" style={{ color: isHouseName(tournament, name) ? "var(--color-teal-strong)" : "var(--color-cream)", fontSize: "1.35rem" }}>
         {name}
@@ -139,7 +139,7 @@ function MatchSheet({ tournament, match, onClose }: { tournament: Tournament; ma
           })}
         </div>
         <p style={{ color: "var(--color-muted)", fontSize: "0.85rem" }}>
-          {match.isBye ? "Walkover: ingen motstander." : match.winner ? `${match.winner} vant${match.simulated ? ", kampen ble avgjort uten at noen kastet" : ""}.` : "Ikke spilt ennå."}
+          {match.isBye ? "Walkover" : match.winner ? `${match.winner} vant` : ""}
         </p>
         <button type="button" onClick={onClose} className={`tactile w-full rounded-lg mt-4 ${FOCUS_RING}`} style={{ minHeight: "2.75rem", background: "var(--color-cell)", color: "var(--color-cream)" }}>
           Lukk
@@ -185,19 +185,19 @@ export function KnockoutOverview({
     <div className="animate-screen-enter screen" style={{ background: "var(--color-bg)" }}>
       {confirm === "cancel" && (
         <ConfirmDialog
-          message="Avbryte turneringen? Fremgangen slettes permanent og kan ikke gjenopprettes."
+          message="Slette turneringen?"
           buttons={[
-            { label: "Nei, fortsett turneringen", onClick: () => setConfirm(null), background: "var(--color-green)" },
-            { label: cancelingTournament ? "Avbryter …" : "Ja, avbryt turneringen", onClick: cancelingTournament ? () => {} : onCancelTournament, background: "var(--color-red)" },
+            { label: "Behold", onClick: () => setConfirm(null), background: "var(--color-green)" },
+            { label: cancelingTournament ? "Sletter …" : "Slett", onClick: cancelingTournament ? () => {} : onCancelTournament, background: "var(--color-red)" },
           ]}
         />
       )}
       {confirm === "undo" && undoable && (
         <ConfirmDialog
-          message={`Ta tilbake resultatet i ${roundName(undoable).toLowerCase()}, ${undoable.participantA} mot ${undoable.participantB}? Kampen åpnes igjen.`}
+          message={`Angre ${undoable.participantA} mot ${undoable.participantB}?`}
           buttons={[
-            { label: "Nei, behold resultatet", onClick: () => setConfirm(null), background: "var(--color-green)" },
-            { label: "Ja, ta det tilbake", onClick: () => { setConfirm(null); onUndo(); }, background: "var(--color-red)" },
+            { label: "Behold", onClick: () => setConfirm(null), background: "var(--color-green)" },
+            { label: "Angre", onClick: () => { setConfirm(null); onUndo(); }, background: "var(--color-red)" },
           ]}
         />
       )}
@@ -214,7 +214,7 @@ export function KnockoutOverview({
           {just && <ResultCard tournament={tournament} match={just} />}
           {elsewhere.length > 0 && (
             <div className="shadow-panel rounded-xl p-4 mb-4" style={card}>
-              <p className="section-label mb-2">RESULTATER FRA ANDRE STEDER</p>
+              <p className="section-label mb-2">ANDRE KAMPER</p>
               <div className="space-y-1">
                 {elsewhere.map((m) => (
                   <p key={m.id} className="flex justify-between gap-3" style={{ fontSize: "0.88rem" }}>
@@ -241,7 +241,7 @@ export function KnockoutOverview({
             </button>
           )}
           <button type="button" onClick={() => setConfirm("cancel")} className={`tactile w-full rounded-lg text-sm ${FOCUS_RING}`} style={{ minHeight: "2.75rem", background: "var(--color-surface)", color: "var(--color-red)", border: "1px solid var(--color-border)" }}>
-            Avbryt turnering
+            Slett turnering
           </button>
         </div>
       </div>
