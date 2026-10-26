@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { PIN, openApp } from "./helpers";
+import { PIN, openApp, startPast } from "./helpers";
 
 /** Bull-duell: «Først til» starts at 10 and goes to 99, or «Best av 3 piler». */
 test.describe("bull-duell", () => {
@@ -29,8 +29,7 @@ test.describe("bull-duell", () => {
     await expect(page.getByText(/Alle kaster tre piler/)).toBeVisible();
     await expect(page.getByText("Best av 3 piler").last()).toBeVisible();
     await page.getByRole("button", { name: /Start Bull-duell/ }).click();
-    const skip = page.getByRole("button", { name: "Hopp over" });
-    if (await skip.isVisible({ timeout: 3000 }).catch(() => false)) await skip.click();
+    await startPast(page);
     // In the game it says what it is, and no race to a number.
     await expect(page.getByRole("status").filter({ hasText: "Best av 3 piler" })).toBeVisible({ timeout: 10_000 });
     await expect(page.getByText(/\/ \d+$/)).toHaveCount(0);

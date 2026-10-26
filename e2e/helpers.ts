@@ -51,3 +51,14 @@ export async function openApp(page: Page, theme: Theme, { welcomed = true, datab
     await page.waitForTimeout(400);
   }
 }
+
+/** Gets past what stands between the start of a match and its board: the rules the first time, and the cards before the match (Fortsett). */
+export async function startPast(page: Page) {
+  const skip = page.getByRole("button", { name: "Hopp over" });
+  if (await skip.isVisible({ timeout: 3000 }).catch(() => false)) await skip.click();
+  const cards = page.getByRole("dialog", { name: "Oppstilling" });
+  if (await cards.isVisible({ timeout: 3000 }).catch(() => false)) {
+    await cards.getByRole("button", { name: "Fortsett" }).click();
+    await expect(cards).toBeHidden();
+  }
+}

@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { PIN, openApp } from "./helpers";
+import { PIN, openApp, startPast } from "./helpers";
 
 /** Keying in the darts by hand: a dart keyed in wrongly can be tapped and keyed in again, from the sheet itself. */
 test.describe("legg inn piler for hånd", () => {
@@ -16,8 +16,7 @@ test.describe("legg inn piler for hånd", () => {
     await page.getByLabel("Avanserte innstillinger").check();
     await page.getByLabel(/Legg inn hver pil for hånd/).check();
     await page.getByRole("button", { name: /Start/ }).first().click();
-    const skip = page.getByRole("button", { name: "Hopp over" });
-    if (await skip.isVisible({ timeout: 3000 }).catch(() => false)) await skip.click();
+    await startPast(page);
 
     await page.getByRole("button", { name: "Legg inn pil 1" }).click();
     const sheet = page.getByRole("dialog", { name: "Legg inn pil 2" });

@@ -136,6 +136,13 @@ export function SetupScreen({
     );
   }
 
+  const noStatsToggle = (
+    <label className="inline-flex items-center gap-3 cursor-pointer" style={{ minHeight: "var(--control)", color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
+      <input type="checkbox" checked={statsOff} onChange={(e) => setStatsOff(e.target.checked)} style={{ width: 22, height: 22, accentColor: "var(--color-gold)" }} />
+      Spill uten at statistikken teller
+    </label>
+  );
+
   const advancedSettings = (
     <div className="w-full flex flex-col items-center" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
       <label className="inline-flex items-center gap-3 cursor-pointer" style={{ minHeight: "var(--control)" }}>
@@ -148,6 +155,7 @@ export function SetupScreen({
             if (!e.target.checked) {
               setExactEntry(false);
               setVariant("standard");
+              setStatsOff(false);
             }
           }}
           style={{ width: 22, height: 22, accentColor: "var(--color-gold)" }}
@@ -167,6 +175,10 @@ export function SetupScreen({
         </div>
       )}
       {advanced && (
+        // Played without a trace in the statistics.
+        <div className="w-full flex justify-center">{noStatsToggle}</div>
+      )}
+      {advanced && (
         <label className="flex items-start gap-3 cursor-pointer pl-9 pb-2">
           <input type="checkbox" checked={exactEntry} onChange={(e) => setExactEntry(e.target.checked)} style={{ width: 22, height: 22, accentColor: "var(--color-gold)", flexShrink: 0 }} />
           <span>
@@ -178,17 +190,11 @@ export function SetupScreen({
     </div>
   );
 
-  const noStatsToggle = (
-    <label className="inline-flex items-center gap-3 cursor-pointer" style={{ minHeight: "var(--control)", color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
-      <input type="checkbox" checked={statsOff} onChange={(e) => setStatsOff(e.target.checked)} style={{ width: 22, height: 22, accentColor: "var(--color-gold)" }} />
-      Spill uten at statistikken teller
-    </label>
-  );
-
-  // Bull-duell reuses this screen and has no keyed-in darts, so the advanced settings are the main game's only.
+  // Bull-duell reuses this screen and has no advanced settings (no row length, no keyed-in darts), so there the no-statistics choice stays
+  // where it was; in the main game it is one of the advanced settings.
   const belowStart = (
     <div className="w-full flex flex-col items-center">
-      {noStatsToggle}
+      {!variantSelectable && noStatsToggle}
       {variantSelectable && advancedSettings}
     </div>
   );

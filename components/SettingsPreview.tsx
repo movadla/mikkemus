@@ -13,8 +13,8 @@ const SPARKS = 12;
 function describe(level: FxLevel): string {
   const f = fxFlags(level);
   if (level === "simple") return "Rolig: ingen bevegelse utenom det nødvendige, ingen lyd, og kampen teller ikke i statistikken.";
-  if (!f.confetti) return "Alt som trengs for å følge kampen, uten støy.";
-  if (!f.bigConfetti) return "Lyd og bevegelse for hvert kast, konfetti og pokal ved seier.";
+  if (!f.confetti) return "Kortene før kampen, ellers alt som trengs for å følge den, uten støy.";
+  if (!f.bigConfetti) return "Kortene før kampen, lyd og bevegelse for hvert kast, konfetti og pokal ved seier.";
   return "Alt i Party, pluss publikum under en rekke og tyngre konfetti.";
 }
 

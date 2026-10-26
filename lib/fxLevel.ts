@@ -70,7 +70,7 @@ export type FxFlags = {
   walkOnTune: boolean;
   /** A dart that misses bounces off and falls. */
   missBounce: boolean;
-  /** The line-up with a count down before the first dart. */
+  /** The line-up before the first dart: the cards of the sides, until Fortsett is pressed. Every level but Enkel. */
   lineup: boolean;
   /** Speed lines, halftone, a hard shake and the word slammed in for a bull, a triple 20 and a match dart. */
   manga: boolean;
@@ -86,8 +86,8 @@ export type FxFlags = {
 
 const FLAGS: Record<FxLevel, FxFlags> = {
   simple: { boomMaxStreak: 1, heat: false, shake: false, tripleOverlay: false, dives: false, confetti: false, bigConfetti: false, crowd: false, ringSlam: false, perfectBurst: false, fire: false, walkOn: false, rowShine: false, shirtRain: false, leadChange: false, matchDart: false, replay: false, recordBanner: false, walkOnTune: false, missBounce: false, lineup: false, manga: false, momentum: false, trophy: false, streakFanfare: false, recordBar: false },
-  normal: { boomMaxStreak: 1, heat: false, shake: false, tripleOverlay: false, dives: false, confetti: false, bigConfetti: false, crowd: false, ringSlam: false, perfectBurst: false, fire: false, walkOn: false, rowShine: false, shirtRain: false, leadChange: false, matchDart: false, replay: false, recordBanner: false, walkOnTune: false, missBounce: false, lineup: false, manga: false, momentum: false, trophy: false, streakFanfare: false, recordBar: false },
-  party: { boomMaxStreak: 3, heat: true, shake: true, tripleOverlay: true, dives: true, confetti: true, bigConfetti: false, crowd: false, ringSlam: false, perfectBurst: false, fire: false, walkOn: false, rowShine: false, shirtRain: false, leadChange: false, matchDart: false, replay: false, recordBanner: false, walkOnTune: false, missBounce: false, lineup: false, manga: false, momentum: false, trophy: false, streakFanfare: false, recordBar: false },
+  normal: { boomMaxStreak: 1, heat: false, shake: false, tripleOverlay: false, dives: false, confetti: false, bigConfetti: false, crowd: false, ringSlam: false, perfectBurst: false, fire: false, walkOn: false, rowShine: false, shirtRain: false, leadChange: false, matchDart: false, replay: false, recordBanner: false, walkOnTune: false, missBounce: false, lineup: true, manga: false, momentum: false, trophy: false, streakFanfare: false, recordBar: false },
+  party: { boomMaxStreak: 3, heat: true, shake: true, tripleOverlay: true, dives: true, confetti: true, bigConfetti: false, crowd: false, ringSlam: false, perfectBurst: false, fire: false, walkOn: false, rowShine: false, shirtRain: false, leadChange: false, matchDart: false, replay: false, recordBanner: false, walkOnTune: false, missBounce: false, lineup: true, manga: false, momentum: false, trophy: false, streakFanfare: false, recordBar: false },
   full: { boomMaxStreak: 12, heat: true, shake: true, tripleOverlay: true, dives: true, confetti: true, bigConfetti: true, crowd: true, ringSlam: true, perfectBurst: true, fire: true, walkOn: true, rowShine: true, shirtRain: true, leadChange: true, matchDart: true, replay: true, recordBanner: true, walkOnTune: true, missBounce: true, lineup: true, manga: true, momentum: true, trophy: true, streakFanfare: true, recordBar: true },
 };
 

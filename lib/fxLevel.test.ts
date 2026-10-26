@@ -16,7 +16,7 @@ describe("fx levels", () => {
     }
   });
 
-  it("Vanlig keeps a single soft boom and none of the big moments", () => {
+  it("Vanlig keeps a single soft boom and none of the big moments, but has the cards before the match", () => {
     expect(fxFlags("normal")).toEqual({
       boomMaxStreak: 1,
       heat: false,
@@ -38,7 +38,7 @@ describe("fx levels", () => {
       recordBanner: false,
       walkOnTune: false,
       missBounce: false,
-      lineup: false,
+      lineup: true,
       manga: false,
       momentum: false,
       trophy: false,
@@ -47,10 +47,15 @@ describe("fx levels", () => {
     });
   });
 
-  it("every new effect is Full party only: Vanlig and Party have none, Full party has all of them", () => {
-    const keys = ["ringSlam", "perfectBurst", "fire", "walkOn", "rowShine", "shirtRain", "leadChange", "matchDart", "replay", "recordBanner", "walkOnTune", "missBounce", "lineup", "manga", "momentum", "trophy", "streakFanfare", "recordBar"] as const;
+  it("the cards before the match are in every level but Enkel", () => {
+    expect(FX_LEVELS.filter((l) => fxFlags(l).lineup)).toEqual(["normal", "party", "full"]);
+  });
+
+  it("every other new effect is Full party only: Vanlig and Party have none, Full party has all of them", () => {
+    const keys = ["ringSlam", "perfectBurst", "fire", "walkOn", "rowShine", "shirtRain", "leadChange", "matchDart", "replay", "recordBanner", "walkOnTune", "missBounce", "manga", "momentum", "trophy", "streakFanfare", "recordBar"] as const;
     for (const level of ["normal", "party"] as const) for (const k of keys) expect(fxFlags(level)[k], `${level}.${k}`).toBe(false);
     for (const k of keys) expect(fxFlags("full")[k], `full.${k}`).toBe(true);
+    expect(fxFlags("full").lineup).toBe(true);
   });
 
   it("only Full party has the crowd and the heavy confetti", () => {
