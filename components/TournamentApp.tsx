@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { matchParticipants, recordMatchResult, type Participant, type Tournament, type TournamentMatch, type TournamentMode } from "@/lib/tournament";
 import { createKnockout, houseAlive, isKnockout, seedByStrength, undoLastResult } from "@/lib/knockout";
 import { tieGroups, withGroupOrder } from "@/lib/bullOff";
-import { createPilot, isPilot, pilotPlayers, playPilotBots, undoPilotResult } from "@/lib/pilot";
+import { createPilot, isPilot, playPilotBots, undoPilotResult } from "@/lib/pilot";
 import { sigmaForLevel } from "@/lib/botStrategy";
 import { clearPendingTies, loadPendingTies, savePendingTies } from "@/lib/pilotTies";
 import { playElsewhere } from "@/lib/botSim";
@@ -23,7 +23,6 @@ import { championShowOf } from "@/lib/championShow";
 import { publishShow } from "@/lib/liveMatch";
 import { botSetupForMatch, type CupConfig } from "@/lib/botCup";
 import { RULES, baseOf, type GameVariant } from "@/lib/rules";
-import { announce } from "@/lib/announcer";
 import { getFxLevel } from "@/lib/fxLevel";
 import { playFanfare, playWinBoom, primeAudio } from "@/lib/fanfare";
 import { useRoster } from "@/lib/storage";
@@ -33,7 +32,7 @@ import { BullOffScreen } from "./BullOffScreen";
 import { DrawScreen } from "./DrawScreen";
 import { PilotOverview } from "./PilotOverview";
 import { EliminatedScreen } from "./EliminatedScreen";
-import { KnockoutOverview, roundName } from "./KnockoutOverview";
+import { KnockoutOverview } from "./KnockoutOverview";
 import { MikkeMusApp } from "./MikkeMusApp";
 import { TournamentHistoryScreen } from "./TournamentHistoryScreen";
 import { TournamentSetupScreen } from "./TournamentSetupScreen";
@@ -206,18 +205,15 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
     setElsewhereIds([]);
     setCurrentMatch(match);
     setScreen("match");
-    // The round is named when the match starts: a quarter-final should sound like one. Enkel is silent, Vanlig only speaks.
+    // A final and a semi-final have their fanfare. Nothing speaks the names: no voice when a match starts.
     const level = getFxLevel();
     if (level !== "simple" && tournament && isPilot(tournament)) {
-      announce(`${match.pilot?.label}. ${pilotPlayers(match).join(", ")}.`);
       if (level !== "normal" && match.pilot?.stage === "final") {
         primeAudio();
         playFanfare();
       }
     }
     if (level !== "simple" && tournament && isKnockout(tournament)) {
-      const [a, b] = matchParticipants(match);
-      announce(`${roundName(match)}. ${a} mot ${b}.`);
       if (level !== "normal") {
         primeAudio();
         if (match.bracketRoundSize === 1 && !match.isBronzeMatch) playFanfare();

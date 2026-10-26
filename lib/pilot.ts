@@ -256,12 +256,25 @@ export function simulatePilotMatch(t: Tournament, m: TournamentMatch): { placeme
   return { placements, stats };
 }
 
-/** Decides every match that only bots play, as soon as it can be played. Returns the tournament and the matches it decided, in order. */
+/** How far into the course a match is: heats first, then the lanes, lucky loser, and so on to the final. */
+function stageRank(m: TournamentMatch): number {
+  return PILOT_STAGES.findIndex((s) => s.stage === m.pilot?.stage);
+}
+
+/**
+ * Decides the matches that only bots play, but never before the house is through with its own: a match is decided only when it is in an
+ * earlier stage than the first match the house has to throw. So the heats of bots wait until the heats of people are played, and a lane
+ * of bots waits until the people's lane is. When the house has nothing to throw (it waits for the bots to be done), everything that can be
+ * played is decided. The results are then on the course, as for any match. Returns the tournament and the matches decided, in order.
+ */
 export function playPilotBots(t: Tournament): { tournament: Tournament; decided: string[] } {
   let cur = t;
   const decided: string[] = [];
   for (let guard = 0; guard <= t.matches.length; guard++) {
-    const m = readyMatches(cur).find((x) => isPilotSimulable(cur, x));
+    const ready = readyMatches(cur);
+    const human = ready.find((x) => !isPilotSimulable(cur, x));
+    const limit = human ? stageRank(human) : Number.POSITIVE_INFINITY;
+    const m = ready.find((x) => isPilotSimulable(cur, x) && stageRank(x) < limit);
     if (!m) break;
     const r = simulatePilotMatch(cur, m);
     cur = recordPilotResult(cur, m.id, r.placements, r.stats, { simulated: true });

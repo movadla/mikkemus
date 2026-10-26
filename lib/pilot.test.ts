@@ -172,30 +172,66 @@ describe("taking a result back", () => {
 });
 
 describe("a cup with bots", () => {
-  it("decides a heat of only bots, and leaves the rest", () => {
+  it("does not play a heat of bots while the heats of the house are still to be thrown", () => {
     const { tournament, decided } = playPilotBots(make(HEAT_A, true));
-    expect(decided).toEqual(["h1"]);
-    expect(byId(tournament, "h1").simulated).toBe(true);
-    expect(byId(tournament, "h1").placements).toHaveLength(4);
+    expect(decided).toEqual([]);
+    expect(byId(tournament, "h1").winner).toBeUndefined();
     expect(nextPilotMatch(tournament)?.id).toBe("h2");
   });
 
-  it("gives the same result every time for the same cup", () => {
-    const a = playPilotBots(make(HEAT_A, true)).tournament;
-    const b = playPilotBots(make(HEAT_A, true)).tournament;
-    expect(a.matches.map((m) => m.placements)).toEqual(b.matches.map((m) => m.placements));
+  it("decides the heat of bots once the house is through with its own, and shows the result", () => {
+    let t = make(HEAT_A, true);
+    for (const h of ["h2", "h3", "h4"]) {
+      t = play(t, h);
+      // Still one heat of the house to go until the last: nothing of the bots' is played.
+      if (h !== "h4") expect(playPilotBots(t).decided).toEqual([]);
+    }
+    const { tournament, decided } = playPilotBots(t);
+    expect(decided).toEqual(["h1"]);
+    expect(byId(tournament, "h1").simulated).toBe(true);
+    expect(byId(tournament, "h1").placements).toHaveLength(4);
   });
 
-  it("takes a simulated result back together with the one thrown before it", () => {
-    let { tournament: t } = playPilotBots(make(HEAT_A, true));
+  it("does not play a lane of bots before the house has played its own lane, nor the losers lane before its stage", () => {
+    // Heats A and D (seeds 1, 8, 9, 16 and 4, 5, 12, 13) are all bots, so winners lane 1 is a lane of bots too.
+    const botHeats = [...HEAT_A, 4, 5, 12, 13];
+    let t = make(botHeats, true);
+    expect(playPilotBots(t).decided).toEqual([]);
     t = play(t, "h2");
+    expect(playPilotBots(t).decided).toEqual([]);
     t = play(t, "h3");
+    let decided: string[];
+    ({ tournament: t, decided } = playPilotBots(t));
+    // The house is through with its heats: the heats of bots are decided. The lanes they lead to are ready, and wait for the house's.
+    expect(decided).toEqual(["h1", "h4"]);
+    expect(isReady(byId(t, "w1"))).toBe(true);
+    expect(byId(t, "w1").winner).toBeUndefined();
+    expect(nextPilotMatch(t)?.id).toBe("w2");
+    t = play(t, "w2");
+    ({ tournament: t, decided } = playPilotBots(t));
+    // After the house's winners lane, the bots' winners lane is decided; the losers lane of bots still waits for the house's.
+    expect(decided).toEqual(["w1"]);
+    expect(byId(t, "l1").winner).toBeUndefined();
+  });
+
+  it("gives the same result every time for the same cup", () => {
+    const run = () => {
+      let t = make(HEAT_A, true);
+      for (const h of ["h2", "h3", "h4"]) t = play(t, h);
+      return playPilotBots(t).tournament;
+    };
+    expect(byId(run(), "h1").placements).toEqual(byId(run(), "h1").placements);
+  });
+
+  it("takes a result of the bots back together with the one thrown before it", () => {
+    let t = make(HEAT_A, true);
+    for (const h of ["h2", "h3", "h4"]) t = play(t, h);
+    t = playPilotBots(t).tournament;
+    expect(byId(t, "h1").winner).toBeTruthy();
     const back = undoPilotResult(t)!;
-    expect(byId(back, "h3").winner).toBeUndefined();
-    expect(byId(back, "h2").winner).toBeTruthy();
-    expect(byId(back, "h1").winner).toBeTruthy();
-    // Taking back the one before it takes the bots' heat along: it was decided after it.
-    const again = undoPilotResult(playPilotBots(make(HEAT_A, true)).tournament);
-    expect(again).toBeNull();
+    // The last thrown (heat D) is reopened, and the heat of bots, decided after it, goes with it.
+    expect(byId(back, "h4").winner).toBeUndefined();
+    expect(byId(back, "h1").winner).toBeUndefined();
+    expect(byId(back, "h3").winner).toBeTruthy();
   });
 });
