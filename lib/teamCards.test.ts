@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mergeTeamCards, withTeamRecords, type TeamCard } from "./teamCards";
+import { TEAMS_SHOWN, mergeTeamCards, rankByUse, withTeamRecords, type TeamCard } from "./teamCards";
 
 describe("withTeamRecords", () => {
   it("adds the teams with a record after the cards this device has used", () => {
@@ -50,5 +50,33 @@ describe("teams with bots", () => {
   it("a record with the same people does not lose the bots of the card", () => {
     const cards: TeamCard[] = [{ name: "Gutta og Dave", members: ["Per", "Dave 🥉"], lastUsed: 5, bots: { "Dave 🥉": "3" } }];
     expect(withTeamRecords(cards, [{ name: "Gutta og Dave", members: ["Per", "Dave 🥉"] }])[0].bots).toEqual({ "Dave 🥉": "3" });
+  });
+});
+
+describe("rankByUse", () => {
+  const card = (name: string, members: string[], lastUsed = 0): TeamCard => ({ name, members, lastUsed });
+  const a = card("A & B", ["A", "B"], 100);
+  const c = card("C & D", ["C", "D"], 300);
+  const e = card("E & F", ["E", "F"], 200);
+
+  it("puts the team with the most matches first, whatever the device last used", () => {
+    const ranked = rankByUse([a, c, e], [{ members: ["A", "B"], matchesPlayed: 12 }, { members: ["C", "D"], matchesPlayed: 2 }, { members: ["E", "F"], matchesPlayed: 5 }]);
+    expect(ranked.map((t) => t.name)).toEqual(["A & B", "E & F", "C & D"]);
+  });
+
+  it("goes by when the device last used a team between teams with no matches on record, and puts teams on record before them", () => {
+    const ranked = rankByUse([a, c, e], [{ members: ["A", "B"], matchesPlayed: 1 }]);
+    expect(ranked.map((t) => t.name)).toEqual(["A & B", "C & D", "E & F"]);
+  });
+
+  it("matches the people whichever way round they are written, and does not change what it is given", () => {
+    const input = [a, c];
+    const ranked = rankByUse(input, [{ members: ["D", "C"], matchesPlayed: 4 }]);
+    expect(ranked[0].name).toBe("C & D");
+    expect(input[0].name).toBe("A & B");
+  });
+
+  it("shows four", () => {
+    expect(TEAMS_SHOWN).toBe(4);
   });
 });

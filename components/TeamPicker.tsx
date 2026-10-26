@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useSyncExternalStore } from "react";
 import { teamKitsOf, useTeamRecords } from "@/lib/storage";
-import { getTeamCardsSnapshot, subscribeTeamCards, withTeamRecords, type TeamCard } from "@/lib/teamCards";
+import { TEAMS_SHOWN, getTeamCardsSnapshot, rankByUse, subscribeTeamCards, withTeamRecords, type TeamCard } from "@/lib/teamCards";
 import { firstKit, type Kit } from "@/lib/teamKit";
 import { TEAM_NAME_MAX, defaultTeamName, pairKey, savedTeamName, teamNameProblems } from "@/lib/teamNames";
 import { makeTeam, sharesMember, teamPeople, toNamedTeam, type PickedTeam, type Person } from "@/lib/people";
@@ -17,7 +17,7 @@ const NO_CARDS: TeamCard[] = [];
 type Tile = { name: string; members: string[]; bots?: TeamCard["bots"]; kit: Kit; picked: PickedTeam | null };
 
 /**
- * Which teams play: every team that has played before, as tiles in two columns — the shirt, the
+ * Which teams play: the four teams used most (and «Mer» for the rest), as tiles in two columns — the shirt, the
  * name, the people — where a tap puts the team in the match and shows its place in the order. A
  * team whose people are already on a picked team cannot be picked. «Nytt lag» opens the one place
  * a team is put together: pick the people, give it a name or let it be called after them.
@@ -28,7 +28,9 @@ type Tile = { name: string; members: string[]; bots?: TeamCard["bots"]; kit: Kit
 export function TeamPicker({ teams, onChange, botsAllowed }: { teams: PickedTeam[]; onChange: (teams: PickedTeam[]) => void; botsAllowed: boolean }) {
   const local = useSyncExternalStore(subscribeTeamCards, getTeamCardsSnapshot, () => NO_CARDS);
   const records = useTeamRecords();
-  const known = useMemo(() => withTeamRecords(local, records), [local, records]);
+  const known = useMemo(() => rankByUse(withTeamRecords(local, records), records), [local, records]);
+  // Only the four used most to begin with; «Mer» opens the rest. A team that is picked stays in view whichever it is.
+  const [showAll, setShowAll] = useState(false);
 
   const [composing, setComposing] = useState(false);
   const [members, setMembers] = useState<Person[]>([]);
@@ -50,6 +52,9 @@ export function TeamPicker({ teams, onChange, botsAllowed }: { teams: PickedTeam
       .filter((t) => !known.some((c) => keyOf(c.members) === keyOf(t.members.map((m) => m.name))))
       .map((t) => ({ name: t.name, members: t.members.map((m) => m.name), kit: firstKit(t.members.map((m) => m.name)), picked: t })),
   ];
+
+  const shown = showAll ? tiles : tiles.filter((t, i) => i < TEAMS_SHOWN || t.picked);
+  const hidden = tiles.length - shown.length;
 
   function toggle(tile: Tile) {
     const i = pickedIndex(tile.members);
@@ -91,7 +96,7 @@ export function TeamPicker({ teams, onChange, botsAllowed }: { teams: PickedTeam
     <div className="mb-4">
       {tiles.length > 0 && (
         <div className="grid grid-cols-2 gap-2 mb-4" role="group" aria-label="Lag">
-          {tiles.map((tile) => {
+          {shown.map((tile) => {
             const order = pickedIndex(tile.members);
             const selected = order !== -1;
             // A team with a bot in it cannot be picked where bots are not allowed (a tournament, say).
@@ -133,6 +138,18 @@ export function TeamPicker({ teams, onChange, botsAllowed }: { teams: PickedTeam
             );
           })}
         </div>
+      )}
+
+      {tiles.length > TEAMS_SHOWN && (hidden > 0 || showAll) && (
+        <button
+          type="button"
+          onClick={() => setShowAll((v) => !v)}
+          aria-expanded={showAll}
+          className={`tactile w-full rounded-lg text-sm font-medium mb-4 ${FOCUS_RING}`}
+          style={{ minHeight: "var(--control)", background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-cream)" }}
+        >
+          {showAll ? "Færre" : `Mer (${hidden})`}
+        </button>
       )}
 
       {!composing && (

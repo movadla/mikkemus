@@ -140,3 +140,17 @@ export function withTeamRecords(cards: TeamCard[], records: { name: string; memb
   }
   return [...byPair.values()].sort((a, b) => b.lastUsed - a.lastUsed || a.name.localeCompare(b.name, "no"));
 }
+
+/** How many teams the picker shows before «Mer». */
+export const TEAMS_SHOWN = 4;
+
+/**
+ * The teams in the order of how much they are used: by the matches the team has on record, most first, and between teams with the same
+ * number (or none: a team only this device remembers) by when this device last used it. The list the picker shows the first of.
+ */
+export function rankByUse(cards: TeamCard[], records: { members?: string[]; matchesPlayed?: number }[]): TeamCard[] {
+  const played = new Map<string, number>();
+  records.forEach((r) => played.set(pairKey(r.members ?? []), r.matchesPlayed ?? 0));
+  const count = (c: TeamCard) => played.get(pairKey(c.members)) ?? 0;
+  return [...cards].sort((a, b) => count(b) - count(a) || b.lastUsed - a.lastUsed || a.name.localeCompare(b.name, "no"));
+}
