@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useAccess } from "@/lib/access";
 import { STEPS, STEP_LABELS, totalMarks, type PlayerProgress, type Step, type TurnAggregate, type TurnResult } from "@/lib/game";
 import { getRules } from "@/lib/rules";
 import { buildMatchFacts } from "@/lib/matchSummary";
@@ -126,6 +127,8 @@ export function WinnerScreen({
   /** An old match opened from the list: the same page, without the celebration, the rating and what belongs to the moment. */
   archive?: boolean;
 }) {
+  // The extra statistics under the result are not for the limited code.
+  const { limited } = useAccess();
   const photo = getPlayerRecord(winner)?.photo;
   const winnerLuck = luckByPlayer[winner] ? overallSumLuck(luckByPlayer[winner]) : null;
   // The celebration follows the chosen level (see lib/fxLevel.ts): none at Vanlig, the usual at
@@ -509,7 +512,7 @@ export function WinnerScreen({
           <RaceChart players={players} turnLog={turnLogByPlayer} winner={winner} total={totalMarks()} />
         </div>
 
-        {hasScoliaData && !showMore && (
+        {hasScoliaData && !showMore && !limited && (
           <button
             type="button"
             onClick={() => setShowMore(true)}
@@ -519,7 +522,7 @@ export function WinnerScreen({
             Mer statistikk
           </button>
         )}
-        {hasScoliaData && showMore && (
+        {hasScoliaData && showMore && !limited && (
           <>
         <div className="shadow-panel rounded-xl p-4 mb-4" style={{ background: "var(--color-surface)" }}>
           <p className="mb-4 section-label">FORVENTEDE TREFF</p>

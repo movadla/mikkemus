@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useAccess } from "@/lib/access";
 import { finishSpotifyLogin } from "@/lib/spotify";
 import { preloadRoster } from "@/lib/storage";
 import { loadActiveTournamentId } from "@/lib/tournamentStorage";
@@ -28,6 +29,7 @@ const TOURNAMENTS_OFFERED = false;
 /** The very first thing rendered — chooses between a one-off "Singel game" (today's app,
  *  unchanged) and "Tournament" mode. Replaces the old direct `<MikkeMusApp />` in app/page.tsx. */
 export function AppRoot() {
+  const { limited } = useAccess();
   const [mode, setMode] = useState<Mode>("home");
   const [hasActiveTournament, setHasActiveTournament] = useState(false);
   // The rules introduction, on request from the home screen. The first-time showing is MikkeMusApp's.
@@ -119,19 +121,25 @@ export function AppRoot() {
           <Link href="/spillere" className={`${shortcut} ${FOCUS_RING}`} style={shortcutStyle}>
             Spillere
           </Link>
-          <Link href="/storskjerm" className={`${shortcut} ${FOCUS_RING}`} style={shortcutStyle}>
-            <TvIcon className="w-4 h-4" />
-            Storskjerm
-          </Link>
+          {!limited && (
+            <Link href="/storskjerm" className={`${shortcut} ${FOCUS_RING}`} style={shortcutStyle}>
+              <TvIcon className="w-4 h-4" />
+              Storskjerm
+            </Link>
+          )}
           <button type="button" onClick={() => setMode("settings")} className={`${shortcut} ${FOCUS_RING}`} style={shortcutStyle}>
             Innstillinger
           </button>
-          <Link href="/statistikk" className={`${shortcut} ${FOCUS_RING}`} style={shortcutStyle}>
-            Statistikk
-          </Link>
-          <Link href="/bet" className={`${shortcut} ${FOCUS_RING}`} style={shortcutStyle}>
-            Spill på morro
-          </Link>
+          {!limited && (
+            <>
+              <Link href="/statistikk" className={`${shortcut} ${FOCUS_RING}`} style={shortcutStyle}>
+                Statistikk
+              </Link>
+              <Link href="/bet" className={`${shortcut} ${FOCUS_RING}`} style={shortcutStyle}>
+                Spill på morro
+              </Link>
+            </>
+          )}
         </div>
       </div>
     </div>

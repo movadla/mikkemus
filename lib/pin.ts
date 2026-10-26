@@ -7,10 +7,20 @@
  */
 export const PIN_LENGTH = 4;
 const SALT = "mikke-mus-pin:";
-/** SHA-256 of the salt and the code, for browsers that have it (every page served over https does). */
-const SHA_OF_PIN = "d6e832e3d218b86e71d41e82ff332526bd64435e287da101a8b1c49b4a02d949";
-/** The same check by a small hash, for the places without SHA-256 (a page on a plain-http address). */
-const FNV_OF_PIN = "12093a46";
+
+/**
+ * Two codes, two doors. "full" is the app as it is. "limited" plays and sets up matches and tournaments, and may add
+ * players and bots, but cannot delete a team or a player, and sees no statistics, seeding, records, betting or big
+ * screen (see lib/access.tsx for what that hides). Like the code itself, that is a lock on a door and not a safe.
+ */
+export type AccessLevel = "full" | "limited";
+
+/** For each code: the SHA-256 of the salt and the code, for browsers that have it (every page served over https does),
+ *  and the same check by a small hash, for the places without SHA-256 (a page on a plain-http address). */
+const CODES: Record<AccessLevel, { sha: string; fnv: string }> = {
+  full: { sha: "a0d81b08f4c615b4d226e07cff10a4f4e64d04dbf3e1fe7cb77f81a1e3990c25", fnv: "8d3fe786" },
+  limited: { sha: "d6e832e3d218b86e71d41e82ff332526bd64435e287da101a8b1c49b4a02d949", fnv: "12093a46" },
+};
 
 /** FNV-1a, 32 bits: a few lines, no dependencies, same answer everywhere. */
 export function fnv1a(text: string): string {
@@ -29,28 +39,36 @@ async function sha256Hex(text: string): Promise<string | null> {
   return [...new Uint8Array(bytes)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-/** Whether `pin` is the code. Anything that is not exactly four digits is wrong without being looked at. */
-export async function checkPin(pin: string): Promise<boolean> {
-  if (pin.length !== PIN_LENGTH || [...pin].some((ch) => ch < "0" || ch > "9")) return false;
+/** Which door `pin` opens, or null. Anything that is not exactly four digits is wrong without being looked at. */
+export async function checkPin(pin: string): Promise<AccessLevel | null> {
+  if (pin.length !== PIN_LENGTH || [...pin].some((ch) => ch < "0" || ch > "9")) return null;
   const sha = await sha256Hex(SALT + pin);
-  return sha !== null ? sha === SHA_OF_PIN : fnv1a(SALT + pin) === FNV_OF_PIN;
+  const fnv = sha === null ? fnv1a(SALT + pin) : null;
+  for (const level of ["full", "limited"] as const) {
+    if (sha !== null ? sha === CODES[level].sha : fnv === CODES[level].fnv) return level;
+  }
+  return null;
 }
 
-/** What a device stores once it has been let in. Changes with the code, so a new code locks every device again. */
+/** What a device stores once it has been let in: the level and a piece of the code's hash. It changes with the code, so a
+ *  new code locks every device again, and it names the level, so a code that used to be the only one is not read as
+ *  either until it has been typed again. */
 const REMEMBER_KEY = "mikke-mus-pin-ok";
-const REMEMBER_VALUE = SHA_OF_PIN.slice(0, 16);
+const rememberValue = (level: AccessLevel) => `${level}:${CODES[level].sha.slice(0, 16)}`;
 
-export function isRemembered(): boolean {
+/** The level this device was let in at, or null if it must be asked. */
+export function rememberedLevel(): AccessLevel | null {
   try {
-    return localStorage.getItem(REMEMBER_KEY) === REMEMBER_VALUE;
+    const stored = localStorage.getItem(REMEMBER_KEY);
+    return (["full", "limited"] as const).find((level) => stored === rememberValue(level)) ?? null;
   } catch {
-    return false;
+    return null;
   }
 }
 
-export function rememberDevice(): void {
+export function rememberDevice(level: AccessLevel): void {
   try {
-    localStorage.setItem(REMEMBER_KEY, REMEMBER_VALUE);
+    localStorage.setItem(REMEMBER_KEY, rememberValue(level));
   } catch {
     // Private mode: the code is asked for again next time.
   }

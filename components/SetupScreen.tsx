@@ -24,13 +24,15 @@ export function ModeToggle<T extends string>({
   value,
   onChange,
   options,
+  label = "Hvem spiller",
 }: {
   value: T;
   onChange: (v: T) => void;
   options: { value: T; label: string; icon: React.ReactNode }[];
+  label?: string;
 }) {
   return (
-    <div className="flex gap-2 mb-6" role="radiogroup" aria-label="Hvem spiller">
+    <div className="flex gap-2 mb-6" role="radiogroup" aria-label={label}>
       {options.map((o) => {
         const selected = o.value === value;
         return (

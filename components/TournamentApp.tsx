@@ -22,7 +22,7 @@ import {
   upsertTournament,
 } from "@/lib/tournamentStorage";
 import { loadActiveMatch } from "@/lib/activeMatch";
-import type { BotLevel, TeamMember } from "@/lib/botLevels";
+import { botSetupForMatch, type CupConfig } from "@/lib/botCup";
 import type { GameVariant } from "@/lib/rules";
 import { DartboardGlyph } from "./DartboardGlyph";
 import { MikkeMusApp } from "./MikkeMusApp";
@@ -53,6 +53,7 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
   const [pendingMode, setPendingMode] = useState<TournamentMode | null>(null);
   const [pendingParticipants, setPendingParticipants] = useState<Participant[] | null>(null);
   const [pendingVariant, setPendingVariant] = useState<GameVariant>("standard");
+  const [pendingCup, setPendingCup] = useState<CupConfig | null>(null);
   const [currentMatch, setCurrentMatch] = useState<TournamentMatch | null>(null);
   // The match that just ended, so the overview can show what it did to the table. Kept only until
   // the next match starts — it is about the moment after a result, not a permanent setting. A
@@ -100,13 +101,13 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
   /** Makes the tournament and opens it. Everything it needs is passed in, because the small-
    *  tournament shortcut below calls it in the same breath as the setup screen's own submit,
    *  before any `pending…` state has been applied. */
-  async function createAndOpen(mode: TournamentMode, participants: Participant[], variant: GameVariant, groups: string[][], matchSize: number) {
+  async function createAndOpen(mode: TournamentMode, participants: Participant[], variant: GameVariant, groups: string[][], matchSize: number, cup?: CupConfig) {
     if (submitting) return;
     setSubmitting(true);
     const id = newTournamentId();
     // Playing several at once is an individual-mode-only setting — a team match is always 1 team
     // vs 1 team, regardless of whatever the (hidden, for team mode) matchSize toggle last held.
-    const created = createTournament(mode, participants, groups, id, new Date().toISOString(), mode === "team" ? 2 : matchSize, variant);
+    const created = createTournament(mode, participants, groups, id, new Date().toISOString(), mode === "team" ? 2 : matchSize, variant, cup);
     setTournament(created);
     setJustPlayedId(null);
     saveActiveTournamentId(id);
@@ -115,14 +116,15 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
     setSubmitting(false);
   }
 
-  function handleSetupNext(mode: TournamentMode, participants: Participant[], variant: GameVariant, adjustGroups: boolean) {
+  function handleSetupNext(mode: TournamentMode, participants: Participant[], variant: GameVariant, adjustGroups: boolean, cup?: CupConfig) {
     setPendingMode(mode);
     setPendingParticipants(participants);
     setPendingVariant(variant);
+    setPendingCup(cup ?? null);
     // Up to four play in a single group, so there is nothing for the group screen to decide: the
     // tournament is made straight away unless the user asked to adjust the groups.
     if (!adjustGroups && participants.length <= MAX_WITHOUT_GROUP_SCREEN) {
-      void createAndOpen(mode, participants, variant, suggestGroups(participants.map((p) => p.name)), 2);
+      void createAndOpen(mode, participants, variant, suggestGroups(participants.map((p) => p.name)), 2, cup);
       return;
     }
     setScreen("group-setup");
@@ -130,15 +132,17 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
 
   async function handleGenerate(groups: string[][], matchSize: number) {
     if (!pendingMode || !pendingParticipants) return;
-    await createAndOpen(pendingMode, pendingParticipants, pendingVariant, groups, matchSize);
+    await createAndOpen(pendingMode, pendingParticipants, pendingVariant, groups, matchSize, pendingCup ?? undefined);
   }
 
   /** A finished tournament, played again by the same people: back to the setup screen with
    *  everyone already in, to change what they want and start. */
   function handleNewWithSame() {
     if (!tournament) return;
+    // A cup against bots is made anew, with other bots: only the house's own entrants carry over.
     setPendingMode(tournament.mode);
-    setPendingParticipants(tournament.participants);
+    setPendingParticipants(tournament.cup ? tournament.participants.filter((p) => (p.members ? p.members.some((m) => !m.isBot) : !p.isBot)) : tournament.participants);
+    setPendingCup(tournament.cup ?? null);
     setPendingVariant(tournament.variant ?? "standard");
     setTournament(null);
     setJustPlayedId(null);
@@ -203,6 +207,7 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
         initialMode={pendingMode}
         initialParticipants={pendingParticipants}
         initialVariant={pendingVariant}
+        initialCup={pendingCup}
       />
     );
   }
@@ -219,12 +224,8 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
   }
 
   if (screen === "match" && tournament && currentMatch && matchParticipants(currentMatch).length >= 2) {
-    const botLevels: Record<string, BotLevel> = {};
-    const teamRosters: Record<string, TeamMember[]> = {};
-    tournament.participants.forEach((p) => {
-      if (p.isBot && p.botLevel) botLevels[p.name] = p.botLevel;
-      if (p.members && p.members.length > 0) teamRosters[p.name] = p.members;
-    });
+    // For a cup against bots the levels are those of this very match: how far into the cup it is, and the bots' form.
+    const { botLevels, teamRosters } = botSetupForMatch(tournament, currentMatch);
     return (
       <MikkeMusApp
         initialPlayers={matchParticipants(currentMatch)}

@@ -1,6 +1,7 @@
 import type { TurnAggregate } from "./game";
 import type { BotLevel, TeamMember } from "./botLevels";
 import type { GameVariant } from "./rules";
+import type { CupConfig } from "./botCup";
 
 export type TournamentMode = "individual" | "team";
 
@@ -13,6 +14,8 @@ export type Participant = {
   name: string;
   isBot: boolean;
   botLevel?: BotLevel;
+  /** A bot in a cup (lib/botCup.ts): its skill on the level scale, which the level of each match is worked out from. */
+  skill?: number;
   /** Only set for a team participant — members can freely mix humans and bots. */
   members?: TeamMember[];
 };
@@ -62,6 +65,8 @@ export type Tournament = {
   /** Which game every match in the tournament is played as — see lib/rules.ts. Absent on
    *  tournaments from before variants existed: standard. */
   variant?: GameVariant;
+  /** Set when this is a cup against bots (lib/botCup.ts): its name, trophy and how the bots throw. */
+  cup?: CupConfig;
 };
 
 /** Every real name in a match, whether it's a normal/bracket match (participantA/B) or a
@@ -443,7 +448,8 @@ export function createTournament(
   id: string,
   createdAt: string,
   matchSize = 2,
-  variant: GameVariant = "standard"
+  variant: GameVariant = "standard",
+  cup?: CupConfig
 ): Tournament {
   const matches: TournamentMatch[] = [];
   groups.forEach((group, groupIndex) => {
@@ -460,7 +466,7 @@ export function createTournament(
       });
     }
   });
-  return { id, mode, participants, groups, matches, status: "group", createdAt, matchSize, variant };
+  return { id, mode, participants, groups, matches, status: "group", createdAt, matchSize, variant, ...(cup ? { cup } : {}) };
 }
 
 /** Pure reducer: records one match's result and advances the tournament to its next stage

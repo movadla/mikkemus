@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { useAccess } from "@/lib/access";
 import { useMemo, useState } from "react";
 import { deletePlayer, renameTeam, useRoster, useRosterLoaded } from "@/lib/storage";
 import { buildSeedTable, formOf, type FormInfo } from "@/lib/seedingTable";
@@ -65,6 +66,8 @@ export default function PlayerDetailPage() {
   const loaded = useRosterLoaded();
   const player = roster.find((p) => p.name.toLowerCase() === name.toLowerCase());
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  // The limited code deletes no player or team, and sees no seeding, rating, record or form.
+  const { limited } = useAccess();
   const [newName, setNewName] = useState<string | null>(null);
   const [nameError, setNameError] = useState("");
   const seed = useMemo(() => (player && player.kind !== "team" ? buildSeedTable(roster, RULES).find((r) => r.name === player.name) ?? null : null), [roster, player]);
@@ -94,6 +97,7 @@ export default function PlayerDetailPage() {
           backHref="/spillere"
           backLabel="← Tilbake"
           right={
+            limited ? undefined : (
             <button
               type="button"
               onClick={() => setConfirmingDelete(true)}
@@ -103,6 +107,7 @@ export default function PlayerDetailPage() {
             >
               <TrashIcon className="w-4 h-4" />
             </button>
+            )
           }
         />
 
@@ -146,23 +151,27 @@ export default function PlayerDetailPage() {
             </p>
           )}
 
-          <div className={`grid gap-2 mt-4 ${seed ? "grid-cols-3" : "grid-cols-2"}`}>
-            {seed && <Fact label="SEEDING">{seed.rank}.</Fact>}
-            {seed && <Fact label="RATING">{Math.round(seed.rating)}</Fact>}
-            <Fact label="KAMPER">
-              {player.matchesWon}–{player.matchesPlayed - player.matchesWon}
-            </Fact>
-          </div>
+          {!limited && (
+            <>
+              <div className={`grid gap-2 mt-4 ${seed ? "grid-cols-3" : "grid-cols-2"}`}>
+                {seed && <Fact label="SEEDING">{seed.rank}.</Fact>}
+                {seed && <Fact label="RATING">{Math.round(seed.rating)}</Fact>}
+                <Fact label="KAMPER">
+                  {player.matchesWon}–{player.matchesPlayed - player.matchesWon}
+                </Fact>
+              </div>
 
-          <div className="mt-4 rounded-lg p-3" style={{ background: "var(--color-cell)" }}>
-            <p className="section-label mb-2" style={{ fontSize: "0.75rem" }}>
-              FORM · SISTE 10
-            </p>
-            <div className="flex items-center justify-center gap-3">
-              <Dots results={form.results} />
-              <span style={{ color: FORM_COLOR[form.label], fontWeight: 700 }}>{form.label}</span>
-            </div>
-          </div>
+              <div className="mt-4 rounded-lg p-3" style={{ background: "var(--color-cell)" }}>
+                <p className="section-label mb-2" style={{ fontSize: "0.75rem" }}>
+                  FORM · SISTE 10
+                </p>
+                <div className="flex items-center justify-center gap-3">
+                  <Dots results={form.results} />
+                  <span style={{ color: FORM_COLOR[form.label], fontWeight: 700 }}>{form.label}</span>
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
         {/* The shirts and the tune a team walks on to. */}
@@ -254,9 +263,11 @@ export default function PlayerDetailPage() {
           </div>
         )}
 
-        <Link href="/statistikk" className={`tactile block text-center rounded-lg ${FOCUS_RING}`} style={{ lineHeight: "2.75rem", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}>
-          Se statistikken ›
-        </Link>
+        {!limited && (
+          <Link href="/statistikk" className={`tactile block text-center rounded-lg ${FOCUS_RING}`} style={{ lineHeight: "2.75rem", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}>
+            Se statistikken ›
+          </Link>
+        )}
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useEffect, useRef, useState } from "react";
+import { useAccess } from "@/lib/access";
 import { getRules } from "@/lib/rules";
 import {
   DARTS_PER_TURN,
@@ -689,6 +690,8 @@ export function GameScreen({
   const [switchTo, setSwitchTo] = useState<string | null>(null);
   // The thrower's numbers, from the bottom of the screen.
   const [sheetOpen, setSheetOpen] = useState(false);
+  // The sheet is a player's statistics: not for the limited code.
+  const { limited } = useAccess();
   // The animation level can be changed from the controls, in the middle of the match.
   const [fxMenuOpen, setFxMenuOpen] = useState(false);
   const fxLevelNow = useFxLevel();
@@ -874,7 +877,7 @@ export function GameScreen({
           row of its own and carries it in the right-hand column instead (see .live-side below). */}
       {!compactLandscape && thrower && (
         <div className="max-w-3xl mx-auto w-full mb-2 shrink-0">
-          <ThrowerBar key={turnToken} thrower={thrower} team={throwerTeam} kit={throwerTeam ? kits[throwerTeam.name] : null} stood={throwerStood} run={throwerRun} fire={fxFire} animate={throwerAnimate} onPickMate={choiceInteractive && !rewound ? setSwitchTo : undefined} onOpen={!rewound ? () => setSheetOpen(true) : undefined} />
+          <ThrowerBar key={turnToken} thrower={thrower} team={throwerTeam} kit={throwerTeam ? kits[throwerTeam.name] : null} stood={throwerStood} run={throwerRun} fire={fxFire} animate={throwerAnimate} onPickMate={choiceInteractive && !rewound ? setSwitchTo : undefined} onOpen={!rewound && !limited ? () => setSheetOpen(true) : undefined} />
         </div>
       )}
       {!compactLandscape && odds && (
@@ -1291,7 +1294,7 @@ export function GameScreen({
         <div className="live-side">
           {thrower && (
             <div className="mb-1 shrink-0">
-              <ThrowerBar key={turnToken} thrower={thrower} team={throwerTeam} kit={throwerTeam ? kits[throwerTeam.name] : null} stood={throwerStood} run={throwerRun} fire={fxFire} animate={throwerAnimate} onPickMate={choiceInteractive && !rewound ? setSwitchTo : undefined} onOpen={!rewound ? () => setSheetOpen(true) : undefined} compact />
+              <ThrowerBar key={turnToken} thrower={thrower} team={throwerTeam} kit={throwerTeam ? kits[throwerTeam.name] : null} stood={throwerStood} run={throwerRun} fire={fxFire} animate={throwerAnimate} onPickMate={choiceInteractive && !rewound ? setSwitchTo : undefined} onOpen={!rewound && !limited ? () => setSheetOpen(true) : undefined} compact />
             </div>
           )}
           {odds && (

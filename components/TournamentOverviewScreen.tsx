@@ -172,7 +172,7 @@ function GroupMatches({ matches }: { matches: TournamentMatch[] }) {
 }
 
 /** First, second and third of a finished tournament — the winner at the centre and tallest. */
-function PodiumCard({ podium }: { podium: Podium }) {
+function PodiumCard({ podium, trophy }: { podium: Podium; trophy?: string }) {
   const places: { name: string | null; place: number; height: string }[] = [
     { name: podium.second, place: 2, height: "5.2rem" },
     { name: podium.first, place: 1, height: "6.8rem" },
@@ -181,6 +181,11 @@ function PodiumCard({ podium }: { podium: Podium }) {
   return (
     <div className="mb-6" role="list" aria-label="Pallen">
       <p className="mb-2 section-label text-center">TURNERINGEN ER FERDIG</p>
+      {trophy && podium.first && (
+        <p className="mb-3 text-center" style={{ color: "var(--color-gold)", fontWeight: 600 }}>
+          {trophy} går til {podium.first}
+        </p>
+      )}
       <div className="flex items-end justify-center gap-2">
         {places.map(({ name, place, height }) => (
           <div key={place} role="listitem" className="flex-1 min-w-0 flex flex-col items-center gap-2">
@@ -253,18 +258,24 @@ export function TournamentOverviewScreen({
         />
       )}
       <div className="screen-inner">
-        <ScreenTop title="Turnering" onBack={onExitToHome} />
+        <ScreenTop title={tournament.cup?.name ?? "Turnering"} onBack={onExitToHome} />
+
+        {tournament.cup && !finished && (
+          <p className="mb-4 text-center" style={{ color: "var(--color-muted)", fontSize: "0.85rem" }}>
+            Dere spiller om {tournament.cup.trophy}
+          </p>
+        )}
 
         {finished && (
           <>
-            <PodiumCard podium={finished} />
+            <PodiumCard podium={finished} trophy={tournament.cup?.trophy} />
             <button
               type="button"
               onClick={onNewWithSame}
               className={`glossy w-full py-4 rounded-xl font-semibold text-lg mb-6 ${FOCUS_RING}`}
               style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)" } as React.CSSProperties}
             >
-              Ny turnering med samme deltakere
+              {tournament.cup ? "Ny pokalturnering med de samme" : "Ny turnering med samme deltakere"}
             </button>
           </>
         )}

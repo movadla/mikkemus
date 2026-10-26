@@ -3,6 +3,7 @@
 import { FxPicker } from "./FxPicker";
 import { SpotifyControl } from "./SpotifyControl";
 import { useShowOdds, setShowOdds } from "@/lib/oddsSetting";
+import { useAccess } from "@/lib/access";
 import { QrCode } from "./QrCode";
 import { ScreenTop } from "./ScreenTop";
 
@@ -13,6 +14,7 @@ import { ScreenTop } from "./ScreenTop";
  * address, not from here.
  */
 export function SettingsScreen({ onBack }: { onBack: () => void }) {
+  const { limited } = useAccess();
   const showOdds = useShowOdds();
   return (
     <div className="animate-screen-enter screen" style={{ background: "var(--color-bg)" }}>
@@ -40,6 +42,7 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
         </div>
 
         {/* The big-screen page, one scan away: no address to type on the TV. */}
+        {!limited && (
         <div className="mb-6 text-center">
           <p className="section-label mb-2">STORSKJERM</p>
           <div className="flex justify-center">
@@ -49,6 +52,7 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
             Skann med TV-en eller en annen skjerm. Sett den til Full party for effektene.
           </p>
         </div>
+        )}
       </div>
     </div>
   );

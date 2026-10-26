@@ -1,30 +1,47 @@
 "use client";
 
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { LOCK_SECONDS, MAX_TRIES, PIN_LENGTH, checkPin, isRemembered, lockSeconds, rememberDevice } from "@/lib/pin";
+import { AccessProvider, blockedForLimited } from "@/lib/access";
+import { LOCK_SECONDS, MAX_TRIES, PIN_LENGTH, checkPin, lockSeconds, rememberDevice, rememberedLevel, type AccessLevel } from "@/lib/pin";
 
 const FOCUS_RING = "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
 
 /**
  * The door of the app: a four-digit code (lib/pin.ts), asked for once on each device and then remembered. A lock
  * on a door rather than a safe, as the note there says. Nothing behind it is drawn, and so nothing is fetched,
- * until the code is right.
+ * until the code is right. There are two codes: the one that lets everything through, and the one that keeps the
+ * statistics, betting and big screen shut (see lib/access.tsx), whose pages are then never drawn.
  */
 export function PinGate({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<"checking" | "locked" | "open">("checking");
+  const [state, setState] = useState<"checking" | "locked" | AccessLevel>("checking");
+  const pathname = usePathname();
 
   // What this device has stored is only known in the browser, so the first answer waits for it.
   useEffect(() => {
-    const t = setTimeout(() => setState(isRemembered() ? "open" : "locked"), 0);
+    const t = setTimeout(() => setState(rememberedLevel() ?? "locked"), 0);
     return () => clearTimeout(t);
   }, []);
 
-  if (state === "open") return <>{children}</>;
   if (state === "checking") return <div style={{ minHeight: "100vh", background: "var(--color-bg)" }} />;
-  return <PinScreen onUnlocked={() => setState("open")} />;
+  if (state === "locked") return <PinScreen onUnlocked={setState} />;
+  return <AccessProvider value={state}>{state === "limited" && blockedForLimited(pathname) ? <NotForThisCode /> : children}</AccessProvider>;
 }
 
-function PinScreen({ onUnlocked }: { onUnlocked: () => void }) {
+function NotForThisCode() {
+  return (
+    <main className="min-h-screen flex flex-col items-center justify-center gap-4 px-6 text-center" style={{ background: "var(--color-bg)", color: "var(--color-cream)" }}>
+      <h1 className="font-display" style={{ fontSize: "1.5rem" }}>Ikke tilgjengelig</h1>
+      <p style={{ color: "var(--color-muted)" }}>Denne siden åpnes ikke med koden du brukte.</p>
+      <Link href="/" className={`tactile rounded-lg px-6 ${FOCUS_RING}`} style={{ minHeight: "2.75rem", lineHeight: "2.75rem", background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
+        Til forsiden
+      </Link>
+    </main>
+  );
+}
+
+function PinScreen({ onUnlocked }: { onUnlocked: (level: AccessLevel) => void }) {
   const [digits, setDigits] = useState("");
   const [wrong, setWrong] = useState(false);
   const [fails, setFails] = useState(0);
@@ -42,10 +59,10 @@ function PinScreen({ onUnlocked }: { onUnlocked: () => void }) {
   const submit = useCallback(
     async (code: string) => {
       busy.current = true;
-      const ok = await checkPin(code);
-      if (ok) {
-        rememberDevice();
-        onUnlocked();
+      const level = await checkPin(code);
+      if (level) {
+        rememberDevice(level);
+        onUnlocked(level);
         return;
       }
       const f = fails + 1;

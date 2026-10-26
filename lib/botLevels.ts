@@ -28,7 +28,13 @@ export function botDisplayName(level: BotLevel): string {
 
 /** One entrant in a shared-board team — a real person or a bot, mixed freely. The game engine
  *  uses this to know who's physically up next within a team's turn (see MikkeMusApp.tsx). */
-export type TeamMember = { name: string; isBot: boolean; botLevel?: BotLevel };
+export type TeamMember = {
+  name: string;
+  isBot: boolean;
+  botLevel?: BotLevel;
+  /** A bot in a cup (lib/botCup.ts): its skill on the level scale, which the level of each match is worked out from. */
+  skill?: number;
+};
 
 export const BOT_LEVELS: Record<BotLevel, BotLevelConfig> = {
   "1": { key: "1", name: "Littler", targetMed: 20 },

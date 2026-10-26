@@ -1,6 +1,7 @@
 import { reportError } from "./errorReporting";
 import { supabase } from "./supabaseClient";
 import { normalizeVariant } from "./rules";
+import type { CupConfig } from "./botCup";
 import type { Participant, Tournament, TournamentMatch, TournamentMode } from "./tournament";
 
 type TournamentRow = {
@@ -19,6 +20,8 @@ type TournamentRow = {
    *    alter table tournaments add column if not exists variant text;
    *  in Supabase before the first non-standard tournament — see tournamentToRow. */
   variant?: string | null;
+  /** A cup against bots (lib/botCup.ts). Nullable column, added after the table — see supabase-setup-cup.sql. */
+  cup?: CupConfig | null;
 };
 
 function rowToTournament(row: TournamentRow): Tournament {
@@ -35,6 +38,7 @@ function rowToTournament(row: TournamentRow): Tournament {
     // Older tournaments (before match_size existed) default to the normal 1-vs-1 behavior.
     matchSize: row.match_size ?? 2,
     variant: normalizeVariant(row.variant),
+    ...(row.cup ? { cup: row.cup } : {}),
   };
 }
 
@@ -53,6 +57,8 @@ function tournamentToRow(t: Tournament): TournamentRow {
     // Only written when it says something. A standard tournament never touches the column, so
     // saving one keeps working on a database where the column has not been added yet.
     ...(t.variant && t.variant !== "standard" ? { variant: t.variant } : {}),
+    // Likewise: only a cup touches the column (run supabase-setup-cup.sql first).
+    ...(t.cup ? { cup: t.cup } : {}),
   };
 }
 
