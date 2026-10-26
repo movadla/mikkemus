@@ -20,10 +20,10 @@ export default function MorePage() {
       <div className="screen-inner wide">
         <ScreenTop title="Mer" />
         <div className="grid gap-2 md:grid-cols-2">
+          <Row leading={<SettingsIcon className={icon} />} title="Innstillinger" subtitle={`${FX_LABELS[fx]} · ${theme === "auto" ? "Auto" : theme === "dark" ? "Mørk" : "Dag"}`} href="/innstillinger" />
           <Row leading={<BookIcon className={icon} />} title="Regler" subtitle="Slik spilles kampene" href="/?m=regler" />
           {!limited && <Row leading={<CoinIcon className={icon} />} title="Spill på morro" subtitle="Tipp vinneren mens kampen pågår" href="/bet" />}
           {!limited && <Row leading={<TvIcon className={icon} />} title="Storskjerm" subtitle="Kampen, trekningen og mesteren i stort format" href="/storskjerm" />}
-          <Row leading={<SettingsIcon className={icon} />} title="Innstillinger" subtitle={`${FX_LABELS[fx]} · ${theme === "auto" ? "Auto" : theme === "dark" ? "Mørk" : "Dag"}`} href="/innstillinger" />
         </div>
         {/* A way out, where it is found: log out and type the other code to see the app as someone with it does. */}
         <div className="mt-6 md:max-w-sm">

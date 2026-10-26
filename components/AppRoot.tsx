@@ -10,8 +10,7 @@ import { loadActiveTournamentId } from "@/lib/tournamentStorage";
 import { useScolia } from "@/lib/useScolia";
 import dynamic from "next/dynamic";
 import { HeroMascot } from "./HeroMascot";
-import { BookIcon, BullseyeIcon, DartIcon, TrophyIcon } from "./icons";
-import { LastPlayedCard } from "./LastPlayedCard";
+import { BullseyeIcon, DartIcon, TrophyIcon } from "./icons";
 import { RulesIntro } from "./RulesIntro";
 import { ScoliaDot, summarizeScolia } from "./ScoliaStatusBadge";
 import { SkeletonRows } from "./ui/Skeleton";
@@ -20,7 +19,6 @@ import { Welcome, hasBeenWelcomed, markWelcomed } from "./Welcome";
 import { BottomNav } from "./ui/BottomNav";
 import { Wordmark } from "./ui/BrandMark";
 import { Button } from "./ui/Button";
-import { Row } from "./ui/Row";
 import { FOCUS_RING } from "./ui/focus";
 
 // The three ways into a game are loaded when one is chosen, not with the front page: the board alone is most of the app
@@ -64,8 +62,6 @@ export function AppRoot() {
   const [matchUnderway, setMatchUnderway] = useState<string[] | null>(null);
   // The rules introduction, on request (the address ?m=regler, from Mer). The first-time showing is MikkeMusApp's.
   const [showRules, setShowRules] = useState(false);
-  // The match that was played last, played again with the same people (from the front page of the limited code).
-  const [replayPlayers, setReplayPlayers] = useState<string[] | null>(null);
   const [welcomed, setWelcomed] = useState(true);
   const loaded = useRosterLoaded();
   // Only connected while the home screen itself is showing — MikkeMusApp/TournamentApp own their
@@ -124,16 +120,7 @@ export function AppRoot() {
     );
   }
   if (showRules) return <RulesIntro onDone={() => setShowRules(false)} />;
-  if (mode === "single")
-    return (
-      <MikkeMusApp
-        initialPlayers={replayPlayers ?? undefined}
-        onExitToHome={() => {
-          setReplayPlayers(null);
-          setMode("home");
-        }}
-      />
-    );
+  if (mode === "single") return <MikkeMusApp onExitToHome={() => setMode("home")} />;
   if (mode === "tournament") return <TournamentApp onExitToHome={() => setMode("home")} />;
   if (mode === "bullduel") return <BullDuelApp onExitToHome={() => setMode("home")} />;
 
@@ -192,20 +179,6 @@ export function AppRoot() {
         </div>
 
         <TonightCard />
-        {/* The limited code has no statistics for the front page: the last match played, to play again, and the rules. */}
-        {limited && (
-          <>
-            <LastPlayedCard
-              onReplay={(players) => {
-                setReplayPlayers(players);
-                setMode("single");
-              }}
-            />
-            <div className="mb-6">
-              <Row leading={<BookIcon className="w-5 h-5" />} title="Regler" subtitle="Slik spilles kampene" onClick={() => setShowRules(true)} />
-            </div>
-          </>
-        )}
       </div>
       <BottomNav current="spill" onTurnering={tournamentsOn ? () => setMode("tournament") : undefined} />
     </div>
