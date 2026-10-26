@@ -81,6 +81,8 @@ export type Tournament = {
   variant?: GameVariant;
   /** Set when this is a cup against bots (lib/botCup.ts): its name, trophy and how the bots throw. */
   cup?: CupConfig;
+  /** A name the players gave it ("Fredagsdart"); shown over the bracket and in the trophy cabinet. */
+  name?: string;
   /** "knockout": a straight knockout, the whole bracket there from the start (lib/knockout.ts). Absent on the older tournaments with groups. */
   format?: "knockout";
   /** The seeding, strongest first — the order the bracket was drawn from. Knockout only. */
@@ -514,4 +516,9 @@ export function recordMatchResult(tournament: Tournament, matchId: string, place
     return advanceBracket(next);
   }
   return next;
+}
+
+/** What the tournament is called on screen: the name it was given, else the cup's, else just "Turnering". */
+export function tournamentTitle(t: Pick<Tournament, "name" | "cup">): string {
+  return t.name?.trim() || t.cup?.name || "Turnering";
 }

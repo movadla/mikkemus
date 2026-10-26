@@ -1,7 +1,7 @@
 "use client";
 
 import { outIn, roadOf, seedOf } from "@/lib/knockout";
-import type { Tournament } from "@/lib/tournament";
+import { tournamentTitle, type Tournament } from "@/lib/tournament";
 import { roundName } from "./KnockoutOverview";
 
 const FOCUS_RING =
@@ -26,7 +26,7 @@ export function EliminatedScreen({
   return (
     <div className="animate-screen-enter screen flex items-center justify-center" style={{ background: "var(--color-bg)" }}>
       <div className="screen-inner">
-        <p className="section-label text-center mb-2">{(tournament.cup?.name ?? "Turneringen").toUpperCase()}</p>
+        <p className="section-label text-center mb-2">{tournamentTitle(tournament).toUpperCase()}</p>
         <h1 className="font-display text-center mb-6" style={{ color: "var(--color-cream)", fontSize: "2rem" }}>
           {names.length === 1 ? "Ute av turneringen" : "Alle er ute av turneringen"}
         </h1>

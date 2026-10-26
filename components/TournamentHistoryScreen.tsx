@@ -74,7 +74,7 @@ export function TournamentHistoryScreen({ onBack }: { onBack: () => void }) {
                   <span className="tabular shrink-0" style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>{(t.completedAt ?? t.createdAt).slice(0, 10)}</span>
                 </div>
                 <p style={{ color: "var(--color-cream)", fontSize: "0.9rem" }}>
-                  {t.cup?.trophy ?? "Turnering"}
+                  {t.name ?? t.cup?.trophy ?? "Turnering"}
                   {places?.second ? ` · finale mot ${places.second}` : ""}
                 </p>
                 <p style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>

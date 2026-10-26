@@ -70,4 +70,19 @@ describe("matches between bots", () => {
     const t = createKnockout("individual", [{ name: "A", isBot: true, botLevel: "3" }, { name: "B", isBot: true, botLevel: "4" }], "t", "2026-01-01");
     expect(playElsewhere(t).decided).toEqual([]);
   });
+
+  it("handles a VM of 128: all names are different, and the whole cup can be played out", () => {
+    const t = cup(128, 3);
+    expect(t.participants).toHaveLength(128);
+    expect(new Set(t.participants.map((p) => p.name)).size).toBe(128);
+    expect(t.participants.filter((p) => p.isBot).every((p) => !/ d+$/.test(p.name))).toBe(true);
+    // Three of the house: only the bot matches of the first round are played elsewhere, and 64 matches are all it takes to start.
+    const first = playElsewhere(t).tournament;
+    expect(first.matches.filter((m) => m.simulated).every((m) => m.bracketRoundSize === 64)).toBe(true);
+    // With the house out of the way the rest is one call.
+    const bots = createKnockout("individual", t.participants.filter((p) => p.isBot), "t2", "2026-01-01", "standard", t.cup);
+    const done = playElsewhere(bots).tournament;
+    expect(done.status).toBe("done");
+    expect(done.winner).toBeTruthy();
+  });
 });

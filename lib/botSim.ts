@@ -94,7 +94,8 @@ export function isSimulable(t: Tournament, match: TournamentMatch): boolean {
 export function playElsewhere(t: Tournament): { tournament: Tournament; decided: string[] } {
   let cur = t;
   const decided: string[] = [];
-  for (let guard = 0; guard < 64; guard++) {
+  // One match is decided per turn of the loop, so no more turns than there are matches (a cup of 128 has 128).
+  for (let guard = 0; guard <= t.matches.length; guard++) {
     const ready = cur.matches.filter((m) => !m.winner && !!m.participantA && !!m.participantB);
     const human = ready.find((m) => !isSimulable(cur, m));
     const limit = human ? human.bracketRoundSize ?? 1 : 0;

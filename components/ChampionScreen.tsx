@@ -4,7 +4,7 @@ import { useState } from "react";
 import { awards, isHouseName, outIn, roadOf, undoableMatch } from "@/lib/knockout";
 import { fxFlags, useFxLevel } from "@/lib/fxLevel";
 import { firstKit } from "@/lib/teamKit";
-import { podium, type Tournament } from "@/lib/tournament";
+import { podium, tournamentTitle, type Tournament } from "@/lib/tournament";
 import { BracketTree } from "./BracketTree";
 import { ShirtRain } from "./ShirtRain";
 import { Trophy } from "./Trophy";
@@ -56,7 +56,7 @@ export function ChampionScreen({
           </button>
         )}
         <p className="section-label text-center" style={{ color: "var(--color-gold)" }}>
-          {(tournament.cup?.name ?? "Turneringen").toUpperCase()} · MESTER
+          {tournamentTitle(tournament).toUpperCase()} · MESTER
         </p>
         <Trophy cannons={fx.confetti && !shirts} />
         <h1 className="font-display text-center" style={{ color: "var(--color-gold)", fontSize: "clamp(2.2rem, 11vw, 3.4rem)", lineHeight: 1.05 }}>

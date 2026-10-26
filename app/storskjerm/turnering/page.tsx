@@ -7,7 +7,7 @@ import { roundName } from "@/components/KnockoutOverview";
 import { nextToThrow } from "@/lib/botSim";
 import { isKnockout } from "@/lib/knockout";
 import { fetchLatestTournament } from "@/lib/tournamentStorage";
-import type { Tournament } from "@/lib/tournament";
+import { tournamentTitle, type Tournament } from "@/lib/tournament";
 
 const POLL_MS = 4000;
 
@@ -59,7 +59,7 @@ export default function StorskjermTurneringPage() {
       {tournament && isKnockout(tournament) && (
         <>
           <header className="text-center mb-6">
-            <p className="section-label" style={{ fontSize: "0.9rem" }}>{(tournament.cup?.name ?? "Turnering").toUpperCase()}</p>
+            <p className="section-label" style={{ fontSize: "0.9rem" }}>{tournamentTitle(tournament).toUpperCase()}</p>
             {tournament.status === "done" ? (
               <h1 className="font-display" style={{ color: "var(--color-gold)", fontSize: "clamp(2.5rem, 7vw, 5rem)", lineHeight: 1.05 }}>
                 {tournament.winner} er mester

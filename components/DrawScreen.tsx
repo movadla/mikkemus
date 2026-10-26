@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { firstRoundPairs, openDraw, swapEntrants } from "@/lib/knockout";
 import type { Participant } from "@/lib/tournament";
 import { ScreenTop } from "./ScreenTop";
+import { StepStrip } from "./StepStrip";
 import { StickyAction } from "./StickyAction";
 
 const FOCUS_RING =
@@ -21,13 +22,14 @@ const freshSeed = () => Math.floor(Math.random() * 2 ** 31);
  */
 export function DrawScreen({
   seeded,
-  cupName,
+  summary,
   onBack,
   onStart,
 }: {
   /** The entrants strongest first. */
   seeded: Participant[];
-  cupName?: string;
+  /** What is being drawn for, in a line; tapping it goes back to the setup. */
+  summary?: string;
   onBack: () => void;
   onStart: (order: Participant[]) => void;
 }) {
@@ -45,7 +47,9 @@ export function DrawScreen({
       return () => clearTimeout(t);
     }
     const timers: ReturnType<typeof setTimeout>[] = [];
-    for (let i = 1; i <= pairs.length; i++) timers.push(setTimeout(() => setRevealed(i), 380 * i));
+    // A cup of 128 would take a minute at this pace, so the whole reveal is held to about three seconds.
+    const step = Math.min(380, 3000 / pairs.length);
+    for (let i = 1; i <= pairs.length; i++) timers.push(setTimeout(() => setRevealed(i), step * i));
     return () => timers.forEach(clearTimeout);
   }, [round, pairs.length]);
 
@@ -84,7 +88,7 @@ export function DrawScreen({
         type="button"
         onClick={() => tap(name)}
         aria-pressed={picked !== null && order[picked].name === name}
-        className={`flex-1 min-w-0 text-left px-3 rounded-lg ${FOCUS_RING}`}
+        className={`flex-1 min-w-0 overflow-hidden flex items-center text-left px-3 rounded-lg ${FOCUS_RING}`}
         style={{
           minHeight: "2.75rem",
           background: picked !== null && order[picked].name === name ? "var(--teal-soft, rgba(52,195,210,0.16))" : "var(--color-cell)",
@@ -95,10 +99,10 @@ export function DrawScreen({
           transition: "opacity 260ms ease, transform 260ms ease",
         }}
       >
-        <span className="tabular" style={{ color: "var(--color-muted)", fontSize: "0.75rem", marginRight: "0.4rem" }}>
+        <span className="tabular shrink-0" style={{ color: "var(--color-muted)", fontSize: "0.75rem", marginRight: "0.4rem" }}>
           {seedNo(name)}
         </span>
-        <span className="truncate">{name}</span>
+        <span className="min-w-0 truncate">{name}</span>
       </button>
     ) : (
       <span className="flex-1 px-3 flex items-center" style={{ minHeight: "2.75rem", color: "var(--color-muted)", fontStyle: "italic", fontSize: "0.85rem", opacity: shown ? 1 : 0, transition: "opacity 260ms ease" }}>
@@ -110,10 +114,12 @@ export function DrawScreen({
     <div className="animate-screen-enter screen has-sticky-action" style={{ background: "var(--color-bg)" }}>
       <div className="screen-inner">
         <ScreenTop title="Trekningen" onBack={onBack} backLabel="← Tilbake" />
-        {cupName && (
-          <p className="text-center mb-4" style={{ color: "var(--color-muted)", fontSize: "0.85rem" }}>
-            {cupName}
-          </p>
+        <StepStrip step={1} />
+        {summary && (
+          <button type="button" onClick={onBack} className={`tactile w-full rounded-lg px-4 flex items-center justify-between gap-3 mb-4 ${FOCUS_RING}`} style={{ minHeight: "2.75rem", background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-cream)", fontSize: "0.9rem" }}>
+            <span className="truncate">{summary}</span>
+            <span style={{ color: "var(--color-teal)" }}>Endre</span>
+          </button>
         )}
         <div className="flex gap-2 mb-4" role="radiogroup" aria-label="Type trekning">
           {(["seeded", "open"] as const).map((m) => (
@@ -130,9 +136,11 @@ export function DrawScreen({
             </button>
           ))}
         </div>
-        <p className="mb-3" style={{ color: "var(--color-muted)", fontSize: "0.85rem" }}>
-          {mode === "seeded" ? "De sterkeste møtes sent: nummer 1 mot den svakeste, og de beste får walkover når tallet ikke går opp." : "Alle trekkes tilfeldig. Trykk på to navn for å bytte plass."}
-        </p>
+        {mode === "open" && (
+          <p className="mb-3" style={{ color: "var(--color-muted)", fontSize: "0.85rem" }}>
+            Trykk på to navn for å bytte plass
+          </p>
+        )}
         <div className="space-y-2 mb-4">
           {pairs.map((p, i) => (
             <div key={`${round}-${i}`} className="flex items-center gap-2 rounded-xl p-2" style={{ background: "var(--color-panel)", border: "1px solid var(--color-border)" }}>

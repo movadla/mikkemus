@@ -2,21 +2,25 @@
 
 import { useState } from "react";
 import { type Participant, type TournamentMode } from "@/lib/tournament";
-import { DEFAULT_CUP_LEVEL, buildCupParticipants, cupType, makeCup, type CupConfig } from "@/lib/botCup";
-import { RULES, baseOf, botsSupported, withStandRule, type GameVariant } from "@/lib/rules";
+import { DEFAULT_CUP_LEVEL, MAX_CUP_SIZE, TEAM_CUP_MAX, buildCupParticipants, cupType, makeCup, type CupConfig } from "@/lib/botCup";
+import { BOT_LEVELS } from "@/lib/botLevels";
+import { RULES, baseOf, botsSupported, hasStandRule, withStandRule, type GameVariant } from "@/lib/rules";
 import { splitPeople, toMember, type PickedTeam, type Person } from "@/lib/people";
 import { individualSetupProblem, setupSummary, teamSetupProblem } from "@/lib/setupProblem";
 import { PeopleIcon, PersonIcon, TrophyIcon } from "./icons";
 import { PlayerPicker } from "./PlayerPicker";
 import { RulesPicker } from "./RulesPicker";
 import { ScreenTop } from "./ScreenTop";
-import { CupOptions, type CupChoice } from "./CupOptions";
+import { CupDetails, CupSizePicker, CupTypePicker, type CupChoice } from "./CupOptions";
 import { ModeToggle, commitPeople, commitTeams } from "./SetupScreen";
+import { StepStrip } from "./StepStrip";
 import { StickyAction } from "./StickyAction";
 import { TeamPicker } from "./TeamPicker";
 
 const MIN_INDIVIDUAL = 2;
 const MIN_TEAMS = 2;
+const FOCUS_RING =
+  "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
 
 /** The people of a previously-submitted individual tournament — used to restore state when
  *  navigating back from the draw (see initialMode/initialParticipants). */
@@ -38,10 +42,11 @@ export function TournamentSetupScreen({
   initialParticipants = null,
   initialVariant = "standard",
   initialCup = null,
+  initialName = "",
 }: {
   onBack: () => void;
   /** On to the draw, with everyone who is in. */
-  onNext: (mode: TournamentMode, participants: Participant[], variant: GameVariant, cup?: CupConfig) => void;
+  onNext: (mode: TournamentMode, participants: Participant[], variant: GameVariant, cup?: CupConfig, name?: string) => void;
   /** The trophy cabinet, one tap away. */
   onHistory?: () => void;
   /** Seeds mode/people/teams from a previous submission — lets "Tilbake" from the draw restore
@@ -51,10 +56,13 @@ export function TournamentSetupScreen({
   initialVariant?: GameVariant;
   /** Coming back from the draw of a cup against bots: its choices are restored, and only the house's own entrants are picked again. */
   initialCup?: CupConfig | null;
+  initialName?: string;
 }) {
   // Individual to begin with, as in Enkeltkamp, so the whole screen is there from the first moment.
   const [mode, setMode] = useState<TournamentMode>(initialMode ?? "individual");
   const [variant, setVariant] = useState<GameVariant>(initialVariant);
+  const [name, setName] = useState(initialName);
+  const [moreOpen, setMoreOpen] = useState(false);
   // A cup against bots keeps only the house's own entrants: the bots are made again when the cup is.
   const ownOf = (list: Participant[] | null) => (initialCup && list ? list.filter((p) => (p.members ? p.members.some((m) => !m.isBot) : !p.isBot)) : list);
   const [people, setPeople] = useState<Person[]>(() => (initialMode === "individual" && initialParticipants ? peopleFromParticipants(ownOf(initialParticipants) ?? []) : []));
@@ -70,8 +78,11 @@ export function TournamentSetupScreen({
   // the button just waits until the bots are taken out or the game is shortened.
   const botsAllowed = botsSupported(variant);
   const ownCount = mode === "team" ? teams.length : people.length;
+  // A cup of teams is smaller than one of people: the bots of a team cup need two names each.
+  const maxSize = mode === "team" ? TEAM_CUP_MAX : MAX_CUP_SIZE;
+  const cupSize = Math.min(cup.size, maxSize);
   // Against bots, the house needs only itself; the bots make up the rest, and the longer games have none.
-  const cupProblem = !botsAllowed ? "Botene spiller bare 1–3 kryss" : ownCount >= cup.size ? "Velg et større antall, eller færre av dere" : null;
+  const cupProblem = !botsAllowed ? "Botene spiller bare 1–3 kryss" : ownCount >= cupSize ? "For mange spillere til dette antallet" : null;
   const problem = cupMode
     ? mode === "team"
       ? (teamSetupProblem(teams, true, 1) ?? cupProblem)
@@ -81,20 +92,24 @@ export function TournamentSetupScreen({
       : individualSetupProblem(people.map((p) => p.name), !botsAllowed && people.some((p) => p.isBot), MIN_INDIVIDUAL);
 
   const crosses = `${RULES[baseOf(variant)].target} kryss`;
+  const trimmedName = name.trim();
+  // What is behind "Flere valg", in a line, so closed does not mean hidden.
+  const moreSummary = [crosses, mode === "team" && hasStandRule(variant) ? "stå ved 3" : null, cupMode ? BOT_LEVELS[cup.level].name : null, trimmedName || null].filter(Boolean).join(" · ");
 
   function handleNext() {
     if (problem) return;
+    const given = trimmedName || undefined;
     if (cupMode) {
       // The house's own entrants, with the bots made to fill the cup: every random thing in it comes from one seed.
       const config = makeCup(cup.kind, cup.level, cup.growth, Math.floor(Math.random() * 2 ** 31));
       if (mode === "individual") {
         commitPeople(people);
         const own: Participant[] = people.map((p) => ({ name: p.name, isBot: false }));
-        onNext("individual", buildCupParticipants("individual", own, cup.size, config), withStandRule(variant, false), config);
+        onNext("individual", buildCupParticipants("individual", own, cupSize, config), withStandRule(variant, false), config, given);
       } else {
         commitTeams(teams);
         const own: Participant[] = teams.map((t) => ({ name: t.name, isBot: false, members: t.members.map(toMember) }));
-        onNext("team", buildCupParticipants("team", own, cup.size, config), variant, config);
+        onNext("team", buildCupParticipants("team", own, cupSize, config), variant, config, given);
       }
       return;
     }
@@ -102,11 +117,11 @@ export function TournamentSetupScreen({
       commitPeople(people);
       const { botLevels } = splitPeople(people);
       const participants: Participant[] = people.map((p) => ({ name: p.name, isBot: p.isBot, botLevel: botLevels[p.name] }));
-      onNext("individual", participants, withStandRule(variant, false));
+      onNext("individual", participants, withStandRule(variant, false), undefined, given);
     } else {
       commitTeams(teams);
       const participants: Participant[] = teams.map((t) => ({ name: t.name, isBot: false, members: t.members.map(toMember) }));
-      onNext("team", participants, variant);
+      onNext("team", participants, variant, undefined, given);
     }
   }
 
@@ -124,7 +139,25 @@ export function TournamentSetupScreen({
             ) : undefined
           }
         />
+        <StepStrip step={0} />
 
+        <p className="section-label mb-2">HVEM ER MED{ownCount > 0 ? ` · ${ownCount}` : ""}</p>
+        <ModeToggle
+          label="Hvem spiller"
+          value={mode}
+          onChange={setMode}
+          options={[
+            { value: "individual", label: "Hver for seg", icon: <PersonIcon className="w-4 h-4" /> },
+            { value: "team", label: "Lag", icon: <PeopleIcon className="w-4 h-4" /> },
+          ]}
+        />
+        {mode === "team" ? (
+          <TeamPicker teams={teams} onChange={setTeams} botsAllowed={botsAllowed && !cupMode} />
+        ) : (
+          <PlayerPicker people={people} onChange={setPeople} botsAllowed={botsAllowed && !cupMode} bulk />
+        )}
+
+        <p className="section-label mb-2 mt-2">TURNERING</p>
         <ModeToggle
           label="Type turnering"
           value={cupMode ? "cup" : "plain"}
@@ -134,31 +167,46 @@ export function TournamentSetupScreen({
             { value: "cup", label: "Pokal mot botter", icon: <TrophyIcon className="w-4 h-4" /> },
           ]}
         />
+        {cupMode && (
+          <>
+            <CupTypePicker value={{ ...cup, size: cupSize }} onChange={setCup} maxSize={maxSize} />
+            <p className="section-label mb-2">ANTALL DELTAKERE</p>
+            <CupSizePicker value={{ ...cup, size: cupSize }} onChange={setCup} own={ownCount} maxSize={maxSize} />
+          </>
+        )}
 
-        <ModeToggle
-          value={mode}
-          onChange={setMode}
-          options={[
-            { value: "individual", label: "Hver for seg", icon: <PersonIcon className="w-4 h-4" /> },
-            { value: "team", label: "Lag", icon: <PeopleIcon className="w-4 h-4" /> },
-          ]}
-        />
-
-        {/* Which game every match is played as — the same picker Enkeltkamp uses. */}
-        <RulesPicker variant={variant} onChange={setVariant} teamPlay={mode === "team"} />
-
-        {cupMode && <CupOptions value={cup} onChange={setCup} maxOwn={ownCount} />}
-
-        {mode === "team" ? (
-          <TeamPicker teams={teams} onChange={setTeams} botsAllowed={botsAllowed && !cupMode} />
-        ) : (
-          <PlayerPicker people={people} onChange={setPeople} botsAllowed={botsAllowed && !cupMode} />
+        <button
+          type="button"
+          onClick={() => setMoreOpen((o) => !o)}
+          aria-expanded={moreOpen}
+          className={`tactile w-full rounded-lg px-4 flex items-center justify-between gap-3 text-left mb-4 ${FOCUS_RING}`}
+          style={{ minHeight: "2.75rem", background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+        >
+          <span style={{ color: "var(--color-cream)", fontWeight: 600, fontSize: "0.9rem" }}>Flere valg</span>
+          <span className="truncate" style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>
+            {moreSummary} {moreOpen ? "⌃" : "›"}
+          </span>
+        </button>
+        {moreOpen && (
+          <div className="mb-6">
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              maxLength={40}
+              placeholder="Navn på turneringen"
+              aria-label="Navn på turneringen"
+              className={`w-full px-4 rounded-lg mb-4 ${FOCUS_RING}`}
+              style={{ minHeight: "2.75rem", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
+            />
+            <RulesPicker variant={variant} onChange={setVariant} teamPlay={mode === "team"} labelAlign="left" />
+            {cupMode && <CupDetails value={{ ...cup, size: cupSize }} onChange={setCup} />}
+          </div>
         )}
 
         <StickyAction
           onClick={handleNext}
           ready={!problem}
-          summary={setupSummary([cupMode ? `${cupType(cup.kind).name}: ${ownCount} av ${cup.size}` : mode === "team" ? `${teams.length} lag` : `${people.length} spillere`, "utslagsturnering", crosses])}
+          summary={setupSummary([cupMode ? `${cupType(cup.kind).name}: ${ownCount} av ${cupSize}` : mode === "team" ? `${teams.length} lag` : `${people.length} spillere`, crosses])}
           reason={problem}
         >
           Neste: trekning

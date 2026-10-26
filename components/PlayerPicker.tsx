@@ -31,6 +31,7 @@ export function PlayerPicker({
   botsAllowed = true,
   guests = false,
   hidden = [],
+  bulk = false,
 }: {
   people: Person[];
   onChange: (people: Person[]) => void;
@@ -40,6 +41,8 @@ export function PlayerPicker({
   guests?: boolean;
   /** Names not offered — people already on another team. */
   hidden?: string[];
+  /** Offers everyone at once, and nobody. */
+  bulk?: boolean;
 }) {
   const [adding, setAdding] = useState<"player" | "guest" | "bot" | null>(null);
   const [nameInput, setNameInput] = useState("");
@@ -194,6 +197,19 @@ export function PlayerPicker({
           className={`w-full px-4 rounded-lg mb-4 ${FOCUS_RING}`}
           style={{ minHeight: "2.75rem", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)", fontSize: "0.9rem" }}
         />
+      )}
+
+      {bulk && known.length > 0 && (
+        <div className="flex justify-end gap-2 mb-2">
+          {([
+            ["Alle", () => onChange([...people, ...filterNames(known, query).filter((n) => orderOf(n) === -1).map((name) => ({ name, isBot: false }))])],
+            ["Ingen", () => onChange([])],
+          ] as const).map(([label, run]) => (
+            <button key={label} type="button" onClick={run} className={`tactile rounded-lg px-3 text-sm ${FOCUS_RING}`} style={{ minHeight: "2.25rem", background: "var(--color-surface)", color: "var(--color-muted)", border: "1px solid var(--color-border)" }}>
+              {label}
+            </button>
+          ))}
+        </div>
       )}
 
       {shown.length > 0 && (

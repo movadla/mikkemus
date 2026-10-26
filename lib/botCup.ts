@@ -14,18 +14,21 @@ import type { Participant, Tournament, TournamentMatch, TournamentMode } from ".
 
 export type CupKind = "vm" | "em" | "gs" | "nm" | "open";
 
-export type CupType = { kind: CupKind; name: string; trophy: string; tagline: string; defaultSize: number };
+export type CupType = { kind: CupKind; name: string; trophy: string; tagline: string; defaultSize: number; /** The sizes it can be played at. */ sizes: number[] };
 
 export const CUP_TYPES: CupType[] = [
-  { kind: "vm", name: "VM i dart", trophy: "Verdensmesterpokalen", tagline: "Hele verden, én pokal", defaultSize: 16 },
-  { kind: "em", name: "EM i dart", trophy: "Europamesterpokalen", tagline: "Europas beste kasteføringer", defaultSize: 8 },
-  { kind: "gs", name: "Grand Slam", trophy: "Grand Slam-pokalen", tagline: "Fire runder mot de beste", defaultSize: 16 },
-  { kind: "nm", name: "Norgesmesterskapet", trophy: "Norgesmesterpokalen", tagline: "Kampen om Norge", defaultSize: 8 },
-  { kind: "open", name: "Lilleaker Open", trophy: "Lilleaker-pokalen", tagline: "Hjemmebane, og alle vil ha pokalen", defaultSize: 8 },
+  { kind: "vm", name: "VM i dart", trophy: "Verdensmesterpokalen", tagline: "Hele verden, én pokal", defaultSize: 128, sizes: [4, 8, 16, 32, 64, 128] },
+  { kind: "em", name: "EM i dart", trophy: "Europamesterpokalen", tagline: "Europas beste kasteføringer", defaultSize: 8, sizes: [4, 8, 16, 32, 64] },
+  { kind: "gs", name: "Grand Slam", trophy: "Grand Slam-pokalen", tagline: "Fire runder mot de beste", defaultSize: 16, sizes: [4, 8, 16, 32, 64] },
+  { kind: "nm", name: "Norgesmesterskapet", trophy: "Norgesmesterpokalen", tagline: "Kampen om Norge", defaultSize: 8, sizes: [4, 8, 16, 32, 64] },
+  { kind: "open", name: "Lilleaker Open", trophy: "Lilleaker-pokalen", tagline: "Hjemmebane, og alle vil ha pokalen", defaultSize: 8, sizes: [4, 8, 16, 32, 64] },
 ];
 
 /** How many take part, the people of the house and the bots together. */
-export const CUP_SIZES = [4, 8, 16];
+export const CUP_SIZES = [4, 8, 16, 32, 64, 128];
+
+/** A cup of teams holds fewer: every team needs two named people, and the pool of names is not endless. */
+export const TEAM_CUP_MAX = 16;
 
 /** Where the cup begins when nothing is chosen: ChrisBell, 39 mm, which is the group's own average (Vadla measures about 37). */
 export const DEFAULT_CUP_LEVEL: BotLevel = "4";
@@ -96,12 +99,33 @@ export function levelForMatch(cup: CupConfig, skill: number, match: Pick<Tournam
   return String(Math.round(clamp(skill + stage + form))) as BotLevel;
 }
 
+/** Real names from the world of darts, so the bots read like a real field. Only the names are theirs: how a bot throws comes from the cup's level and the bot's own luck, not from the player it is named after. */
 const FIRST_NAMES_POOL = [
-  "Jonas Lindqvist", "Marco Bellini", "Pieter de Wit", "Callum Hartley", "Kasper Nygaard", "Luca Moretti", "Henrik Dahl", "Ruben Castillo",
-  "Declan O'Rourke", "Matti Korhonen", "Stefan Brandt", "Joao Ferreira", "Tobias Engel", "Nico Vandenberg", "Sven Eriksen", "Aleksi Heikkila",
-  "Ewan MacLeod", "Thijs Bakker", "Mateo Alvarez", "Oskar Berg", "Rory Callahan", "Felix Wagner", "Dario Conti", "Emil Strand",
-  "Liam Brennan", "Jakub Nowak", "Anders Moe", "Gerrit Smit", "Niklas Holm", "Teodor Lund", "Arne Solberg", "Kristian Aas",
-  "Sander Veen", "Casper Holt", "Yannick Dubois", "Milan Horvat", "Bastian Roth", "Hugo Lefevre", "Gunnar Vik", "Remy Laurent",
+  "Luke Littler", "Luke Humphries", "Michael van Gerwen", "Gerwyn Price", "Peter Wright", "Michael Smith",
+  "Nathan Aspinall", "Rob Cross", "Jonny Clayton", "Dave Chisnall", "James Wade", "Danny Noppert",
+  "Gary Anderson", "Stephen Bunting", "Chris Dobey", "Damon Heta", "Ross Smith", "Josh Rock",
+  "Dimitri Van den Bergh", "Ryan Searle", "Martin Schindler", "Mike De Decker", "Callan Rydz", "Jermaine Wattimena",
+  "Ryan Joyce", "Andrew Gilding", "Joe Cullen", "Daryl Gurney", "Krzysztof Ratajski", "Gabriel Clemens",
+  "Kim Huybrechts", "Raymond van Barneveld", "Phil Taylor", "Eric Bristow", "Jocky Wilson", "John Lowe",
+  "Bob Anderson", "Keith Deller", "Mervyn King", "Adrian Lewis", "Simon Whitlock", "Brendan Dolan",
+  "Mensur Suljovic", "Vincent van der Voort", "Wayne Mardle", "Dennis Priestley", "Rod Harrington", "Colin Lloyd",
+  "Ronnie Baxter", "Alan Warriner-Smith", "Steve Beaton", "Paul Lim", "Cliff Lazarenko", "Bobby George",
+  "Leighton Rees", "Peter Manley", "Kevin Painter", "Terry Jenkins", "Andy Hamilton", "Wes Newton",
+  "Justin Pipe", "Robert Thornton", "Steve West", "Devon Petersen", "Scott Williams", "Jelle Klaasen",
+  "Dirk van Duijvenbode", "Jose de Sousa", "Niels Zonneveld", "Gian van Veen", "Wessel Nijman", "Danny van Trijp",
+  "Kevin Doets", "Jeffrey de Graaf", "Max Hopp", "Ricardo Pietreczko", "Florian Hempel", "Cameron Menzies",
+  "Keegan Brown", "Luke Woodhouse", "Ian White", "Alan Norris", "Steve Lennon", "William O'Connor",
+  "Mickey Mansell", "Boris Krcmar", "Madars Razma", "Darius Labanauskas", "Karel Sedlacek", "Vladimir Andersen",
+  "Jeffrey de Zwaan", "Ritchie Edhouse", "Nick Kenny", "Rowby-John Rodriguez", "Dave Prins", "Christian Kist",
+  "Benito van de Pas", "Ron Meulenkamp", "Mark Webster", "Fallon Sherrock", "Beau Greaves", "Lisa Ashton",
+  "Deta Hedman", "Trina Gulliver", "Anastasia Dobromyslova", "Mikuru Suzuki", "Noa-Lynn van Leuven", "Aileen de Graaf",
+  "Rhian O'Sullivan", "Gemma Hayter", "Laura Turner", "Lorraine Winstanley", "Paula Jacklin", "Martin Adams",
+  "Scott Waites", "Glen Durrant", "Jim Williams", "Tony O'Shea", "Ted Hankey", "Andy Fordham",
+  "Mark McGeeney", "Tony David", "John Part", "Gary Mawson", "Darren Webster", "Dean Winstanley",
+  "Mark Dudbridge", "Chris Mason", "Matt Clark", "James Richardson", "Joe Murnan", "Jules van Dongen",
+  "Wesley Plaisier", "Dennis Nilsson", "Daniel Larsson", "Rusty-Jake Rodriguez", "Richie Howson", "Stowe Buntz",
+  "Lourence Ilagan", "Haupai Puha", "Paul Nicholson", "Jamie Caven", "Alan Soutar", "Dave Askew",
+  "Andy Jenkins", "Mark Walsh", "Brian Woods",
 ];
 
 const TEAM_NAMES_POOL = [
@@ -125,8 +149,8 @@ export function pickNames(pool: string[], count: number, taken: string[], seed: 
   return names;
 }
 
-/** The most the cup holds: the pools, with one more for each person of the house to be told apart from. */
-export const MAX_CUP_SIZE = 16;
+/** The most a cup holds: the VM. */
+export const MAX_CUP_SIZE = 128;
 
 /**
  * Everyone in the cup: the house's own entrants first (people alone, or teams), then the bots to make `size`. Bots get names

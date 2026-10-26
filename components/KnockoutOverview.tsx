@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { bracketRoundLabel, type Tournament, type TournamentMatch } from "@/lib/tournament";
+import { bracketRoundLabel, tournamentTitle, type Tournament, type TournamentMatch } from "@/lib/tournament";
 import { nextToThrow } from "@/lib/botSim";
 import { isHouseName, outIn, placeholderLabel, seedOf, undoableMatch, upcomingFor } from "@/lib/knockout";
 import { winChanceFor } from "@/lib/nextUp";
@@ -9,6 +9,7 @@ import { useRoster } from "@/lib/storage";
 import { BracketTree } from "./BracketTree";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { ScreenTop } from "./ScreenTop";
+import { StepStrip } from "./StepStrip";
 
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
@@ -202,7 +203,8 @@ export function KnockoutOverview({
       )}
       {selected && <MatchSheet tournament={tournament} match={selected} onClose={() => setSelected(null)} />}
       <div className="screen-inner" style={{ maxWidth: "min(100%, 64rem)" }}>
-        <ScreenTop title={tournament.cup?.name ?? "Turnering"} onBack={onExitToHome} right={onHistory ? <button type="button" onClick={onHistory} className={`tactile rounded-lg text-sm px-3 ${FOCUS_RING}`} style={{ minHeight: "2.75rem", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}>Pokaler</button> : undefined} />
+        <ScreenTop title={tournamentTitle(tournament)} onBack={onExitToHome} right={onHistory ? <button type="button" onClick={onHistory} className={`tactile rounded-lg text-sm px-3 ${FOCUS_RING}`} style={{ minHeight: "2.75rem", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}>Pokaler</button> : undefined} />
+        <StepStrip step={2} />
         {tournament.cup && (
           <p className="mb-4 text-center" style={{ color: "var(--color-muted)", fontSize: "0.85rem" }}>
             Dere spiller om {tournament.cup.trophy}

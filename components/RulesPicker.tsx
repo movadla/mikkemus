@@ -18,18 +18,20 @@ export function RulesPicker({
   variant,
   onChange,
   teamPlay,
+  labelAlign = "center",
 }: {
   variant: GameVariant;
   onChange: (next: GameVariant) => void;
   /** Whether the stand rule is on offer — it only means something when a team has several members. */
   teamPlay: boolean;
+  labelAlign?: "center" | "left";
 }) {
   const base = baseOf(variant);
   const stand = hasStandRule(variant);
 
   return (
     <div className="mb-6">
-      <p className="section-label text-center mb-2">KRYSS PER RAD</p>
+      <p className={`section-label ${labelAlign === "center" ? "text-center " : ""}mb-2`}>KRYSS PER RAD</p>
       <div className="flex gap-2" role="radiogroup" aria-label="Kryss per rad">
         {VARIANT_ORDER.map((v) => {
           const selected = base === v;

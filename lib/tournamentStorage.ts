@@ -22,6 +22,8 @@ type TournamentRow = {
   variant?: string | null;
   /** A cup against bots (lib/botCup.ts). Nullable column, added after the table — see supabase-setup-cup.sql. */
   cup?: CupConfig | null;
+  /** The name the players gave it. Nullable column, added after the table — see supabase-setup-name.sql. */
+  name?: string | null;
 };
 
 function rowToTournament(row: TournamentRow): Tournament {
@@ -42,6 +44,7 @@ function rowToTournament(row: TournamentRow): Tournament {
     matchSize: row.match_size ?? 2,
     variant: normalizeVariant(row.variant),
     ...(row.cup ? { cup: row.cup } : {}),
+    ...(row.name ? { name: row.name } : {}),
   };
 }
 
@@ -62,6 +65,8 @@ function tournamentToRow(t: Tournament): TournamentRow {
     ...(t.variant && t.variant !== "standard" ? { variant: t.variant } : {}),
     // Likewise: only a cup touches the column (run supabase-setup-cup.sql first).
     ...(t.cup ? { cup: t.cup } : {}),
+    // And only a named one touches the name column (run supabase-setup-name.sql first).
+    ...(t.name ? { name: t.name } : {}),
   };
 }
 

@@ -56,6 +56,7 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
   const [pendingParticipants, setPendingParticipants] = useState<Participant[] | null>(null);
   const [pendingVariant, setPendingVariant] = useState<GameVariant>("standard");
   const [pendingCup, setPendingCup] = useState<CupConfig | null>(null);
+  const [pendingName, setPendingName] = useState("");
   const [currentMatch, setCurrentMatch] = useState<TournamentMatch | null>(null);
   // The match that just ended, so the overview can show what it did to the bracket. Kept only until
   // the next match starts — it is about the moment after a result, not a permanent setting. A
@@ -120,7 +121,8 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
     if (submitting || !pendingMode) return;
     setSubmitting(true);
     const id = newTournamentId();
-    const created = createKnockout(pendingMode, order, id, new Date().toISOString(), pendingVariant, pendingCup ?? undefined);
+    const made = createKnockout(pendingMode, order, id, new Date().toISOString(), pendingVariant, pendingCup ?? undefined);
+    const created = pendingName ? { ...made, name: pendingName } : made;
     setTournament(created);
     setJustPlayedId(null);
     setElsewhereIds([]);
@@ -130,7 +132,8 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
     setSubmitting(false);
   }
 
-  function handleSetupNext(mode: TournamentMode, participants: Participant[], variant: GameVariant, cup?: CupConfig) {
+  function handleSetupNext(mode: TournamentMode, participants: Participant[], variant: GameVariant, cup?: CupConfig, name?: string) {
+    setPendingName(name ?? "");
     setPendingMode(mode);
     setPendingParticipants(participants);
     setPendingVariant(variant);
@@ -269,12 +272,13 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
         initialParticipants={pendingParticipants}
         initialVariant={pendingVariant}
         initialCup={pendingCup}
+        initialName={pendingName}
       />
     );
   }
 
   if (screen === "draw" && pendingMode && pendingParticipants) {
-    return <DrawScreen seeded={seededOrder()} cupName={pendingCup?.name} onBack={() => setScreen("setup")} onStart={createAndOpen} />;
+    return <DrawScreen seeded={seededOrder()} summary={[pendingName || pendingCup?.name || "Turnering", `${pendingParticipants.length} deltakere`].join(" · ")} onBack={() => setScreen("setup")} onStart={createAndOpen} />;
   }
 
   if (screen === "match" && tournament && currentMatch && matchParticipants(currentMatch).length >= 2) {
