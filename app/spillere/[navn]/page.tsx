@@ -45,10 +45,10 @@ function Dots({ results }: { results: boolean[] }) {
   return (
     <span className="inline-flex gap-1" aria-label={results.map((r) => (r ? "seier" : "tap")).join(", ")}>
       {Array.from({ length: pad }).map((_, i) => (
-        <i key={`p${i}`} style={{ width: 12, height: 12, borderRadius: 999, border: "1px solid var(--color-border)", display: "block" }} />
+        <i key={`p${i}`} style={{ width: 14, height: 14, borderRadius: 999, border: "1px solid var(--color-border)", display: "block" }} />
       ))}
       {results.map((r, i) => (
-        <i key={i} style={{ width: 12, height: 12, borderRadius: 999, background: r ? "var(--color-green)" : "var(--color-red)", display: "block" }} />
+        <i key={i} style={{ width: 14, height: 14, borderRadius: 999, background: r ? "var(--color-green)" : "var(--color-red)", display: "block", boxShadow: i >= results.length - 3 ? "0 0 0 2px var(--color-surface), 0 0 0 3.5px var(--color-hairline)" : undefined }} />
       ))}
     </span>
   );
@@ -58,7 +58,7 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
   return (
     <div className="cell-tile rounded-lg p-3 text-center flex flex-col justify-center" style={{ minHeight: "4.5rem" }}>
       <p style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)", letterSpacing: "0.05em" }}>{label}</p>
-      <p className="tabular" style={{ color: "var(--color-cream)", fontSize: "var(--text-title)", fontWeight: 700 }}>
+      <p className="tabular font-display" style={{ color: "var(--color-cream)", fontSize: "var(--text-num)", fontWeight: 600, lineHeight: 1.1 }}>
         {children}
       </p>
     </div>
@@ -220,6 +220,7 @@ export default function PlayerDetailPage() {
             name={player.name}
             photo={player.photo}
             morph
+            members={isTeam ? player.members : undefined}
             caption={isTeam ? "Lag" : `${player.matchesPlayed} ${player.matchesPlayed === 1 ? "kamp" : "kamper"}`}
             figure={!limited && seed ? <CountUp value={Math.round(seed.rating)} /> : undefined}
             figureLabel={!limited && seed ? "RATING" : undefined}

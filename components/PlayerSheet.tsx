@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 import { averagePct, useRoster, type PlayerRecord } from "@/lib/storage";
 import { shownHitPct } from "@/lib/playerRows";
-import { avatarAccent } from "@/lib/avatarAccent";
+import { Avatar } from "./ui/Avatar";
 
 const same = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
 
@@ -80,14 +80,7 @@ export function PlayerSheet({ name, team, onClose }: { name: string; team: strin
       >
         <div className="mx-auto mb-3 rounded-full" style={{ width: 40, height: 5, background: "var(--color-border)" }} aria-hidden />
         <div className="flex items-center gap-3 mb-4">
-          <span className="rounded-full flex items-center justify-center font-display shrink-0 overflow-hidden" style={{ width: 48, height: 48, border: `3px solid ${avatarAccent(name)}`, background: "var(--color-cell)", color: avatarAccent(name), fontSize: "var(--text-title)" }} aria-hidden>
-            {rec?.photo ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={rec.photo} alt="" className="w-full h-full object-cover" />
-            ) : (
-              name.charAt(0).toUpperCase()
-            )}
-          </span>
+          <Avatar name={name} photo={rec?.photo} px={52} />
           <p className="font-display flex-1 truncate" style={{ fontSize: "var(--text-num)" }}>
             {name}
           </p>

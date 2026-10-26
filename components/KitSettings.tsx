@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { setKits, setWalkOn, teamKitsOf, type PlayerRecord } from "@/lib/storage";
 import { WALK_ON_LABELS, playWalkOnTune, primeAudio } from "@/lib/fanfare";
-import { KIT_COLOURS, PATTERNS, PATTERN_LABELS, colourName, defaultKits, makeKit, usesSecondColour, type Kit, type TeamKits } from "@/lib/teamKit";
-import { TeamKit } from "./TeamKit";
+import { PATTERNS, PATTERN_LABELS, colourName, defaultKits, makeKit, usesSecondColour, type Kit, type TeamKits } from "@/lib/teamKit";
+import { byHue, checkOn, suggestPatternColours } from "@/lib/kitColours";
+import { KitStage, TeamKit } from "./TeamKit";
 import { CheckIcon } from "./icons";
 
 const FOCUS_RING =
@@ -14,13 +15,18 @@ const FOCUS_RING =
 type Slot = "primary" | "secondary";
 
 /**
- * One shirt: first the style, then two colours — a main colour and a pattern colour, picked from
- * sixteen. Every tap is saved at once. A plain shirt has one colour, so the second slot is off.
+ * One shirt: a large preview that stays at the top while the rest is chosen (the shirt from the front and from behind, with the name
+ * printed on it), then the style, then two colours — a main colour and a pattern colour — as round swatches in a row like a spectrum, with
+ * three suggestions for a pattern colour that goes with the main one. Every tap is saved at once. A plain shirt has one colour, so the
+ * second slot is off.
  */
-function KitEditor({ label, kit, onChange }: { label: string; kit: Kit; onChange: (kit: Kit) => void }) {
+function KitEditor({ label, kit, onChange, name }: { label: string; kit: Kit; onChange: (kit: Kit) => void; name: string }) {
   const [slot, setSlot] = useState<Slot>("primary");
   const two = usesSecondColour(kit.pattern);
   const active: Slot = two ? slot : "primary";
+  const current = active === "primary" ? kit.primary : kit.secondary;
+  const row = byHue();
+  const suggestions = two ? suggestPatternColours(kit.primary) : [];
 
   function pick(hex: string) {
     onChange(makeKit(kit.pattern, active === "primary" ? hex : kit.primary, active === "secondary" ? hex : kit.secondary));
@@ -32,10 +38,21 @@ function KitEditor({ label, kit, onChange }: { label: string; kit: Kit; onChange
     border: active === s ? "1px solid var(--color-teal)" : "1px solid var(--color-border)",
     opacity: off ? 0.5 : 1,
   });
+  const swatch = (hex: string, name: string, selected: boolean, onPick: () => void, small = false) => (
+    <button key={hex} type="button" aria-pressed={selected} aria-label={name} title={name} onClick={onPick} className={`swatch ${small ? "swatch-small" : ""} tactile ${FOCUS_RING}`} style={{ background: hex }}>
+      {selected && <CheckIcon className={`w-5 h-5 ${checkOn(hex) === "light" ? "swatch-check-light" : "swatch-check-dark"}`} />}
+    </button>
+  );
 
   return (
     <div className="mb-6">
       <p className="section-label mb-2">{label}</p>
+      {/* The shirt, large, and it stays in view while the sheet is scrolled: what is chosen below is seen here at once. */}
+      <div className="kit-preview" role="group" aria-label={`${label}: forhåndsvisning, foran og bak`}>
+        <KitStage kit={kit} size={88} title="Drakten sett forfra" />
+        <KitStage kit={kit} size={88} back label={name} number={1} title="Drakten sett bakfra" />
+      </div>
+
       <div className="grid grid-cols-5 gap-2 mb-4" role="radiogroup" aria-label={`${label}: stil`}>
         {PATTERNS.map((p) => {
           const selected = p === kit.pattern;
@@ -46,11 +63,16 @@ function KitEditor({ label, kit, onChange }: { label: string; kit: Kit; onChange
               role="radio"
               aria-checked={selected}
               onClick={() => onChange(makeKit(p, kit.primary, kit.secondary))}
-              className={`tactile rounded-lg flex flex-col items-center justify-center gap-0.5 ${FOCUS_RING}`}
-              style={{ minHeight: "4.25rem", background: selected ? "var(--teal-soft)" : "var(--color-surface)", border: selected ? "1px solid var(--color-teal)" : "1px solid var(--color-border)" }}
+              className={`tactile rounded-lg flex flex-col items-center justify-center gap-1 ${FOCUS_RING}`}
+              style={{
+                minHeight: "5.75rem",
+                background: selected ? "var(--teal-soft)" : "var(--color-surface)",
+                border: selected ? "2px solid var(--color-teal)" : "1px solid var(--color-border)",
+                boxShadow: selected ? "var(--elevation-1)" : "var(--elevation-0)",
+              }}
             >
-              <TeamKit kit={makeKit(p, kit.primary, kit.secondary)} size={34} />
-              <span style={{ color: selected ? "var(--color-teal)" : "var(--color-muted)", fontSize: "var(--text-micro)" }}>{PATTERN_LABELS[p]}</span>
+              <TeamKit kit={makeKit(p, kit.primary, kit.secondary)} size={46} />
+              <span style={{ color: selected ? "var(--color-cream)" : "var(--color-muted)", fontSize: "var(--text-micro)", fontWeight: selected ? 700 : 400 }}>{PATTERN_LABELS[p]}</span>
             </button>
           );
         })}
@@ -83,25 +105,26 @@ function KitEditor({ label, kit, onChange }: { label: string; kit: Kit; onChange
         </button>
       </div>
 
-      <div className="grid grid-cols-4 gap-2" role="group" aria-label={`${label}: farger`}>
-        {KIT_COLOURS.map((c) => {
-          const selected = (active === "primary" ? kit.primary : kit.secondary).toLowerCase() === c.hex;
-          return (
-            <button
-              key={c.hex}
-              type="button"
-              aria-pressed={selected}
-              aria-label={c.name}
-              title={c.name}
-              onClick={() => pick(c.hex)}
-              className={`tactile rounded-lg flex items-center justify-center ${FOCUS_RING}`}
-              style={{ minHeight: "var(--control)", background: c.hex, border: selected ? "3px solid #fff" : "2px solid rgba(255,255,255,0.18)", color: "#0b0b0b" }}
-            >
-              {selected && <CheckIcon className="w-5 h-5" />}
-            </button>
-          );
-        })}
+      <p className="section-label mb-2" aria-live="polite">
+        {active === "primary" ? "HOVEDFARGE" : "MØNSTERFARGE"} · {colourName(current).toUpperCase()}
+      </p>
+      <div className="flex flex-wrap gap-3 mb-4" role="group" aria-label={`${label}: farger`}>
+        {row.map((c) => swatch(c.hex, c.name, current.toLowerCase() === c.hex.toLowerCase(), () => pick(c.hex)))}
+        {/* Any other colour: the phone's own colour picker. */}
+        <label className={`swatch swatch-custom tactile ${FOCUS_RING}`} title="Egen farge">
+          <span className="sr-only">Egen farge</span>
+          <input type="color" value={current} onChange={(e) => pick(e.target.value.toLowerCase())} className="sr-only" />
+        </label>
       </div>
+
+      {two && suggestions.length > 0 && (
+        <div className="flex items-center gap-3">
+          <span style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>Passer til {colourName(kit.primary).toLowerCase()}:</span>
+          <div className="flex gap-2" role="group" aria-label="Forslag til mønsterfarge">
+            {suggestions.map((c) => swatch(c.hex, `Forslag: ${c.name}`, kit.secondary.toLowerCase() === c.hex.toLowerCase(), () => onChange(makeKit(kit.pattern, kit.primary, c.hex)), true))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -144,7 +167,7 @@ export function PlayerKitEditor({ player }: { player: PlayerRecord }) {
   const kit = teamKitsOf(player).home;
   return (
     <div>
-      <KitEditor label="DRAKT" kit={kit} onChange={(next) => setKits(player.name, { home: next, away: next })} />
+      <KitEditor label="DRAKT" name={player.name} kit={kit} onChange={(next) => setKits(player.name, { home: next, away: next })} />
       <button
         type="button"
         onClick={() => setKits(player.name, defaultKits([player.name]))}
@@ -168,8 +191,8 @@ export function TeamKitEditor({ team }: { team: PlayerRecord }) {
   return (
     <div>
       <WalkOnPicker record={team} />
-      <KitEditor label="HJEMME" kit={kits.home} onChange={(home) => save({ ...kits, home })} />
-      <KitEditor label="BORTE" kit={kits.away} onChange={(away) => save({ ...kits, away })} />
+      <KitEditor label="HJEMME" name={team.name} kit={kits.home} onChange={(home) => save({ ...kits, home })} />
+      <KitEditor label="BORTE" name={team.name} kit={kits.away} onChange={(away) => save({ ...kits, away })} />
       <button
         type="button"
         onClick={() => save(defaultKits(team.members ?? []))}

@@ -41,6 +41,7 @@ export function Row({
     border: `1px solid ${tone === "gold" ? "var(--gold-ring)" : selected ? "var(--color-teal)" : "var(--color-border)"}`,
     color: "var(--color-cream)",
     padding: "0.5rem 0.75rem",
+    boxShadow: "var(--elevation-1)",
     ...(accent ? { borderLeft: `4px solid ${accent}` } : {}),
   } as const;
   const body = (

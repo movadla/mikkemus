@@ -28,21 +28,27 @@ export type LineupSide = {
   hitPct?: number | null;
   /** Matches won. */
   wins?: number;
+  /** Matches played: a win count says nothing without it, so the wins are shown as «2 av 8» and compared as a share. */
+  played?: number;
 };
 
 /** The bars start to grow once the cards have turned in. */
 const GROW_AFTER_MS = 1500;
 
-type Row = { label: string; a: number; b: number; low: boolean; fmt: (n: number) => string };
+type Row = { label: string; a: number; b: number; low: boolean; fmt: (n: number) => string; /** What is written for each side when it is not just the number («2 av 8»). */ shown?: [string, string] };
 
 /** The rows both sides have a figure for, so that the two are always compared on the same things. */
 function compareRows(sides: LineupSide[]): Row[] {
   if (sides.length !== 2) return [];
   const [x, y] = sides;
   const rows: Row[] = [];
-  if (x.med && y.med) rows.push({ label: "MED", a: x.med, b: y.med, low: true, fmt: (n) => `${Math.round(n)} mm` });
+  // The hit share first: it is what the two throw, and what both have a figure for as soon as each has played. Then the distance.
   if (x.hitPct != null && y.hitPct != null) rows.push({ label: "TREFF", a: x.hitPct, b: y.hitPct, low: false, fmt: (n) => `${Math.round(n)} %` });
-  if (x.wins !== undefined && y.wins !== undefined && x.wins + y.wins > 0) rows.push({ label: "SEIRE", a: x.wins, b: y.wins, low: false, fmt: (n) => String(n) });
+  if (x.med && y.med) rows.push({ label: "MED", a: x.med, b: y.med, low: true, fmt: (n) => `${Math.round(n)} mm` });
+  // Wins only with the matches they are out of, and compared as a share of them: a count of wins alone says nothing.
+  if (x.wins !== undefined && y.wins !== undefined && x.played && y.played) {
+    rows.push({ label: "SEIRE", a: (x.wins / x.played) * 100, b: (y.wins / y.played) * 100, low: false, fmt: (n) => `${Math.round(n)} %`, shown: [`${x.wins} av ${x.played}`, `${y.wins} av ${y.played}`] });
+  }
   if (x.odds !== undefined && y.odds !== undefined) rows.push({ label: "ODDS", a: x.odds, b: y.odds, low: true, fmt: formatOdds });
   return rows;
 }
@@ -154,12 +160,12 @@ export function LineupIntro({ sides, onDone }: { sides: LineupSide[]; onDone: ()
                   </div>
                 );
                 return (
-                  <div key={r.label} className="grid items-center gap-2" style={{ gridTemplateColumns: "3.4rem 1fr 3rem 1fr 3.4rem" }}>
-                    <span className="font-display tabular" style={{ fontSize: "var(--text-body)", color: "var(--color-cream)" }}>{r.fmt(r.a)}</span>
+                  <div key={r.label} className="grid items-center gap-2" style={{ gridTemplateColumns: "3.9rem 1fr 3rem 1fr 3.9rem" }}>
+                    <span className="font-display tabular" style={{ fontSize: "var(--text-body)", color: "var(--color-cream)" }}>{r.shown ? r.shown[0] : r.fmt(r.a)}</span>
                     {bar(r.a, true, aBetter)}
                     <span style={{ textAlign: "center", fontSize: "var(--text-micro)", letterSpacing: "0.12em", color: "var(--color-muted)" }}>{r.label}</span>
                     {bar(r.b, false, !aBetter)}
-                    <span className="font-display tabular" style={{ fontSize: "var(--text-body)", color: "var(--color-cream)", textAlign: "right" }}>{r.fmt(r.b)}</span>
+                    <span className="font-display tabular" style={{ fontSize: "var(--text-body)", color: "var(--color-cream)", textAlign: "right" }}>{r.shown ? r.shown[1] : r.fmt(r.b)}</span>
                   </div>
                 );
               })}

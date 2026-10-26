@@ -5,7 +5,7 @@ import { useRoster, type PlayerRecord } from "@/lib/storage";
 import { avatarAccent } from "@/lib/avatarAccent";
 import { ScreenTop } from "@/components/ScreenTop";
 import { PeopleIcon } from "@/components/icons";
-import { Avatar, MorphAvatar } from "@/components/ui/Avatar";
+import { Avatar, MorphAvatar, TeamAvatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { NavList } from "@/components/ui/NavList";
@@ -22,7 +22,7 @@ function PlayerRow({ p, selected, morph }: { p: PlayerRecord; selected: boolean;
       href={`/spillere/${encodeURIComponent(p.name)}`}
       selected={selected}
       accent={avatarAccent(p.name)}
-      leading={<Face name={p.name} photo={p.photo} size="m" />}
+      leading={p.kind === "team" ? <TeamAvatar name={p.name} photo={p.photo} members={p.members} /> : <Face name={p.name} photo={p.photo} size="m" />}
       title={p.name}
       subtitle={p.kind === "team" && p.members?.length ? `${p.members.join(", ")} · ${matches}` : matches}
     />

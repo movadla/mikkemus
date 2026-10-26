@@ -44,7 +44,7 @@ export function Segmented<T extends string>({
       role="radiogroup"
       aria-label={label}
       className="flex gap-1 p-1 overflow-x-auto"
-      style={{ background: "var(--color-panel)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-m)", scrollbarWidth: "none" }}
+      style={{ background: "var(--color-panel)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-m)", boxShadow: "var(--elevation-0)", scrollbarWidth: "none" }}
     >
       {options.map((o) => {
         const selected = o.value === value;

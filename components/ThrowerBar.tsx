@@ -4,7 +4,7 @@ import { avatarAccent } from "@/lib/avatarAccent";
 import type { Kit } from "@/lib/teamKit";
 import { useEffect, useRef } from "react";
 import { TeamKit } from "./TeamKit";
-import { BotFace } from "./ui/BotFace";
+import { Avatar as UiAvatar } from "./ui/Avatar";
 
 export type Thrower = { name: string; photo?: string | null; isBot: boolean };
 
@@ -23,31 +23,10 @@ function tint(hex: string, alpha: number): string {
   return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
 }
 
-function Avatar({ who, size, active = true, ring = false }: { who: Thrower; size: number; active?: boolean; ring?: boolean }) {
-  const accent = avatarAccent(who.name);
+function Avatar({ who, size, active = true }: { who: Thrower; size: number; active?: boolean }) {
   return (
-    <span
-      className={`shrink-0 rounded-full overflow-hidden flex items-center justify-center ${ring ? "animate-thrower-ring" : ""}`}
-      style={{
-        width: size,
-        height: size,
-        background: "var(--color-cell)",
-        border: `${active ? 3 : 1.5}px solid ${active ? "var(--color-teal)" : accent}`,
-        opacity: active ? 1 : 0.6,
-        color: accent,
-        fontSize: size * 0.42,
-        fontFamily: "var(--font-display)",
-      }}
-      aria-hidden
-    >
-      {who.isBot ? (
-        <BotFace name={who.name} className="w-full h-full" />
-      ) : who.photo ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={who.photo} alt="" className="w-full h-full object-cover" />
-      ) : (
-        who.name.charAt(0).toUpperCase()
-      )}
+    <span className="inline-flex" style={{ opacity: active ? 1 : 0.6 }}>
+      <UiAvatar name={who.name} photo={who.photo} px={size} state={active ? "active" : "idle"} bot={who.isBot} />
     </span>
   );
 }
@@ -173,11 +152,12 @@ export function ThrowerBar({
         // A team's turn is in the team's colours: the bar washes from the kit's main colour, and
         // the left edge is the kit, not the app's teal.
         // A lone player has a colour too (the one on their picture), so the bar is theirs whoever it is.
-        background: kit ? `linear-gradient(90deg, ${tint(kit.primary, 0.32)}, var(--color-surface) 65%)` : `linear-gradient(90deg, color-mix(in srgb, ${avatarAccent(team ? team.name : thrower.name)} 24%, var(--color-surface)), var(--color-surface) 70%)`,
+        background: kit ? `linear-gradient(90deg, ${tint(kit.primary, 0.22)}, var(--color-surface) 65%)` : `linear-gradient(90deg, color-mix(in oklab, ${avatarAccent(team ? team.name : thrower.name)} 15%, var(--color-surface)), var(--color-surface) 72%)`,
         border: flush ? "none" : `1px solid ${kit ? tint(kit.primary, 0.6) : "var(--color-border)"}`,
         borderBottom: flush ? "1px solid var(--color-hairline)" : undefined,
         borderLeft: `8px solid ${kit ? kit.primary : avatarAccent(team ? team.name : thrower.name)}`,
         padding: compact ? "0.4rem 0.6rem" : "0.6rem 0.8rem",
+        boxShadow: flush ? "inset 0 1px 0 var(--rim)" : undefined,
       }}
     >
       <Wrap
@@ -187,7 +167,7 @@ export function ThrowerBar({
       >
       <span className="thrower-avatar relative shrink-0" style={{ width: photoSize, height: photoSize }}>
         {fire && run >= 2 && <Flames run={run} size={photoSize} />}
-        <Avatar who={thrower} size={photoSize} ring={animate} />
+        <Avatar who={thrower} size={photoSize} />
         {/* The shirt the thrower is playing in, worn on the picture — big enough to read across the room. */}
         {kit && (
           <span className="absolute" style={{ right: -kitBadge * 0.3, bottom: -kitBadge * 0.15 }} aria-hidden>

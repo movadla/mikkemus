@@ -2885,6 +2885,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
               med: rec ? meanEuclideanDistance(rec) : null,
               hitPct: rec && rec.matchesPlayed > 0 ? averagePct(rec.overall) : null,
               wins: rec?.matchesWon ?? 0,
+              played: rec?.matchesPlayed ?? 0,
               record: rec && rec.matchesPlayed > 0 ? `${rec.matchesWon} ${rec.matchesWon === 1 ? "seier" : "seire"} på ${rec.matchesPlayed} ${rec.matchesPlayed === 1 ? "kamp" : "kamper"}` : undefined,
             };
           })}

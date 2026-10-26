@@ -66,13 +66,13 @@ export function ConfirmDialog({
       aria-modal="true"
       aria-describedby={messageId}
       onKeyDown={handleKeyDown}
-      className="fixed inset-0 flex items-center justify-center p-6 z-50"
+      className="scrim-blur fixed inset-0 flex items-center justify-center p-6 z-50"
       style={{ background: "var(--scrim)" }}
     >
       {/* shadow-panel matters most here of anywhere: a modal floating over a scrim is the
           one surface that should carry the deepest elevation, and it was the only card in
           the app without it. */}
-      <div className="dialog-in card-raised w-full max-w-sm" style={{ padding: "1.5rem", boxShadow: "var(--elevation-3)" }}>
+      <div className="dialog-in glass w-full max-w-sm" style={{ padding: "1.5rem", borderRadius: "var(--radius-l)" }}>
         <p id={messageId} className="text-center mb-6" style={{ color: "var(--color-cream)", fontSize: messageFontSize }}>
           {message}
         </p>

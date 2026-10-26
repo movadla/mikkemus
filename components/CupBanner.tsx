@@ -9,14 +9,17 @@ export function CupBanner({ cup, name, large = false }: { cup: Pick<CupConfig, "
   const colour = cupColor(cup.kind);
   return (
     <div
-      className="flex items-center gap-3 mb-4"
-      style={{
-        padding: large ? "1rem 1.5rem" : "0.75rem 1rem",
-        borderRadius: "var(--radius-m)",
-        background: `linear-gradient(90deg, color-mix(in srgb, ${colour} 20%, var(--color-surface)), var(--color-surface) 75%)`,
-        border: "1px solid var(--color-border)",
-        borderLeft: `6px solid ${colour}`,
-      }}
+      className="edge flex items-center gap-3 mb-4"
+      style={
+        {
+          padding: large ? "1rem 1.5rem" : "0.75rem 1rem",
+          borderRadius: "var(--radius-m)",
+          "--edge-fill-image": `linear-gradient(90deg, color-mix(in srgb, ${colour} 20%, var(--color-surface)), var(--color-surface) 75%)`,
+          "--edge-accent": colour,
+          borderLeft: `6px solid ${colour}`,
+          boxShadow: "var(--elevation-1)",
+        } as React.CSSProperties
+      }
     >
       <span style={{ color: colour }}>
         <CupEmblem kind={cup.kind} className={large ? "w-12 h-12" : "w-8 h-8"} />

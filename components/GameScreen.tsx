@@ -548,13 +548,13 @@ function DartPicker({
       role="dialog"
       aria-modal="true"
       aria-label={current ? `Rett pil ${index + 1}` : `Legg inn pil ${index + 1}`}
-      className="fixed inset-0 flex items-center justify-center p-4 z-50"
+      className="scrim-blur fixed inset-0 flex items-center justify-center p-4 z-50"
       style={{ background: "var(--scrim)" }}
       onKeyDown={(e) => {
         if (e.key === "Escape") onClose();
       }}
     >
-      <div className="shadow-panel w-full max-w-sm rounded-xl p-4" style={{ background: "var(--color-surface)" }}>
+      <div className="glass w-full max-w-sm rounded-xl p-4">
         <p className="text-center mb-3" style={{ color: "var(--color-cream)", fontSize: "var(--text-body)" }}>
           {current ? (
             <>
@@ -643,13 +643,13 @@ function DartEntry({
       role="dialog"
       aria-modal="true"
       aria-label={`Legg inn pil ${index + 1}`}
-      className="fixed inset-0 flex items-end sm:items-center justify-center p-4 z-50"
+      className="scrim-blur fixed inset-0 flex items-end sm:items-center justify-center p-4 z-50"
       style={{ background: "var(--scrim)" }}
       onKeyDown={(e) => {
         if (e.key === "Escape") onClose();
       }}
     >
-      <div className="shadow-panel w-full max-w-sm rounded-xl p-4" style={{ background: "var(--color-surface)" }}>
+      <div className="glass w-full max-w-sm rounded-xl p-4">
         <div className="grid grid-cols-3 gap-2 mb-3">
           {[0, 1, 2].map((i) => {
             const style = {
@@ -1256,16 +1256,9 @@ export function GameScreen({
                     {dartsThrown[p] ?? 0}
                   </span>
                   <span className="relative inline-flex max-w-full min-w-0">
-                    {isActive && (
-                      <span
-                        aria-hidden
-                        className="animate-idle-glow absolute inset-0 rounded-full pointer-events-none"
-                        style={{ boxShadow: `0 0 16px ${glowColor}` }}
-                      />
-                    )}
                     <span
                       key={isActive ? `active-${turnToken}` : "inactive"}
-                      className={`relative block max-w-full truncate px-3 py-0.5 rounded-full transition-all duration-300 ${isActive ? "animate-column-glow" : ""}`}
+                      className="relative block max-w-full truncate px-3 py-0.5 rounded-full transition-all duration-300"
                       style={
                         {
                           color: isActive ? "var(--color-bg)" : "var(--color-cream)",

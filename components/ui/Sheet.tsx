@@ -16,10 +16,10 @@ export function Sheet({ title, onClose, children }: { title: string; onClose: ()
         if (e.key === "Escape") onClose();
       }}
     >
-      <button type="button" aria-label="Lukk" onClick={onClose} className="absolute inset-0 w-full h-full" style={{ background: "var(--scrim)" }} />
+      <button type="button" aria-label="Lukk" onClick={onClose} className="scrim-blur absolute inset-0 w-full h-full" style={{ background: "var(--scrim)" }} />
       <div
-        className="sheet-in relative w-full max-w-md max-h-[90dvh] overflow-y-auto p-4"
-        style={{ background: "var(--color-surface)", borderRadius: "var(--radius-l) var(--radius-l) 0 0", boxShadow: "var(--elevation-3)", paddingBottom: "max(1rem, env(safe-area-inset-bottom, 0px))" }}
+        className="sheet-in glass relative w-full max-w-md max-h-[90dvh] overflow-y-auto p-4"
+        style={{ borderRadius: "var(--radius-l) var(--radius-l) 0 0", paddingBottom: "max(1rem, env(safe-area-inset-bottom, 0px))" }}
       >
         <div className="flex items-center justify-between gap-3 mb-4">
           <h2 className="font-display" style={{ fontSize: "var(--text-title)", color: "var(--color-cream)" }}>

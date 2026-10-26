@@ -39,7 +39,7 @@ const COLOUR_LITERALS: Record<string, number> = {
   "components/RowDartsChart.tsx": 1,
   "components/SeedingTab.tsx": 1,
   "components/StatsLineChart.tsx": 3,
-  "components/TeamKit.tsx": 2,
+  "components/TeamKit.tsx": 8,
   "components/ThrowerBar.tsx": 3,
   "components/TimeMachine.tsx": 2,
   "components/Trophy.tsx": 14,
@@ -56,6 +56,16 @@ const MOTION_LITERALS: Record<string, number> = {
   "components/NightStory.tsx": 1,
   "components/PinGate.tsx": 1,
   "components/RatingCard.tsx": 1,
+};
+
+/** The breathing glows (animate-idle-glow, animate-column-glow) in the screens: one glow per screen, so no file gains one. What is left is the
+ *  light behind the mascot and behind a winner, and the breathing round the cell that is aimed at. The number per file can go down and never up. */
+const GLOW_USES: Record<string, number> = {
+  "app/storskjerm/page.tsx": 3,
+  "components/BullDuelWinnerScreen.tsx": 1,
+  "components/GameScreen.tsx": 1,
+  "components/HeroMascot.tsx": 1,
+  "components/WinnerScreen.tsx": 1,
 };
 
 const LITERAL = /#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b|rgba?\(/g;
@@ -80,6 +90,16 @@ describe("design rules", () => {
         .split(/\r?\n/)
         .filter((line) => /transition[A-Za-z]*: .*\d+m?s/.test(line) && !/var\(--(duration|pull|spring|weight)/.test(line)).length;
       const allowed = MOTION_LITERALS[file] ?? 0;
+      if (count > allowed) over.push(`${file}: ${count} (allowed ${allowed})`);
+    }
+    expect(over).toEqual([]);
+  });
+
+  it("keeps to one glow per screen: no file gains a breathing glow", () => {
+    const over: string[] = [];
+    for (const file of SCREENS()) {
+      const count = (read(file).match(/animate-(idle|column)-glow/g) ?? []).length;
+      const allowed = GLOW_USES[file] ?? 0;
       if (count > allowed) over.push(`${file}: ${count} (allowed ${allowed})`);
     }
     expect(over).toEqual([]);

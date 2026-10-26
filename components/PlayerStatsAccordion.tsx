@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { useState } from "react";
 import { STEP_LABELS } from "@/lib/game";
-import { avatarAccent } from "@/lib/avatarAccent";
 import { SOURCES, singleView, teamView, type Source, type View } from "@/lib/playerView";
 import { ratingOf, type PlayerRecord } from "@/lib/storage";
 import { coachTips, sumBias } from "@/lib/coach";
 import { memberHitPct, memberMed } from "@/lib/memberStats";
 import { RowDartsChart, type RowChartUnit } from "./RowDartsChart";
+import { Avatar, TeamAvatar } from "./ui/Avatar";
 import { Segmented } from "./ui/Segmented";
 import { Sheet } from "./ui/Sheet";
 import { STEPS, type Step } from "@/lib/game";
@@ -337,14 +337,7 @@ export function PlayerStatsAccordion({ players, all }: { players: PlayerRecord[]
               className={`w-full flex items-center gap-4 px-4 text-left ${FOCUS_RING}`}
               style={{ minHeight: "var(--control-lg)" }}
             >
-              <span className="rounded-full overflow-hidden shrink-0 flex items-center justify-center" style={{ width: "2.5rem", height: "2.5rem", background: "var(--color-cell)", border: "1px solid var(--color-border)" }}>
-                {p.photo ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={p.photo} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  <span style={{ color: avatarAccent(p.name) }}>{p.name.charAt(0).toUpperCase()}</span>
-                )}
-              </span>
+              {p.members && p.members.length > 0 ? <TeamAvatar name={p.name} photo={p.photo} members={p.members} /> : <Avatar name={p.name} photo={p.photo} size="m" />}
               <span className="flex-1 min-w-0">
                 <span className="block truncate" style={{ color: "var(--color-cream)", fontWeight: 600 }}>{p.name}</span>
                 <span className="block truncate" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>

@@ -1,11 +1,11 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { setPlayerPhoto } from "@/lib/storage";
 import { reportError } from "@/lib/errorReporting";
-import { photoToDataUrl } from "@/lib/image";
-import { avatarAccent } from "@/lib/avatarAccent";
 import { CameraIcon } from "./icons";
+import { PhotoCropper } from "./PhotoCropper";
+import { Avatar } from "./ui/Avatar";
 
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
@@ -16,17 +16,17 @@ const FOCUS_RING =
  * camera on every row of the setup screen, taking space at every match for something people do
  * once.
  */
-export function PhotoButton({ name, photo, size = "3.5rem" }: { name: string; photo?: string; size?: string }) {
+export function PhotoButton({ name, photo, size = 56 }: { name: string; photo?: string; size?: number }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  // The picture that was chosen and is being cropped (see PhotoCropper) before it is kept.
+  const [cropping, setCropping] = useState<File | null>(null);
 
   function onSelected(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
-    // Shrunk first: the camera's file is megabytes, and every picture is fetched with the player list.
-    photoToDataUrl(file)
-      .then((dataUrl) => setPlayerPhoto(name, dataUrl))
-      .catch(() => reportError("Kunne ikke lese bildet.", { key: "photo-read" }));
+    // Cropped first, to a small square: the camera's file is megabytes, and every picture is fetched with the player list.
+    setCropping(file);
   }
 
   return (
@@ -38,25 +38,32 @@ export function PhotoButton({ name, photo, size = "3.5rem" }: { name: string; ph
         type="button"
         onClick={() => inputRef.current?.click()}
         aria-label={photo ? `Nytt bilde av ${name}` : `Velg bilde av ${name}`}
-        className={`tactile relative rounded-full overflow-hidden shrink-0 flex items-center justify-center ${FOCUS_RING}`}
-        style={{ width: size, height: size, background: "var(--color-cell)", border: `1.5px solid ${avatarAccent(name)}` }}
+        className={`tactile relative rounded-full shrink-0 inline-flex ${FOCUS_RING}`}
+        style={{ background: "transparent", boxShadow: "none" }}
       >
-        {photo ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={photo} alt="" className="w-full h-full object-cover" />
-        ) : (
-          <span className="font-display" style={{ color: avatarAccent(name), fontSize: "var(--text-title)" }}>
-            {name.charAt(0).toUpperCase()}
-          </span>
-        )}
+        <Avatar name={name} photo={photo} px={size} />
         <span
           aria-hidden
           className="absolute flex items-center justify-center rounded-full"
-          style={{ right: 0, bottom: 0, width: "1.25rem", height: "1.25rem", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
+          style={{ right: 0, bottom: 0, width: "1.5rem", height: "1.5rem", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)", boxShadow: "var(--elevation-1)" }}
         >
           <CameraIcon className="w-3 h-3" />
         </span>
       </button>
+      {cropping && (
+        <PhotoCropper
+          file={cropping}
+          onCancel={() => setCropping(null)}
+          onDone={(dataUrl) => {
+            setCropping(null);
+            try {
+              setPlayerPhoto(name, dataUrl);
+            } catch {
+              reportError("Kunne ikke lagre bildet.", { key: "photo-read" });
+            }
+          }}
+        />
+      )}
     </>
   );
 }

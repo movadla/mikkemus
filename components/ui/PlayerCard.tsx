@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import { avatarAccent } from "@/lib/avatarAccent";
-import { Avatar, MorphAvatar } from "./Avatar";
+import { Avatar, MorphAvatar, TeamAvatar } from "./Avatar";
 
 /**
  * A player as a card to collect: the face in the player's own colour, the name, a figure that says how they stand (the rating), and
@@ -14,6 +14,7 @@ export function PlayerCard({
   figure,
   figureLabel,
   bot = false,
+  members,
   size = "poster",
   morph = false,
   children,
@@ -26,6 +27,8 @@ export function PlayerCard({
   figure?: ReactNode;
   figureLabel?: string;
   bot?: boolean;
+  /** The people of a team without a picture of its own: their faces stand in for it. */
+  members?: string[];
   size?: "poster" | "card";
   /** The face grows into the one on the profile and back (see MorphAvatar). */
   morph?: boolean;
@@ -34,9 +37,10 @@ export function PlayerCard({
   const poster = size === "poster";
   const Face = morph ? MorphAvatar : Avatar;
   return (
-    <section className="player-card" style={{ "--pc": avatarAccent(name) } as CSSProperties} aria-label={name}>
+    <section className="player-card edge edge-sheen" style={{ "--pc": avatarAccent(name), "--edge-accent": avatarAccent(name) } as CSSProperties} aria-label={name}>
+      <span aria-hidden className="sheen" />
       <div className="player-card-head" style={{ padding: poster ? "1.5rem 1.25rem 1rem" : "1rem" }}>
-        <Face name={name} photo={photo} size={poster ? "xl" : "l"} bot={bot} />
+        {members && members.length > 0 && !photo ? <TeamAvatar name={name} members={members} size={poster ? "xxl" : "l"} /> : <Face name={name} photo={photo} size={poster ? "xxl" : "l"} bot={bot} />}
         <div className="min-w-0 flex-1">
           <h2 className="font-display truncate" style={{ color: "var(--color-cream)", fontSize: poster ? "var(--text-num)" : "var(--text-title)", lineHeight: 1.1 }}>
             {name}
@@ -45,7 +49,7 @@ export function PlayerCard({
         </div>
         {figure !== undefined && (
           <div className="shrink-0 text-right">
-            <p className="font-display" style={{ color: "var(--pc)", fontSize: poster ? "var(--text-num)" : "var(--text-title)", lineHeight: 1 }}>
+            <p className="font-display" style={{ color: "var(--pc)", fontSize: poster ? "2.4rem" : "var(--text-num)", lineHeight: 1, textShadow: "var(--shadow-text)" }}>
               {figure}
             </p>
             {figureLabel && <p className="section-label">{figureLabel}</p>}
