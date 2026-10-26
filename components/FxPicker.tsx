@@ -39,6 +39,11 @@ export function FxPicker() {
           );
         })}
       </div>
+      {level === "simple" && (
+        <p className="text-center mt-2" style={{ color: "var(--color-red)", fontSize: "0.8rem" }}>
+          Enkel er en krittavle: bare brettet, med trykk der du vil og uten bekreftelse. Kampene teller ikke i statistikken.
+        </p>
+      )}
     </div>
   );
 }

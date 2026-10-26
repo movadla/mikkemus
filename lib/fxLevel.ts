@@ -15,11 +15,12 @@ import { useSyncExternalStore } from "react";
  * what they are doing. Hand-entered darts get the click under the finger and the slam on a row
  * they close, which do not depend on timing — see MikkeMusApp's registerHitFromUi.
  */
-export type FxLevel = "normal" | "party" | "full";
+export type FxLevel = "simple" | "normal" | "party" | "full";
 
-export const FX_LEVELS: FxLevel[] = ["normal", "party", "full"];
+export const FX_LEVELS: FxLevel[] = ["simple", "normal", "party", "full"];
 
 export const FX_LABELS: Record<FxLevel, string> = {
+  simple: "Enkel",
   normal: "Vanlig",
   party: "Party",
   full: "Full party",
@@ -84,6 +85,7 @@ export type FxFlags = {
 };
 
 const FLAGS: Record<FxLevel, FxFlags> = {
+  simple: { boomMaxStreak: 1, heat: false, shake: false, tripleOverlay: false, dives: false, confetti: false, bigConfetti: false, crowd: false, ringSlam: false, perfectBurst: false, fire: false, walkOn: false, rowShine: false, shirtRain: false, leadChange: false, matchDart: false, replay: false, recordBanner: false, walkOnTune: false, missBounce: false, lineup: false, manga: false, momentum: false, trophy: false, streakFanfare: false, recordBar: false },
   normal: { boomMaxStreak: 1, heat: false, shake: false, tripleOverlay: false, dives: false, confetti: false, bigConfetti: false, crowd: false, ringSlam: false, perfectBurst: false, fire: false, walkOn: false, rowShine: false, shirtRain: false, leadChange: false, matchDart: false, replay: false, recordBanner: false, walkOnTune: false, missBounce: false, lineup: false, manga: false, momentum: false, trophy: false, streakFanfare: false, recordBar: false },
   party: { boomMaxStreak: 3, heat: true, shake: true, tripleOverlay: true, dives: true, confetti: true, bigConfetti: false, crowd: false, ringSlam: false, perfectBurst: false, fire: false, walkOn: false, rowShine: false, shirtRain: false, leadChange: false, matchDart: false, replay: false, recordBanner: false, walkOnTune: false, missBounce: false, lineup: false, manga: false, momentum: false, trophy: false, streakFanfare: false, recordBar: false },
   full: { boomMaxStreak: 12, heat: true, shake: true, tripleOverlay: true, dives: true, confetti: true, bigConfetti: true, crowd: true, ringSlam: true, perfectBurst: true, fire: true, walkOn: true, rowShine: true, shirtRain: true, leadChange: true, matchDart: true, replay: true, recordBanner: true, walkOnTune: true, missBounce: true, lineup: true, manga: true, momentum: true, trophy: true, streakFanfare: true, recordBar: true },
@@ -95,7 +97,7 @@ export function fxFlags(level: FxLevel): FxFlags {
 
 /** Anything stored — nothing, or a value from some other version — into a valid level. */
 export function normalizeFxLevel(raw: unknown): FxLevel {
-  return raw === "normal" || raw === "party" || raw === "full" ? raw : DEFAULT_FX_LEVEL;
+  return raw === "simple" || raw === "normal" || raw === "party" || raw === "full" ? raw : DEFAULT_FX_LEVEL;
 }
 
 const STORAGE_KEY = "mikke-mus-fx-level";

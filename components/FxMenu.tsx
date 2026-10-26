@@ -19,7 +19,8 @@ export function FxMenu({ onClose }: { onClose: () => void }) {
       <div className="relative mt-16 w-full max-w-sm rounded-2xl p-4" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
         <p className="section-label text-center mb-3">ANIMASJON OG LYD</p>
         <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Animasjon og lyd">
-          {FX_LEVELS.map((l) => {
+          {/* Enkel is a different kind of screen, chosen before the match: it cannot take over one that is going. */}
+          {FX_LEVELS.filter((l) => l !== "simple").map((l) => {
             const selected = level === l;
             return (
               <button

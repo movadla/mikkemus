@@ -90,7 +90,8 @@ export function AppRoot() {
           </button>
           {/* Tournaments are off the home screen for now (2026-10-15, on request) — the code is
               all still here, and a tournament already under way can still be picked up. */}
-          {TOURNAMENTS_OFFERED || hasActiveTournament ? (
+          {/* Tournaments are for the full code (9696) only. */}
+          {!limited && (TOURNAMENTS_OFFERED || hasActiveTournament) ? (
             <button
               type="button"
               onClick={() => setMode("tournament")}

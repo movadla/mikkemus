@@ -54,6 +54,7 @@ import { useShowOdds } from "@/lib/oddsSetting";
 import { haptics } from "@/lib/haptics";
 import { crowdForStreak, playCrowd, playFanfare, playHitStreakSound, playStreakFanfare, playMatchDartSound, playTapSound, playWalkOnTune, playWinBoom, primeAudio, warmAudio } from "@/lib/fanfare";
 import { fxFlags, getFxLevel, useFxLevel } from "@/lib/fxLevel";
+import { ChalkboardScreen } from "./ChalkboardScreen";
 import { classifyThrow, formatSectorLabel, parseSector } from "@/lib/scoliaMapping";
 import {
   applyDartToBoard,
@@ -2847,6 +2848,12 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
 
   // The intro. Covers the board while it plays, then hands over to the game underneath —
   // the same component as the win, so the two moments are unmistakably the same gesture.
+  // Enkel: the chalkboard, with none of the turns, darts or statistics above. A tournament match needs its result back, so
+  // it plays as Vanlig.
+  if (fxLevel === "simple" && !onMatchComplete) {
+    return <ChalkboardScreen players={players} kits={kits} onExit={abortGame} />;
+  }
+
   if (introDiving) {
     return <WinDive onDone={() => setIntroDiving(false)} />;
   }
