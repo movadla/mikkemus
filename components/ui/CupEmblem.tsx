@@ -2,7 +2,7 @@ import type { CupKind } from "@/lib/botCup";
 
 /**
  * The emblem of a cup, drawn in the cup's own colour: a globe for the VM, a star for the EM, a crown for Grand Slam, a shield for
- * the NM and a house for Lilleaker Open. Plain line drawings in the same style as the rest of the icons.
+ * the NM and a house for Ly Pilotturnering. Plain line drawings in the same style as the rest of the icons.
  */
 export function CupEmblem({ kind, className = "w-5 h-5" }: { kind: CupKind; className?: string }) {
   return (

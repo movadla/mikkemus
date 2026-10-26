@@ -27,10 +27,12 @@ type TournamentRow = {
 };
 
 function rowToTournament(row: TournamentRow): Tournament {
-  const knockout = row.matches.some((m) => m.feedA || m.feedB) || (row.groups.length === 0 && row.matches.length > 0);
+  const pilot = row.matches.some((m) => m.pilot);
+  const knockout = !pilot && (row.matches.some((m) => m.feedA || m.feedB) || (row.groups.length === 0 && row.matches.length > 0));
   return {
     // A knockout carries no groups, so that is what marks it (no column to add): its seeding is the order of its entrants.
-    ...(knockout ? { format: "knockout" as const, seeds: row.participants.map((p) => p.name) } : {}),
+    // A pilot (lib/pilot.ts) is marked by its matches, and its seeding is the order of its entrants too.
+    ...(pilot ? { format: "pilot" as const, seeds: row.participants.map((p) => p.name) } : knockout ? { format: "knockout" as const, seeds: row.participants.map((p) => p.name) } : {}),
     id: row.id,
     mode: row.mode as TournamentMode,
     participants: row.participants,

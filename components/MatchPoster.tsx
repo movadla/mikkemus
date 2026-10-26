@@ -27,7 +27,7 @@ export function posterSides(t: Tournament, match: TournamentMatch, records: Pick
   return [sideOf(match.participantA!, chance), sideOf(match.participantB!, chance === null ? null : 1 - chance)];
 }
 
-function Side({ side, large }: { side: PosterSide; large: boolean }) {
+export function Side({ side, large }: { side: PosterSide; large: boolean }) {
   return (
     <div className="match-side" style={{ "--pc": avatarAccent(side.name), padding: large ? "1.75rem 1rem" : "1rem 0.5rem" } as CSSProperties}>
       <Avatar name={side.name} photo={side.photo} size={large ? "xl" : "l"} bot={side.bot} />
@@ -44,6 +44,22 @@ function Side({ side, large }: { side: PosterSide; large: boolean }) {
         </p>
       )}
     </div>
+  );
+}
+
+/** A match of four: the four as cards in two columns, in the order they throw, each with its place in the order on it. */
+export function PosterGrid({ sides, large = false }: { sides: PosterSide[]; large?: boolean }) {
+  return (
+    <ol className="grid grid-cols-2 gap-2" aria-label="Rekkefølgen de kaster i">
+      {sides.map((side, i) => (
+        <li key={side.name} className="relative flex">
+          <span className="absolute z-10 tabular rounded-full flex items-center justify-center" style={{ top: "0.4rem", left: "0.4rem", width: "1.5rem", height: "1.5rem", background: "var(--color-cell)", color: "var(--color-text-2)", fontSize: "var(--text-micro)", fontWeight: 700 }} aria-label={`kaster nummer ${i + 1}`}>
+            {i + 1}
+          </span>
+          <Side side={side} large={large} />
+        </li>
+      ))}
+    </ol>
   );
 }
 

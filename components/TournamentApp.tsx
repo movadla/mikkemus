@@ -3,6 +3,10 @@
 import { useEffect, useState } from "react";
 import { matchParticipants, recordMatchResult, type Participant, type Tournament, type TournamentMatch, type TournamentMode } from "@/lib/tournament";
 import { createKnockout, houseAlive, isKnockout, seedByStrength, undoLastResult } from "@/lib/knockout";
+import { tieGroups, withGroupOrder } from "@/lib/bullOff";
+import { createPilot, isPilot, pilotPlayers, playPilotBots, undoPilotResult } from "@/lib/pilot";
+import { sigmaForLevel } from "@/lib/botStrategy";
+import { clearPendingTies, loadPendingTies, savePendingTies } from "@/lib/pilotTies";
 import { playElsewhere } from "@/lib/botSim";
 import { strengthMap } from "@/lib/knockoutSeeding";
 import {
@@ -25,7 +29,9 @@ import { playFanfare, playWinBoom, primeAudio } from "@/lib/fanfare";
 import { useRoster } from "@/lib/storage";
 import { DartboardGlyph } from "./DartboardGlyph";
 import { ChampionScreen } from "./ChampionScreen";
+import { BullOffScreen } from "./BullOffScreen";
 import { DrawScreen } from "./DrawScreen";
+import { PilotOverview } from "./PilotOverview";
 import { EliminatedScreen } from "./EliminatedScreen";
 import { KnockoutOverview, roundName } from "./KnockoutOverview";
 import { MikkeMusApp } from "./MikkeMusApp";
@@ -33,7 +39,7 @@ import { TournamentHistoryScreen } from "./TournamentHistoryScreen";
 import { TournamentSetupScreen } from "./TournamentSetupScreen";
 import { TournamentOverviewScreen } from "./TournamentOverviewScreen";
 
-type Screen = "loading" | "setup" | "draw" | "overview" | "match" | "eliminated" | "champion" | "history";
+type Screen = "loading" | "setup" | "draw" | "overview" | "match" | "bulloff" | "eliminated" | "champion" | "history";
 
 /** Finds the tournament match a resumed single-match session belongs to, by matching its two
  *  player names — lets a mid-match refresh resume correctly without needing separate persisted
@@ -71,6 +77,8 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
   // Guards "Generer turnering" and the cancel-tournament confirm button against a double-tap
   // firing a second Supabase write while the first is still in flight.
   const [submitting, setSubmitting] = useState(false);
+  // A match of four that ended level for a place: the result waits here while the bull-offs are thrown (lib/bullOff.ts).
+  const [ties, setTies] = useState<{ placements: string[]; stats: Record<string, import("@/lib/game").TurnAggregate>; groups: string[][] } | null>(null);
 
   // One-time resolution of which screen to start on, from external state (localStorage's active-
   // tournament pointer + a Supabase fetch) — same "you might not need an effect" exception
@@ -97,7 +105,14 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
       const t = result.tournament;
       setTournament(t);
       const resumable = findResumableMatch(t);
-      if (resumable) {
+      // A match of the pilot that ended level and whose bull-offs were not all thrown: pick up at the bull-off.
+      const saved = loadPendingTies();
+      const waiting = saved && saved.tournamentId === t.id ? t.matches.find((m) => m.id === saved.matchId && !m.winner) : undefined;
+      if (saved && waiting) {
+        setCurrentMatch(waiting);
+        setTies({ placements: saved.placements, stats: saved.stats, groups: saved.groups });
+        setScreen("bulloff");
+      } else if (resumable) {
         setCurrentMatch(resumable);
         setScreen("match");
       } else if (isKnockout(t) && t.cup && t.status !== "done" && !houseAlive(t)) {
@@ -134,7 +149,35 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
     setSubmitting(false);
   }
 
+  /** Ly Pilotturnering (lib/pilot.ts): seeded by strength and started at once, there is no draw to make. The heats of bots only are decided. */
+  async function startPilot(participants: Participant[], variant: GameVariant, cup: CupConfig, name?: string) {
+    if (submitting) return;
+    setSubmitting(true);
+    const rules = RULES[baseOf(variant)];
+    const strength = strengthMap(roster, participants, { target: rules.target, ringChoice: rules.ringOnOwnNumberIsChoice });
+    const order = seedByStrength(participants, (n) => strength.get(n) ?? 0.5);
+    const id = newTournamentId();
+    const made = createPilot("individual", order, id, new Date().toISOString(), variant, cup);
+    const { tournament: started, decided } = playPilotBots(name ? { ...made, name } : made);
+    setPendingMode("individual");
+    setPendingParticipants(participants);
+    setPendingVariant(variant);
+    setPendingCup(cup);
+    setPendingName(name ?? "");
+    setTournament(started);
+    setJustPlayedId(null);
+    setElsewhereIds(decided);
+    saveActiveTournamentId(id);
+    setScreen("overview");
+    await upsertTournament(started);
+    setSubmitting(false);
+  }
+
   function handleSetupNext(mode: TournamentMode, participants: Participant[], variant: GameVariant, cup?: CupConfig, name?: string) {
+    if (cup?.kind === "open" && mode === "individual") {
+      void startPilot(participants, variant, cup, name);
+      return;
+    }
     setPendingName(name ?? "");
     setPendingMode(mode);
     setPendingParticipants(participants);
@@ -165,6 +208,13 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
     setScreen("match");
     // The round is named when the match starts: a quarter-final should sound like one. Enkel is silent, Vanlig only speaks.
     const level = getFxLevel();
+    if (level !== "simple" && tournament && isPilot(tournament)) {
+      announce(`${match.pilot?.label}. ${pilotPlayers(match).join(", ")}.`);
+      if (level !== "normal" && match.pilot?.stage === "final") {
+        primeAudio();
+        playFanfare();
+      }
+    }
     if (level !== "simple" && tournament && isKnockout(tournament)) {
       const [a, b] = matchParticipants(match);
       announce(`${roundName(match)}. ${a} mot ${b}.`);
@@ -187,8 +237,36 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
     setScreen("overview");
   }
 
-  async function handleMatchComplete(result: { winner: string; placements: string[]; stats: Record<string, import("@/lib/game").TurnAggregate> }) {
+  /** A match of the pilot is over with its places settled: record it, let the bots' matches that it opened be played, and go on. */
+  async function finishPilotMatch(placements: string[], stats: Record<string, import("@/lib/game").TurnAggregate>) {
     if (!tournament || !currentMatch) return;
+    const recorded = recordMatchResult(tournament, currentMatch.id, placements, stats);
+    const { tournament: updated, decided } = playPilotBots(recorded);
+    setTournament(updated);
+    setJustPlayedId(currentMatch.id);
+    setElsewhereIds(decided);
+    setCurrentMatch(null);
+    setTies(null);
+    clearPendingTies();
+    setScreen(updated.status === "done" ? "champion" : "overview");
+    await upsertTournament(updated);
+    if (updated.status === "done") clearActiveTournamentId();
+  }
+
+  async function handleMatchComplete(result: { winner: string; placements: string[]; stats: Record<string, import("@/lib/game").TurnAggregate>; remaining?: Record<string, number> }) {
+    if (!tournament || !currentMatch) return;
+    if (isPilot(tournament)) {
+      // Level on crosses missing is a tie for a place: a bull-off, for each group that is level.
+      const groups = result.remaining ? tieGroups(result.placements, result.remaining) : [];
+      if (groups.length > 0) {
+        setTies({ placements: result.placements, stats: result.stats, groups });
+        savePendingTies({ tournamentId: tournament.id, matchId: currentMatch.id, placements: result.placements, stats: result.stats, groups });
+        setScreen("bulloff");
+        return;
+      }
+      await finishPilotMatch(result.placements, result.stats);
+      return;
+    }
     let updated = recordMatchResult(tournament, currentMatch.id, result.placements, result.stats);
     let decided: string[] = [];
     const wasAlive = houseAlive(tournament);
@@ -222,7 +300,7 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
   /** Takes the latest result back and reopens the match. */
   async function handleUndo() {
     if (!tournament) return;
-    const back = undoLastResult(tournament);
+    const back = isPilot(tournament) ? undoPilotResult(tournament) : undoLastResult(tournament);
     if (!back) return;
     setTournament(back);
     setJustPlayedId(null);
@@ -306,9 +384,38 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
         initialPlayers={matchParticipants(currentMatch)}
         initialBotLevels={botLevels}
         initialTeamRosters={teamRosters}
-        initialVariant={tournament.variant ?? "standard"}
+        initialVariant={currentMatch.variant ?? tournament.variant ?? "standard"}
         onMatchComplete={handleMatchComplete}
         onExitToHome={handleMatchAbort}
+      />
+    );
+  }
+
+  if (screen === "bulloff" && tournament && currentMatch && ties && ties.groups.length > 0) {
+    const group = ties.groups[0];
+    const places = group.map((n) => ties.placements.indexOf(n) + 1);
+    const sigmas = Object.fromEntries(
+      group.map((n) => {
+        const p = tournament.participants.find((x) => x.name === n);
+        return [n, p?.isBot ? sigmaForLevel(p.botLevel ?? "4") : undefined];
+      }),
+    );
+    return (
+      <BullOffScreen
+        key={group.join("|")}
+        group={group}
+        context={`Likt om plass ${places.join(" og ")} i ${currentMatch.pilot?.label ?? "kampen"}`}
+        sigmas={sigmas}
+        photos={Object.fromEntries(roster.map((r) => [r.name, r.photo]))}
+        onDone={(order) => {
+          const placements = withGroupOrder(ties.placements, group, order);
+          const rest = ties.groups.slice(1);
+          if (rest.length === 0) void finishPilotMatch(placements, ties.stats);
+          else {
+            setTies({ ...ties, placements, groups: rest });
+            savePendingTies({ tournamentId: tournament.id, matchId: currentMatch.id, placements, stats: ties.stats, groups: rest });
+          }
+        }}
       />
     );
   }
@@ -320,6 +427,22 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
   if (screen === "eliminated" && tournament) {
     const house = tournament.participants.filter((p) => (p.members ? p.members.some((m) => !m.isBot) : !p.isBot)).map((p) => p.name);
     return <EliminatedScreen tournament={tournament} names={house} onWatchRest={handleWatchRest} onLeave={onExitToHome} />;
+  }
+
+  if (tournament && isPilot(tournament)) {
+    return (
+      <PilotOverview
+        tournament={tournament}
+        justDecidedId={justPlayedId}
+        decidedElsewhere={elsewhereIds}
+        onPlayNext={handlePlayNext}
+        onExitToHome={onExitToHome}
+        onUndo={handleUndo}
+        onCancelTournament={handleCancelTournament}
+        cancelingTournament={submitting}
+        onHistory={() => openHistory("overview")}
+      />
+    );
   }
 
   if (tournament && isKnockout(tournament)) {

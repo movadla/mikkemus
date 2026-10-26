@@ -26,7 +26,7 @@
  * function reads it from here. Tests run on "standard" unless they say otherwise.
  */
 export type BaseVariant = "onehit" | "t2" | "standard" | "t4" | "t5";
-export type GameVariant = BaseVariant | `${BaseVariant}+stand`;
+export type GameVariant = BaseVariant | `${BaseVariant}+stand` | `${BaseVariant}+forced` | `${BaseVariant}+stand+forced`;
 
 export type Rules = {
   /** The full key, stand rule included. */
@@ -43,9 +43,12 @@ export type Rules = {
   countsForStats: boolean;
   /** A team member with three counting darts throws again the next time the team is up. */
   standOnThree: boolean;
+  /** Forced rings («tvunget»): a double or triple only counts on 20 to 14, the numbers of the game. D1 or T5 is nothing, and the bullseye
+   *  before BULL is up is not a double. Used from the quarter-finals of Ly Pilotturnering. Not in the career statistics: it is another game. */
+  forcedRings: boolean;
 };
 
-type BaseRules = Omit<Rules, "variant" | "base" | "standOnThree">;
+type BaseRules = Omit<Rules, "variant" | "base" | "standOnThree" | "forcedRings">;
 
 /** A row of one cross has no "number or ring" question: redirecting pays the same single cross
  *  the ring does. From two up there is something to decide. */
@@ -57,12 +60,15 @@ const BASE_RULES: Record<BaseVariant, BaseRules> = {
   t5: { label: "5 treff", target: 5, ringOnOwnNumberIsChoice: true, countsForStats: false },
 };
 
-function rulesFor(base: BaseVariant, standOnThree: boolean): Rules {
+function rulesFor(base: BaseVariant, standOnThree: boolean, forcedRings = false): Rules {
   return {
     ...BASE_RULES[base],
+    // Forced rings is another game, so it does not count in the career figures.
+    countsForStats: BASE_RULES[base].countsForStats && !forcedRings,
     base,
-    variant: standOnThree ? (`${base}+stand` as GameVariant) : base,
+    variant: compose(base, standOnThree, forcedRings),
     standOnThree,
+    forcedRings,
   };
 }
 
@@ -79,6 +85,22 @@ export const RULES: Record<BaseVariant, Rules> = {
 export const VARIANT_ORDER: BaseVariant[] = ["onehit", "t2", "standard", "t4", "t5"];
 
 const STAND_SUFFIX = "+stand";
+const FORCED_SUFFIX = "+forced";
+
+/** The three parts of a key: the row length, the stand rule and forced rings. Anything that is not one is left out. */
+function parse(raw: unknown): { base: BaseVariant; stand: boolean; forced: boolean } {
+  if (typeof raw !== "string") return { base: "standard", stand: false, forced: false };
+  const forced = raw.endsWith(FORCED_SUFFIX);
+  let rest = forced ? raw.slice(0, -FORCED_SUFFIX.length) : raw;
+  const stand = rest.endsWith(STAND_SUFFIX);
+  if (stand) rest = rest.slice(0, -STAND_SUFFIX.length);
+  const base: BaseVariant = rest in BASE_RULES ? (rest as BaseVariant) : "standard";
+  return { base, stand, forced };
+}
+
+function compose(base: BaseVariant, stand: boolean, forced: boolean): GameVariant {
+  return `${base}${stand ? STAND_SUFFIX : ""}${forced ? FORCED_SUFFIX : ""}` as GameVariant;
+}
 
 /**
  * Anything stored or typed — a saved snapshot, a database column, nothing at all — into a valid
@@ -86,31 +108,38 @@ const STAND_SUFFIX = "+stand";
  * base with a stand suffix keeps the suffix, which is the half that can still be honoured.
  */
 export function normalizeVariant(raw: unknown): GameVariant {
-  if (typeof raw !== "string") return "standard";
-  const stand = raw.endsWith(STAND_SUFFIX);
-  const base = stand ? raw.slice(0, -STAND_SUFFIX.length) : raw;
-  const known: BaseVariant = base in BASE_RULES ? (base as BaseVariant) : "standard";
-  return stand ? (`${known}${STAND_SUFFIX}` as GameVariant) : known;
+  const p = parse(raw);
+  return compose(p.base, p.stand, p.forced);
 }
 
 export function baseOf(variant: GameVariant | null | undefined): BaseVariant {
-  const key = normalizeVariant(variant);
-  return (key.endsWith(STAND_SUFFIX) ? key.slice(0, -STAND_SUFFIX.length) : key) as BaseVariant;
+  return parse(variant).base;
 }
 
 export function hasStandRule(variant: GameVariant | null | undefined): boolean {
-  return normalizeVariant(variant).endsWith(STAND_SUFFIX);
+  return parse(variant).stand;
 }
 
-/** The same row length, with the stand rule switched on or off. */
+export function hasForcedRings(variant: GameVariant | null | undefined): boolean {
+  return parse(variant).forced;
+}
+
+/** The same row length and forced rings, with the stand rule switched on or off. */
 export function withStandRule(variant: GameVariant | null | undefined, on: boolean): GameVariant {
-  const base = baseOf(variant);
-  return on ? (`${base}${STAND_SUFFIX}` as GameVariant) : base;
+  const p = parse(variant);
+  return compose(p.base, on, p.forced);
 }
 
-/** The same stand rule, on another row length. */
+/** The same game, with forced rings switched on or off. */
+export function withForcedRings(variant: GameVariant | null | undefined, on: boolean): GameVariant {
+  const p = parse(variant);
+  return compose(p.base, p.stand, on);
+}
+
+/** The same stand rule and forced rings, on another row length. */
 export function withBase(variant: GameVariant | null | undefined, base: BaseVariant): GameVariant {
-  return withStandRule(base, hasStandRule(variant));
+  const p = parse(variant);
+  return compose(base, p.stand, p.forced);
 }
 
 /**
@@ -132,7 +161,7 @@ let current: Rules = RULES.standard;
 
 /** Absent or unknown (a snapshot from before variants existed) means standard. */
 export function setGameVariant(variant: GameVariant | null | undefined): void {
-  current = rulesFor(baseOf(variant), hasStandRule(variant));
+  current = rulesFor(baseOf(variant), hasStandRule(variant), hasForcedRings(variant));
 }
 
 export function getRules(): Rules {

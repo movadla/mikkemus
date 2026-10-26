@@ -10,6 +10,9 @@ import { roundName } from "@/components/KnockoutOverview";
 import { isSimulable, nextToThrow } from "@/lib/botSim";
 import { cupColor } from "@/lib/botCup";
 import { championShowOf } from "@/lib/championShow";
+import { MatchBox, sidesOf } from "@/components/PilotOverview";
+import { PosterGrid } from "@/components/MatchPoster";
+import { isPilot, nextPilotMatch, pilotPlayers, pilotQueue, pilotStages } from "@/lib/pilot";
 import { winChanceFor } from "@/lib/nextUp";
 import { useRoster } from "@/lib/storage";
 import { isKnockout } from "@/lib/knockout";
@@ -56,13 +59,62 @@ export default function StorskjermTurneringPage() {
   const chance = tournament && next ? winChanceFor(tournament, next, records) : null;
 
   // A finished cup is its champion, on the same scene as the phone sends.
-  if (tournament && isKnockout(tournament) && tournament.status === "done" && tournament.winner) return <TvChampion show={championShowOf(tournament)} />;
+  if (tournament && (isKnockout(tournament) || isPilot(tournament)) && tournament.status === "done" && tournament.winner) return <TvChampion show={championShowOf(tournament)} />;
+
+  // Ly Pilotturnering: the next match large, what follows, and the whole course below with every place as it stands.
+  if (tournament && isPilot(tournament)) {
+    const upNext = nextPilotMatch(tournament);
+    const photos = new Map(records.map((r) => [r.name, r.photo]));
+    const line = pilotQueue(tournament, upNext);
+    const sides = upNext ? sidesOf(tournament, upNext, photos) : [];
+    return (
+      <TvFrame label="Turnering" className="px-6 pt-14 pb-10">
+        <header className="text-center mb-6">
+          {tournament.cup ? <div className="mx-auto" style={{ maxWidth: "40rem" }}><CupBanner cup={tournament.cup} name={tournamentTitle(tournament)} large /></div> : <p className="section-label" style={{ fontSize: "var(--text-body)" }}>{tournamentTitle(tournament).toUpperCase()}</p>}
+          {upNext ? (
+            <>
+              <h1 className="sr-only">
+                {upNext.pilot?.label}: {pilotPlayers(upNext).join(", ")}
+              </h1>
+              <p className="section-label mb-3" style={{ color: cupColor(tournament.cup?.kind), fontSize: "var(--text-body)" }}>
+                NESTE · {upNext.pilot?.label.toUpperCase()}
+              </p>
+              <div className="mx-auto" style={{ maxWidth: "64rem" }}>
+                {sides.length === 2 ? <MatchPoster large tint={cupColor(tournament.cup?.kind)} a={sides[0]} b={sides[1]} /> : <PosterGrid large sides={sides} />}
+              </div>
+              {line.length > 0 && (
+                <p className="mt-4" style={{ color: "var(--color-muted)", fontSize: "var(--text-title)" }}>
+                  Deretter: {line.slice(0, 3).map((m) => m.pilot?.label).join(" · ")}
+                </p>
+              )}
+            </>
+          ) : (
+            <h1 className="font-display" style={{ fontSize: "var(--text-num)" }}>Venter på neste kamp</h1>
+          )}
+        </header>
+        <div className="space-y-6 mx-auto" style={{ maxWidth: "100rem" }}>
+          {pilotStages(tournament).map((s) => (
+            <section key={s.stage} aria-label={s.title}>
+              <h2 className="section-label mb-2" style={{ fontSize: "var(--text-body)" }}>
+                {s.title.toUpperCase()}
+              </h2>
+              <ul className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(16rem, 1fr))" }}>
+                {s.matches.map((m) => (
+                  <MatchBox key={m.id} tournament={tournament} match={m} next={m.id === upNext?.id} />
+                ))}
+              </ul>
+            </section>
+          ))}
+        </div>
+      </TvFrame>
+    );
+  }
 
   return (
     <TvFrame label="Turnering" className="px-6 pt-14 pb-10">
       {tournament === undefined && <p className="text-center pt-24" style={{ color: "var(--color-muted)", fontSize: "var(--text-title)" }}>Henter turneringen …</p>}
       {tournament === null && <p className="text-center pt-24" style={{ color: "var(--color-muted)", fontSize: "var(--text-title)" }}>Ingen turnering er i gang.</p>}
-      {tournament && !isKnockout(tournament) && <p className="text-center pt-24" style={{ color: "var(--color-muted)", fontSize: "var(--text-title)" }}>Den siste turneringen har gruppespill og vises ikke her.</p>}
+      {tournament && !isKnockout(tournament) && !isPilot(tournament) && <p className="text-center pt-24" style={{ color: "var(--color-muted)", fontSize: "var(--text-title)" }}>Den siste turneringen har gruppespill og vises ikke her.</p>}
       {tournament && isKnockout(tournament) && (
         <>
           <header className="text-center mb-6">

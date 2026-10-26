@@ -205,7 +205,7 @@ type MikkeMusAppProps = {
   initialVariant?: GameVariant;
   /** When set, the winner screen's home button reports the result here instead of resetting to
    *  SetupScreen — the caller (tournament mode) decides what happens next. */
-  onMatchComplete?: (result: { winner: string; placements: string[]; stats: Record<string, TurnAggregate> }) => void;
+  onMatchComplete?: (result: { winner: string; placements: string[]; stats: Record<string, TurnAggregate>; /** Crosses each player was still missing when it ended: what the placements were made from, and what a tie is told by. */ remaining?: Record<string, number> }) => void;
   /** Bails all the way back to the true home screen (AppRoot) — wired into SetupScreen's "← Hjem"
    *  and into aborting a tournament match (which would otherwise strand the player on the generic,
    *  disconnected SetupScreen instead of back where they actually came from). */
@@ -2671,7 +2671,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     if (onMatchComplete && winner) {
       flushMatchResults();
       clearActiveMatch();
-      onMatchComplete({ winner, placements, stats: winnerStats });
+      onMatchComplete({ winner, placements, stats: winnerStats, remaining: Object.fromEntries(players.map((p) => [p, progress[p] ? remainingMarks(progress[p]) : 0])) });
       return;
     }
     setScreen("setup");

@@ -96,9 +96,13 @@ export function TournamentSetupScreen({
   const cupSize = Math.min(cup.size, maxSize);
   // Against bots, the house needs only itself; the bots make up the rest, and the longer games have none.
   const cupProblem = !botsAllowed ? "Boter bare på 1–3 kryss" : ownCount >= cupSize ? "For mange" : null;
+  // Ly Pilotturnering has a format of its own (lib/pilot.ts): sixteen single players, four at a time, in standard.
+  const pilot = cupMode && cup.kind === "open";
   const problem = cupMode
     ? mode === "team"
-      ? (teamSetupProblem(teams, true, 1) ?? cupProblem)
+      ? pilot
+        ? "Ly Pilotturnering spilles av enkeltspillere"
+        : (teamSetupProblem(teams, true, 1) ?? cupProblem)
       : (individualSetupProblem(people.map((p) => p.name), false, 1) ?? cupProblem)
     : mode === "team"
       ? teamSetupProblem(teams, botsAllowed, MIN_TEAMS)
@@ -115,7 +119,7 @@ export function TournamentSetupScreen({
       if (mode === "individual") {
         commitPeople(people);
         const own: Participant[] = people.map((p) => ({ name: p.name, isBot: false }));
-        onNext("individual", buildCupParticipants("individual", own, cupSize, config), withStandRule(variant, false), config, given);
+        onNext("individual", buildCupParticipants("individual", own, cupSize, config), pilot ? "standard" : withStandRule(variant, false), config, given);
       } else {
         commitTeams(teams);
         const own: Participant[] = teams.map((t) => ({ name: t.name, isBot: false, members: t.members.map(toMember) }));
@@ -180,8 +184,14 @@ export function TournamentSetupScreen({
         {cupMode && (
           <>
             <CupTypePicker value={{ ...cup, size: cupSize }} onChange={setCup} maxSize={maxSize} />
-            <Step n={3}>Antall</Step>
-            <CupSizePicker value={{ ...cup, size: cupSize }} onChange={setCup} own={ownCount} maxSize={maxSize} />
+            {cupType(cup.kind).sizes.length > 1 ? (
+              <>
+                <Step n={3}>Antall</Step>
+                <CupSizePicker value={{ ...cup, size: cupSize }} onChange={setCup} own={ownCount} maxSize={maxSize} />
+              </>
+            ) : (
+              ownCount >= cupSize && <p className="mb-6" style={{ color: "var(--color-red)", fontSize: "var(--text-small)" }}>For mange</p>
+            )}
           </>
         )}
 
@@ -200,7 +210,7 @@ export function TournamentSetupScreen({
             <div className="mb-4">
               <TextField hideLabel value={name} onChange={setName} maxLength={40} placeholder="Navn (valgfritt)" label="Navn på turneringen" />
             </div>
-            <RulesPicker variant={variant} onChange={setVariant} teamPlay={mode === "team"} labelAlign="left" />
+            {!pilot && <RulesPicker variant={variant} onChange={setVariant} teamPlay={mode === "team"} labelAlign="left" />}
             {cupMode && <CupDetails value={{ ...cup, size: cupSize }} onChange={setCup} />}
           </div>
         )}

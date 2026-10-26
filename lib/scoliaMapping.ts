@@ -51,6 +51,9 @@ export function stepForSector(parsed: ParsedSector): ThrowMapping {
     return { step: "BULL", crosses: parsed.ring === "inner" ? 2 : 1 };
   }
 
+  // Forced rings: a double or triple counts only on the numbers of the game, 20 to 14. D1 and T5 are nothing.
+  if ((parsed.ring === "D" || parsed.ring === "T") && getRules().forcedRings && (parsed.number < 14 || parsed.number > 20)) return { step: null, crosses: 0 };
+
   if (parsed.ring === "D") return { step: "D", crosses: 1 };
   if (parsed.ring === "T") return { step: "T", crosses: 1 };
 
@@ -86,7 +89,8 @@ export function classifyThrow(parsed: ParsedSector, activeStep: Step | null, pro
   // it early shouldn't score less than clipping D20. Only the red inner bull earns this;
   // outer bull (25) is an ordinary miss when BULL isn't up yet. Whether the D row actually
   // has room is left to isRegistrable, exactly as for any other double.
-  if (parsed.kind === "bull" && parsed.ring === "inner" && activeStep !== "BULL") {
+  // (Not in forced rings: there the bullseye is the bull and nothing else.)
+  if (parsed.kind === "bull" && parsed.ring === "inner" && activeStep !== "BULL" && !getRules().forcedRings) {
     return { step: "D", crosses: 1, ambiguous: null };
   }
 

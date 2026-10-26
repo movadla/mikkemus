@@ -5,6 +5,7 @@ import type { CupConfig } from "./botCup";
 // A circular import, on purpose: knockout.ts builds on this file's types and seeding, and recordMatchResult hands a knockout over to it.
 // Both are only used when called, never while the modules load.
 import { recordKnockoutResult } from "./knockout";
+import { recordPilotResult } from "./pilot";
 
 export type TournamentMode = "individual" | "team";
 
@@ -21,6 +22,14 @@ export type Participant = {
   skill?: number;
   /** Only set for a team participant — members can freely mix humans and bots. */
   members?: TeamMember[];
+};
+
+/** The special format of Ly Pilotturnering (lib/pilot.ts): which stage a match belongs to and where its players come from. */
+export type PilotInfo = {
+  stage: "heat" | "winners" | "losers" | "lucky" | "quarter" | "semi" | "final";
+  label: string;
+  /** Who fills the match: the finishing place (0 is first) in an earlier match. A heat has none, its players are drawn from the seeding. */
+  slots?: { from: string; place: number }[];
 };
 
 export type TournamentMatch = {
@@ -59,6 +68,10 @@ export type TournamentMatch = {
   decidedOrder?: number;
   /** Decided by the model and not thrown: a match between two bots in a cup (lib/botSim.ts). */
   simulated?: boolean;
+  /** Set on every match of Ly Pilotturnering. */
+  pilot?: PilotInfo;
+  /** The game this match is played as, when it is not the tournament's own (forced rings from the quarter-finals of the pilot). */
+  variant?: GameVariant;
 };
 
 export type Tournament = {
@@ -84,7 +97,7 @@ export type Tournament = {
   /** A name the players gave it ("Fredagsdart"); shown over the bracket and in the trophy cabinet. */
   name?: string;
   /** "knockout": a straight knockout, the whole bracket there from the start (lib/knockout.ts). Absent on the older tournaments with groups. */
-  format?: "knockout";
+  format?: "knockout" | "pilot";
   /** The seeding, strongest first — the order the bracket was drawn from. Knockout only. */
   seeds?: string[];
 };
@@ -495,6 +508,7 @@ export function createTournament(
  *  caller passes [winner, loser], which is exactly what MikkeMusApp always computes anyway. */
 export function recordMatchResult(tournament: Tournament, matchId: string, placements: string[], stats: Record<string, TurnAggregate>): Tournament {
   if (tournament.format === "knockout") return recordKnockoutResult(tournament, matchId, placements, stats);
+  if (tournament.format === "pilot") return recordPilotResult(tournament, matchId, placements, stats);
   const matches = tournament.matches.map((m) => (m.id === matchId ? { ...m, winner: placements[0], placements, stats } : m));
   let next: Tournament = { ...tournament, matches };
 

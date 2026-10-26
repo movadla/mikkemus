@@ -21,7 +21,8 @@ export const CUP_TYPES: CupType[] = [
   { kind: "em", name: "EM i dart", trophy: "Europamesterpokalen", tagline: "Europas beste kasteføringer", defaultSize: 8, sizes: [4, 8, 16, 32, 64] },
   { kind: "gs", name: "Grand Slam", trophy: "Grand Slam-pokalen", tagline: "Fire runder mot de beste", defaultSize: 16, sizes: [4, 8, 16, 32, 64] },
   { kind: "nm", name: "Norgesmesterskapet", trophy: "Norgesmesterpokalen", tagline: "Kampen om Norge", defaultSize: 8, sizes: [4, 8, 16, 32, 64] },
-  { kind: "open", name: "Lilleaker Open", trophy: "Lilleaker-pokalen", tagline: "Hjemmebane, og alle vil ha pokalen", defaultSize: 8, sizes: [4, 8, 16, 32, 64] },
+  // The one cup with a format of its own (lib/pilot.ts): sixteen play, four at a time, so there is one size. The rest are knockouts.
+  { kind: "open", name: "Ly Pilotturnering", trophy: "Ly-pokalen", tagline: "Fire og fire, med en ny sjanse", defaultSize: 16, sizes: [16] },
 ];
 
 /** How many take part, the people of the house and the bots together. */

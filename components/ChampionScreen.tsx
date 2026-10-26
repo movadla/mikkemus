@@ -2,6 +2,7 @@
 
 import { ViewTransition, useState } from "react";
 import { awards, isHouseName, outIn, roadOf, undoableMatch } from "@/lib/knockout";
+import { isPilot, undoablePilotMatch } from "@/lib/pilot";
 import { fxFlags, useFxLevel } from "@/lib/fxLevel";
 import { firstKit } from "@/lib/teamKit";
 import { cupColor } from "@/lib/botCup";
@@ -143,10 +144,12 @@ export function ChampionScreen({
           </section>
         )}
 
+        {!isPilot(tournament) && (
         <button type="button" onClick={() => setShowBracket((v) => !v)} className={`tactile w-full rounded-lg mt-4 ${FOCUS_RING}`} style={{ minHeight: "var(--control)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}>
           Brakett
         </button>
-        {showBracket && (
+        )}
+        {showBracket && !isPilot(tournament) && (
           <div className="shadow-panel rounded-xl p-3 mt-3" style={card}>
             <BracketTree tournament={tournament} />
           </div>
@@ -158,7 +161,7 @@ export function ChampionScreen({
               Spill igjen
             </button>
           )}
-          {onUndo && undoableMatch(tournament) && (
+          {onUndo && (isPilot(tournament) ? undoablePilotMatch(tournament) : undoableMatch(tournament)) && (
             <button type="button" onClick={onUndo} className={`tactile w-full rounded-lg text-sm ${FOCUS_RING}`} style={{ minHeight: "var(--control)", background: "transparent", color: "var(--color-muted)", border: "1px solid var(--color-border)" }}>
               Angre finalen
             </button>
