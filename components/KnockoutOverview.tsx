@@ -10,6 +10,8 @@ import { BracketTree } from "./BracketTree";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { ScreenTop } from "./ScreenTop";
 import { StepStrip } from "./StepStrip";
+import { Avatar } from "./ui/Avatar";
+import { CupBanner } from "./CupBanner";
 
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
@@ -46,7 +48,7 @@ function ResultCard({ tournament, match }: { tournament: Tournament; match: Tour
     );
   };
   return (
-    <div className="shadow-panel rounded-xl p-4 mb-4" style={{ ...card, border: "1px solid var(--color-teal)" }}>
+    <div className="card mb-4" style={{ ...card, border: "1px solid var(--color-teal)" }}>
       <p className="section-label mb-3">RESULTAT · {roundName(match).toUpperCase()}</p>
       <div className="space-y-1 mb-3">
         {row(winner)}
@@ -70,7 +72,8 @@ function NextUpCard({ tournament, match, onPlay }: { tournament: Tournament; mat
   const chance = useMemo(() => winChanceFor(tournament, match, records), [tournament, match, records]);
   const [a, b] = [match.participantA!, match.participantB!];
   const side = (name: string, p: number | null) => (
-    <div className="flex-1 min-w-0 text-center">
+    <div className="flex-1 min-w-0 flex flex-col items-center text-center gap-1">
+      <Avatar name={name} photo={records.find((r) => r.name === name)?.photo} size="l" state={isHouseName(tournament, name) ? "active" : "idle"} bot={!!tournament.participants.find((p) => p.name === name)?.isBot} />
       <p className="tabular" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>
         {seedOf(tournament, name) ? `#${seedOf(tournament, name)}` : ""}
       </p>
@@ -85,7 +88,7 @@ function NextUpCard({ tournament, match, onPlay }: { tournament: Tournament; mat
     </div>
   );
   return (
-    <div className="shadow-panel rounded-xl p-4 mb-4" style={{ ...card, border: "1px solid var(--color-teal)" }}>
+    <div className="card mb-4" style={{ ...card, border: "1px solid var(--color-teal)" }}>
       <p className="section-label mb-3 text-center">NESTE · {roundName(match).toUpperCase()}</p>
       <div className="flex items-center gap-2 mb-3">
         {side(a, chance)}
@@ -205,15 +208,11 @@ export function KnockoutOverview({
       <div className="screen-inner" style={{ maxWidth: "min(100%, 64rem)" }}>
         <ScreenTop title={tournamentTitle(tournament)} onBack={onExitToHome} right={onHistory ? <button type="button" onClick={onHistory} className={`tactile rounded-lg text-sm px-3 ${FOCUS_RING}`} style={{ minHeight: "var(--control)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}>Pokaler</button> : undefined} />
         <StepStrip step={2} />
-        {tournament.cup && (
-          <p className="mb-4 text-center" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
-            Dere spiller om {tournament.cup.trophy}
-          </p>
-        )}
+        {tournament.cup && <CupBanner cup={tournament.cup} />}
         <div className="mx-auto" style={{ maxWidth: "28rem" }}>
           {just && <ResultCard tournament={tournament} match={just} />}
           {elsewhere.length > 0 && (
-            <div className="shadow-panel rounded-xl p-4 mb-4" style={card}>
+            <div className="card mb-4" style={card}>
               <p className="section-label mb-2">ANDRE KAMPER</p>
               <div className="space-y-1">
                 {elsewhere.map((m) => (
@@ -231,7 +230,7 @@ export function KnockoutOverview({
           )}
           {next && <NextUpCard key={next.id} tournament={tournament} match={next} onPlay={() => onPlayNext(next)} />}
         </div>
-        <div className="shadow-panel rounded-xl p-4 mb-4" style={card}>
+        <div className="card mb-4" style={card}>
           <BracketTree tournament={tournament} nextId={next?.id ?? null} justDecidedId={justDecidedId} onSelect={setSelected} />
         </div>
         <div className="mx-auto space-y-2" style={{ maxWidth: "28rem" }}>

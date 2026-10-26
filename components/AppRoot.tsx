@@ -3,25 +3,36 @@
 import { useEffect, useState } from "react";
 import { useAccess } from "@/lib/access";
 import { loadActiveMatch } from "@/lib/activeMatch";
-import { dayLabel } from "@/lib/formatDate";
-import { groupNights } from "@/lib/nights";
 import { useNavSpace } from "@/lib/navSpace";
 import { finishSpotifyLogin } from "@/lib/spotify";
-import { preloadRoster, useRoster } from "@/lib/storage";
+import { preloadRoster, useRoster, useRosterLoaded } from "@/lib/storage";
 import { loadActiveTournamentId } from "@/lib/tournamentStorage";
 import { useScolia } from "@/lib/useScolia";
-import { BullDuelApp } from "./BullDuelApp";
+import dynamic from "next/dynamic";
 import { HeroMascot } from "./HeroMascot";
 import { BullseyeIcon, DartIcon, TrophyIcon } from "./icons";
-import { MikkeMusApp } from "./MikkeMusApp";
 import { RulesIntro } from "./RulesIntro";
 import { ScoliaDot, summarizeScolia } from "./ScoliaStatusBadge";
-import { TournamentApp } from "./TournamentApp";
+import { SkeletonRows } from "./ui/Skeleton";
+import { TonightCard } from "./TonightCard";
+import { Welcome, hasBeenWelcomed, markWelcomed } from "./Welcome";
 import { BottomNav } from "./ui/BottomNav";
+import { Wordmark } from "./ui/BrandMark";
 import { Button } from "./ui/Button";
-import { Row } from "./ui/Row";
-import { Section } from "./ui/Section";
 import { FOCUS_RING } from "./ui/focus";
+
+// The three ways into a game are loaded when one is chosen, not with the front page: the board alone is most of the app
+// (three thousand lines), and the front page is the first thing every visit draws.
+const loading = () => (
+  <div className="screen" style={{ background: "var(--color-bg)" }}>
+    <div className="screen-inner">
+      <SkeletonRows count={4} />
+    </div>
+  </div>
+);
+const MikkeMusApp = dynamic(() => import("./MikkeMusApp").then((m) => m.MikkeMusApp), { loading });
+const TournamentApp = dynamic(() => import("./TournamentApp").then((m) => m.TournamentApp), { loading });
+const BullDuelApp = dynamic(() => import("./BullDuelApp").then((m) => m.BullDuelApp), { loading });
 
 type Mode = "home" | "single" | "tournament" | "bullduel";
 
@@ -51,6 +62,8 @@ export function AppRoot() {
   const [matchUnderway, setMatchUnderway] = useState<string[] | null>(null);
   // The rules introduction, on request (the address ?m=regler, from Mer). The first-time showing is MikkeMusApp's.
   const [showRules, setShowRules] = useState(false);
+  const [welcomed, setWelcomed] = useState(true);
+  const loaded = useRosterLoaded();
   // Only connected while the home screen itself is showing — MikkeMusApp/TournamentApp own their
   // own connection once a mode is picked, so this never runs two connections at once.
   const scolia = useScolia(mode === "home" && !showRules, {});
@@ -79,6 +92,13 @@ export function AppRoot() {
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
 
+  // The first time on this device: the welcome, unless there are people in the app already.
+  /* eslint-disable react-hooks/set-state-in-effect -- reads this device's storage once, after the first paint */
+  useEffect(() => {
+    setWelcomed(hasBeenWelcomed());
+  }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
   // The players are fetched while the home screen is up, not when the setup screen first asks.
   useEffect(() => {
     preloadRoster();
@@ -89,14 +109,22 @@ export function AppRoot() {
     void finishSpotifyLogin();
   }, []);
 
+  if (!welcomed && loaded && roster.length === 0 && mode === "home") {
+    return (
+      <Welcome
+        onDone={() => {
+          markWelcomed();
+          setWelcomed(true);
+        }}
+      />
+    );
+  }
   if (showRules) return <RulesIntro onDone={() => setShowRules(false)} />;
   if (mode === "single") return <MikkeMusApp onExitToHome={() => setMode("home")} />;
   if (mode === "tournament") return <TournamentApp onExitToHome={() => setMode("home")} />;
   if (mode === "bullduel") return <BullDuelApp onExitToHome={() => setMode("home")} />;
 
   const tournamentsOn = !limited && (TOURNAMENTS_OFFERED || hasActiveTournament);
-  const lastNight = groupNights(roster)[0];
-  const winner = lastNight?.players[0];
   const resume = matchUnderway ? { title: matchUnderway.join(" mot "), label: "Kamp pågår", go: () => setMode("single") } : tournamentsOn && hasActiveTournament ? { title: "Turnering", label: "Pågår", go: () => setMode("tournament") } : null;
 
   return (
@@ -105,11 +133,12 @@ export function AppRoot() {
       <div className="fixed top-2 right-2 z-40">
         <ScoliaDot summary={summarizeScolia(scolia.state)} />
       </div>
-      <div className="screen-inner">
-        <h1 className="page-title mb-4" style={{ fontSize: "var(--text-num)" }}>
-          Mikke Mus
+      <div className="screen-inner wide">
+        <h1 className="mb-4">
+          <Wordmark size="num" />
         </h1>
 
+        <div className="wide-columns">
         <section
           className="mb-6 text-center p-4"
           style={{ borderRadius: "var(--radius-l)", background: "var(--color-panel)", border: "1px solid var(--color-border)", boxShadow: "var(--elevation-1)" }}
@@ -141,16 +170,9 @@ export function AppRoot() {
           <Tile icon={<BullseyeIcon className="w-6 h-6" />} label="Bull-duell" onClick={() => setMode("bullduel")} />
         </div>
 
-        {lastNight && (
-          <Section label="Siste kveld">
-            <Row
-              href={`/kveld/${lastNight.date}`}
-              title={dayLabel(lastNight.date)}
-              subtitle={winner && winner.wins > 0 ? `${winner.name} vant` : undefined}
-              leading={<TrophyIcon className="w-5 h-5" />}
-            />
-          </Section>
-        )}
+        </div>
+
+        <TonightCard />
       </div>
       <BottomNav current="spill" onTurnering={tournamentsOn ? () => setMode("tournament") : undefined} />
     </div>

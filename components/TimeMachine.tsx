@@ -59,7 +59,7 @@ export function TimeMachine({ players, turnLog, snapshots, winner }: { players: 
   };
 
   return (
-    <div className="shadow-panel rounded-xl p-4 mb-6" style={{ background: "var(--color-surface)" }}>
+    <div className="card mb-6" style={{ background: "var(--color-surface)" }}>
       <p className="mb-3 section-label">KAMPEN TUR FOR TUR</p>
 
       <div className="grid gap-1 mb-3" style={{ gridTemplateColumns: `2.6rem repeat(${players.length}, minmax(0, 1fr))` }}>

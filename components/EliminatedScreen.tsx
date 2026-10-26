@@ -35,7 +35,7 @@ export function EliminatedScreen({
             const lost = outIn(tournament, name);
             const beatBy = lost ? (lost.winner === lost.participantA ? lost.participantA : lost.participantB) : null;
             return (
-              <div key={name} className="shadow-panel rounded-xl p-4" style={{ background: "var(--color-panel)", border: "1px solid var(--color-border)" }}>
+              <div key={name} className="card" style={{ background: "var(--color-panel)", border: "1px solid var(--color-border)" }}>
                 <p className="font-display" style={{ color: "var(--color-cream)", fontSize: "var(--text-title)" }}>
                   {name}
                 </p>

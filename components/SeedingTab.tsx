@@ -20,7 +20,7 @@ const nb = (n: number) => Math.round(n).toLocaleString("nb-NO").replace(/\s/g, "
 
 function Card({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
   return (
-    <section className="shadow-panel rounded-xl p-4 mb-5" style={{ background: "var(--color-surface)" }}>
+    <section className="card mb-5" style={{ background: "var(--color-surface)" }}>
       <div className="flex items-baseline justify-between gap-2 mb-3">
         <h2 className="section-label">{title}</h2>
         {hint && <span style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>{hint}</span>}

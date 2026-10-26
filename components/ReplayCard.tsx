@@ -46,7 +46,7 @@ export function ReplayCard({ throws }: { throws: [number, number][] }) {
   const done = calm || (shown === throws.length && flying === null);
 
   return (
-    <div className="shadow-panel rounded-xl p-4 mb-6" style={{ background: "var(--color-surface)" }}>
+    <div className="card mb-6" style={{ background: "var(--color-surface)" }}>
       <div className="flex items-center justify-between mb-4">
         <p className="section-label">REPRISE · SISTE RUNDE</p>
         {!calm && (

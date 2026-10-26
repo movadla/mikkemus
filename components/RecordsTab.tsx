@@ -22,7 +22,7 @@ export function RecordsTab() {
   return (
     <div className="space-y-4">
       {lists.map((l) => (
-        <section key={l.key} className="shadow-panel rounded-xl p-4" style={{ background: "var(--color-surface)" }}>
+        <section key={l.key} className="card" style={{ background: "var(--color-surface)" }}>
           <h2 className="section-label mb-3">{l.title.toUpperCase()}</h2>
           <ol className="space-y-2">
             {l.holders.map((h, i) => (

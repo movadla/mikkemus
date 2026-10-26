@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { AccessProvider, blockedForLimited } from "@/lib/access";
+import { Wordmark } from "./ui/BrandMark";
 import { LOCK_SECONDS, MAX_TRIES, PIN_LENGTH, checkPin, lockSeconds, rememberDevice, rememberedLevel, type AccessLevel } from "@/lib/pin";
 
 const FOCUS_RING = "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
@@ -114,7 +115,9 @@ function PinScreen({ onUnlocked }: { onUnlocked: (level: AccessLevel) => void })
   return (
     <main className="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-8 px-6" style={{ background: "var(--color-bg)", color: "var(--color-cream)" }}>
       <div className="text-center">
-        <h1 className="font-display" style={{ fontSize: "var(--text-num)" }}>Mikke Mus</h1>
+        <h1>
+          <Wordmark size="num" align="center" />
+        </h1>
         <p style={{ color: "var(--color-muted)", fontSize: "var(--text-body)", marginTop: 6 }}>Skriv inn koden</p>
       </div>
       <div className="flex gap-4" style={{ animation: wrong ? "pin-shake 420ms" : undefined }} aria-hidden>

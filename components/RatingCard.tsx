@@ -66,7 +66,7 @@ export function RatingCard({ players, winner }: { players: string[]; winner: str
   const loserRow = shown.find((r) => r.name === loser);
 
   return (
-    <div className="shadow-panel rounded-xl p-4 mb-6" style={{ background: "var(--color-surface)" }}>
+    <div className="card mb-6" style={{ background: "var(--color-surface)" }}>
       <p className="mb-3 section-label">RATING ETTER KAMP</p>
       <div className="relative" style={{ height: shown.length * ROW_H }}>
         {shown.map((r) => {

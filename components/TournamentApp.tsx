@@ -278,7 +278,7 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
   }
 
   if (screen === "draw" && pendingMode && pendingParticipants) {
-    return <DrawScreen seeded={seededOrder()} summary={[pendingName || pendingCup?.name || "Turnering", String(pendingParticipants.length)].join(" · ")} onBack={() => setScreen("setup")} onStart={createAndOpen} />;
+    return <DrawScreen seeded={seededOrder()} cup={pendingCup ?? undefined} summary={[pendingName || pendingCup?.name || "Turnering", String(pendingParticipants.length)].join(" · ")} onBack={() => setScreen("setup")} onStart={createAndOpen} />;
   }
 
   if (screen === "match" && tournament && currentMatch && matchParticipants(currentMatch).length >= 2) {

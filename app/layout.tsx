@@ -35,8 +35,8 @@ export const viewport: Viewport = {
   colorScheme: "dark",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  // Zoom and "larger text" are the person's to choose, so neither is switched off. Double-tap zoom is (see touch-action in globals.css), because a quick second tap on the board is a dart.
+  maximumScale: 5,
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

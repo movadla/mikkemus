@@ -187,7 +187,7 @@ export function BullDuelWinnerScreen({
           <Tile label="MED" value={meanDistanceFor(duel, winner) === null ? "–" : String(Math.round(meanDistanceFor(duel, winner) as number))} unit={meanDistanceFor(duel, winner) === null ? undefined : "mm"} />
         </div>
 
-        <div className="shadow-panel rounded-xl p-4 mb-6" style={{ background: "var(--color-surface)" }}>
+        <div className="card mb-6" style={{ background: "var(--color-surface)" }}>
           <p className="mb-4 section-label">BULL-DUELL — DENNE KAMPEN</p>
           <div className="grid gap-x-2 gap-y-4 text-left" style={{ gridTemplateColumns: "1fr repeat(5, auto)" }}>
             <span style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }} />
@@ -253,7 +253,7 @@ export function BullDuelWinnerScreen({
         </div>
 
         {insights.length > 0 && (
-          <div className="shadow-panel rounded-xl p-4 mb-6" style={{ background: "var(--color-surface)" }}>
+          <div className="card mb-6" style={{ background: "var(--color-surface)" }}>
             <p className="mb-4 section-label">DET SOM STAKK UT</p>
             <div className="grid grid-cols-2 gap-3">
               {insights.map((a) => (
@@ -268,7 +268,7 @@ export function BullDuelWinnerScreen({
         )}
 
         {duel.players.some((p) => duel.pointsByTurn[p].length > 0) && (
-          <div className="shadow-panel rounded-xl p-4 mb-6" style={{ background: "var(--color-surface)" }}>
+          <div className="card mb-6" style={{ background: "var(--color-surface)" }}>
             <p className="mb-3 section-label">POENG RUNDE FOR RUNDE</p>
             <PointsRace duel={duel} winner={winner} />
             <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 justify-center" style={{ fontSize: "var(--text-micro)", color: "var(--color-muted)" }}>
@@ -283,7 +283,7 @@ export function BullDuelWinnerScreen({
         )}
 
         {measured && (
-          <div className="shadow-panel rounded-xl p-4 mb-6" style={{ background: "var(--color-surface)" }}>
+          <div className="card mb-6" style={{ background: "var(--color-surface)" }}>
             <p className="mb-3 section-label">KASTSPREDNING</p>
             {duel.players.length > 1 && (
               <div className="flex flex-wrap gap-2 mb-3 justify-center" role="radiogroup" aria-label="Spiller">

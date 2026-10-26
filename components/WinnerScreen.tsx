@@ -1,6 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { createPortal } from "react-dom";
+import { ChartFrame } from "./ui/ChartFrame";
+import { Segmented } from "./ui/Segmented";
 import { useAccess } from "@/lib/access";
 import { STEPS, STEP_LABELS, totalMarks, type PlayerProgress, type Step, type TurnAggregate, type TurnResult } from "@/lib/game";
 import { getRules } from "@/lib/rules";
@@ -194,9 +197,56 @@ export function WinnerScreen({
     players.some((p) => STEPS.some((s) => (luckByPlayer[p]?.[s].count ?? 0) > 0)) ||
     players.some((p) => (throwsByPlayer[p]?.length ?? 0) > 0);
   const [showMore, setShowMore] = useState(false);
+  const [tab, setTab] = useState<"oppsummering" | "statistikk" | "replay">("oppsummering");
+
+  // The way on, fixed to the window. It is drawn into the body: the screen above animates with a transform, and a fixed child of a
+  // transformed element is fixed to that element, not to the window.
+  const actionBarEl = (
+    <div className="fixed left-0 right-0 bottom-0 z-40 px-4" style={{ background: "var(--glass)", backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)", borderTop: "1px solid var(--color-hairline)", paddingTop: "0.75rem", paddingBottom: "max(0.75rem, env(safe-area-inset-bottom, 0px))" }}>
+      <div className="mx-auto max-w-md grid gap-2" style={{ gridTemplateColumns: [onPlayAgain, onNewMatch, true].filter(Boolean).length === 3 ? "1.5fr 1fr 1fr" : [onPlayAgain, onNewMatch, true].filter(Boolean).length === 2 ? "1.5fr 1fr" : "1fr" }}>
+    {onPlayAgain && (
+      <button
+        type="button"
+        onClick={onPlayAgain}
+        className={`glossy w-full rounded-xl font-semibold text-lg  ${FOCUS_RING}`}
+        style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", minHeight: "var(--control-lg)" } as React.CSSProperties}
+      >
+        Revansj
+      </button>
+    )}
+    {onNewMatch && (
+      <button
+        type="button"
+        onClick={onNewMatch}
+        className={`tactile w-full rounded-xl font-semibold text-lg  ${FOCUS_RING}`}
+        style={{ minHeight: "var(--control-lg)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
+      >
+        Ny kamp
+      </button>
+    )}
+    <button
+      type="button"
+      onClick={onHome}
+      className={
+        onPlayAgain
+          ? `tactile w-full rounded-xl font-semibold text-lg ${FOCUS_RING}`
+          : `glossy w-full rounded-xl font-semibold text-lg ${FOCUS_RING}`
+      }
+      style={
+        onPlayAgain
+          ? { minHeight: "var(--control-lg)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }
+          : ({ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", minHeight: "var(--control-lg)" } as React.CSSProperties)
+      }
+    >
+      {homeLabel}
+    </button>
+      </div>
+    </div>
+  );
+  const actionBar = typeof document === "undefined" ? actionBarEl : createPortal(actionBarEl, document.body);
 
   return (
-    <div className="animate-winner-slam relative min-h-screen w-full flex items-center justify-center p-4 overflow-hidden" style={{ background: "var(--color-bg)" }}>
+    <div className="animate-winner-slam relative min-h-screen w-full flex items-start justify-center p-4 overflow-hidden"  style={{ background: "var(--color-bg)" }}>
       {/* The blown-out first frame. Above everything, pointer-transparent, gone in 620ms. */}
       <div
         className="animate-winner-flash absolute inset-0 pointer-events-none z-50"
@@ -247,7 +297,7 @@ export function WinnerScreen({
           />
         ))}
       </div>
-      <div className="relative z-10 w-full max-w-md text-center">
+      <div className="relative z-10 w-full max-w-md text-center" style={{ paddingBottom: "7rem" }}>
         {/* The trophy rises above the winner; a team's own shirts rain instead of confetti cannons. */}
         {fx.trophy && <Trophy cannons={!shirts} />}
         <div className="relative">
@@ -357,10 +407,48 @@ export function WinnerScreen({
           </div>
         )}
 
+
+
+
+
+
+
+
+
+
+        {/* Three tabs, with what people want first: who won and why. The numbers are the second, the replay the third. */}
+        <div className="mb-4">
+          <Segmented
+            value={tab}
+            onChange={setTab}
+            label="Kampen"
+            options={[
+              { value: "oppsummering", label: "Oppsummering" },
+              { value: "statistikk", label: "Statistikk" },
+              { value: "replay", label: "Replay" },
+            ]}
+          />
+        </div>
+
+        {tab === "oppsummering" && (
+          <>
+        <AwardsCard awards={awards} />
+        {/* A match that has just been played: the ratings, and the match turn by turn. */}
+        {stats[winner] && !statsOff && !archive && <RatingCard players={players} winner={winner} />}
+        <MatchSummary facts={facts} />
+        {/* The match as a race — who led when, and by how much. */}
+        <ChartFrame title="LEDELSE RUNDE FOR RUNDE" legend={players.map((n) => ({ name: n, won: n === winner }))}>
+          <RaceChart players={players} turnLog={turnLogByPlayer} winner={winner} total={totalMarks()} />
+        </ChartFrame>
+          </>
+        )}
+
+        {tab === "statistikk" && (
+          <>
         {/* What people read first, and often all they read: hit percentage and darts, side by side
             for everyone. The charts and the finer statistics are further down, for those who
             keep scrolling. */}
-        <div className="shadow-panel rounded-xl p-4 mb-6" style={{ background: "var(--color-surface)" }}>
+        <div className="card mb-6" style={{ background: "var(--color-surface)" }}>
           <p className="mb-4 section-label">
             STATISTIKK — DENNE KAMPEN
           </p>
@@ -401,7 +489,7 @@ export function WinnerScreen({
 
         {/* Per thrower: in team play the members' own numbers, which the table above cannot show;
             for everyone, the turns where all three darts counted — and how many of those in a row. */}
-        <div className="shadow-panel rounded-xl p-4 mb-6" style={{ background: "var(--color-surface)" }}>
+        <div className="card mb-6" style={{ background: "var(--color-surface)" }}>
           <p className="mb-4 section-label">PER KASTER</p>
           <div role="table" aria-label="Per kaster">
             <div
@@ -456,7 +544,7 @@ export function WinnerScreen({
 
         {/* Team matches: every thrower of every side in one list, best hit percentage on top. */}
         {teamRanking.length > 1 && (
-          <div className="shadow-panel rounded-xl p-4 mb-6" style={{ background: "var(--color-surface)" }}>
+          <div className="card mb-6" style={{ background: "var(--color-surface)" }}>
             <p className="mb-4 section-label">TREFF % PÅ TVERS AV LAGENE</p>
             <div role="table" aria-label="Treffprosent per spiller">
               <div
@@ -491,27 +579,7 @@ export function WinnerScreen({
           </div>
         )}
 
-        <AwardsCard awards={awards} />
-
         <RowCostCard players={players} turnLog={turnLogByPlayer} />
-
-        <OddsChart history={oddsHistory} winner={winner} />
-
-        {/* A match that has just been played: the ratings, and the match turn by turn. */}
-        {stats[winner] && !statsOff && !archive && <RatingCard players={players} winner={winner} />}
-
-        <TimeMachine players={players} turnLog={turnLogByPlayer} snapshots={oddsHistory} winner={winner} />
-
-        {replayThrows && <ReplayCard throws={replayThrows} />}
-
-        <MatchSummary facts={facts} />
-
-        {/* The match as a race — who led when, and by how much. */}
-        <div className="shadow-panel rounded-xl p-4 mb-6" style={{ background: "var(--color-surface)" }}>
-          <p className="mb-4 section-label">LEDELSE RUNDE FOR RUNDE</p>
-          <RaceChart players={players} turnLog={turnLogByPlayer} winner={winner} total={totalMarks()} />
-        </div>
-
         {hasScoliaData && !showMore && !limited && (
           <button
             type="button"
@@ -524,7 +592,7 @@ export function WinnerScreen({
         )}
         {hasScoliaData && showMore && !limited && (
           <>
-        <div className="shadow-panel rounded-xl p-4 mb-4" style={{ background: "var(--color-surface)" }}>
+        <div className="card mb-4" style={{ background: "var(--color-surface)" }}>
           <p className="mb-4 section-label">FORVENTEDE TREFF</p>
           {!players.some((p) => STEPS.some((s) => luckByPlayer[p]?.[s].count > 0)) ? (
             <p style={{ color: "var(--color-muted)", fontSize: "var(--text-small)", lineHeight: 1.45 }}>
@@ -587,7 +655,7 @@ export function WinnerScreen({
         </div>
 
         {players.some((p) => (throwsByPlayer[p]?.length ?? 0) > 0) && (
-          <div className="shadow-panel rounded-xl p-4 mb-6" style={{ background: "var(--color-surface)" }}>
+          <div className="card mb-6" style={{ background: "var(--color-surface)" }}>
             <p className="mb-4 section-label">
               KASTSPREDNING
             </p>
@@ -609,10 +677,6 @@ export function WinnerScreen({
         )}
           </>
         )}
-
-        {/* After a single match there are three things to do next, in the order people want them:
-            the same people again, other people, or leave. In tournament mode there is only one —
-            back to the tournament — and it is the main button. */}
         {onToggleStats && (
           <div className="mb-4 text-center">
             {statsOff && (
@@ -630,42 +694,20 @@ export function WinnerScreen({
             </button>
           </div>
         )}
-        {onPlayAgain && (
-          <button
-            type="button"
-            onClick={onPlayAgain}
-            className={`glossy w-full rounded-xl font-semibold text-lg mb-2 ${FOCUS_RING}`}
-            style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", minHeight: "var(--control-lg)" } as React.CSSProperties}
-          >
-            Revansj
-          </button>
+          </>
         )}
-        {onNewMatch && (
-          <button
-            type="button"
-            onClick={onNewMatch}
-            className={`tactile w-full rounded-xl font-semibold text-lg mb-2 ${FOCUS_RING}`}
-            style={{ minHeight: "var(--control-lg)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
-          >
-            Ny kamp
-          </button>
+
+        {tab === "replay" && (
+          <>
+        <OddsChart history={oddsHistory} winner={winner} />
+        <TimeMachine players={players} turnLog={turnLogByPlayer} snapshots={oddsHistory} winner={winner} />
+        {replayThrows && <ReplayCard throws={replayThrows} />}
+          </>
         )}
-        <button
-          type="button"
-          onClick={onHome}
-          className={
-            onPlayAgain
-              ? `tactile w-full rounded-xl font-semibold text-lg ${FOCUS_RING}`
-              : `glossy w-full rounded-xl font-semibold text-lg ${FOCUS_RING}`
-          }
-          style={
-            onPlayAgain
-              ? { minHeight: "var(--control-lg)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }
-              : ({ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", minHeight: "var(--control-lg)" } as React.CSSProperties)
-          }
-        >
-          {homeLabel}
-        </button>
+
+        {/* The way on, fixed at the bottom: the same people again, other people, or leave. In a tournament there is only one,
+            back to the tournament, and it is the main button. */}
+        {actionBar}
       </div>
     </div>
   );

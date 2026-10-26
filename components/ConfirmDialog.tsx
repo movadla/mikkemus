@@ -72,7 +72,7 @@ export function ConfirmDialog({
       {/* shadow-panel matters most here of anywhere: a modal floating over a scrim is the
           one surface that should carry the deepest elevation, and it was the only card in
           the app without it. */}
-      <div className="shadow-panel w-full max-w-sm rounded-xl p-6" style={{ background: "var(--color-surface)" }}>
+      <div className="dialog-in card-raised w-full max-w-sm" style={{ padding: "1.5rem", boxShadow: "var(--elevation-3)" }}>
         <p id={messageId} className="text-center mb-6" style={{ color: "var(--color-cream)", fontSize: messageFontSize }}>
           {message}
         </p>
@@ -85,8 +85,8 @@ export function ConfirmDialog({
               }}
               type="button"
               onClick={b.onClick}
-              className={`glossy w-full py-4 rounded-lg font-medium ${FOCUS_RING}`}
-              style={{ "--btn-fill": b.background, color: b.color ?? "var(--color-cream)" } as React.CSSProperties}
+              className={`glossy w-full py-4 font-medium ${FOCUS_RING}`}
+              style={{ "--btn-fill": b.background, color: b.color ?? "var(--color-cream)", borderRadius: "var(--radius-m)", minHeight: "var(--control-lg)" } as React.CSSProperties}
             >
               {b.label}
             </button>

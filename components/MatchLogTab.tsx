@@ -9,6 +9,7 @@ import { shownHitPct } from "@/lib/playerRows";
 import { whenLabel } from "@/lib/formatDate";
 import { plainName } from "@/lib/botLevels";
 import { ChevronRightIcon } from "./icons";
+import { Button } from "./ui/Button";
 import { EmptyState } from "./ui/EmptyState";
 
 const PAGE_SIZE = 10;
@@ -86,7 +87,7 @@ export function MatchLogTab() {
   }, []);
 
   if (log.length === 0) {
-    return <EmptyState title="Ingen kamper ennå" />;
+    return <EmptyState title="Ingen kamper ennå" action={<Button href="/" variant="primary">Spill en kamp</Button>} />;
   }
   const pages = Math.ceil(log.length / PAGE_SIZE);
   const current = Math.min(page, pages - 1);

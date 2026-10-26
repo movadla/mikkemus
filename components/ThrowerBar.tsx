@@ -169,9 +169,10 @@ export function ThrowerBar({
         gap: compact ? "0.6rem" : "0.8rem",
         // A team's turn is in the team's colours: the bar washes from the kit's main colour, and
         // the left edge is the kit, not the app's teal.
-        background: kit ? `linear-gradient(90deg, ${tint(kit.primary, 0.32)}, var(--color-surface) 65%)` : "var(--color-surface)",
+        // A lone player has a colour too (the one on their picture), so the bar is theirs whoever it is.
+        background: kit ? `linear-gradient(90deg, ${tint(kit.primary, 0.32)}, var(--color-surface) 65%)` : `linear-gradient(90deg, color-mix(in srgb, ${avatarAccent(team ? team.name : thrower.name)} 24%, var(--color-surface)), var(--color-surface) 70%)`,
         border: `1px solid ${kit ? tint(kit.primary, 0.6) : "var(--color-border)"}`,
-        borderLeft: `6px solid ${kit ? kit.primary : "var(--color-teal)"}`,
+        borderLeft: `8px solid ${kit ? kit.primary : avatarAccent(team ? team.name : thrower.name)}`,
         padding: compact ? "0.4rem 0.6rem" : "0.6rem 0.8rem",
       }}
     >

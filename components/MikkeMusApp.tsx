@@ -52,6 +52,7 @@ import type { OddsRow } from "./OddsBar";
 import { logOddsMatch, type OddsSnapshot } from "@/lib/oddsLog";
 import { useShowOdds } from "@/lib/oddsSetting";
 import { haptics } from "@/lib/haptics";
+import { uiSound } from "@/lib/uiSound";
 import { crowdForStreak, playCrowd, playFanfare, playHitStreakSound, playStreakFanfare, playMatchDartSound, playTapSound, playWalkOnTune, playWinBoom, primeAudio, warmAudio } from "@/lib/fanfare";
 import { fxFlags, getFxLevel, useFxLevel } from "@/lib/fxLevel";
 import { ChalkboardScreen } from "./ChalkboardScreen";
@@ -2081,6 +2082,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   }
 
   function undo() {
+    uiSound("undo");
     haptics.undo();
     setStandQuestion(false);
     // This turn: the last ACTION goes — a whole dart with everything it brought, or a tap. See
@@ -2338,6 +2340,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
    * can't catch it: a `() => void` prop happily accepts a function with optional parameters.
    */
   function confirm() {
+    uiSound("confirm");
     if (standQuestionDue()) {
       setStandQuestion(true);
       return;

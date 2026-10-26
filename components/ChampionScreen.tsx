@@ -4,7 +4,9 @@ import { useState } from "react";
 import { awards, isHouseName, outIn, roadOf, undoableMatch } from "@/lib/knockout";
 import { fxFlags, useFxLevel } from "@/lib/fxLevel";
 import { firstKit } from "@/lib/teamKit";
+import { cupColor } from "@/lib/botCup";
 import { podium, tournamentTitle, type Tournament } from "@/lib/tournament";
+import { CupEmblem } from "./ui/CupEmblem";
 import { BracketTree } from "./BracketTree";
 import { ShirtRain } from "./ShirtRain";
 import { Trophy } from "./Trophy";
@@ -55,7 +57,8 @@ export function ChampionScreen({
             ← Tilbake
           </button>
         )}
-        <p className="section-label text-center" style={{ color: "var(--color-gold)" }}>
+        <p className="section-label text-center inline-flex items-center justify-center gap-2 w-full" style={{ color: cupColor(tournament.cup?.kind) }}>
+          {tournament.cup && <CupEmblem kind={tournament.cup.kind} className="w-4 h-4" />}
           {tournamentTitle(tournament).toUpperCase()} · MESTER
         </p>
         <Trophy cannons={fx.confetti && !shirts} />
@@ -79,7 +82,7 @@ export function ChampionScreen({
         )}
 
         {road.length > 0 && (
-          <section className="shadow-panel rounded-xl p-4 mt-6" style={card} aria-label="Veien til pokalen">
+          <section className="card mt-6" style={card} aria-label="Veien til pokalen">
             <p className="section-label mb-3">VEIEN</p>
             <ol className="space-y-2">
               {road.map((r) => {
@@ -105,7 +108,7 @@ export function ChampionScreen({
         )}
 
         {prizes.length > 0 && (
-          <section className="shadow-panel rounded-xl p-4 mt-4" style={card} aria-label="Utmerkelser">
+          <section className="card mt-4" style={card} aria-label="Utmerkelser">
             <p className="section-label mb-3">PRISER</p>
             <div className="space-y-2">
               {prizes.map((a) => (
@@ -124,7 +127,7 @@ export function ChampionScreen({
         )}
 
         {places && (
-          <section className="shadow-panel rounded-xl p-4 mt-4" style={card} aria-label="Pallen">
+          <section className="card mt-4" style={card} aria-label="Pallen">
             <ol className="space-y-1" style={{ color: "var(--color-cream)" }}>
               <li>1. {places.first}</li>
               {places.second && <li>2. {places.second}</li>}

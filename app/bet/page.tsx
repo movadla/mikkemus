@@ -80,7 +80,7 @@ export default function BetPage() {
 
 function Card({ children, title, hint }: { children: React.ReactNode; title?: string; hint?: string }) {
   return (
-    <section className="shadow-panel rounded-xl p-4 mb-4" style={{ background: "var(--color-surface)" }}>
+    <section className="card mb-4" style={{ background: "var(--color-surface)" }}>
       {title && (
         <div className="flex items-baseline justify-between gap-2 mb-3">
           <h2 className="section-label">{title}</h2>

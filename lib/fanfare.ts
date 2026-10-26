@@ -1037,3 +1037,39 @@ export function playWalkOnTune(kind: WalkOnTune): void {
     // A synth glitch must never break the turn that asked for it.
   }
 }
+
+/**
+ * The small sounds of the interface itself: a soft click for a pressed button, a rising pair for a confirmed turn and a short low
+ * thud for a step taken back. Quiet by design: they sit under the sounds of the game and are only played when asked for
+ * (see lib/uiSound.ts).
+ */
+export function playUiSound(kind: "click" | "confirm" | "undo") {
+  const ctx = getContext();
+  if (!ctx) return;
+  try {
+    if (ctx.state === "suspended") ctx.resume().catch(() => {});
+    const buses = getBuses(ctx);
+    if (!buses) return;
+    const t0 = ctx.currentTime + 0.005;
+    const tone = (freq: number, start: number, length: number, peak: number, type: OscillatorType = "sine") => {
+      const env = ctx.createGain();
+      env.gain.setValueAtTime(0.0001, start);
+      env.gain.exponentialRampToValueAtTime(peak, start + 0.006);
+      env.gain.exponentialRampToValueAtTime(0.0001, start + length);
+      env.connect(buses.master);
+      const osc = ctx.createOscillator();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, start);
+      osc.connect(env);
+      osc.start(start);
+      osc.stop(start + length + 0.02);
+    };
+    if (kind === "click") tone(880, t0, 0.04, 0.08, "triangle");
+    else if (kind === "confirm") {
+      tone(523, t0, 0.09, 0.14, "triangle");
+      tone(784, t0 + 0.07, 0.14, 0.14, "triangle");
+    } else tone(180, t0, 0.12, 0.2, "sine");
+  } catch {
+    // A sound that fails to play must never get in the way of the tap that asked for it.
+  }
+}

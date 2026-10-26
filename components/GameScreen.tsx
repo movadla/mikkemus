@@ -34,7 +34,9 @@ import { Mark } from "./Mark";
 import { ThrowerBar, type Thrower, type ThrowerTeam } from "./ThrowerBar";
 import { TeamKit } from "./TeamKit";
 import type { Kit } from "@/lib/teamKit";
-import { CalibrateIcon, DartIcon, PeopleIcon, ShakeIcon, SpeakerIcon, SpeakerMuteIcon } from "./icons";
+import { ArrowLeftIcon, CalibrateIcon, DartIcon, MoreIcon, PeopleIcon, ShakeIcon, SpeakerIcon, SpeakerMuteIcon } from "./icons";
+import { ScoliaDot } from "./ScoliaStatusBadge";
+import { Sheet } from "./ui/Sheet";
 
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
@@ -190,8 +192,11 @@ export function ChromeControls({
   onToggleStand,
   fxLabel,
   onOpenFx,
+  hideHome = false,
 }: {
   stacked?: boolean;
+  /** Left out inside the menu sheet, where the way out is not among the settings. */
+  hideHome?: boolean;
   onHome: () => void;
   announcerOn: boolean;
   onToggleAnnouncer: () => void;
@@ -208,18 +213,21 @@ export function ChromeControls({
   onOpenFx: () => void;
 }) {
   const icon = stacked
-    ? `tactile w-full h-11 rounded-lg flex items-center justify-center gap-2 text-sm ${FOCUS_RING}`
+    ? `tactile w-full h-12 rounded-lg flex items-center justify-start gap-3 px-4 ${FOCUS_RING}`
     : `tactile w-11 h-11 rounded-lg flex items-center justify-center shrink-0 ${FOCUS_RING}`;
   return (
     <>
-      <button
-        type="button"
-        onClick={onHome}
-        className={`tactile rounded-lg text-sm ${stacked ? "w-full h-11" : "px-3 h-11"} ${FOCUS_RING}`}
-        style={{ background: "var(--color-surface)", color: "var(--color-cream)" }}
-      >
-        ← Hjem
-      </button>
+      {!hideHome && (
+        <button
+          type="button"
+          onClick={onHome}
+          className={`tactile rounded-lg text-sm inline-flex items-center justify-center gap-2 ${stacked ? "w-full h-11" : "px-3 h-11"} ${FOCUS_RING}`}
+          style={{ background: "var(--color-surface)", color: "var(--color-cream)" }}
+        >
+          <ArrowLeftIcon className="w-4 h-4" />
+          Hjem
+        </button>
+      )}
       <button
         type="button"
         onClick={onToggleAnnouncer}
@@ -228,7 +236,7 @@ export function ChromeControls({
         style={{ background: "var(--color-surface)", color: announcerOn ? "var(--color-teal)" : "var(--color-muted)" }}
       >
         {announcerOn ? <SpeakerIcon className="w-4 h-4" /> : <SpeakerMuteIcon className="w-4 h-4" />}
-        {stacked && <span style={{ fontSize: "var(--text-micro)" }}>{announcerOn ? "Lyd på" : "Lyd av"}</span>}
+        {stacked && <span style={{ fontSize: "var(--text-body)" }}>{announcerOn ? "Lyd på" : "Lyd av"}</span>}
       </button>
       <button
         type="button"
@@ -239,7 +247,7 @@ export function ChromeControls({
         style={{ background: "var(--color-surface)", color: shakeOn ? "var(--color-teal)" : "var(--color-muted)" }}
       >
         <ShakeIcon className="w-4 h-4" />
-        {stacked && <span style={{ fontSize: "var(--text-micro)" }}>{shakeOn ? "Risting på" : "Risting av"}</span>}
+        {stacked && <span style={{ fontSize: "var(--text-body)" }}>{shakeOn ? "Risting på" : "Risting av"}</span>}
       </button>
       {/* The stand rule can be switched on (or off) while the match is on — for the match that was
           started with it forgotten. It counts from the moment it is switched. */}
@@ -258,7 +266,7 @@ export function ChromeControls({
           }}
         >
           <PeopleIcon className="w-4 h-4" />
-          {stacked && <span style={{ fontSize: "var(--text-micro)" }}>{standOn ? "Står ved 3: på" : "Står ved 3: av"}</span>}
+          {stacked && <span style={{ fontSize: "var(--text-body)" }}>{standOn ? "Står ved 3: på" : "Står ved 3: av"}</span>}
         </button>
       )}
       {/* The animation level, changeable in the match: Vanlig, Party or Full party. */}
@@ -273,7 +281,7 @@ export function ChromeControls({
         <svg viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor" aria-hidden>
           <path d="M12 2l2.4 6.2L21 9l-5 4.2L17.5 20 12 16.5 6.5 20 8 13.2 3 9l6.6-.8z" />
         </svg>
-        {stacked && <span style={{ fontSize: "var(--text-micro)" }}>{fxLabel}</span>}
+        {stacked && <span style={{ fontSize: "var(--text-body)" }}>{fxLabel}</span>}
       </button>
       {/* AirPlay: an audio context created before mirroring started keeps the sound on the
           phone. Only offered inside the panel — it is a recovery action, not something you
@@ -287,7 +295,7 @@ export function ChromeControls({
           style={{ background: "var(--color-surface)", color: "var(--color-muted)" }}
         >
           <SpeakerIcon className="w-4 h-4" />
-          <span style={{ fontSize: "var(--text-micro)" }}>Start lyd på nytt</span>
+          <span style={{ fontSize: "var(--text-body)" }}>Start lyd på nytt</span>
         </button>
       )}
       <button
@@ -309,7 +317,7 @@ export function ChromeControls({
         }}
       >
         <CalibrateIcon className="w-4 h-4" />
-        {stacked && <span style={{ fontSize: "var(--text-micro)" }}>Kalibrer</span>}
+        {stacked && <span style={{ fontSize: "var(--text-body)" }}>Kalibrer</span>}
       </button>
     </>
   );
@@ -770,6 +778,7 @@ export function GameScreen({
   // The turn the entry sheet was opened for: it follows that turn dart by dart and is gone when the turn is.
   const [enteringTurn, setEnteringTurn] = useState<number | null>(null);
   const [enteringOther, setEnteringOther] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   // Lazy-initialized from localStorage so the button reflects whatever the host last chose,
   // without waiting for an effect — announce() itself reads the same localStorage value
   // directly, so this state only drives the button's own icon/label.
@@ -910,6 +919,30 @@ export function GameScreen({
   /** Every player has finished this row, so it's settled history rather than live board. */
   const allClosed = (s: Step) => players.length > 0 && players.every((p) => (progress[p]?.[s] ?? 0) >= target);
 
+  // The settings of the match: in the sheet in portrait, in the (i) panel in landscape.
+  const chromeProps = {
+    onHome: () => setShowHomeConfirm(true),
+    announcerOn,
+    onToggleAnnouncer: () => {
+      const next = !announcerOn;
+      setAnnouncerOn(next);
+      setAnnouncerEnabled(next);
+    },
+    shakeOn,
+    onToggleShake: () => {
+      const next = !shakeOn;
+      setShakeOn(next);
+      setShakeEnabled(next);
+    },
+    onCalibrate: handleCalibrate,
+    calibrating,
+    standAvailable,
+    standOn,
+    onToggleStand,
+    fxLabel: FX_LABELS[fxLevelNow],
+    onOpenFx: () => setFxMenuOpen(true),
+  };
+
   return (
     <div
       // board-live: a connected board registers the darts itself, so landscape shrinks
@@ -940,28 +973,26 @@ export function GameScreen({
           every pixel of width is one the board and the live panel can use instead. */}
       {!compactLandscape && (
         <div className="game-header landscape-tight flex items-center gap-2 mb-2 max-w-3xl mx-auto w-full shrink-0">
-          <ChromeControls
-            onHome={() => setShowHomeConfirm(true)}
-            announcerOn={announcerOn}
-            onToggleAnnouncer={() => {
-              const next = !announcerOn;
-              setAnnouncerOn(next);
-              setAnnouncerEnabled(next);
-            }}
-            shakeOn={shakeOn}
-            onToggleShake={() => {
-              const next = !shakeOn;
-              setShakeOn(next);
-              setShakeEnabled(next);
-            }}
-            onCalibrate={handleCalibrate}
-            calibrating={calibrating}
-            standAvailable={standAvailable}
-            standOn={standOn}
-            onToggleStand={onToggleStand}
-            fxLabel={FX_LABELS[fxLevelNow]}
-            onOpenFx={() => setFxMenuOpen(true)}
-          />
+          <button
+            type="button"
+            onClick={() => setShowHomeConfirm(true)}
+            className={`tactile rounded-lg text-sm inline-flex items-center justify-center gap-2 px-3 h-11 ${FOCUS_RING}`}
+            style={{ background: "var(--color-surface)", color: "var(--color-cream)" }}
+          >
+            <ArrowLeftIcon className="w-4 h-4" />
+            Hjem
+          </button>
+          <span className="flex-1" />
+          {scolia && <ScoliaDot summary={scolia} />}
+          <button
+            type="button"
+            onClick={() => setMenuOpen(true)}
+            aria-label="Meny"
+            className={`tactile w-11 h-11 rounded-lg flex items-center justify-center shrink-0 ${FOCUS_RING}`}
+            style={{ background: "var(--color-surface)", color: "var(--color-cream)" }}
+          >
+            <MoreIcon className="w-5 h-5" />
+          </button>
           {/* Not gold: this is a mode warning, not something earned, and gold only means the
               latter (see globals.css). Red is the app's "careful" colour. */}
           {rewound && (
@@ -1071,6 +1102,13 @@ export function GameScreen({
       )}
 
       {fxMenuOpen && <FxMenu onClose={() => setFxMenuOpen(false)} />}
+      {menuOpen && (
+        <Sheet title="Kamp" onClose={() => setMenuOpen(false)}>
+          <div className="grid gap-2">
+            <ChromeControls {...chromeProps} stacked hideHome />
+          </div>
+        </Sheet>
+      )}
 
       {sheetOpen && thrower && <PlayerSheet name={thrower.name} team={throwerTeam?.name ?? null} onClose={() => setSheetOpen(false)} />}
 

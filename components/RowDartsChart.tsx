@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { STEPS, STEP_LABELS, type Step } from "@/lib/game";
+import { seriesColor } from "./ui/ChartFrame";
 
 export type RowChartUnit = "darts" | "pct";
 
@@ -34,7 +35,7 @@ export function RowDartsChart({ values, unit = "darts", who }: { values: Record<
           return (
             <g key={s} onClick={() => setPicked(s)} style={{ cursor: "pointer" }}>
               <rect x={x} y={20} width={24} height={110} fill="transparent" />
-              <rect x={x} y={125 - h} width={20} height={Math.max(2, h)} rx={5} fill={isWorst ? "var(--color-gold)" : "var(--color-teal)"} opacity={shown === s ? 1 : 0.8} stroke={shown === s ? "#fff" : "none"} strokeWidth={1.5} />
+              <rect x={x} y={125 - h} width={20} height={Math.max(2, h)} rx={5} fill={isWorst ? "var(--color-gold)" : seriesColor(who)} opacity={shown === s ? 1 : 0.8} stroke={shown === s ? "#fff" : "none"} strokeWidth={1.5} />
               <text x={x + 10} y={118 - h} textAnchor="middle" fill="var(--color-cream)" fontSize={unit === "pct" ? "10" : "11"} fontWeight="700">
                 {v === null ? "–" : unit === "pct" ? Math.round(v) : v}
               </text>

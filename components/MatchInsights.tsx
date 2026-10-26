@@ -6,6 +6,7 @@ import { throwerStats } from "@/lib/turnStats";
 import { rowCosts } from "@/lib/rowCosts";
 import { RowDartsChart } from "./RowDartsChart";
 import { BoltIcon, BullseyeIcon, FlameIcon, SparkIcon } from "./icons";
+import { ChartFrame, seriesColor } from "./ui/ChartFrame";
 
 type AwardKind = "accuracy" | "streak" | "fast" | "luck";
 type Award = { icon: AwardKind; title: string; who: string; detail: string };
@@ -64,7 +65,7 @@ export function buildAwards(args: {
 export function AwardsCard({ awards }: { awards: Award[] }) {
   if (awards.length === 0) return null;
   return (
-    <div className="shadow-panel rounded-xl p-4 mb-6" style={{ background: "var(--color-surface)" }}>
+    <div className="card mb-6" style={{ background: "var(--color-surface)" }}>
       <p className="mb-4 section-label">PRISER</p>
       <div className="grid grid-cols-2 gap-2">
         {awards.map((a) => (
@@ -96,7 +97,7 @@ export function RowCostCard({ players, turnLog }: { players: string[]; turnLog: 
   if (STEPS.every((s) => costs[s] === 0)) return null;
 
   return (
-    <div className="shadow-panel rounded-xl p-4 mb-6" style={{ background: "var(--color-surface)" }}>
+    <div className="card mb-6" style={{ background: "var(--color-surface)" }}>
       <p className="mb-4 section-label">HVILKEN RAD TOK LENGST TID?</p>
       {players.length > 1 && (
         <div className="flex flex-wrap gap-2 mb-4" role="radiogroup" aria-label="Lag">
@@ -120,7 +121,6 @@ export function RowCostCard({ players, turnLog }: { players: string[]; turnLog: 
   );
 }
 
-const SIDE_COLORS = ["#4b8be8", "var(--color-red)", "#e6bd57", "var(--color-teal)"];
 
 /**
  * How the odds moved through the match: each side's chance of winning after every turn, with the
@@ -134,30 +134,20 @@ export function OddsChart({ history, winner }: { history: { key: string; sides: 
   const x = (i: number) => X0 + (i / (history.length - 1)) * (X1 - X0);
   const y = (p: number) => 10 + (1 - p) * (H - 20);
   return (
-    <div className="shadow-panel rounded-xl p-4 mb-6" style={{ background: "var(--color-surface)" }}>
-      <p className="mb-4 section-label">ODDSENS FORLØP</p>
+    <ChartFrame title="ODDSENS FORLØP" legend={names.map((n) => ({ name: n, won: n === winner }))}>
       <svg viewBox={`0 0 ${W} ${H + 8}`} className="w-full h-auto" role="img" aria-label="Vinnersjanse etter hver runde">
         <line x1={X0} x2={X1} y1={y(0.5)} y2={y(0.5)} stroke="var(--color-border)" strokeDasharray="4 4" />
-        {names.map((n, si) => {
+        {names.map((n) => {
           const pts = history.map((h, i) => `${x(i)},${y(h.sides.find((s) => s.name === n)?.p ?? 0.5)}`).join(" ");
           const last = history[history.length - 1].sides.find((s) => s.name === n)?.p ?? 0.5;
           return (
             <g key={n}>
-              <polyline points={pts} fill="none" stroke={SIDE_COLORS[si % 4]} strokeWidth={n === winner ? 3.5 : 2.5} strokeLinecap="round" strokeLinejoin="round" opacity={n === winner ? 1 : 0.85} />
-              <circle cx={x(history.length - 1)} cy={y(last)} r={3.5} fill={SIDE_COLORS[si % 4]} />
+              <polyline points={pts} fill="none" stroke={seriesColor(n)} strokeWidth={n === winner ? 3.5 : 2.5} strokeLinecap="round" strokeLinejoin="round" opacity={n === winner ? 1 : 0.85} />
+              <circle cx={x(history.length - 1)} cy={y(last)} r={3.5} fill={seriesColor(n)} />
             </g>
           );
         })}
       </svg>
-      <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2" style={{ fontSize: "var(--text-small)" }}>
-        {names.map((n, si) => (
-          <span key={n} style={{ color: "var(--color-muted)" }}>
-            <i className="inline-block rounded-full mr-1" style={{ width: 8, height: 8, background: SIDE_COLORS[si % 4] }} />
-            {n}
-            {n === winner ? " (vant)" : ""}
-          </span>
-        ))}
-      </div>
-    </div>
+    </ChartFrame>
   );
 }

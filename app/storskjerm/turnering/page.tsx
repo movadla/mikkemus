@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { BracketTree } from "@/components/BracketTree";
+import { CupBanner } from "@/components/CupBanner";
 import { TvFrame } from "@/components/TvFrame";
 import { roundName } from "@/components/KnockoutOverview";
 import { nextToThrow } from "@/lib/botSim";
@@ -52,7 +53,7 @@ export default function StorskjermTurneringPage() {
       {tournament && isKnockout(tournament) && (
         <>
           <header className="text-center mb-6">
-            <p className="section-label" style={{ fontSize: "var(--text-body)" }}>{tournamentTitle(tournament).toUpperCase()}</p>
+            {tournament.cup ? <div className="mx-auto" style={{ maxWidth: "40rem" }}><CupBanner cup={tournament.cup} name={tournamentTitle(tournament)} large /></div> : <p className="section-label" style={{ fontSize: "var(--text-body)" }}>{tournamentTitle(tournament).toUpperCase()}</p>}
             {tournament.status === "done" ? (
               <h1 className="font-display" style={{ color: "var(--color-gold)", fontSize: "clamp(2.5rem, 7vw, 5rem)", lineHeight: 1.05 }}>
                 {tournament.winner} er mester
@@ -64,7 +65,6 @@ export default function StorskjermTurneringPage() {
             ) : (
               <h1 className="font-display" style={{ fontSize: "var(--text-num)" }}>Venter på neste kamp</h1>
             )}
-            {tournament.cup && tournament.status !== "done" && <p style={{ color: "var(--color-muted)", fontSize: "var(--text-title)" }}>Spiller om {tournament.cup.trophy}</p>}
           </header>
           <div className="rounded-2xl p-4 mx-auto" style={{ background: "var(--color-panel)", border: "1px solid var(--color-border)", maxWidth: "100rem" }}>
             <BracketTree tournament={tournament} nextId={next?.id ?? null} justDecidedId={justDecided} large />

@@ -90,7 +90,7 @@ function JustPlayedCard({ match, tournament }: { match: TournamentMatch; tournam
   const round = match.round === "group" ? `Gruppe ${(match.groupIndex ?? 0) + 1}` : bracketRoundLabel(match.bracketRoundSize ?? 1, match.isBronzeMatch);
   const group = match.round === "group" && match.groupIndex !== undefined ? tournament.groups[match.groupIndex] : null;
   return (
-    <div className="shadow-panel rounded-xl p-4 mb-4" style={{ background: "var(--color-panel)", border: "1px solid var(--color-teal)" }}>
+    <div className="card mb-4" style={{ background: "var(--color-panel)", border: "1px solid var(--color-teal)" }}>
       <p className="section-label mb-2">RESULTAT · {round.toUpperCase()}</p>
       <p className="mb-4" style={{ color: "var(--color-cream)", fontSize: "var(--text-title)" }}>
         <span className="font-display" style={{ color: "var(--color-gold)", fontSize: "var(--text-title)" }}>
@@ -295,7 +295,7 @@ export function TournamentOverviewScreen({
 
         <div className="space-y-4 mb-4">
           {tournament.groups.map((group, gi) => (
-            <div key={gi} className="shadow-panel rounded-xl p-4" style={{ background: "var(--color-panel)", border: "1px solid var(--color-border)" }}>
+            <div key={gi} className="card" style={{ background: "var(--color-panel)", border: "1px solid var(--color-border)" }}>
               <p className="section-label mb-2">GRUPPE {gi + 1}</p>
               {/* The group that has just played has its table in the result card above; showing it
                   again right under would only be the same numbers twice. */}
@@ -316,7 +316,7 @@ export function TournamentOverviewScreen({
             if (!preview) return null;
             return (
               <>
-                <div className="shadow-panel rounded-xl p-4 mb-4" style={{ background: "var(--color-panel)", border: "1px solid var(--color-border)" }}>
+                <div className="card mb-4" style={{ background: "var(--color-panel)", border: "1px solid var(--color-border)" }}>
                   <p className="section-label mb-2">
                     SLUTTSPILL · {[bracketRoundLabel(preview.bracketSize / 2), ...preview.laterRoundLabels].join(" → ").toUpperCase()}
                     {preview.hasBronzeMatch && " · BRONSE"}
@@ -340,7 +340,7 @@ export function TournamentOverviewScreen({
           <>
             <div className="space-y-4 mb-4">
               {bracketRoundSizes.map((size) => (
-                <div key={size} className="shadow-panel rounded-xl p-4" style={{ background: "var(--color-panel)", border: "1px solid var(--color-border)" }}>
+                <div key={size} className="card" style={{ background: "var(--color-panel)", border: "1px solid var(--color-border)" }}>
                   <p className="section-label mb-2">{bracketRoundLabel(size).toUpperCase()}</p>
                   <div className="space-y-2">
                     {bracketMatches
@@ -352,7 +352,7 @@ export function TournamentOverviewScreen({
                 </div>
               ))}
               {bracketMatches.some((m) => m.isBronzeMatch) && (
-                <div className="shadow-panel rounded-xl p-4" style={{ background: "var(--color-panel)", border: "1px solid var(--color-border)" }}>
+                <div className="card" style={{ background: "var(--color-panel)", border: "1px solid var(--color-border)" }}>
                   <p className="section-label mb-2">BRONSEFINALE</p>
                   <div className="space-y-2">
                     {bracketMatches

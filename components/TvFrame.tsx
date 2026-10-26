@@ -5,6 +5,7 @@ import { useEffect, type ReactNode } from "react";
 import { dayLabel } from "@/lib/formatDate";
 import { groupNights } from "@/lib/nights";
 import { useRoster } from "@/lib/storage";
+import { Wordmark } from "./ui/BrandMark";
 
 /**
  * The frame every big-screen page shares, so the TV looks like one broadcast whichever page is on it: a plain dark ground
@@ -34,9 +35,7 @@ export function TvFrame({ label, children, className = "" }: { label: string; ch
         Hjem
       </Link>
       <div className="absolute top-3 left-0 right-0 z-30 flex items-center justify-center gap-3 pointer-events-none" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)", letterSpacing: "0.18em", textTransform: "uppercase" }}>
-        <span className="font-display" style={{ color: "var(--color-cream)", letterSpacing: "0.08em", fontSize: "var(--text-body)" }}>
-          Mikke Mus
-        </span>
+        <Wordmark />
         <span aria-hidden>·</span>
         <span>{label}</span>
       </div>

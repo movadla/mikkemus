@@ -1,0 +1,61 @@
+name: Kontroll
+
+# Hver endring: typer, lint og alle enhetstester. Skjermbildene kjøres i en egen jobb, for hånd eller hver natt, fordi de trenger
+# en nettleser og koden til appen (se under).
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      update_snapshots:
+        description: "Ta nye skjermbilder i stedet for å sammenligne (etter en endring som skal se annerledes ut)"
+        type: boolean
+        default: false
+  schedule:
+    - cron: "0 3 * * *"
+
+jobs:
+  kontroll:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npx eslint app components lib e2e
+      - run: npx vitest run
+
+  skjermbilder:
+    # Bare for hånd og om natten: bildene er av en bestemt nettleser og skrift, og tar noen minutter.
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    needs: kontroll
+    env:
+      # Koden til appen, lagt inn som en hemmelighet i GitHub (Settings, Secrets, Actions).
+      E2E_PIN: ${{ secrets.E2E_PIN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Sammenlign skjermbildene
+        if: ${{ !inputs.update_snapshots }}
+        run: npx playwright test
+      - name: Ta nye skjermbilder
+        if: ${{ inputs.update_snapshots }}
+        run: npx playwright test --update-snapshots
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: skjermbilder
+          path: |
+            e2e/__screenshots__
+            test-results
+          if-no-files-found: ignore

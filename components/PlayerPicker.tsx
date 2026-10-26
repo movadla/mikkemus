@@ -3,11 +3,12 @@
 import { useMemo, useState } from "react";
 import { useRoster } from "@/lib/storage";
 import { BOT_LEVEL_PICKABLE, botDisplayName, type BotLevel } from "@/lib/botLevels";
-import { avatarAccent } from "@/lib/avatarAccent";
 import { nextBotName, sameName, type Person } from "@/lib/people";
 import { filterNames, readUsage, sortByRecent } from "@/lib/recentPlayers";
 import { BotIcon, CloseIcon, GuestIcon } from "./icons";
 import { LevelBadge } from "./LevelBadge";
+import { Avatar } from "./ui/Avatar";
+import { SearchField, TextField } from "./ui/TextField";
 
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
@@ -135,19 +136,20 @@ export function PlayerPicker({
 
       {(adding === "player" || adding === "guest") && (
         <div className="flex gap-2 mb-4">
-          <input
-            autoFocus
-            value={nameInput}
-            onChange={(e) => {
-              setNameInput(e.target.value);
-              setError("");
-            }}
-            onKeyDown={(e) => e.key === "Enter" && addName(adding === "guest")}
-            placeholder={adding === "guest" ? "Gjestens navn" : "Spillernavn"}
-            aria-label={adding === "guest" ? "Gjestens navn" : "Spillernavn"}
-            className={`flex-1 min-w-0 px-4 rounded-lg ${FOCUS_RING}`}
-            style={{ minHeight: "var(--control)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
-          />
+          <div className="flex-1 min-w-0">
+            <TextField
+              autoFocus
+              hideLabel
+              value={nameInput}
+              onChange={(v) => {
+                setNameInput(v);
+                setError("");
+              }}
+              onEnter={() => addName(adding === "guest")}
+              placeholder={adding === "guest" ? "Gjestens navn" : "Spillernavn"}
+              label={adding === "guest" ? "Gjestens navn" : "Spillernavn"}
+            />
+          </div>
           <button
             type="button"
             onClick={() => addName(adding === "guest")}
@@ -190,15 +192,9 @@ export function PlayerPicker({
       )}
 
       {known.length >= SEARCH_FROM && (
-        <input
-          type="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Søk"
-          aria-label="Søk etter spiller"
-          className={`w-full px-4 rounded-lg mb-4 ${FOCUS_RING}`}
-          style={{ minHeight: "var(--control)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)", fontSize: "var(--text-body)" }}
-        />
+        <div className="mb-4">
+          <SearchField value={query} onChange={setQuery} label="Søk etter spiller" />
+        </div>
       )}
 
       {bulk && known.length > 0 && (
@@ -235,22 +231,13 @@ export function PlayerPicker({
                   border: selected ? "1px solid var(--color-teal)" : `1px ${dashed ? "dashed" : "solid"} var(--color-border)`,
                 }}
               >
-                <span
-                  className="rounded-full overflow-hidden shrink-0 flex items-center justify-center"
-                  style={{ width: "1.75rem", height: "1.75rem", background: "var(--color-cell)", border: `1.5px solid ${person.isBot || person.isGuest ? "var(--color-border)" : avatarAccent(person.name)}` }}
-                  aria-hidden
-                >
-                  {person.isBot ? (
-                    <BotIcon className="w-4 h-4" />
-                  ) : person.isGuest ? (
+                {person.isGuest ? (
+                  <span aria-hidden className="rounded-full shrink-0 flex items-center justify-center" style={{ width: 32, height: 32, background: "var(--color-cell)", border: "1.5px dashed var(--color-border)" }}>
                     <GuestIcon className="w-3.5 h-3.5" />
-                  ) : photo ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={photo} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <span style={{ color: avatarAccent(person.name), fontSize: "var(--text-micro)" }}>{person.name.charAt(0).toUpperCase()}</span>
-                  )}
-                </span>
+                  </span>
+                ) : (
+                  <Avatar name={person.name} photo={photo} size="s" bot={person.isBot} />
+                )}
                 <span className="flex-1 min-w-0 truncate" style={{ color: botBlocked ? "var(--color-red)" : selected ? "var(--color-cream)" : "var(--color-muted)", fontSize: "var(--text-body)", fontWeight: selected ? 600 : 400 }}>
                   {person.name}
                   {person.isGuest && <span style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)", fontWeight: 400 }}> · gjest</span>}

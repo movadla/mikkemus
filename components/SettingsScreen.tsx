@@ -5,6 +5,7 @@ import { FX_LABELS, FX_LEVELS, setFxLevel, useFxLevel } from "@/lib/fxLevel";
 import { useShowOdds, setShowOdds } from "@/lib/oddsSetting";
 import { setTexture, useTexture } from "@/lib/texture";
 import { setTheme, useTheme } from "@/lib/theme";
+import { setUiSound, useUiSound } from "@/lib/uiSound";
 import { useAccess } from "@/lib/access";
 import { QrCode } from "./QrCode";
 import { ScreenTop } from "./ScreenTop";
@@ -41,6 +42,7 @@ export function SettingsScreen({ onBack }: { onBack?: () => void }) {
   const { limited } = useAccess();
   const showOdds = useShowOdds();
   const texture = useTexture();
+  const uiSoundOn = useUiSound();
   const theme = useTheme();
   const fx = useFxLevel();
   const [qr, setQr] = useState<"live" | "turnering" | null>(null);
@@ -71,6 +73,7 @@ export function SettingsScreen({ onBack }: { onBack?: () => void }) {
             </div>
             <SwitchRow label="Odds" checked={showOdds} onChange={setShowOdds} />
             <SwitchRow label="Tekstur" checked={texture} onChange={setTexture} />
+            <SwitchRow label="Lyd i knapper" hint="Party og Full party" checked={uiSoundOn} onChange={setUiSound} />
           </div>
         </Section>
 

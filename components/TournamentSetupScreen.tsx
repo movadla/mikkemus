@@ -13,6 +13,7 @@ import { ScreenTop } from "./ScreenTop";
 import { CupDetails, CupSizePicker, CupTypePicker, type CupChoice } from "./CupOptions";
 import { ModeToggle, commitPeople, commitTeams } from "./SetupScreen";
 import { StepStrip } from "./StepStrip";
+import { TextField } from "./ui/TextField";
 import { StickyAction } from "./StickyAction";
 import { TeamPicker } from "./TeamPicker";
 
@@ -196,15 +197,9 @@ export function TournamentSetupScreen({
         </button>
         {moreOpen && (
           <div className="mb-6">
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              maxLength={40}
-              placeholder="Navn (valgfritt)"
-              aria-label="Navn på turneringen"
-              className={`w-full px-4 rounded-lg mb-4 ${FOCUS_RING}`}
-              style={{ minHeight: "var(--control)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
-            />
+            <div className="mb-4">
+              <TextField hideLabel value={name} onChange={setName} maxLength={40} placeholder="Navn (valgfritt)" label="Navn på turneringen" />
+            </div>
             <RulesPicker variant={variant} onChange={setVariant} teamPlay={mode === "team"} labelAlign="left" />
             {cupMode && <CupDetails value={{ ...cup, size: cupSize }} onChange={setCup} />}
           </div>

@@ -16,12 +16,14 @@ import { PlayerKitEditor, TeamKitEditor, WalkOnPicker } from "@/components/KitSe
 import { TeamKit } from "@/components/TeamKit";
 import { teamKitsOf } from "@/lib/storage";
 import { EditIcon, TrashIcon } from "@/components/icons";
-import { avatarAccent } from "@/lib/avatarAccent";
+import { ViewTransition } from "react";
+import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Row } from "@/components/ui/Row";
 import { Section } from "@/components/ui/Section";
 import { Sheet } from "@/components/ui/Sheet";
+import { TextField } from "@/components/ui/TextField";
 import { SkeletonRows } from "@/components/ui/Skeleton";
 
 const RULES = { target: 3, ringChoice: true };
@@ -143,22 +145,16 @@ export default function PlayerDetailPage() {
 
               {/* A team can be called anything — it does not have to be its players' names. */}
               {isTeam && (
-                <div>
-                  <label htmlFor="rename-team" className="mb-2 section-label block">
-                    LAGNAVN
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      id="rename-team"
-                      value={newName ?? player.name}
-                      onChange={(e) => {
-                        setNewName(e.target.value);
-                        setNameError("");
-                      }}
-                      maxLength={TEAM_NAME_MAX}
-                      className={`flex-1 min-w-0 px-4 ${FOCUS_RING}`}
-                      style={{ minHeight: "var(--control)", borderRadius: "var(--radius-s)", background: "var(--color-cell)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
-                    />
+                <TextField
+                  label="Lagnavn"
+                  value={newName ?? player.name}
+                  onChange={(v) => {
+                    setNewName(v);
+                    setNameError("");
+                  }}
+                  maxLength={TEAM_NAME_MAX}
+                  error={nameError}
+                  trailing={
                     <Button
                       variant="primary"
                       disabled={newName === null || newName.trim() === player.name}
@@ -175,13 +171,8 @@ export default function PlayerDetailPage() {
                     >
                       Lagre
                     </Button>
-                  </div>
-                  {nameError && (
-                    <p role="alert" className="mt-2" style={{ color: "var(--color-red)", fontSize: "var(--text-micro)" }}>
-                      {nameError}
-                    </p>
-                  )}
-                </div>
+                  }
+                />
               )}
 
               {/* The shirts and the tune a team walks on to. */}
@@ -226,16 +217,11 @@ export default function PlayerDetailPage() {
 
         <div className="shadow-panel p-5 mb-6 text-center" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-l)" }}>
           <div className="flex justify-center mb-3">
-            <span className="rounded-full overflow-hidden flex items-center justify-center" style={{ width: "6rem", height: "6rem", background: "var(--color-cell)", border: "2px solid " + avatarAccent(player.name) }}>
-              {player.photo ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={player.photo} alt="" className="w-full h-full object-cover" />
-              ) : (
-                <span className="font-display" style={{ color: avatarAccent(player.name), fontSize: "var(--text-num)" }}>
-                  {player.name.charAt(0).toUpperCase()}
-                </span>
-              )}
-            </span>
+            <ViewTransition name={`avatar-${player.name}`} share="morph" default="none">
+              <span className="inline-flex">
+                <Avatar name={player.name} photo={player.photo} size="l" state="idle" />
+              </span>
+            </ViewTransition>
           </div>
           <div className="flex justify-center">
             <TeamKit kit={teamKitsOf(player).home} size={44} title="Drakt" />

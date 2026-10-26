@@ -24,7 +24,7 @@ export function StatsView({ initialTab = "spillere" }: { initialTab?: StatsTab }
   const [tab, setTab] = useState<StatsTab>(initialTab);
   return (
     <div className="animate-screen-enter screen" style={{ background: "var(--color-bg)" }}>
-      <div className="screen-inner">
+      <div className="screen-inner wide">
         <ScreenTop title="Statistikk" />
         <div className="mb-5">
           <Segmented value={tab} onChange={setTab} label="Statistikk" options={OPTIONS} />

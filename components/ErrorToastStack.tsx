@@ -8,7 +8,7 @@ function ToastLine({ message, id }: { message: string; id: number }) {
   return (
     <p
       key={id}
-      className="animate-toast-enter shadow-panel rounded-full px-4 py-2 text-center mx-auto"
+      className="animate-toast-enter card-raised text-center mx-auto"
       style={{
         background: "var(--color-surface)",
         border: "1px solid var(--color-border)",
@@ -16,6 +16,8 @@ function ToastLine({ message, id }: { message: string; id: number }) {
         color: "var(--color-cream)",
         fontSize: "var(--text-small)",
         maxWidth: "26rem",
+        padding: "0.5rem 1rem",
+        borderRadius: "var(--radius-m)",
       }}
     >
       {message}

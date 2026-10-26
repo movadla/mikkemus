@@ -1,7 +1,8 @@
 "use client";
 
 import { BOT_LEVELS, BOT_LEVEL_PICKABLE, type BotLevel } from "@/lib/botLevels";
-import { CUP_TYPES, cupType, type CupKind } from "@/lib/botCup";
+import { CUP_TYPES, cupColor, cupType, type CupKind } from "@/lib/botCup";
+import { CupEmblem } from "./ui/CupEmblem";
 import { LevelBadge } from "./LevelBadge";
 import { Chip } from "./ui/Chip";
 import { FOCUS_RING } from "./ui/focus";
@@ -16,7 +17,12 @@ export function CupTypePicker({ value, onChange, maxSize }: { value: CupChoice; 
         const selected = t.kind === value.kind;
         return (
           <Chip key={t.kind} block selected={selected} onClick={() => onChange({ ...value, kind: t.kind, size: Math.min(t.defaultSize, maxSize) })}>
-            {t.name}
+            <span className="inline-flex items-center gap-2">
+              <span style={{ color: cupColor(t.kind) }}>
+                <CupEmblem kind={t.kind} />
+              </span>
+              {t.name}
+            </span>
           </Chip>
         );
       })}

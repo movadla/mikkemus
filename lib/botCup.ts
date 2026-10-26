@@ -46,6 +46,11 @@ export type CupConfig = {
   seed: number;
 };
 
+/** The colour a cup is drawn in (a token, so it follows the theme); the everyday teal for a tournament that is not a cup. */
+export function cupColor(kind?: CupKind | null): string {
+  return kind ? `var(--cup-${kind})` : "var(--color-teal)";
+}
+
 export function cupType(kind: CupKind): CupType {
   return CUP_TYPES.find((c) => c.kind === kind) ?? CUP_TYPES[0];
 }

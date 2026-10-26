@@ -130,6 +130,15 @@
   --radius-2xl: 1.25rem;
 }
 
+html {
+  /* The size of text is the person's: it follows the browser's own setting (and the phone's "larger text"), and nothing here pins it. */
+  font-size: 100%;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  /* No zoom by double tap: two quick taps on the board are two darts. Pinching still zooms. */
+  touch-action: manipulation;
+}
+
 html,
 body {
   /* A light source above the screen: the top of the page a shade warmer, the rest the deep ground. */
@@ -1617,6 +1626,21 @@ button {
   --veil: rgba(255, 255, 255, 0.06);
 }
 
+@keyframes dialog-pop {
+  from {
+    transform: scale(0.96);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+.dialog-in {
+  animation: dialog-pop var(--duration-fast) var(--ease-standard) both;
+}
+
 @keyframes sheet-up {
   from {
     transform: translateY(24px);
@@ -1727,4 +1751,80 @@ html[data-theme="light"] .tactile {
 
 html[data-theme="light"] body::before {
   opacity: 0.025;
+}
+
+/* -- cards, in three levels --
+   Flat groups things (a panel on the ground), raised holds a result or an action (a surface with a shadow), gold is for what has
+   been earned and nothing else (see .card-gold above). Same corners and padding on all three; a screen picks the level, not the look. */
+.card,
+.card-raised {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-m);
+  padding: 1rem;
+  box-shadow: var(--elevation-1);
+}
+
+.card-flat {
+  background: var(--color-panel);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-m);
+  padding: 1rem;
+}
+
+.card-gold-pad {
+  border-radius: var(--radius-m);
+  padding: 1rem;
+}
+
+/* -- the cups: each has a colour of its own, used for its emblem, its stripe and its trophy -- */
+:root {
+  --cup-vm: #d9ae4f;
+  --cup-em: #5b9bf0;
+  --cup-gs: #a47ae6;
+  --cup-nm: #ee6b57;
+  --cup-open: #58b072;
+}
+
+html[data-theme="light"] {
+  --cup-vm: #94700f;
+  --cup-em: #2f66bd;
+  --cup-gs: #6c43b8;
+  --cup-nm: #bf3f2b;
+  --cup-open: #2a7a47;
+}
+
+/* -- wide screens --
+   From 768 px the menu is a rail down the left side and the screen leaves room for it; from 900 px the pages that are lists
+   (.screen-inner.wide) open up to two columns instead of a thin stripe in the middle. */
+.bottom-nav {
+  border-right: 0;
+}
+
+@media (min-width: 768px) {
+  .bottom-nav {
+    border-right: 1px solid var(--color-hairline);
+  }
+
+  .screen {
+    padding-left: calc(1rem + var(--nav-rail, 0px));
+    padding-bottom: 2.5rem;
+  }
+}
+
+.screen-inner.wide {
+  max-width: 28rem;
+}
+
+@media (min-width: 900px) {
+  .screen-inner.wide {
+    max-width: 60rem;
+  }
+
+  .wide-columns {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem 1.5rem;
+    align-items: start;
+  }
 }

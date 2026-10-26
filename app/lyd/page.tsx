@@ -23,7 +23,7 @@ const FOCUS_RING =
 
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="shadow-panel rounded-xl p-4 mb-4" style={{ background: "var(--color-surface)" }}>
+    <div className="card mb-4" style={{ background: "var(--color-surface)" }}>
       <p className="mb-4 section-label">
         {title}
       </p>

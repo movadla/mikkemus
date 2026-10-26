@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useEffect, useRef, useState } from "react";
+import { cupColor } from "@/lib/botCup";
 import { bracketRounds, bronzeMatch, isHouseName, placeholderLabel, seedOf } from "@/lib/knockout";
 import type { Tournament, TournamentMatch } from "@/lib/tournament";
 import { MinusIcon, PlusIcon, TrophyIcon } from "./icons";
@@ -43,6 +44,7 @@ export function BracketTree({
     const pitch = total / rounds[ci].matches.length;
     return m.top + (i + 0.5) * pitch;
   };
+  const accent = cupColor(tournament.cup?.kind);
   const just = justDecidedId ? tournament.matches.find((x) => x.id === justDecidedId) : undefined;
   const scroller = useRef<HTMLDivElement>(null);
   const focus = useRef<HTMLDivElement>(null);
@@ -195,7 +197,7 @@ export function BracketTree({
   const final = rounds[lastCol]?.matches[0];
   const finalY = centerY(lastCol, 0);
   if (final) {
-    lines.push(<path key="cup" d={`M${colX(lastCol) + m.w},${finalY} H${colX(lastCol + 1)}`} stroke={final.winner ? "var(--color-gold)" : "var(--color-border)"} strokeWidth={final.winner ? 2.5 : 1.5} fill="none" />);
+    lines.push(<path key="cup" d={`M${colX(lastCol) + m.w},${finalY} H${colX(lastCol + 1)}`} stroke={final.winner ? accent : "var(--color-border)"} strokeWidth={final.winner ? 2.5 : 1.5} fill="none" />);
   }
 
   return (
@@ -243,7 +245,7 @@ export function BracketTree({
             {r.label.toUpperCase()}
           </div>
         ))}
-        <div className="absolute text-center section-label" style={{ left: colX(rounds.length), top: 0, width: m.w, borderBottom: "1px solid var(--color-gold)", paddingBottom: 6, color: "var(--color-gold)" }}>
+        <div className="absolute text-center section-label" style={{ left: colX(rounds.length), top: 0, width: m.w, borderBottom: `1px solid ${accent}`, paddingBottom: 6, color: accent }}>
           MESTER
         </div>
         <svg width={width} height={height} className="absolute left-0 top-0 pointer-events-none" aria-hidden>
@@ -252,7 +254,7 @@ export function BracketTree({
         {rounds.map((r, ci) => r.matches.map((match, i) => tie(match, colX(ci), centerY(ci, i) - m.h / 2)))}
         <div
           className="absolute flex flex-col items-center justify-center gap-1 text-center"
-          style={{ left: colX(rounds.length), top: finalY - m.h * 0.75, width: m.w, height: m.h * 1.5, borderRadius: 10, border: `1px ${tournament.winner ? "solid" : "dashed"} var(--color-gold)`, color: "var(--color-gold)", background: tournament.winner ? "rgba(217,174,79,0.1)" : "transparent" }}
+          style={{ left: colX(rounds.length), top: finalY - m.h * 0.75, width: m.w, height: m.h * 1.5, borderRadius: 10, border: `1px ${tournament.winner ? "solid" : "dashed"} ${accent}`, color: accent, background: tournament.winner ? "rgba(217,174,79,0.1)" : "transparent" }}
         >
           <TrophyIcon className={large ? "w-9 h-9" : "w-6 h-6"} />
           <span className="font-display w-full px-2" style={{ lineHeight: 1.1, fontSize: large ? "var(--text-title)" : "var(--text-body)", color: tournament.winner ? "var(--color-cream)" : "var(--color-gold)" }}>

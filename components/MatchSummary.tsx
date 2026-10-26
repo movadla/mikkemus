@@ -79,7 +79,7 @@ export function MatchSummary({ facts }: { facts: MatchFacts | null }) {
   const isAi = aiText !== null && aiText.key === key;
 
   return (
-    <div className="shadow-panel rounded-xl p-4 mb-6" style={{ background: "var(--color-surface)" }}>
+    <div className="card mb-6" style={{ background: "var(--color-surface)" }}>
       <p className="mb-4 section-label flex items-center justify-center gap-2">
         HVORDAN GIKK DET?
         {isAi && (

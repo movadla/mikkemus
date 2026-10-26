@@ -1,10 +1,11 @@
 "use client";
 
 import { useRoster, type MatchHistoryEntry, type PlayerRecord } from "@/lib/storage";
-import { avatarAccent } from "@/lib/avatarAccent";
 import { dayLabel } from "@/lib/formatDate";
 import { groupNights } from "@/lib/nights";
 import { MedalIcon, TrophyIcon } from "./icons";
+import { Avatar } from "./ui/Avatar";
+import { Button } from "./ui/Button";
 import { EmptyState } from "./ui/EmptyState";
 import { Row } from "./ui/Row";
 import { Section } from "./ui/Section";
@@ -37,19 +38,6 @@ function winStreaks(history: MatchHistoryEntry[]): { best: number; current: numb
 /** The colours of the places: gold is earned, silver and bronze are the two below it. */
 const PLACE_COLOR = ["var(--color-gold)", "var(--color-silver)", "var(--color-bronze)"];
 
-function Avatar({ p, size }: { p: PlayerRecord; size: string }) {
-  return (
-    <span className="rounded-full overflow-hidden shrink-0 flex items-center justify-center" style={{ width: size, height: size, background: "var(--color-cell)", border: "1px solid var(--color-border)" }}>
-      {p.photo ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={p.photo} alt="" className="w-full h-full object-cover" />
-      ) : (
-        <span style={{ color: avatarAccent(p.name), fontSize: "var(--text-body)" }}>{p.name.charAt(0).toUpperCase()}</span>
-      )}
-    </span>
-  );
-}
-
 /** One of the three on the podium: the medal, the picture, the name and the win rate. The winner stands highest. */
 function PodiumPlace({ p, place }: { p: PlayerRecord; place: 0 | 1 | 2 }) {
   return (
@@ -60,7 +48,7 @@ function PodiumPlace({ p, place }: { p: PlayerRecord; place: 0 | 1 | 2 }) {
       <span style={{ color: PLACE_COLOR[place] }}>
         <MedalIcon className="w-6 h-6" />
       </span>
-      <Avatar p={p} size={place === 0 ? "3.5rem" : "2.75rem"} />
+      <Avatar name={p.name} photo={p.photo} size={place === 0 ? "l" : "m"} state={place === 0 ? "winner" : "idle"} />
       <span className="font-display truncate w-full" style={{ color: "var(--color-cream)", fontSize: "var(--text-body)" }}>
         {p.name}
       </span>
@@ -82,7 +70,7 @@ export function HallOfFameTab() {
     .sort((a, b) => Number(b.matchesPlayed >= MIN_MATCHES) - Number(a.matchesPlayed >= MIN_MATCHES) || winPct(b) - winPct(a) || b.matchesWon - a.matchesWon || b.matchesPlayed - a.matchesPlayed);
   const nights = groupNights(roster);
 
-  if (ranked.length === 0) return <EmptyState icon={<TrophyIcon className="w-6 h-6" />} title="Ingen kamper spilt ennå" />;
+  if (ranked.length === 0) return <EmptyState icon={<TrophyIcon className="w-6 h-6" />} title="Ingen kamper spilt ennå" action={<Button href="/" variant="primary">Spill en kamp</Button>} />;
 
   const top = ranked.slice(0, 3);
   // The winner in the middle, as on a podium.
@@ -113,7 +101,7 @@ export function HallOfFameTab() {
       )}
 
       <Section label="Kvelder">
-        <div className="space-y-2">
+        <div className="space-y-2 wide-list">
           {nights.map((night) => {
             const best = night.players[0];
             return (

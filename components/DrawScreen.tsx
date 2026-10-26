@@ -5,6 +5,8 @@ import { firstRoundPairs, openDraw, swapEntrants } from "@/lib/knockout";
 import type { Participant } from "@/lib/tournament";
 import { ScreenTop } from "./ScreenTop";
 import { StepStrip } from "./StepStrip";
+import { CupBanner } from "./CupBanner";
+import type { CupConfig } from "@/lib/botCup";
 import { StickyAction } from "./StickyAction";
 
 const FOCUS_RING =
@@ -23,6 +25,7 @@ const freshSeed = () => Math.floor(Math.random() * 2 ** 31);
 export function DrawScreen({
   seeded,
   summary,
+  cup,
   onBack,
   onStart,
 }: {
@@ -30,6 +33,8 @@ export function DrawScreen({
   seeded: Participant[];
   /** What is being drawn for, in a line; tapping it goes back to the setup. */
   summary?: string;
+  /** The cup being drawn, shown as its title card. */
+  cup?: CupConfig;
   onBack: () => void;
   onStart: (order: Participant[]) => void;
 }) {
@@ -115,6 +120,7 @@ export function DrawScreen({
       <div className="screen-inner">
         <ScreenTop title="Trekning" onBack={onBack} backLabel="← Tilbake" />
         <StepStrip step={1} />
+        {cup && <CupBanner cup={cup} />}
         {summary && (
           <button type="button" onClick={onBack} className={`tactile w-full rounded-lg px-4 flex items-center justify-between gap-3 mb-4 ${FOCUS_RING}`} style={{ minHeight: "var(--control)", background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-cream)", fontSize: "var(--text-body)" }}>
             <span className="truncate">{summary}</span>
