@@ -512,20 +512,21 @@ export function WinnerScreen({
           </div>
         </div>
 
-        {/* Per thrower: in team play the members' own numbers, which the table above cannot show;
-            for everyone, the turns where all three darts counted — and how many of those in a row. */}
+        {/* Per thrower: in team play the members' own numbers, which the table above cannot show. A match of single players has nothing
+            to add to that table, so there it is not drawn. (The turns of three counting darts, and the run of them, were here once: they
+            said little to anyone who did not know what they were counting, and the records still keep the run.) */}
+        {players.some((p) => throwerStats(turnLogByPlayer[p] ?? [], p).some((r) => r.name !== p)) && (
         <div className="card mb-6" style={{ background: "var(--color-surface)" }}>
           <p className="mb-4 section-label">PER KASTER</p>
           <div role="table" aria-label="Per kaster">
             <div
               role="row"
               className="grid items-end pb-1"
-              style={{ gridTemplateColumns: "minmax(0, 1fr) 4rem 3.5rem 6rem", color: "var(--color-label)", fontSize: "var(--text-micro)", letterSpacing: "0.1em" }}
+              style={{ gridTemplateColumns: "minmax(0, 1fr) 4rem 3.5rem", color: "var(--color-label)", fontSize: "var(--text-micro)", letterSpacing: "0.1em" }}
             >
               <span role="columnheader" />
               <span role="columnheader" className="text-right">TREFF</span>
               <span role="columnheader" className="text-right">PILER</span>
-              <span role="columnheader" className="text-right whitespace-nowrap">3 TELLENDE</span>
             </div>
             <div className="space-y-2">
               {players.map((p) => {
@@ -543,7 +544,7 @@ export function WinnerScreen({
                         key={r.name}
                         role="row"
                         className="grid items-baseline"
-                        style={{ gridTemplateColumns: "minmax(0, 1fr) 4rem 3.5rem 6rem", color: p === winner ? "var(--color-gold)" : "var(--color-cream)", paddingLeft: isTeam ? "0.75rem" : 0 }}
+                        style={{ gridTemplateColumns: "minmax(0, 1fr) 4rem 3.5rem", color: p === winner ? "var(--color-gold)" : "var(--color-cream)", paddingLeft: isTeam ? "0.75rem" : 0 }}
                       >
                         <span role="cell" className="truncate text-left">{r.name}</span>
                         <span role="cell" className="tabular text-right font-display" style={{ fontSize: "var(--text-title)" }}>
@@ -551,12 +552,6 @@ export function WinnerScreen({
                         </span>
                         <span role="cell" className="tabular text-right font-display" style={{ fontSize: "var(--text-title)" }}>
                           {r.darts}
-                        </span>
-                        <span role="cell" className="tabular text-right font-display whitespace-nowrap" style={{ fontSize: "var(--text-title)" }}>
-                          {r.perfectTurns}
-                          {r.bestRun >= 1 && (
-                            <span className="font-sans" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)", marginLeft: "0.35rem" }}>{r.bestRun * 3} piler på rad</span>
-                          )}
                         </span>
                       </div>
                     ))}
@@ -566,6 +561,7 @@ export function WinnerScreen({
             </div>
           </div>
         </div>
+        )}
 
         {/* Team matches: every thrower of every side in one list, best hit percentage on top. */}
         {teamRanking.length > 1 && (
