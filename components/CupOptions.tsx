@@ -90,7 +90,7 @@ export function CupOptions({ value, onChange, maxOwn }: { value: CupChoice; onCh
       >
         <span>
           <span className="block" style={{ color: "var(--color-cream)", fontWeight: 600 }}>Botene blir bedre underveis</span>
-          <span className="block" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>Litt svakere i gruppespillet, sterkest i finalen</span>
+          <span className="block" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>Litt svakere i første runde, sterkest i finalen</span>
         </span>
         <span aria-hidden style={{ color: value.growth ? "var(--color-green)" : "var(--color-muted)", fontWeight: 700 }}>{value.growth ? "På" : "Av"}</span>
       </button>

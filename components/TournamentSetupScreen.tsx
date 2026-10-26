@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MAX_WITHOUT_GROUP_SCREEN, type Participant, type TournamentMode } from "@/lib/tournament";
+import { type Participant, type TournamentMode } from "@/lib/tournament";
 import { DEFAULT_CUP_LEVEL, buildCupParticipants, cupType, makeCup, type CupConfig } from "@/lib/botCup";
 import { RULES, baseOf, botsSupported, withStandRule, type GameVariant } from "@/lib/rules";
 import { splitPeople, toMember, type PickedTeam, type Person } from "@/lib/people";
@@ -15,19 +15,16 @@ import { ModeToggle, commitPeople, commitTeams } from "./SetupScreen";
 import { StickyAction } from "./StickyAction";
 import { TeamPicker } from "./TeamPicker";
 
-const FOCUS_RING =
-  "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
-
-const MIN_INDIVIDUAL = 3;
+const MIN_INDIVIDUAL = 2;
 const MIN_TEAMS = 2;
 
 /** The people of a previously-submitted individual tournament — used to restore state when
- *  navigating back from group-setup (see initialMode/initialParticipants). */
+ *  navigating back from the draw (see initialMode/initialParticipants). */
 function peopleFromParticipants(participants: Participant[]): Person[] {
   return participants.map((p) => ({ name: p.name, isBot: p.isBot, botLevel: p.botLevel }));
 }
 
-/** Coming back from the group screen: these names are final, so they stay as they are rather
+/** Coming back from the draw: these names are final, so they stay as they are rather
  *  than being rebuilt from the members. */
 function teamsFromParticipants(participants: Participant[]): PickedTeam[] {
   return participants.map((p) => ({ name: p.name, members: (p.members ?? []).map((m) => ({ name: m.name, isBot: m.isBot, botLevel: m.botLevel })), custom: true }));
@@ -36,21 +33,23 @@ function teamsFromParticipants(participants: Participant[]): PickedTeam[] {
 export function TournamentSetupScreen({
   onBack,
   onNext,
+  onHistory,
   initialMode = null,
   initialParticipants = null,
   initialVariant = "standard",
   initialCup = null,
 }: {
   onBack: () => void;
-  /** `adjustGroups` is true when the user asked to see the group screen even though the tournament
-   *  is small enough to make without one. */
-  onNext: (mode: TournamentMode, participants: Participant[], variant: GameVariant, adjustGroups: boolean, cup?: CupConfig) => void;
-  /** Seeds mode/people/teams from a previous submission — lets "Tilbake" from group-setup restore
+  /** On to the draw, with everyone who is in. */
+  onNext: (mode: TournamentMode, participants: Participant[], variant: GameVariant, cup?: CupConfig) => void;
+  /** The trophy cabinet, one tap away. */
+  onHistory?: () => void;
+  /** Seeds mode/people/teams from a previous submission — lets "Tilbake" from the draw restore
    *  what was already entered instead of remounting this screen back to a blank slate. */
   initialMode?: TournamentMode | null;
   initialParticipants?: Participant[] | null;
   initialVariant?: GameVariant;
-  /** Coming back from the group screen of a cup against bots: its choices are restored, and only the house's own entrants are picked again. */
+  /** Coming back from the draw of a cup against bots: its choices are restored, and only the house's own entrants are picked again. */
   initialCup?: CupConfig | null;
 }) {
   // Individual to begin with, as in Enkeltkamp, so the whole screen is there from the first moment.
@@ -81,12 +80,9 @@ export function TournamentSetupScreen({
       ? teamSetupProblem(teams, botsAllowed, MIN_TEAMS)
       : individualSetupProblem(people.map((p) => p.name), !botsAllowed && people.some((p) => p.isBot), MIN_INDIVIDUAL);
 
-  // Up to four take part in one group and need no group screen — the tournament is made at once.
-  const participantCount = cupMode ? cup.size : ownCount;
-  const makesGroupsAtOnce = participantCount <= MAX_WITHOUT_GROUP_SCREEN;
   const crosses = `${RULES[baseOf(variant)].target} kryss`;
 
-  function handleNext(adjustGroups: boolean = false) {
+  function handleNext() {
     if (problem) return;
     if (cupMode) {
       // The house's own entrants, with the bots made to fill the cup: every random thing in it comes from one seed.
@@ -94,11 +90,11 @@ export function TournamentSetupScreen({
       if (mode === "individual") {
         commitPeople(people);
         const own: Participant[] = people.map((p) => ({ name: p.name, isBot: false }));
-        onNext("individual", buildCupParticipants("individual", own, cup.size, config), withStandRule(variant, false), adjustGroups, config);
+        onNext("individual", buildCupParticipants("individual", own, cup.size, config), withStandRule(variant, false), config);
       } else {
         commitTeams(teams);
         const own: Participant[] = teams.map((t) => ({ name: t.name, isBot: false, members: t.members.map(toMember) }));
-        onNext("team", buildCupParticipants("team", own, cup.size, config), variant, adjustGroups, config);
+        onNext("team", buildCupParticipants("team", own, cup.size, config), variant, config);
       }
       return;
     }
@@ -106,18 +102,28 @@ export function TournamentSetupScreen({
       commitPeople(people);
       const { botLevels } = splitPeople(people);
       const participants: Participant[] = people.map((p) => ({ name: p.name, isBot: p.isBot, botLevel: botLevels[p.name] }));
-      onNext("individual", participants, withStandRule(variant, false), adjustGroups);
+      onNext("individual", participants, withStandRule(variant, false));
     } else {
       commitTeams(teams);
       const participants: Participant[] = teams.map((t) => ({ name: t.name, isBot: false, members: t.members.map(toMember) }));
-      onNext("team", participants, variant, adjustGroups);
+      onNext("team", participants, variant);
     }
   }
 
   return (
     <div className="animate-screen-enter screen has-sticky-action" style={{ background: "var(--color-bg)" }}>
       <div className="screen-inner">
-        <ScreenTop title="Ny turnering" onBack={onBack} />
+        <ScreenTop
+          title="Ny turnering"
+          onBack={onBack}
+          right={
+            onHistory ? (
+              <button type="button" onClick={onHistory} className="tactile rounded-lg text-sm px-3" style={{ minHeight: "2.75rem", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}>
+                Pokaler
+              </button>
+            ) : undefined
+          }
+        />
 
         <ModeToggle
           label="Type turnering"
@@ -149,27 +155,13 @@ export function TournamentSetupScreen({
           <PlayerPicker people={people} onChange={setPeople} botsAllowed={botsAllowed && !cupMode} />
         )}
 
-        {/* The group screen is one tap away for the small tournaments that skip it. */}
-        {makesGroupsAtOnce && !problem && (
-          <div className="flex justify-center mb-4">
-            <button
-              type="button"
-              onClick={() => handleNext(true)}
-              className={`tactile px-4 rounded-lg text-sm ${FOCUS_RING}`}
-              style={{ minHeight: "2.75rem", color: "var(--color-muted)", background: "transparent", border: "1px solid var(--color-border)" }}
-            >
-              Endre grupper
-            </button>
-          </div>
-        )}
-
         <StickyAction
-          onClick={() => handleNext(false)}
+          onClick={handleNext}
           ready={!problem}
-          summary={setupSummary([cupMode ? `${cupType(cup.kind).name}: ${ownCount} av ${cup.size}` : mode === "team" ? `${teams.length} lag` : `${people.length} spillere`, crosses])}
+          summary={setupSummary([cupMode ? `${cupType(cup.kind).name}: ${ownCount} av ${cup.size}` : mode === "team" ? `${teams.length} lag` : `${people.length} spillere`, "utslagsturnering", crosses])}
           reason={problem}
         >
-          {cupMode ? (makesGroupsAtOnce ? "Start pokalturneringen" : "Neste: grupper") : makesGroupsAtOnce ? "Opprett turnering" : "Neste: grupper"}
+          Neste: trekning
         </StickyAction>
       </div>
     </div>

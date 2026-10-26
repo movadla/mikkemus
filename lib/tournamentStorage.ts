@@ -25,7 +25,10 @@ type TournamentRow = {
 };
 
 function rowToTournament(row: TournamentRow): Tournament {
+  const knockout = row.matches.some((m) => m.feedA || m.feedB) || (row.groups.length === 0 && row.matches.length > 0);
   return {
+    // A knockout carries no groups, so that is what marks it (no column to add): its seeding is the order of its entrants.
+    ...(knockout ? { format: "knockout" as const, seeds: row.participants.map((p) => p.name) } : {}),
     id: row.id,
     mode: row.mode as TournamentMode,
     participants: row.participants,
@@ -104,6 +107,25 @@ export async function fetchTournament(id: string): Promise<FetchTournamentResult
     return { status: "error" };
   }
   return data ? { status: "found", tournament: rowToTournament(data as TournamentRow) } : { status: "not-found" };
+}
+
+/** The finished tournaments, newest first — the trophy cabinet. */
+export async function listFinishedTournaments(limit = 50): Promise<Tournament[]> {
+  if (!supabase) return [];
+  const { data, error } = await supabase.from("tournaments").select("*").eq("status", "done").order("completed_at", { ascending: false }).limit(limit);
+  if (error) {
+    console.error("Kunne ikke hente tidligere turneringer:", error.message);
+    return [];
+  }
+  return ((data ?? []) as TournamentRow[]).map(rowToTournament);
+}
+
+/** The tournament made most recently, whoever made it: what the big screen shows, since it is another device with no pointer of its own. */
+export async function fetchLatestTournament(): Promise<Tournament | null> {
+  if (!supabase) return null;
+  const { data, error } = await supabase.from("tournaments").select("*").order("created_at", { ascending: false }).limit(1).maybeSingle();
+  if (error || !data) return null;
+  return rowToTournament(data as TournamentRow);
 }
 
 export function newTournamentId(): string {

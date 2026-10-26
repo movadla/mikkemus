@@ -2,6 +2,9 @@ import type { TurnAggregate } from "./game";
 import type { BotLevel, TeamMember } from "./botLevels";
 import type { GameVariant } from "./rules";
 import type { CupConfig } from "./botCup";
+// A circular import, on purpose: knockout.ts builds on this file's types and seeding, and recordMatchResult hands a knockout over to it.
+// Both are only used when called, never while the modules load.
+import { recordKnockoutResult } from "./knockout";
 
 export type TournamentMode = "individual" | "team";
 
@@ -45,6 +48,17 @@ export type TournamentMatch = {
   /** Set only by resolveByes — the "winner" here never actually played, so the UI must show this
    *  distinctly from a real result (see previewPlayoffBracket's own "(walkover videre)" wording). */
   isBye?: boolean;
+  /** Knockout (lib/knockout.ts): the matches whose result fills each side of this one. A side with no feed is a seeded entrant. */
+  feedA?: string;
+  feedB?: string;
+  /** What fills a side from its feed: the winner (the usual) or the loser (the bronze match). */
+  feedKind?: "winner" | "loser";
+  /** When the result was recorded — the latest of them is the one «Angre» takes back. */
+  decidedAt?: string;
+  /** 1 for the first result recorded, 2 for the next… — the order, which a clock reading cannot give for two results in the same moment. */
+  decidedOrder?: number;
+  /** Decided by the model and not thrown: a match between two bots in a cup (lib/botSim.ts). */
+  simulated?: boolean;
 };
 
 export type Tournament = {
@@ -67,6 +81,10 @@ export type Tournament = {
   variant?: GameVariant;
   /** Set when this is a cup against bots (lib/botCup.ts): its name, trophy and how the bots throw. */
   cup?: CupConfig;
+  /** "knockout": a straight knockout, the whole bracket there from the start (lib/knockout.ts). Absent on the older tournaments with groups. */
+  format?: "knockout";
+  /** The seeding, strongest first — the order the bracket was drawn from. Knockout only. */
+  seeds?: string[];
 };
 
 /** Every real name in a match, whether it's a normal/bracket match (participantA/B) or a
@@ -274,7 +292,7 @@ export function bracketRoundLabel(size: number, isBronze?: boolean): string {
   return `Runde av ${size * 2}`;
 }
 
-function nextPowerOfTwo(n: number): number {
+export function nextPowerOfTwo(n: number): number {
   let p = 1;
   while (p < n) p *= 2;
   return Math.max(p, 1);
@@ -282,7 +300,7 @@ function nextPowerOfTwo(n: number): number {
 
 /** Standard recursive tournament-bracket seeding order (1v8/4v5/2v7/3v6 for size 8, etc.) — seed
  *  `order[i]` (1-indexed) belongs at bracket slot `i`. */
-function bracketSeedOrder(size: number): number[] {
+export function bracketSeedOrder(size: number): number[] {
   let seeds = [1];
   while (seeds.length < size) {
     const n = seeds.length * 2;
@@ -474,6 +492,7 @@ export function createTournament(
  *  `placements` is the full finishing order (winner first) — for a plain 2-player match the
  *  caller passes [winner, loser], which is exactly what MikkeMusApp always computes anyway. */
 export function recordMatchResult(tournament: Tournament, matchId: string, placements: string[], stats: Record<string, TurnAggregate>): Tournament {
+  if (tournament.format === "knockout") return recordKnockoutResult(tournament, matchId, placements, stats);
   const matches = tournament.matches.map((m) => (m.id === matchId ? { ...m, winner: placements[0], placements, stats } : m));
   let next: Tournament = { ...tournament, matches };
 

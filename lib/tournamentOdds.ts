@@ -45,6 +45,14 @@ function pairChances(a: Entrant, b: Entrant): Float64Array {
   return out;
 }
 
+/** The chance a beats b over one match, with every unsure spread of each equally likely. */
+export function matchChance(a: Entrant, b: Entrant): number {
+  const c = pairChances(a, b);
+  let sum = 0;
+  for (let i = 0; i < c.length; i++) sum += c[i];
+  return sum / c.length;
+}
+
 /** A small seeded random source, so the same tournament gives the same odds and a test can rely on it. */
 export function randomSource(seed: number): () => number {
   let a = seed >>> 0;

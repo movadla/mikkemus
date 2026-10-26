@@ -3,7 +3,7 @@ import type { Participant, Tournament, TournamentMatch, TournamentMode } from ".
 
 /**
  * A cup against bots: the people (or teams) of the house in a tournament with named bot opponents, played for a trophy.
- * The tournament itself is the ordinary one (groups, then a bracket); what is new is who the bots are and how they throw.
+ * The tournament itself is the ordinary one (a straight knockout); what is new is who the bots are and how they throw.
  *
  * A bot has a skill of its own, a number on the level scale (1 = Littler, the sharpest, to 5 = Kjetil, the weakest), set
  * once for the cup from the level chosen with some spread, so the field is not made of equals. For each match the skill is
@@ -19,13 +19,13 @@ export type CupType = { kind: CupKind; name: string; trophy: string; tagline: st
 export const CUP_TYPES: CupType[] = [
   { kind: "vm", name: "VM i dart", trophy: "Verdensmesterpokalen", tagline: "Hele verden, én pokal", defaultSize: 16 },
   { kind: "em", name: "EM i dart", trophy: "Europamesterpokalen", tagline: "Europas beste kasteføringer", defaultSize: 8 },
-  { kind: "gs", name: "Grand Slam", trophy: "Grand Slam-pokalen", tagline: "Gruppespill, så utslagskamper", defaultSize: 12 },
+  { kind: "gs", name: "Grand Slam", trophy: "Grand Slam-pokalen", tagline: "Fire runder mot de beste", defaultSize: 16 },
   { kind: "nm", name: "Norgesmesterskapet", trophy: "Norgesmesterpokalen", tagline: "Kampen om Norge", defaultSize: 8 },
   { kind: "open", name: "Lilleaker Open", trophy: "Lilleaker-pokalen", tagline: "Hjemmebane, og alle vil ha pokalen", defaultSize: 8 },
 ];
 
 /** How many take part, the people of the house and the bots together. */
-export const CUP_SIZES = [4, 6, 8, 12, 16];
+export const CUP_SIZES = [4, 8, 16];
 
 /** Where the cup begins when nothing is chosen: ChrisBell, 39 mm, which is the group's own average (Vadla measures about 37). */
 export const DEFAULT_CUP_LEVEL: BotLevel = "4";

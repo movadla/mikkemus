@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useAccess } from "@/lib/access";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { listFinishedTournaments } from "@/lib/tournamentStorage";
 import { deletePlayer, renameTeam, useRoster, useRosterLoaded } from "@/lib/storage";
 import { buildSeedTable, formOf, type FormInfo } from "@/lib/seedingTable";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -70,6 +71,18 @@ export default function PlayerDetailPage() {
   const { limited } = useAccess();
   const [newName, setNewName] = useState<string | null>(null);
   const [nameError, setNameError] = useState("");
+  // Cups won, from the trophy cabinet (finished tournaments).
+  const [cups, setCups] = useState(0);
+  useEffect(() => {
+    if (limited) return;
+    let live = true;
+    void listFinishedTournaments().then((list) => {
+      if (live) setCups(list.filter((t) => t.winner?.toLowerCase() === name.toLowerCase()).length);
+    });
+    return () => {
+      live = false;
+    };
+  }, [limited, name]);
   const seed = useMemo(() => (player && player.kind !== "team" ? buildSeedTable(roster, RULES).find((r) => r.name === player.name) ?? null : null), [roster, player]);
 
   if (!player) {
@@ -153,7 +166,8 @@ export default function PlayerDetailPage() {
 
           {!limited && (
             <>
-              <div className={`grid gap-2 mt-4 ${seed ? "grid-cols-3" : "grid-cols-2"}`}>
+              <div className={`grid gap-2 mt-4 ${(seed ? 3 : 2) + (cups > 0 ? 1 : 0) === 4 ? "grid-cols-2" : seed ? "grid-cols-3" : "grid-cols-2"}`}>
+                {cups > 0 && <Fact label="POKALER">{cups}</Fact>}
                 {seed && <Fact label="SEEDING">{seed.rank}.</Fact>}
                 {seed && <Fact label="RATING">{Math.round(seed.rating)}</Fact>}
                 <Fact label="KAMPER">
