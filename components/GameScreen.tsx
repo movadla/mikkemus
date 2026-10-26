@@ -607,7 +607,8 @@ function DartPicker({
 /**
  * Keying in the darts by hand: the three darts across the top, and under them what the dart that is up did to the number being
  * thrown at — Enkel, Dobbel, Trippel or Bom. The sheet stays up from one dart to the next, so a whole turn is three taps.
- * "Annen plass" is the way to the full board for a dart that hit something else.
+ * "Annen plass" is the way to the full board for a dart that hit something else. A dart already keyed in can be tapped to be keyed in again,
+ * for the finger that hit Trippel when it was Dobbel.
  */
 function DartEntry({
   index,
@@ -616,6 +617,7 @@ function DartEntry({
   onPick,
   onOther,
   onClose,
+  onEditEntered,
 }: {
   /** The dart being keyed in, 0 to 2. */
   index: number;
@@ -626,6 +628,8 @@ function DartEntry({
   onPick: (sector: string) => void;
   onOther: () => void;
   onClose: () => void;
+  /** Opens a dart already keyed in to be changed (by its place among the darts keyed in). Absent when the turn cannot be edited. */
+  onEditEntered?: (i: number) => void;
 }) {
   // The numbered rows are thrown at by their number; Dobbel and Trippel rows take any double or triple, so 20 stands for them.
   const bull = target === "BULL";
@@ -647,24 +651,32 @@ function DartEntry({
     >
       <div className="shadow-panel w-full max-w-sm rounded-xl p-4" style={{ background: "var(--color-surface)" }}>
         <div className="grid grid-cols-3 gap-2 mb-3">
-          {[0, 1, 2].map((i) => (
-            <div
-              key={i}
-              aria-current={i === index ? "step" : undefined}
-              className="rounded-lg text-center py-2"
-              style={{
-                background: i === index ? "var(--teal-soft)" : "var(--color-cell)",
-                border: i === index ? "1px solid var(--color-teal)" : "1px solid var(--color-border)",
-                color: i === index ? "var(--color-teal)" : i < index ? "var(--color-cream)" : "var(--color-muted)",
-                fontWeight: 600,
-              }}
-            >
-              {i + 1}. pil
-              <span className="block tabular" style={{ fontSize: "var(--text-micro)", fontWeight: 400, minHeight: "1.1rem" }}>
-                {entered[i] ?? ""}
-              </span>
-            </div>
-          ))}
+          {[0, 1, 2].map((i) => {
+            const style = {
+              background: i === index ? "var(--teal-soft)" : "var(--color-cell)",
+              border: i === index ? "1px solid var(--color-teal)" : "1px solid var(--color-border)",
+              color: i === index ? "var(--color-teal)" : i < index ? "var(--color-cream)" : "var(--color-muted)",
+              fontWeight: 600,
+            } as const;
+            const body = (
+              <>
+                {i + 1}. pil
+                <span className="block tabular" style={{ fontSize: "var(--text-micro)", fontWeight: 400, minHeight: "1.1rem" }}>
+                  {entered[i] ?? ""}
+                </span>
+              </>
+            );
+            // A dart that is keyed in is a button: tap it to key it in again.
+            return entered[i] && onEditEntered ? (
+              <button key={i} type="button" onClick={() => onEditEntered(i)} aria-label={`Endre pil ${i + 1}: ${entered[i]}`} className={`tactile rounded-lg text-center py-2 ${FOCUS_RING}`} style={style}>
+                {body}
+              </button>
+            ) : (
+              <div key={i} aria-current={i === index ? "step" : undefined} className="rounded-lg text-center py-2" style={style}>
+                {body}
+              </div>
+            );
+          })}
         </div>
         <div className="grid gap-2 mb-3" style={{ gridTemplateColumns: `repeat(${choices.length === 4 ? 2 : 3}, minmax(0, 1fr))` }}>
           {choices.map((c) => (
@@ -1145,7 +1157,7 @@ export function GameScreen({
           onClose={() => setEditingShot(null)}
         />
       )}
-      {enteringTurn === turnToken && turnShots.filter(Boolean).length < 3 && !showChoiceBox && !showStandBox &&
+      {enteringTurn === turnToken && editingShot === null && turnShots.filter(Boolean).length < 3 && !showChoiceBox && !showStandBox &&
         (enteringOther ? (
           <DartPicker
             index={turnShots.filter(Boolean).length}
@@ -1163,6 +1175,7 @@ export function GameScreen({
             onPick={onEnterDart}
             onOther={() => setEnteringOther(true)}
             onClose={() => setEnteringTurn(null)}
+            onEditEntered={shotsEditable ? (i) => setEditingShot(turnShots.map((s, at) => (s ? at : -1)).filter((at) => at >= 0)[i] ?? null) : undefined}
           />
         ))}
       {showHomeConfirm && (
