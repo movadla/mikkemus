@@ -11,13 +11,13 @@ import type { Participant } from "./tournament";
  * matches for counts as a typical player, as the seeding table treats them.
  */
 
-const LEVELS: BotLevel[] = ["1", "2", "3", "4", "5"];
+const LEVELS: BotLevel[] = ["1", "2", "3", "4", "5", "6"];
 
 /** The mean distance in mm for a bot's skill, which in a cup is a number between the levels. */
 export function medForSkill(skill: number): number {
-  const s = Math.min(5, Math.max(1, skill));
+  const s = Math.min(6, Math.max(1, skill));
   const lo = Math.floor(s);
-  const hi = Math.min(5, lo + 1);
+  const hi = Math.min(6, lo + 1);
   const a = BOT_LEVELS[LEVELS[lo - 1]].targetMed;
   const b = BOT_LEVELS[LEVELS[hi - 1]].targetMed;
   return a + (b - a) * (s - lo);

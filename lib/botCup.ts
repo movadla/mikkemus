@@ -61,9 +61,10 @@ export function makeCup(kind: CupKind, level: BotLevel, growth: boolean, seed: n
   return { kind, name: t.name, trophy: t.trophy, level, growth, seed };
 }
 
-/** The sharpest and the weakest level there is to play a bot at. */
+/** The sharpest and the weakest level there is to play a bot at. Ly Pilotturnering goes down to level 6, the others stop at 5. */
 const BEST = 1;
 const WORST = 5;
+const WORST_PILOT = 6;
 
 function hash(text: string): number {
   let h = 2166136261;
@@ -102,7 +103,52 @@ export function stageOffset(match: Pick<TournamentMatch, "round" | "bracketRound
 export function levelForMatch(cup: CupConfig, skill: number, match: Pick<TournamentMatch, "id" | "round" | "bracketRoundSize">, name: string): BotLevel {
   const stage = cup.growth ? stageOffset(match) : 0;
   const form = (unit(`${cup.seed}|form|${match.id}|${name}`) - 0.5) * 1.8;
-  return String(Math.round(clamp(skill + stage + form))) as BotLevel;
+  const worst = cup.kind === "open" ? WORST_PILOT : WORST;
+  return String(Math.round(Math.min(worst, Math.max(BEST, skill + stage + form)))) as BotLevel;
+}
+
+/**
+ * The bots of Ly Pilotturnering: eighteen with fixed names, from the best to the weakest, each with a skill on the level scale (lower is
+ * sharper; between the levels it is how often they throw at the one above or the one below). The scale is set from a player who measures
+ * 37.4 mm: that is level 3.8, so such a player would stand between the fourth and the fifth of these. The match level of a bot swings
+ * about one level either way from match to match (levelForMatch), so the order is a tendency, not a promise.
+ */
+export const PILOT_BOTS: { name: string; skill: number }[] = [
+  { name: "Chris Bell", skill: 2.4 },
+  { name: "Dave", skill: 2.9 },
+  { name: "Kjetil", skill: 3.3 },
+  { name: "Christer", skill: 3.65 },
+  { name: "Dan", skill: 3.95 },
+  { name: "Nikolai", skill: 4.2 },
+  { name: "Anders", skill: 4.4 },
+  { name: "Olav Johan", skill: 4.55 },
+  { name: "Kalle", skill: 4.7 },
+  { name: "Svein", skill: 4.85 },
+  { name: "Bent", skill: 5.0 },
+  { name: "Håkon", skill: 5.1 },
+  { name: "Thomas", skill: 5.2 },
+  { name: "Rudolf", skill: 5.3 },
+  { name: "Joachim", skill: 5.4 },
+  { name: "Linus", skill: 5.5 },
+  { name: "Bernhard", skill: 5.6 },
+  { name: "Guro", skill: 5.7 },
+];
+
+/** Always in the field when there is room for them; in this order when there is not. The rest are drawn. */
+export const PILOT_BOTS_ALWAYS = ["Chris Bell", "Dave", "Kjetil", "Thomas", "Guro"];
+
+/** `count` of the pilot's bots, strongest first: the ones that are always in, and the rest drawn from the cup's seed. A name the house has is skipped. */
+export function pickPilotBots(count: number, taken: string[], seed: number): { name: string; isBot: true; botLevel: BotLevel; skill: number }[] {
+  const lower = taken.map((t) => t.trim().toLowerCase());
+  const free = PILOT_BOTS.filter((b) => !lower.includes(b.name.toLowerCase()));
+  const always = PILOT_BOTS_ALWAYS.map((n) => free.find((b) => b.name === n)).filter((b): b is (typeof PILOT_BOTS)[number] => !!b);
+  const chosen = new Set(always.slice(0, count).map((b) => b.name));
+  const drawn = free
+    .filter((b) => !chosen.has(b.name))
+    .sort((a, b) => unit(`${seed}|pilot-bots|${a.name}`) - unit(`${seed}|pilot-bots|${b.name}`))
+    .slice(0, Math.max(0, count - chosen.size));
+  drawn.forEach((b) => chosen.add(b.name));
+  return free.filter((b) => chosen.has(b.name)).slice(0, count).map((b) => ({ name: b.name, isBot: true as const, botLevel: String(Math.round(b.skill)) as BotLevel, skill: b.skill }));
 }
 
 /** Real names from the world of darts, so the bots read like a real field. Only the names are theirs: how a bot throws comes from the cup's level and the bot's own luck, not from the player it is named after. */
@@ -169,6 +215,7 @@ export function buildCupParticipants(mode: TournamentMode, own: Participant[], s
     const skill = botSkill(cup, name);
     return { name, isBot: true, botLevel: String(Math.round(skill)) as BotLevel, skill };
   };
+  if (mode === "individual" && cup.kind === "open") return [...own, ...pickPilotBots(botCount, taken, cup.seed)];
   if (mode === "individual") {
     const bots = pickNames(FIRST_NAMES_POOL, botCount, taken, `${cup.seed}|people`).map(asBot);
     return [...own, ...bots];

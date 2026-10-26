@@ -9,7 +9,10 @@ describe("bot strength on the seeding scale", () => {
     expect(medForSkill(5)).toBe(49);
     expect(medForSkill(3.5)).toBeCloseTo(34.5, 5);
     expect(medForSkill(0)).toBe(20);
-    expect(medForSkill(9)).toBe(49);
+    // Level 6, the weakest, is there for Ly Pilotturnering; the other cups never go past 5.
+    expect(medForSkill(6)).toBe(55);
+    expect(medForSkill(9)).toBe(55);
+    expect(medForSkill(5.5)).toBeCloseTo(52, 5);
   });
 
   it("puts a sharp bot above a weak one, and a team at the average of its members", () => {

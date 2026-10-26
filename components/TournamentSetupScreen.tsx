@@ -115,7 +115,7 @@ export function TournamentSetupScreen({
     const given = trimmedName || undefined;
     if (cupMode) {
       // The house's own entrants, with the bots made to fill the cup: every random thing in it comes from one seed.
-      const config = makeCup(cup.kind, cup.level, cup.growth, Math.floor(Math.random() * 2 ** 31));
+      const config = makeCup(cup.kind, cup.level, pilot ? false : cup.growth, Math.floor(Math.random() * 2 ** 31));
       if (mode === "individual") {
         commitPeople(people);
         const own: Participant[] = people.map((p) => ({ name: p.name, isBot: false }));
@@ -211,7 +211,7 @@ export function TournamentSetupScreen({
               <TextField hideLabel value={name} onChange={setName} maxLength={40} placeholder="Navn (valgfritt)" label="Navn på turneringen" />
             </div>
             {!pilot && <RulesPicker variant={variant} onChange={setVariant} teamPlay={mode === "team"} labelAlign="left" />}
-            {cupMode && <CupDetails value={{ ...cup, size: cupSize }} onChange={setCup} />}
+            {cupMode && !pilot && <CupDetails value={{ ...cup, size: cupSize }} onChange={setCup} />}
           </div>
         )}
 

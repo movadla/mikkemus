@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { botSetupForMatch, buildCupParticipants, levelForMatch, makeCup, pickNames, stageOffset, botSkill, CUP_TYPES } from "./botCup";
+import { botSetupForMatch, buildCupParticipants, levelForMatch, makeCup, pickNames, pickPilotBots, stageOffset, botSkill, CUP_TYPES, PILOT_BOTS, PILOT_BOTS_ALWAYS } from "./botCup";
+import { medForSkill } from "./knockoutSeeding";
 import type { Participant } from "./tournament";
 
 const me = (name: string): Participant => ({ name, isBot: false });
@@ -101,5 +102,67 @@ describe("how the bots throw", () => {
     const bot = t.participants[1];
     expect(rosters[bot.name].every((m) => m.isBot && !!m.botLevel)).toBe(true);
     expect(rosters.Oss.every((m) => !m.isBot)).toBe(true);
+  });
+});
+
+describe("the bots of Ly Pilotturnering", () => {
+  const open = makeCup("open", "4", false, 777);
+
+  it("has eighteen named bots, from the best to the weakest, and each is weaker than the one before", () => {
+    expect(PILOT_BOTS.map((b) => b.name)).toEqual(["Chris Bell", "Dave", "Kjetil", "Christer", "Dan", "Nikolai", "Anders", "Olav Johan", "Kalle", "Svein", "Bent", "Håkon", "Thomas", "Rudolf", "Joachim", "Linus", "Bernhard", "Guro"]);
+    for (let i = 1; i < PILOT_BOTS.length; i++) expect(PILOT_BOTS[i].skill).toBeGreaterThan(PILOT_BOTS[i - 1].skill);
+  });
+
+  it("puts a player who measures 37.4 mm between the fourth and the fifth", () => {
+    const med = (name: string) => medForSkill(PILOT_BOTS.find((b) => b.name === name)!.skill);
+    expect(med("Christer")).toBeLessThan(37.4);
+    expect(med("Dan")).toBeGreaterThan(37.4);
+    // And the best is clearly sharper than such a player, the weakest clearly weaker.
+    expect(med("Chris Bell")).toBeLessThan(30);
+    expect(med("Guro")).toBeGreaterThan(50);
+  });
+
+  it("fills a field of sixteen with the bots, the house first, and always has the five that are always there", () => {
+    const own = ["Vadla", "Hans", "Lars"].map(me);
+    const all = buildCupParticipants("individual", own, 16, open);
+    expect(all).toHaveLength(16);
+    expect(all.slice(0, 3)).toEqual(own);
+    const bots = all.slice(3).map((p) => p.name);
+    expect(bots).toHaveLength(13);
+    for (const n of PILOT_BOTS_ALWAYS) expect(bots).toContain(n);
+    // Strongest first, as they are listed.
+    expect(bots).toEqual(PILOT_BOTS.map((b) => b.name).filter((n) => bots.includes(n)));
+    all.slice(3).forEach((b) => expect(b.skill).toBe(PILOT_BOTS.find((x) => x.name === b.name)!.skill));
+  });
+
+  it("draws the rest from the seed: the same every time, and another field from another seed", () => {
+    const names = (seed: number) => pickPilotBots(8, [], seed).map((b) => b.name);
+    expect(names(1)).toEqual(names(1));
+    const fields = new Set(Array.from({ length: 12 }, (_, i) => names(i + 1).join("|")));
+    expect(fields.size).toBeGreaterThan(3);
+    for (let s = 1; s <= 12; s++) for (const n of PILOT_BOTS_ALWAYS) expect(names(s)).toContain(n);
+  });
+
+  it("has room for only some of the always-bots when few are asked for, the best first", () => {
+    expect(pickPilotBots(3, [], 5).map((b) => b.name)).toEqual(["Chris Bell", "Dave", "Kjetil"]);
+    expect(pickPilotBots(5, [], 5).map((b) => b.name)).toEqual(["Chris Bell", "Dave", "Kjetil", "Thomas", "Guro"]);
+    expect(pickPilotBots(0, [], 5)).toEqual([]);
+  });
+
+  it("leaves out a name the house has, and still fills the field", () => {
+    const bots = pickPilotBots(15, ["dan", "Dave"], 3).map((b) => b.name);
+    expect(bots).not.toContain("Dan");
+    expect(bots).not.toContain("Dave");
+    expect(bots).toHaveLength(15);
+  });
+
+  it("lets a bot reach level 6 here and never in the other cups", () => {
+    const m = { id: "h1", round: "bracket" as const, bracketRoundSize: undefined };
+    const levels = new Set<string>();
+    for (let i = 0; i < 400; i++) levels.add(levelForMatch({ ...open, seed: i }, 5.7, { ...m, id: `x${i}` }, "Guro"));
+    expect(levels.has("6")).toBe(true);
+    const other = new Set<string>();
+    for (let i = 0; i < 400; i++) other.add(levelForMatch({ ...cup, seed: i }, 5, { ...m, id: `x${i}` }, "Guro"));
+    expect(other.has("6")).toBe(false);
   });
 });

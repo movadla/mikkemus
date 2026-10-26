@@ -23,7 +23,8 @@ test.describe("Ly Pilotturnering", () => {
 
       // The course is there from the start: heats with four in each, and the places that are not known yet say what fills them.
       await expect(page.getByRole("heading", { name: "HEAT", exact: true })).toBeVisible({ timeout: 20_000 });
-      await expect(page.getByText("NESTE · HEAT A")).toBeVisible();
+      // A heat of only bots is decided at once, so the first one to throw is the first heat with someone of the house in it.
+      await expect(page.getByText(/NESTE · HEAT [A-D]/)).toBeVisible();
       for (const stage of ["Vinnerbaner", "Taperbaner", "Lucky loser", "Kvartfinale", "Semifinale", "Finale"]) await expect(page.getByRole("heading", { name: stage.toUpperCase(), exact: true })).toBeVisible();
       await expect(page.getByText("1. i Heat A").first()).toBeVisible();
       await expect(page.getByRole("list", { name: "Rekkefølgen de kaster i" }).getByRole("listitem")).toHaveCount(4);
