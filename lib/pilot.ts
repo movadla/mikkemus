@@ -10,10 +10,11 @@ import type { Participant, PilotInfo, Tournament, TournamentMatch, TournamentMod
  *    lanes, the last two to the losers' lanes.
  *  - Two winners' lanes and two losers' lanes, of four each. The first two of a winners' lane are through to the quarter-finals;
  *    the last two go to lucky loser. The first two of a losers' lane go to lucky loser; the last two are out.
- *  - Two lucky loser matches, each the two who were last in a winners' lane against the two who were first in the losers' lane of
- *    the same number. The first two of each are through to the quarter-finals.
- *  - Eight in the quarter-finals, one against one: someone straight through meets someone from lucky loser. From here the rings
- *    are forced (lib/rules.ts). Then the semi-finals and the final. No bronze match.
+ *  - Four lucky loser matches, one against one: the two who were last in a winners' lane each meet one of the two who were first in
+ *    the losers' lane of the same number (the better of the first against the weaker of the others). The winners are through to
+ *    the quarter-finals.
+ *  - Eight in the quarter-finals, one against one: someone straight through meets a winner from lucky loser, from the other lane.
+ *    From here the rings are forced (lib/rules.ts). Then the semi-finals and the final. No bronze match.
  *
  * In a match of four the first to close every row wins; the others are placed by how many crosses they are missing, and a tie is a
  * bull-off (lib/bullOff.ts). The whole tournament is made when it is, with the places that cannot be known yet left empty and
@@ -35,7 +36,7 @@ export const HEAT_SEEDS: number[][] = [
 ];
 
 /** The order the matches are played in. */
-const ORDER = ["h1", "h2", "h3", "h4", "w1", "w2", "l1", "l2", "k1", "k2", "q1", "q2", "q3", "q4", "s1", "s2", "f"];
+const ORDER = ["h1", "h2", "h3", "h4", "w1", "w2", "l1", "l2", "k1", "k2", "k3", "k4", "q1", "q2", "q3", "q4", "s1", "s2", "f"];
 
 type Spec = { id: string; stage: PilotInfo["stage"]; label: string; slots?: { from: string; place: number }[]; size?: number };
 
@@ -49,13 +50,17 @@ const SPECS: Spec[] = [
   { id: "w2", stage: "winners", label: "Vinnerbane 2", slots: [{ from: "h2", place: 0 }, { from: "h2", place: 1 }, { from: "h3", place: 0 }, { from: "h3", place: 1 }] },
   { id: "l1", stage: "losers", label: "Taperbane 1", slots: [{ from: "h1", place: 2 }, { from: "h1", place: 3 }, { from: "h4", place: 2 }, { from: "h4", place: 3 }] },
   { id: "l2", stage: "losers", label: "Taperbane 2", slots: [{ from: "h2", place: 2 }, { from: "h2", place: 3 }, { from: "h3", place: 2 }, { from: "h3", place: 3 }] },
-  { id: "k1", stage: "lucky", label: "Lucky loser 1", slots: [{ from: "w1", place: 2 }, { from: "w1", place: 3 }, { from: "l1", place: 0 }, { from: "l1", place: 1 }] },
-  { id: "k2", stage: "lucky", label: "Lucky loser 2", slots: [{ from: "w2", place: 2 }, { from: "w2", place: 3 }, { from: "l2", place: 0 }, { from: "l2", place: 1 }] },
-  // Someone straight through meets someone from lucky loser, from the other lane, the best against the last.
-  { id: "q1", stage: "quarter", label: "Kvartfinale 1", size: 4, slots: [{ from: "w1", place: 0 }, { from: "k2", place: 1 }] },
-  { id: "q2", stage: "quarter", label: "Kvartfinale 2", size: 4, slots: [{ from: "w1", place: 1 }, { from: "k2", place: 0 }] },
-  { id: "q3", stage: "quarter", label: "Kvartfinale 3", size: 4, slots: [{ from: "w2", place: 0 }, { from: "k1", place: 1 }] },
-  { id: "q4", stage: "quarter", label: "Kvartfinale 4", size: 4, slots: [{ from: "w2", place: 1 }, { from: "k1", place: 0 }] },
+  // Lucky loser, one against one: the last two of a winners' lane against the first two of the losers' lane of the same number. The third
+  // of the winners' lane (the better of the two) meets the second of the losers' lane (the weaker), and the fourth meets the first.
+  { id: "k1", stage: "lucky", label: "Lucky loser 1", slots: [{ from: "w1", place: 2 }, { from: "l1", place: 1 }] },
+  { id: "k2", stage: "lucky", label: "Lucky loser 2", slots: [{ from: "w1", place: 3 }, { from: "l1", place: 0 }] },
+  { id: "k3", stage: "lucky", label: "Lucky loser 3", slots: [{ from: "w2", place: 2 }, { from: "l2", place: 1 }] },
+  { id: "k4", stage: "lucky", label: "Lucky loser 4", slots: [{ from: "w2", place: 3 }, { from: "l2", place: 0 }] },
+  // Someone straight through meets the winner of a lucky loser match from the other lane.
+  { id: "q1", stage: "quarter", label: "Kvartfinale 1", size: 4, slots: [{ from: "w1", place: 0 }, { from: "k3", place: 0 }] },
+  { id: "q2", stage: "quarter", label: "Kvartfinale 2", size: 4, slots: [{ from: "w1", place: 1 }, { from: "k4", place: 0 }] },
+  { id: "q3", stage: "quarter", label: "Kvartfinale 3", size: 4, slots: [{ from: "w2", place: 0 }, { from: "k1", place: 0 }] },
+  { id: "q4", stage: "quarter", label: "Kvartfinale 4", size: 4, slots: [{ from: "w2", place: 1 }, { from: "k2", place: 0 }] },
   { id: "s1", stage: "semi", label: "Semifinale 1", size: 2, slots: [{ from: "q1", place: 0 }, { from: "q3", place: 0 }] },
   { id: "s2", stage: "semi", label: "Semifinale 2", size: 2, slots: [{ from: "q2", place: 0 }, { from: "q4", place: 0 }] },
   { id: "f", stage: "final", label: "Finale", size: 1, slots: [{ from: "s1", place: 0 }, { from: "s2", place: 0 }] },

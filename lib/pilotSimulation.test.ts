@@ -101,7 +101,7 @@ describe("Ly Pilotturnering, simulert", () => {
         const seen = new Set<string>();
         for (const m of s.matches) {
           const p = pilotPlayers(m);
-          const want = s.stage === "quarter" || s.stage === "semi" || s.stage === "final" ? 2 : 4;
+          const want = s.stage === "lucky" || s.stage === "quarter" || s.stage === "semi" || s.stage === "final" ? 2 : 4;
           if (p.length !== want || new Set(p).size !== want) problems.push(`seed ${seed}: ${m.id} har ${p.join(",")}`);
           for (const n2 of p) {
             if (seen.has(n2)) problems.push(`seed ${seed}: ${n2} er to ganger i ${s.stage}`);
@@ -119,20 +119,20 @@ describe("Ly Pilotturnering, simulert", () => {
       }
       // Quarter-final: eight players, the first two of the winners lanes and the first two of lucky loser.
       const qf = ["q1", "q2", "q3", "q4"].flatMap((q) => pilotPlayers(by(q)));
-      const expectQf = [...by("w1").placements!.slice(0, 2), ...by("w2").placements!.slice(0, 2), ...by("k1").placements!.slice(0, 2), ...by("k2").placements!.slice(0, 2)];
+      const expectQf = [...by("w1").placements!.slice(0, 2), ...by("w2").placements!.slice(0, 2), ...["k1", "k2", "k3", "k4"].map((k) => by(k).placements![0])];
       if ([...qf].sort().join() !== [...expectQf].sort().join()) problems.push(`seed ${seed}: kvartfinalen har feil åtte`);
       // Each quarter has one straight through and one from lucky loser.
       for (const q of ["q1", "q2", "q3", "q4"]) {
         const [x, y] = pilotPlayers(by(q));
         const direct = [...by("w1").placements!.slice(0, 2), ...by("w2").placements!.slice(0, 2)];
-        const lucky = [...by("k1").placements!.slice(0, 2), ...by("k2").placements!.slice(0, 2)];
+        const lucky = ["k1", "k2", "k3", "k4"].map((k) => by(k).placements![0]);
         const ok = (direct.includes(x) && lucky.includes(y)) || (direct.includes(y) && lucky.includes(x));
         if (!ok) problems.push(`seed ${seed}: ${q} er ikke direkte mot lucky loser`);
       }
       // The two last of a losers lane are out: nowhere after it.
-      const later = new Set(["k1", "k2", "q1", "q2", "q3", "q4", "s1", "s2", "f"].flatMap((id) => pilotPlayers(by(id))));
+      const later = new Set(["k1", "k2", "k3", "k4", "q1", "q2", "q3", "q4", "s1", "s2", "f"].flatMap((id) => pilotPlayers(by(id))));
       for (const l of ["l1", "l2"]) for (const out of by(l).placements!.slice(2)) if (later.has(out)) problems.push(`seed ${seed}: ${out} er ute men spiller videre`);
-      if (t.matches.filter((m) => m.winner).length !== 17) problems.push(`seed ${seed}: ${t.matches.filter((m) => m.winner).length} kamper`);
+      if (t.matches.filter((m) => m.winner).length !== 19) problems.push(`seed ${seed}: ${t.matches.filter((m) => m.winner).length} kamper`);
     }
     const top = Object.entries(champs).sort((a, b) => b[1] - a[1]);
     console.log(`\n1000 løp: ${matchesPlayed / 1000} kamper per turnering, ${(ties / 1000).toFixed(2)} bull-off per turnering`);

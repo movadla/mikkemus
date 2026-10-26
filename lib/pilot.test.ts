@@ -31,11 +31,11 @@ function playAll(t: Tournament): Tournament {
 const EARLY = ["h1", "h2", "h3", "h4", "w1", "w2", "l1", "l2"];
 
 describe("the pilot tournament is whole from the start", () => {
-  it("has seventeen matches: four heats, two of each lane, two lucky loser, four quarters, two semis and a final", () => {
+  it("has nineteen matches: four heats, two of each lane, four lucky loser, four quarters, two semis and a final", () => {
     const t = make();
     expect(t.format).toBe("pilot");
-    expect(t.matches).toHaveLength(17);
-    expect(pilotStages(t).map((s) => [s.stage, s.matches.length])).toEqual([["heat", 4], ["winners", 2], ["losers", 2], ["lucky", 2], ["quarter", 4], ["semi", 2], ["final", 1]]);
+    expect(t.matches).toHaveLength(19);
+    expect(pilotStages(t).map((s) => [s.stage, s.matches.length])).toEqual([["heat", 4], ["winners", 2], ["losers", 2], ["lucky", 4], ["quarter", 4], ["semi", 2], ["final", 1]]);
   });
 
   it("seeds the heats in a snake", () => {
@@ -57,7 +57,7 @@ describe("the pilot tournament is whole from the start", () => {
   it("says what fills an empty place", () => {
     const t = make();
     expect(pilotSlotLabel(t, byId(t, "w1"), 0)).toBe("1. i Heat A");
-    expect(pilotSlotLabel(t, byId(t, "q1"), 1)).toBe("2. i Lucky loser 2");
+    expect(pilotSlotLabel(t, byId(t, "q1"), 1)).toBe("1. i Lucky loser 3");
   });
 
   it("is for exactly sixteen", () => {
@@ -85,12 +85,15 @@ describe("where the places go", () => {
     expect(isReady(byId(t, "w2"))).toBe(false);
   });
 
-  it("sends the first two of a winners lane straight on and the last two to lucky loser, against the first two of the losers lane of the same number", () => {
+  it("sends the first two of a winners lane straight on and the last two to lucky loser, one against one with the first two of the losers lane of the same number", () => {
     let t = make();
     for (const id of EARLY) t = play(t, id);
-    // w1: P1 P4 P5 P8 -> P1 P4 through, P5 P8 to lucky loser 1 with the first two of l1 (P9 P12).
-    expect(pilotPlayers(byId(t, "k1"))).toEqual(["P5", "P8", "P9", "P12"]);
-    expect(pilotPlayers(byId(t, "k2"))).toEqual(["P6", "P7", "P10", "P11"]);
+    // w1: P1 P4 P5 P8 -> P1 P4 through. The third (P5) meets the second of l1 (P12), the fourth (P8) meets the first of l1 (P9).
+    expect(pilotPlayers(byId(t, "k1"))).toEqual(["P5", "P12"]);
+    expect(pilotPlayers(byId(t, "k2"))).toEqual(["P8", "P9"]);
+    // And the same in the other lane: w2 gave P6 and P7 (third and fourth), l2 gave P10 (first) and P11 (second).
+    expect(pilotPlayers(byId(t, "k3"))).toEqual(["P6", "P11"]);
+    expect(pilotPlayers(byId(t, "k4"))).toEqual(["P7", "P10"]);
     // The last two of l1 (P13, P16) are out: they are in no later match.
     const later = t.matches.filter((m) => !EARLY.includes(m.id)).flatMap((m) => pilotPlayers(m));
     expect(later).not.toContain("P13");
@@ -99,20 +102,21 @@ describe("where the places go", () => {
 
   it("puts someone straight through against someone from lucky loser, one against one, from the other lane", () => {
     let t = make();
-    for (const id of [...EARLY, "k1", "k2"]) t = play(t, id);
+    for (const id of [...EARLY, "k1", "k2", "k3", "k4"]) t = play(t, id);
     const q = (id: string) => pilotPlayers(byId(t, id));
-    // w1 gave P1, P4 and w2 gave P2, P3; lucky loser 1 gave P5, P8 and lucky loser 2 gave P6, P7.
-    expect(q("q1")).toEqual(["P1", "P7"]);
-    expect(q("q2")).toEqual(["P4", "P6"]);
-    expect(q("q3")).toEqual(["P2", "P8"]);
-    expect(q("q4")).toEqual(["P3", "P5"]);
+    // w1 gave P1, P4 and w2 gave P2, P3. The winners of lucky loser were P5 (k1), P8 (k2), P6 (k3) and P7 (k4), the better seed each time.
+    // Someone straight through meets a winner from the other lane: w1 against lucky loser 3 and 4, w2 against 1 and 2.
+    expect(q("q1")).toEqual(["P1", "P6"]);
+    expect(q("q2")).toEqual(["P4", "P7"]);
+    expect(q("q3")).toEqual(["P2", "P5"]);
+    expect(q("q4")).toEqual(["P3", "P8"]);
   });
 });
 
 describe("the rules from the quarter-finals", () => {
   it("are forced from the quarter-finals and not before", () => {
     const t = make();
-    for (const id of [...EARLY, "k1", "k2"]) expect(byId(t, id).variant).toBeUndefined();
+    for (const id of [...EARLY, "k1", "k2", "k3", "k4"]) expect(byId(t, id).variant).toBeUndefined();
     for (const id of ["q1", "q2", "q3", "q4", "s1", "s2", "f"]) expect(byId(t, id).variant).toBe("standard+forced");
   });
 });
@@ -128,7 +132,7 @@ describe("playing it through", () => {
 
   it("has one against one from the quarter-finals", () => {
     let t = make();
-    for (const id of [...EARLY, "k1", "k2"]) t = play(t, id);
+    for (const id of [...EARLY, "k1", "k2", "k3", "k4"]) t = play(t, id);
     for (const id of ["q1", "q2", "q3", "q4"]) expect(pilotPlayers(byId(t, id))).toHaveLength(2);
     expect(pilotQueue(t, nextPilotMatch(t)).map((m) => m.id)).toEqual(["q2", "q3", "q4"]);
   });

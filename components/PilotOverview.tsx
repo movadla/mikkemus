@@ -26,7 +26,7 @@ export function routingOf(m: TournamentMatch): string {
     case "losers":
       return "1.–2. går til lucky loser, 3.–4. er ute";
     case "lucky":
-      return "1.–2. går til kvartfinale, 3.–4. er ute";
+      return "Vinneren går til kvartfinale, taperen er ute";
     case "quarter":
       return "Vinneren går til semifinale";
     case "semi":
@@ -82,7 +82,7 @@ function NextCard({ tournament, match, queue, photos, onPlay }: { tournament: To
       )}
       {forced && (
         <p className="mb-3 text-center" style={{ color: "var(--color-gold-strong)", fontSize: "var(--text-small)", fontWeight: 600 }}>
-          Tvungne ringer: dobbel og trippel gjelder bare på 20 til 14.
+          Tvungne ringer: dobbel og trippel gjelder bare på 20 til 14. Kampen teller ikke i personlig statistikk.
         </p>
       )}
       <button

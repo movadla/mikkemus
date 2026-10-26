@@ -245,7 +245,7 @@ export function roadOf(t: Tournament, name: string): { match: TournamentMatch; o
       match: m,
       opponent: m.participantA === name ? m.participantB : m.participantA,
       won: m.winner === name,
-      label: m.isBronzeMatch ? "Bronsefinale" : bracketRoundLabel(m.bracketRoundSize ?? 1),
+      label: m.pilot?.label ?? (m.isBronzeMatch ? "Bronsefinale" : bracketRoundLabel(m.bracketRoundSize ?? 1)),
     }));
 }
 
