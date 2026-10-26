@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { nightSlides } from "@/lib/nightStory";
 import { NightStory } from "./NightStory";
+import { dayLabel } from "@/lib/formatDate";
 import { formatNightDate, nightAverages, type NightSummary } from "@/lib/nights";
 import { TrophyIcon } from "@/components/icons";
 import { ScreenTop } from "./ScreenTop";
@@ -19,9 +20,9 @@ export function NightDetail({ night, otherDates }: { night: NightSummary | null;
   const [story, setStory] = useState(false);
   const slides = useMemo(() => (night ? nightSlides(night) : []), [night]);
   return (
-    <div className="animate-screen-enter screen" style={{ background: "var(--color-bg)" }}>
+    <div className="animate-screen-push screen" style={{ background: "var(--color-bg)" }}>
       <div className="screen-inner">
-        <ScreenTop title={night ? formatNightDate(night.date) : "Kveld"} backHref="/hall-of-fame" backLabel="← Tilbake" />
+        <ScreenTop title={night ? formatNightDate(night.date) : "Kveld"} backHref="/hall-of-fame" />
 
         {!night ? (
           <p className="text-center py-8" style={{ color: "var(--color-muted)" }}>
@@ -34,7 +35,7 @@ export function NightDetail({ night, otherDates }: { night: NightSummary | null;
                 type="button"
                 onClick={() => setStory(true)}
                 className={`glossy w-full py-3 rounded-xl font-semibold mb-4 ${FOCUS_RING}`}
-                style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", minHeight: "2.75rem" } as React.CSSProperties}
+                style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", minHeight: "var(--control)" } as React.CSSProperties}
               >
                 Se kveldens oppsummering
               </button>
@@ -42,10 +43,10 @@ export function NightDetail({ night, otherDates }: { night: NightSummary | null;
             {story && <NightStory slides={slides} onClose={() => setStory(false)} />}
             {night.players[0] && night.players[0].wins > 0 && (
               <div className="card-gold shadow-panel rounded-xl p-4 mb-4 text-center">
-                <p className="font-display" style={{ color: "var(--color-bg)", fontStyle: "italic", fontSize: "0.9rem" }}>
+                <p className="font-display" style={{ color: "var(--color-bg)", fontStyle: "italic", fontSize: "var(--text-body)" }}>
                   Kveldens vinner
                 </p>
-                <p className="font-display flex items-center justify-center gap-2" style={{ color: "var(--color-bg)", fontSize: "1.6rem" }}>
+                <p className="font-display flex items-center justify-center gap-2" style={{ color: "var(--color-bg)", fontSize: "var(--text-num)" }}>
                   <TrophyIcon className="w-6 h-6" />
                   {night.players[0].name}
                 </p>
@@ -60,11 +61,11 @@ export function NightDetail({ night, otherDates }: { night: NightSummary | null;
                   <div
                     key={p.name}
                     className={`${rankClass} rounded-xl px-4 flex items-center justify-between`}
-                    style={{ minHeight: "3.5rem", ...(i < 3 ? {} : { background: "var(--color-surface)" }) }}
+                    style={{ minHeight: "var(--control-lg)", ...(i < 3 ? {} : { background: "var(--color-surface)" }) }}
                   >
                     <div>
                       <p style={{ color: "var(--color-cream)", fontWeight: 600 }}>{p.name}</p>
-                      <p style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>
+                      <p style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>
                         {p.wins}-{p.losses}
                       </p>
                     </div>
@@ -72,7 +73,7 @@ export function NightDetail({ night, otherDates }: { night: NightSummary | null;
                       <p style={{ color: "var(--color-teal)", fontWeight: 700 }}>
                         {stats.hitPct !== null ? `${Math.round(stats.hitPct)} %` : "–"}
                       </p>
-                      <p className="section-label" style={{ fontSize: "0.75rem" }}>TREFF</p>
+                      <p className="section-label" style={{ fontSize: "var(--text-micro)" }}>TREFF</p>
                     </div>
                   </div>
                 );
@@ -90,9 +91,9 @@ export function NightDetail({ night, otherDates }: { night: NightSummary | null;
                   key={d}
                   href={`/kveld/${d}`}
                   className={`tactile inline-flex items-center px-4 rounded-full text-sm ${FOCUS_RING}`}
-                  style={{ minHeight: "2.75rem", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
+                  style={{ minHeight: "var(--control)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
                 >
-                  {d}
+                  {dayLabel(d)}
                 </Link>
               ))}
             </div>

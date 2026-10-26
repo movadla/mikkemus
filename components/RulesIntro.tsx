@@ -47,7 +47,7 @@ function Picture({ slide }: { slide: RulesSlide }) {
                   ? "var(--color-cell-done)"
                   : "var(--color-cell)",
               color: "var(--color-cream)",
-              fontSize: s.length > 2 ? "0.8rem" : "1.2rem",
+              fontSize: s.length > 2 ? "var(--text-small)" : "var(--text-title)",
               border: "1px solid var(--color-border)",
             }}
           >
@@ -70,11 +70,11 @@ function Picture({ slide }: { slide: RulesSlide }) {
             </div>
             <span
               className="font-display"
-              style={{ color: "var(--color-cream)", fontSize: "1.3rem" }}
+              style={{ color: "var(--color-cream)", fontSize: "var(--text-title)" }}
             >
               {r.label}
             </span>
-            <span style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>
+            <span style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>
               {r.note}
             </span>
           </div>
@@ -94,7 +94,7 @@ function Picture({ slide }: { slide: RulesSlide }) {
             height: 56,
             background: "var(--color-green)",
             color: "var(--color-cream)",
-            fontSize: "1.5rem",
+            fontSize: "var(--text-num)",
           }}
         >
           {n}
@@ -152,7 +152,7 @@ export function RulesIntro({ onDone }: { onDone: () => void }) {
         type="button"
         onClick={finish}
         className={`tactile absolute top-4 right-4 px-4 rounded-lg text-sm ${FOCUS_RING}`}
-        style={{ minHeight: "2.75rem", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
+        style={{ minHeight: "var(--control)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
       >
         Hopp over
       </button>
@@ -161,10 +161,10 @@ export function RulesIntro({ onDone }: { onDone: () => void }) {
         <p className="section-label mb-6">SLIK SPILLER DU · {index + 1} AV {RULES_SLIDES.length}</p>
         <div key={slide.id} className="animate-name-swap flex flex-col items-center gap-6" style={{ minHeight: "18rem" }}>
           <Picture slide={slide} />
-          <h2 className="font-display" style={{ color: "var(--color-cream)", fontSize: "1.8rem" }}>
+          <h2 className="font-display" style={{ color: "var(--color-cream)", fontSize: "var(--text-num)" }}>
             {slide.title}
           </h2>
-          <p style={{ color: "var(--color-cream)", opacity: 0.85, fontSize: "1.05rem", lineHeight: 1.55 }}>{slide.text}</p>
+          <p style={{ color: "var(--color-cream)", opacity: 0.85, fontSize: "var(--text-body)", lineHeight: 1.55 }}>{slide.text}</p>
         </div>
 
         <div className="flex justify-center mt-4" role="group" aria-label="Velg side">
@@ -181,7 +181,7 @@ export function RulesIntro({ onDone }: { onDone: () => void }) {
             onClick={() => go(index - 1)}
             disabled={index === 0}
             className={nav}
-            style={{ minHeight: "3rem", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)", opacity: index === 0 ? 0.4 : 1 }}
+            style={{ minHeight: "var(--control-lg)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)", opacity: index === 0 ? 0.4 : 1 }}
           >
             ← Tilbake
           </button>
@@ -189,7 +189,7 @@ export function RulesIntro({ onDone }: { onDone: () => void }) {
             type="button"
             onClick={() => (index === last ? finish() : go(index + 1))}
             className={nav}
-            style={{ minHeight: "3rem", background: "var(--color-teal)", color: "var(--color-bg)" }}
+            style={{ minHeight: "var(--control-lg)", background: "var(--color-teal)", color: "var(--color-bg)" }}
           >
             {index === last ? "Ferdig" : "Neste →"}
           </button>

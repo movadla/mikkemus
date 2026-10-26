@@ -50,7 +50,7 @@ export function ReplayCard({ throws }: { throws: [number, number][] }) {
       <div className="flex items-center justify-between mb-4">
         <p className="section-label">REPRISE · SISTE RUNDE</p>
         {!calm && (
-          <span className="tabular" style={{ color: "var(--color-gold)", fontSize: "0.75rem", letterSpacing: "0.14em", fontWeight: 700 }}>
+          <span className="tabular" style={{ color: "var(--color-gold)", fontSize: "var(--text-micro)", letterSpacing: "0.14em", fontWeight: 700 }}>
             ×0,25
           </span>
         )}
@@ -79,8 +79,8 @@ export function ReplayCard({ throws }: { throws: [number, number][] }) {
           })}
         </svg>
       </div>
-      <div className="flex items-center justify-between mt-4" style={{ minHeight: "2.75rem" }}>
-        <p className="font-display" style={{ color: "var(--color-gold)", fontSize: "1.1rem" }}>
+      <div className="flex items-center justify-between mt-4" style={{ minHeight: "var(--control)" }}>
+        <p className="font-display" style={{ color: "var(--color-gold)", fontSize: "var(--text-title)" }}>
           {done ? `Pil ${throws.length} ga seieren` : `Pil ${Math.min(throws.length, (flying ?? shown) + 1)} av ${throws.length}`}
         </p>
         {!calm && done && (
@@ -88,7 +88,7 @@ export function ReplayCard({ throws }: { throws: [number, number][] }) {
             type="button"
             onClick={() => setRun((r) => r + 1)}
             className="tactile px-4 rounded-lg text-sm"
-            style={{ minHeight: "2.75rem", background: "var(--color-cell)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
+            style={{ minHeight: "var(--control)", background: "var(--color-cell)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
           >
             Spill av igjen
           </button>

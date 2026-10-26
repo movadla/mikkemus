@@ -18,9 +18,9 @@ describe("splitPeople", () => {
 
 describe("nextBotName", () => {
   it("numbers a second bot of the same level, whatever the case of the names", () => {
-    expect(nextBotName("1", [])).toBe("Littler 🥇");
-    expect(nextBotName("1", ["littler 🥇"])).toBe("Littler 🥇 (2)");
-    expect(nextBotName("1", ["Littler 🥇", "Littler 🥇 (2)"])).toBe("Littler 🥇 (3)");
+    expect(nextBotName("1", [])).toBe("Littler");
+    expect(nextBotName("1", ["littler"])).toBe("Littler (2)");
+    expect(nextBotName("1", ["Littler", "Littler (2)"])).toBe("Littler (3)");
   });
 });
 

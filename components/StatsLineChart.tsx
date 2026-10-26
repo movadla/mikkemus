@@ -30,7 +30,7 @@ export function StatsLineChart({
   const pointCount = Math.max(...series.map((s) => s.points.length), 0);
   if (pointCount < 2) {
     return (
-      <p style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>Ikke nok kamper ennå til å vise en trend.</p>
+      <p style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>Ikke nok kamper ennå til å vise en trend.</p>
     );
   }
 
@@ -109,7 +109,7 @@ export function StatsLineChart({
           {series.map((s) => (
             <div key={s.label} className="flex items-center gap-1.5">
               <span aria-hidden style={{ width: "0.5rem", height: "0.5rem", borderRadius: "50%", background: s.color }} />
-              <span style={{ color: "var(--color-muted)", fontSize: "0.7rem" }}>{s.label}</span>
+              <span style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>{s.label}</span>
             </div>
           ))}
         </div>

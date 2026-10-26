@@ -34,7 +34,7 @@ function ShotIndicator({ shots }: { shots: BullDuelState["turnShots"] }) {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            fontSize: "0.85rem",
+            fontSize: "var(--text-small)",
             fontWeight: 700,
             background: shot ? (shot.points === 2 ? "var(--color-red)" : shot.points === 1 ? "var(--color-green)" : "var(--color-cell)") : "transparent",
             border: shot ? "none" : "1px dashed var(--color-border)",
@@ -125,7 +125,7 @@ export function BullDuelGameScreen({
   const heat = fxHeat ? hitPulse?.streak ?? 0 : 0;
 
   const btn = (fill: string, extra: React.CSSProperties = {}): React.CSSProperties =>
-    ({ "--btn-fill": fill, color: "var(--color-cream)", minHeight: "3.5rem", ...extra }) as React.CSSProperties;
+    ({ "--btn-fill": fill, color: "var(--color-cream)", minHeight: "var(--control-lg)", ...extra }) as React.CSSProperties;
 
   return (
     <div
@@ -206,27 +206,27 @@ export function BullDuelGameScreen({
                 }}
               >
                 <div className="flex items-baseline justify-between gap-3">
-                  <span className="truncate" style={{ color: isActive ? "var(--color-teal-strong)" : "var(--color-cream)", fontWeight: 600, fontSize: "1rem" }}>
+                  <span className="truncate" style={{ color: isActive ? "var(--color-teal-strong)" : "var(--color-cream)", fontWeight: 600, fontSize: "var(--text-body)" }}>
                     {p}
                   </span>
-                  <span className="tabular shrink-0" style={{ color: "var(--color-cream)", fontSize: "1.5rem", fontWeight: 700, letterSpacing: "-0.01em", lineHeight: 1 }}>
+                  <span className="tabular shrink-0" style={{ color: "var(--color-cream)", fontSize: "var(--text-num)", fontWeight: 700, letterSpacing: "-0.01em", lineHeight: 1 }}>
                     {points}
-                    <span style={{ color: "var(--color-muted)", fontSize: "0.85rem", fontWeight: 500 }}> / {duel.target}</span>
+                    <span style={{ color: "var(--color-muted)", fontSize: "var(--text-small)", fontWeight: 500 }}> / {duel.target}</span>
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-3 mt-2">
-                  <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)", boxShadow: "inset 0 1px 1px rgba(0,0,0,0.5)" }} aria-hidden>
+                  <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: "var(--veil)", boxShadow: "inset 0 1px 1px var(--scrim-soft)" }} aria-hidden>
                     <div
                       className="h-full rounded-full"
                       style={{
                         width: `${pct}%`,
-                        background: finish ? "linear-gradient(90deg, #b8862e, #f0d080)" : "linear-gradient(180deg, var(--color-teal-strong), var(--color-teal-deep))",
+                        background: finish ? "linear-gradient(90deg, #b8862e, var(--color-gold-strong))" : "linear-gradient(180deg, var(--color-teal-strong), var(--color-teal-deep))",
                         boxShadow: finish ? "0 0 12px rgba(240, 208, 128, 0.5)" : undefined,
                         transition: "width 400ms var(--ease-standard, ease-out)",
                       }}
                     />
                   </div>
-                  <span className="tabular shrink-0" style={{ color: finish ? "var(--color-gold-strong)" : "var(--color-muted)", fontSize: "0.7rem", fontWeight: 600, letterSpacing: "0.1em", minWidth: "4.5rem", textAlign: "right" }}>
+                  <span className="tabular shrink-0" style={{ color: finish ? "var(--color-gold-strong)" : "var(--color-muted)", fontSize: "var(--text-micro)", fontWeight: 600, letterSpacing: "0.1em", minWidth: "4.5rem", textAlign: "right" }}>
                     {finish === "matchdart" ? "MATCHDART" : finish === "out" ? "OUT" : `${left} IGJEN`}
                   </span>
                 </div>
@@ -239,7 +239,7 @@ export function BullDuelGameScreen({
       <div className="max-w-3xl mx-auto w-full shrink-0">
         <ShotIndicator shots={duel.turnShots} />
         {!isActiveBot && awaitingTakeout && turnComplete && (
-          <p className="text-center mt-1" style={{ color: "var(--color-muted)", fontSize: "0.72rem" }}>
+          <p className="text-center mt-1" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>
             Ta ut pilene for å bekrefte turen
           </p>
         )}

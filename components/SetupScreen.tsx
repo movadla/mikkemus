@@ -16,11 +16,9 @@ import { RulesPicker } from "./RulesPicker";
 import { ScreenTop } from "./ScreenTop";
 import { StickyAction } from "./StickyAction";
 import { TeamPicker } from "./TeamPicker";
+import { Segmented } from "./ui/Segmented";
 
-const FOCUS_RING =
-  "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
-
-/** The two ways to play, as a pair of outlined choices — not two teal buttons that look like Start. */
+/** The two ways to play (or any other pair or trio of options), as one segmented control. */
 export function ModeToggle<T extends string>({
   value,
   onChange,
@@ -33,29 +31,8 @@ export function ModeToggle<T extends string>({
   label?: string;
 }) {
   return (
-    <div className="flex gap-2 mb-6" role="radiogroup" aria-label={label}>
-      {options.map((o) => {
-        const selected = o.value === value;
-        return (
-          <button
-            key={o.value}
-            type="button"
-            role="radio"
-            aria-checked={selected}
-            onClick={() => onChange(o.value)}
-            className={`tactile flex-1 rounded-lg font-medium flex items-center justify-center gap-2 ${FOCUS_RING}`}
-            style={{
-              minHeight: "2.75rem",
-              background: selected ? "var(--teal-soft)" : "var(--color-surface)",
-              color: selected ? "var(--color-teal)" : "var(--color-muted)",
-              border: selected ? "1px solid var(--color-teal)" : "1px solid var(--color-border)",
-            }}
-          >
-            {o.icon}
-            {o.label}
-          </button>
-        );
-      })}
+    <div className="mb-6">
+      <Segmented value={value} onChange={onChange} options={options} label={label} />
     </div>
   );
 }
@@ -159,8 +136,8 @@ export function SetupScreen({
   }
 
   const advancedSettings = (
-    <div className="w-full flex flex-col items-center" style={{ color: "var(--color-muted)", fontSize: "0.85rem" }}>
-      <label className="inline-flex items-center gap-3 cursor-pointer" style={{ minHeight: "2.75rem" }}>
+    <div className="w-full flex flex-col items-center" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
+      <label className="inline-flex items-center gap-3 cursor-pointer" style={{ minHeight: "var(--control)" }}>
         <input
           type="checkbox"
           checked={advanced}
@@ -183,7 +160,7 @@ export function SetupScreen({
           <input type="checkbox" checked={exactEntry} onChange={(e) => setExactEntry(e.target.checked)} style={{ width: 22, height: 22, accentColor: "var(--color-gold)", flexShrink: 0 }} />
           <span>
             Legg inn hver pil for hånd
-            <span className="block" style={{ fontSize: "0.75rem" }}>Velg hva hver pil traff</span>
+            <span className="block" style={{ fontSize: "var(--text-micro)" }}>Velg hva hver pil traff</span>
           </span>
         </label>
       )}
@@ -191,7 +168,7 @@ export function SetupScreen({
   );
 
   const noStatsToggle = (
-    <label className="inline-flex items-center gap-3 cursor-pointer" style={{ minHeight: "2.75rem", color: "var(--color-muted)", fontSize: "0.85rem" }}>
+    <label className="inline-flex items-center gap-3 cursor-pointer" style={{ minHeight: "var(--control)", color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
       <input type="checkbox" checked={statsOff} onChange={(e) => setStatsOff(e.target.checked)} style={{ width: 22, height: 22, accentColor: "var(--color-gold)" }} />
       Spill uten at statistikken teller
     </label>
@@ -206,7 +183,7 @@ export function SetupScreen({
   );
 
   return (
-    <div className="animate-screen-enter screen has-sticky-action" style={{ background: "var(--color-bg)" }}>
+    <div className="animate-screen-push screen has-sticky-action" style={{ background: "var(--color-bg)" }}>
       <div className="screen-inner">
         <ScreenTop title={title} onBack={onHome} scolia={scolia} />
 

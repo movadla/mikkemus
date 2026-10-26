@@ -2,6 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { ScreenTop } from "@/components/ScreenTop";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Segmented } from "@/components/ui/Segmented";
+import { SkeletonRows } from "@/components/ui/Skeleton";
 import { useLiveMatch } from "@/lib/liveMatch";
 import { addUser, marketOpen, newNight, offerBet, removeUser, settleMatch, takeBet, withdrawBet } from "@/lib/bet/api";
 import { MARGIN_BUCKETS, MIN_MARGIN_CHANCE, atStake, balances, betText, bucketChance, fairPrice, liabilityFor, lifetimeNet, netByUser, settleUp, stakeProblem, START_COINS, type BetRow, type BetUser } from "@/lib/bet/ledger";
@@ -47,43 +50,22 @@ export default function BetPage() {
   const bal = useMemo(() => (books ? balances(books.ledger, night) : {}), [books, night]);
 
   return (
-    <div className="animate-screen-enter screen" style={{ background: "var(--color-bg)" }}>
+    <div className="animate-screen-push screen" style={{ background: "var(--color-bg)" }}>
       <div className="screen-inner">
-        <ScreenTop title="Spill på morro" backHref="/" />
-        <p className="text-center mb-4" style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>
+        <ScreenTop title="Spill på morro" backHref="/mer" />
+        <p className="mb-4" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
           Virtuelle mynter, ingen ekte penger.
         </p>
 
         {bet.setupNeeded ? (
           <SetupNeeded />
         ) : !books ? (
-          <p className="text-center py-8" style={{ color: "var(--color-muted)" }}>
-            {bet.error ? bet.error : "Henter regnskapet …"}
-          </p>
+          bet.error ? <EmptyState title={bet.error} /> : <SkeletonRows count={4} />
         ) : (
           <>
             <PeopleBar users={users} bal={bal} meId={meId} onPick={chooseMe} night={night} onChanged={bet.refresh} onAdded={(u) => chooseMe(u.id)} />
-            <div className="grid grid-cols-3 gap-2 my-4" role="tablist">
-              {(["spill", "stilling", "regnskap"] as Tab[]).map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  role="tab"
-                  aria-selected={tab === t}
-                  onClick={() => setTab(t)}
-                  className={`tactile rounded-lg ${FOCUS_RING}`}
-                  style={{
-                    minHeight: "2.75rem",
-                    background: tab === t ? "var(--color-teal)" : "var(--color-surface)",
-                    color: tab === t ? "var(--color-bg)" : "var(--color-cream)",
-                    border: "1px solid var(--color-border)",
-                    fontWeight: 600,
-                    fontSize: "0.9rem",
-                  }}
-                >
-                  {t === "spill" ? "Spill" : t === "stilling" ? "Stilling" : "Regnskap"}
-                </button>
-              ))}
+            <div className="my-4">
+              <Segmented value={tab} onChange={setTab} label="Spill på morro" options={[{ value: "spill", label: "Spill" }, { value: "stilling", label: "Stilling" }, { value: "regnskap", label: "Regnskap" }]} />
             </div>
             {tab === "spill" && <PlayTab bet={bet} live={live} me={me} balance={me ? bal[me.id] ?? 0 : 0} />}
             {tab === "stilling" && <TableTab bet={bet} />}
@@ -102,7 +84,7 @@ function Card({ children, title, hint }: { children: React.ReactNode; title?: st
       {title && (
         <div className="flex items-baseline justify-between gap-2 mb-3">
           <h2 className="section-label">{title}</h2>
-          {hint && <span style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>{hint}</span>}
+          {hint && <span style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>{hint}</span>}
         </div>
       )}
       {children}
@@ -113,13 +95,13 @@ function Card({ children, title, hint }: { children: React.ReactNode; title?: st
 function SetupNeeded() {
   return (
     <Card title="Må settes opp først">
-      <p style={{ color: "var(--color-cream)", fontSize: "0.9rem" }}>Spillsiden trenger fire tabeller i Supabase. Det gjøres én gang:</p>
-      <ol className="mt-3 space-y-2 list-decimal pl-5" style={{ color: "var(--color-cream)", fontSize: "0.9rem" }}>
+      <p style={{ color: "var(--color-cream)", fontSize: "var(--text-body)" }}>Spillsiden trenger fire tabeller i Supabase. Det gjøres én gang:</p>
+      <ol className="mt-3 space-y-2 list-decimal pl-5" style={{ color: "var(--color-cream)", fontSize: "var(--text-body)" }}>
         <li>Åpne Supabase og gå til SQL Editor.</li>
         <li>Lim inn innholdet i filen supabase-setup-bet.sql fra prosjektet.</li>
         <li>Trykk Run, og last denne siden på nytt.</li>
       </ol>
-      <p className="mt-3" style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>Resten av appen virker som før uten denne.</p>
+      <p className="mt-3" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>Resten av appen virker som før uten denne.</p>
     </Card>
   );
 }
@@ -153,7 +135,7 @@ function PeopleBar({ users, bal, meId, onPick, night, onChanged, onAdded }: { us
             aria-pressed={meId === u.id}
             className={`tactile rounded-full px-4 ${FOCUS_RING}`}
             style={{
-              minHeight: "2.75rem",
+              minHeight: "var(--control)",
               background: meId === u.id ? "var(--teal-soft)" : "var(--color-cell)",
               color: meId === u.id ? "var(--color-teal-strong)" : "var(--color-cream)",
               border: meId === u.id ? "1px solid var(--color-teal)" : "1px solid var(--color-border)",
@@ -164,7 +146,7 @@ function PeopleBar({ users, bal, meId, onPick, night, onChanged, onAdded }: { us
           </button>
         ))}
         {!adding && (
-          <button type="button" onClick={() => setAdding(true)} className={`tactile rounded-full px-4 ${FOCUS_RING}`} style={{ minHeight: "2.75rem", background: "transparent", color: "var(--color-teal-strong)", border: "1px dashed var(--color-teal)" }}>
+          <button type="button" onClick={() => setAdding(true)} className={`tactile rounded-full px-4 ${FOCUS_RING}`} style={{ minHeight: "var(--control)", background: "transparent", color: "var(--color-teal-strong)", border: "1px dashed var(--color-teal)" }}>
             + Legg til
           </button>
         )}
@@ -184,15 +166,15 @@ function PeopleBar({ users, bal, meId, onPick, night, onChanged, onAdded }: { us
             maxLength={24}
             aria-label="Navn på ny deltaker"
             className={`flex-1 min-w-0 rounded-lg px-3 ${FOCUS_RING}`}
-            style={{ minHeight: "2.75rem", background: "var(--color-cell)", color: "var(--color-cream)", border: "1px solid var(--color-border)", fontSize: "1rem" }}
+            style={{ minHeight: "var(--control)", background: "var(--color-cell)", color: "var(--color-cream)", border: "1px solid var(--color-border)", fontSize: "var(--text-body)" }}
           />
-          <button type="submit" disabled={busy || !name.trim()} className={`glossy rounded-lg px-4 ${FOCUS_RING}`} style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", minHeight: "2.75rem", fontWeight: 700, opacity: busy || !name.trim() ? 0.5 : 1 } as React.CSSProperties}>
+          <button type="submit" disabled={busy || !name.trim()} className={`glossy rounded-lg px-4 ${FOCUS_RING}`} style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", minHeight: "var(--control)", fontWeight: 700, opacity: busy || !name.trim() ? 0.5 : 1 } as React.CSSProperties}>
             Start med {coins(START_COINS)}
           </button>
         </form>
       )}
-      {error && <p className="mt-2" style={{ color: "var(--color-red)", fontSize: "0.85rem" }}>{error}</p>}
-      {users.length > 0 && !meId && <p className="mt-3" style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>Trykk på navnet ditt for å spille.</p>}
+      {error && <p className="mt-2" style={{ color: "var(--color-red)", fontSize: "var(--text-small)" }}>{error}</p>}
+      {users.length > 0 && !meId && <p className="mt-3" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>Trykk på navnet ditt for å spille.</p>}
     </Card>
   );
 }
@@ -257,10 +239,10 @@ function PlayTab({ bet, live, me, balance }: { bet: ReturnType<typeof useBet>; l
     <>
       <Card title="Kampen nå" hint={live?.screen === "winner" && bet.settlingIn ? `Utbetaling om ${bet.settlingIn} s` : open ? "Spill åpent" : inMatch ? "Stengt" : undefined}>
         {!inMatch || !live ? (
-          <p style={{ color: "var(--color-muted)", fontSize: "0.9rem" }}>Ingen kamp i gang. Når en kamp starter dukker oddsen opp her.</p>
+          <p style={{ color: "var(--color-muted)", fontSize: "var(--text-body)" }}>Ingen kamp i gang. Når en kamp starter dukker oddsen opp her.</p>
         ) : (
           <>
-            <p className="mb-2" style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>Hvem tror du vinner? Oddsen er prisen på spillet ditt.</p>
+            <p className="mb-2" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>Hvem tror du vinner? Oddsen er prisen på spillet ditt.</p>
             <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.min(sides.length, 2)}, minmax(0, 1fr))` }}>
               {sides.map((o) => {
                 const active = pick === o.name && !bucket;
@@ -285,20 +267,20 @@ function PlayTab({ bet, live, me, balance }: { bet: ReturnType<typeof useBet>; l
                     }}
                   >
                     <span className="block truncate" style={{ fontWeight: 600 }}>{o.name}</span>
-                    <span className="block tabular font-display" style={{ fontSize: "1.6rem", lineHeight: 1.1 }}>{oddsText(o.odds)}</span>
-                    <span className="block" style={{ fontSize: "0.75rem", opacity: 0.8 }}>{Math.round(o.p * 100)} % sjanse</span>
+                    <span className="block tabular font-display" style={{ fontSize: "var(--text-num)", lineHeight: 1.1 }}>{oddsText(o.odds)}</span>
+                    <span className="block" style={{ fontSize: "var(--text-micro)", opacity: 0.8 }}>{Math.round(o.p * 100)} % sjanse</span>
                   </button>
                 );
               })}
             </div>
             {sides.length === 2 && sides.some((s) => s.margin) && (
               <div className="mt-4">
-                <p className="mb-2" style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>
+                <p className="mb-2" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
                   Eller spill på hvor mye det vinnes med. Streker er hvor mange kryss taperen mangler når kampen er over.
                 </p>
                 {sides.map((s) => (
                   <div key={s.name} className="mb-2">
-                    <p className="mb-1" style={{ color: "var(--color-cream)", fontSize: "0.8rem", fontWeight: 600 }}>{s.name} vinner med</p>
+                    <p className="mb-1" style={{ color: "var(--color-cream)", fontSize: "var(--text-small)", fontWeight: 600 }}>{s.name} vinner med</p>
                     <div className="flex flex-wrap gap-2">
                       {MARGIN_BUCKETS.filter((b) => bucketChance(s.margin, b) >= MIN_MARGIN_CHANCE).map((b) => {
                         const on = pick === s.name && bucket === b.label;
@@ -315,10 +297,10 @@ function PlayTab({ bet, live, me, balance }: { bet: ReturnType<typeof useBet>; l
                               setMsg(null);
                             }}
                             className={`tactile rounded-lg px-3 text-center ${FOCUS_RING}`}
-                            style={{ minHeight: "2.75rem", minWidth: "3.6rem", background: on ? "var(--teal-soft)" : "var(--color-cell)", color: on ? "var(--color-teal-strong)" : "var(--color-cream)", border: on ? "1px solid var(--color-teal)" : "1px solid var(--color-border)", opacity: open && me ? 1 : 0.6 }}
+                            style={{ minHeight: "var(--control)", minWidth: "3.6rem", background: on ? "var(--teal-soft)" : "var(--color-cell)", color: on ? "var(--color-teal-strong)" : "var(--color-cream)", border: on ? "1px solid var(--color-teal)" : "1px solid var(--color-border)", opacity: open && me ? 1 : 0.6 }}
                           >
                             <span className="block" style={{ fontWeight: 600, lineHeight: 1.1 }}>{b.label}</span>
-                            <span className="block tabular" style={{ fontSize: "0.75rem", opacity: 0.85 }}>{oddsText(price)}</span>
+                            <span className="block tabular" style={{ fontSize: "var(--text-micro)", opacity: 0.85 }}>{oddsText(price)}</span>
                           </button>
                         );
                       })}
@@ -327,21 +309,21 @@ function PlayTab({ bet, live, me, balance }: { bet: ReturnType<typeof useBet>; l
                 ))}
               </div>
             )}
-            {!me && <p className="mt-3" style={{ color: "var(--color-muted)", fontSize: "0.85rem" }}>Velg navnet ditt øverst for å spille.</p>}
-            {me && !open && <p className="mt-3" style={{ color: "var(--color-muted)", fontSize: "0.85rem" }}>{live.screen === "winner" ? "Kampen er ferdig." : "Spillet åpner igjen mellom rundene, når alle tre pilene er kastet."}</p>}
+            {!me && <p className="mt-3" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>Velg navnet ditt øverst for å spille.</p>}
+            {me && !open && <p className="mt-3" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>{live.screen === "winner" ? "Kampen er ferdig." : "Spillet åpner igjen mellom rundene, når alle tre pilene er kastet."}</p>}
 
             {me && open && chosen && (
               <div className="mt-4">
-                <p className="mb-2" style={{ color: "var(--color-cream)", fontSize: "0.9rem" }}>
+                <p className="mb-2" style={{ color: "var(--color-cream)", fontSize: "var(--text-body)" }}>
                   {me.name}, hvor mye på <strong>{what}</strong>? Du har {coins(balance)}.
                 </p>
                 <div className="flex flex-wrap gap-2 mb-2">
                   {[50, 100, 250, 500].map((n) => (
-                    <button key={n} type="button" disabled={n > balance} onClick={() => setStake(String(n))} className={`tactile rounded-full px-4 ${FOCUS_RING}`} style={{ minHeight: "2.75rem", background: stakeNum === n ? "var(--color-teal)" : "var(--color-cell)", color: stakeNum === n ? "var(--color-bg)" : "var(--color-cream)", border: "1px solid var(--color-border)", opacity: n > balance ? 0.4 : 1 }}>
+                    <button key={n} type="button" disabled={n > balance} onClick={() => setStake(String(n))} className={`tactile rounded-full px-4 ${FOCUS_RING}`} style={{ minHeight: "var(--control)", background: stakeNum === n ? "var(--color-teal)" : "var(--color-cell)", color: stakeNum === n ? "var(--color-bg)" : "var(--color-cream)", border: "1px solid var(--color-border)", opacity: n > balance ? 0.4 : 1 }}>
                       {coins(n)}
                     </button>
                   ))}
-                  <button type="button" onClick={() => setStake(String(balance))} className={`tactile rounded-full px-4 ${FOCUS_RING}`} style={{ minHeight: "2.75rem", background: "var(--color-cell)", color: "var(--color-gold-strong)", border: "1px solid var(--color-border)" }}>
+                  <button type="button" onClick={() => setStake(String(balance))} className={`tactile rounded-full px-4 ${FOCUS_RING}`} style={{ minHeight: "var(--control)", background: "var(--color-cell)", color: "var(--color-gold-strong)", border: "1px solid var(--color-border)" }}>
                     Alt
                   </button>
                 </div>
@@ -352,21 +334,21 @@ function PlayTab({ bet, live, me, balance }: { bet: ReturnType<typeof useBet>; l
                     onChange={(e) => setStake(e.target.value.replace(/[^\d]/g, ""))}
                     aria-label="Innsats i mynter"
                     className={`w-28 rounded-lg px-3 tabular ${FOCUS_RING}`}
-                    style={{ minHeight: "2.75rem", background: "var(--color-cell)", color: "var(--color-cream)", border: "1px solid var(--color-border)", fontSize: "1.1rem" }}
+                    style={{ minHeight: "var(--control)", background: "var(--color-cell)", color: "var(--color-cream)", border: "1px solid var(--color-border)", fontSize: "var(--text-title)" }}
                   />
-                  <button type="button" disabled={busy || problem !== "none" || liability < 1} onClick={() => void offer()} className={`glossy flex-1 rounded-lg ${FOCUS_RING}`} style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", minHeight: "2.75rem", fontWeight: 700, opacity: busy || problem !== "none" || liability < 1 ? 0.5 : 1 } as React.CSSProperties}>
+                  <button type="button" disabled={busy || problem !== "none" || liability < 1} onClick={() => void offer()} className={`glossy flex-1 rounded-lg ${FOCUS_RING}`} style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", minHeight: "var(--control)", fontWeight: 700, opacity: busy || problem !== "none" || liability < 1 ? 0.5 : 1 } as React.CSSProperties}>
                     {problem === "none" ? "Legg ut spillet" : problem === "too-high" ? "Mer enn du har" : "Skriv en innsats"}
                   </button>
                 </div>
                 {problem === "none" && liability >= 1 && (
-                  <p className="mt-2" style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>
+                  <p className="mt-2" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
                     {bucket ? `Går det som du tror (${what}), får du ${coins(stakeNum + liability)} (gevinst ${coins(liability)}). Ellers mister du ${coins(stakeNum)}.` : `Vinner ${chosen.name}, får du ${coins(stakeNum + liability)} (gevinst ${coins(liability)}). Vinner ${otherSide(chosen.name)}, mister du ${coins(stakeNum)}.`} Spillet gjelder først når noen andre tar imot, og trekkes tilbake av seg selv hvis ingen gjør det før neste runde.
                   </p>
                 )}
               </div>
             )}
             {msg && (
-              <p role="status" className="mt-3" style={{ color: msg.ok ? "var(--color-green)" : "var(--color-red)", fontSize: "0.9rem" }}>
+              <p role="status" className="mt-3" style={{ color: msg.ok ? "var(--color-green)" : "var(--color-red)", fontSize: "var(--text-body)" }}>
                 {msg.text}
               </p>
             )}
@@ -377,20 +359,20 @@ function PlayTab({ bet, live, me, balance }: { bet: ReturnType<typeof useBet>; l
       {inMatch && (
         <Card title="Venter på motpart" hint={offers.length ? `${offers.length}` : undefined}>
           {offers.length === 0 ? (
-            <p style={{ color: "var(--color-muted)", fontSize: "0.9rem" }}>Ingen åpne spill akkurat nå. Legg ut ett over, så kan en annen ta imot.</p>
+            <p style={{ color: "var(--color-muted)", fontSize: "var(--text-body)" }}>Ingen åpne spill akkurat nå. Legg ut ett over, så kan en annen ta imot.</p>
           ) : (
             <ul className="space-y-2">
               {offers.map((b) => (
                 <li key={b.id} className="rounded-lg px-3 py-3" style={{ background: "var(--color-cell)" }}>
-                  <p style={{ color: "var(--color-cream)", fontSize: "0.9rem" }}>
+                  <p style={{ color: "var(--color-cream)", fontSize: "var(--text-body)" }}>
                     <strong>{name(b.backer_id)}</strong> satser {coins(b.stake)} på <strong>{betText(b)}</strong> til {oddsText(b.odds)}
                   </p>
                   {me && b.backer_id === me.id ? (
-                    <button type="button" disabled={busy} onClick={() => void withdraw(b)} className={`tactile mt-2 rounded-lg px-4 ${FOCUS_RING}`} style={{ minHeight: "2.75rem", background: "transparent", color: "var(--color-muted)", border: "1px solid var(--color-border)" }}>
+                    <button type="button" disabled={busy} onClick={() => void withdraw(b)} className={`tactile mt-2 rounded-lg px-4 ${FOCUS_RING}`} style={{ minHeight: "var(--control)", background: "transparent", color: "var(--color-muted)", border: "1px solid var(--color-border)" }}>
                       Trekk tilbake
                     </button>
                   ) : (
-                    <button type="button" disabled={busy || !me || !open} onClick={() => void take(b)} className={`glossy mt-2 w-full rounded-lg ${FOCUS_RING}`} style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", minHeight: "2.75rem", fontWeight: 700, opacity: busy || !me || !open ? 0.5 : 1 } as React.CSSProperties}>
+                    <button type="button" disabled={busy || !me || !open} onClick={() => void take(b)} className={`glossy mt-2 w-full rounded-lg ${FOCUS_RING}`} style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", minHeight: "var(--control)", fontWeight: 700, opacity: busy || !me || !open ? 0.5 : 1 } as React.CSSProperties}>
                       {me ? `Ta imot: ${b.market === "margin" ? "ikke " + betText(b) : otherSide(b.pick) + " vinner"}. Risiker ${coins(b.liability)}, vinn ${coins(b.stake)}` : "Velg navn først"}
                     </button>
                   )}
@@ -406,7 +388,7 @@ function PlayTab({ bet, live, me, balance }: { bet: ReturnType<typeof useBet>; l
           <ul className="space-y-2">
             {running.map((b) => (
               <li key={b.id} className="flex items-center justify-between gap-3 rounded-lg px-3 py-2" style={{ background: "var(--color-cell)" }}>
-                <span style={{ color: "var(--color-cream)", fontSize: "0.9rem" }}>
+                <span style={{ color: "var(--color-cream)", fontSize: "var(--text-body)" }}>
                   <strong>{name(b.backer_id)}</strong> på {betText(b)} mot <strong>{name(b.layer_id)}</strong>
                 </span>
                 <span className="tabular shrink-0" style={{ color: "var(--color-gold-strong)", fontWeight: 700 }}>{coins(b.stake + b.liability)}</span>
@@ -419,7 +401,7 @@ function PlayTab({ bet, live, me, balance }: { bet: ReturnType<typeof useBet>; l
       {me && (
         <Card title={`Spillene til ${me.name}`} hint={`${coins(atStake(books.bets, me.id))} på spill`}>
           {mine.length === 0 ? (
-            <p style={{ color: "var(--color-muted)", fontSize: "0.9rem" }}>Ingen spill ennå.</p>
+            <p style={{ color: "var(--color-muted)", fontSize: "var(--text-body)" }}>Ingen spill ennå.</p>
           ) : (
             <ul className="space-y-2">
               {mine.map((b) => (
@@ -449,12 +431,12 @@ function BetLine({ b, meId, name }: { b: BetRow; meId: string; name: (id: string
         <span className="block truncate" style={{ color: "var(--color-cream)", fontWeight: 600 }}>
           {backer ? betText(b) : `Mot ${betText(b)}`}
         </span>
-        <span className="block" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>
+        <span className="block" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>
           {coins(risked)} til {oddsText(b.odds)}
           {against ? ` · mot ${name(against)}` : ""} · {b.phase === "pre" ? "før kampen" : "under kampen"}
         </span>
       </span>
-      <span className="tabular shrink-0" style={{ color, fontWeight: 700, fontSize: "0.9rem" }}>{label}</span>
+      <span className="tabular shrink-0" style={{ color, fontWeight: 700, fontSize: "var(--text-body)" }}>{label}</span>
     </li>
   );
 }
@@ -473,35 +455,35 @@ function Stale({ matches, bets, night, refresh, name }: { matches: { match_id: s
   };
   return (
     <Card title="Spill som ikke er avgjort" hint="Kampen er over">
-      <p className="mb-3" style={{ color: "var(--color-muted)", fontSize: "0.85rem" }}>Disse kampene ble ikke avgjort automatisk. Velg hvem som vant, eller betal tilbake innsatsene.</p>
+      <p className="mb-3" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>Disse kampene ble ikke avgjort automatisk. Velg hvem som vant, eller betal tilbake innsatsene.</p>
       <div className="space-y-3">
         {matches.map((m) => {
           const list = bets.filter((b) => b.match_id === m.match_id && b.status === "matched");
           const sides = m.sides.length ? m.sides : [...new Set(list.map((b) => b.pick))];
           return (
             <div key={m.match_id} className="rounded-lg p-3" style={{ background: "var(--color-cell)" }}>
-              <p className="mb-2" style={{ color: "var(--color-cream)", fontSize: "0.85rem" }}>
+              <p className="mb-2" style={{ color: "var(--color-cream)", fontSize: "var(--text-small)" }}>
                 {sides.join(" mot ")} · {list.length} spill ({list.map((b) => `${name(b.backer_id)}–${name(b.layer_id)}`).join(", ")})
               </p>
               {list.some((b) => b.market === "margin") && (
-                <label className="mb-2 flex items-center gap-2" style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>
+                <label className="mb-2 flex items-center gap-2" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
                   Streker taperen manglet
                   <input
                     inputMode="numeric"
                     value={margins[m.match_id] ?? ""}
                     onChange={(e) => setMargins((p) => ({ ...p, [m.match_id]: e.target.value.replace(/[^\d]/g, "") }))}
                     className={`w-16 rounded-lg px-2 tabular ${FOCUS_RING}`}
-                    style={{ minHeight: "2.75rem", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
+                    style={{ minHeight: "var(--control)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
                   />
                 </label>
               )}
               <div className="flex flex-wrap gap-2">
                 {sides.map((s) => (
-                  <button key={s} type="button" disabled={busy} onClick={() => void decide(m.match_id, s)} className={`tactile rounded-full px-4 ${FOCUS_RING}`} style={{ minHeight: "2.75rem", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}>
+                  <button key={s} type="button" disabled={busy} onClick={() => void decide(m.match_id, s)} className={`tactile rounded-full px-4 ${FOCUS_RING}`} style={{ minHeight: "var(--control)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}>
                     {s} vant
                   </button>
                 ))}
-                <button type="button" disabled={busy} onClick={() => void decide(m.match_id, null)} className={`tactile rounded-full px-4 ${FOCUS_RING}`} style={{ minHeight: "2.75rem", background: "transparent", color: "var(--color-muted)", border: "1px solid var(--color-border)" }}>
+                <button type="button" disabled={busy} onClick={() => void decide(m.match_id, null)} className={`tactile rounded-full px-4 ${FOCUS_RING}`} style={{ minHeight: "var(--control)", background: "transparent", color: "var(--color-muted)", border: "1px solid var(--color-border)" }}>
                   Betal tilbake
                 </button>
               </div>
@@ -525,7 +507,7 @@ function TableTab({ bet }: { bet: ReturnType<typeof useBet> }) {
     <Card title={all ? "Alle kvelder" : `Kveld ${bet.night}`}>
       <div className="grid grid-cols-2 gap-2 mb-3">
         {[false, true].map((v) => (
-          <button key={String(v)} type="button" onClick={() => setAll(v)} aria-pressed={all === v} className={`tactile rounded-lg ${FOCUS_RING}`} style={{ minHeight: "2.75rem", background: all === v ? "var(--color-cell-done)" : "var(--color-cell)", color: "var(--color-cream)", border: "1px solid var(--color-border)", fontSize: "0.85rem" }}>
+          <button key={String(v)} type="button" onClick={() => setAll(v)} aria-pressed={all === v} className={`tactile rounded-lg ${FOCUS_RING}`} style={{ minHeight: "var(--control)", background: all === v ? "var(--color-cell-done)" : "var(--color-cell)", color: "var(--color-cream)", border: "1px solid var(--color-border)", fontSize: "var(--text-small)" }}>
             {v ? "Alle kvelder" : "I kveld"}
           </button>
         ))}
@@ -535,15 +517,15 @@ function TableTab({ bet }: { bet: ReturnType<typeof useBet> }) {
       ) : (
         <ol className="space-y-2">
           {rows.map((r, i) => (
-            <li key={r.u.id} className="flex items-center gap-3 rounded-lg px-3" style={{ minHeight: "3.25rem", background: i === 0 && r.value > 0 ? "var(--color-cell-done)" : "var(--color-cell)" }}>
+            <li key={r.u.id} className="flex items-center gap-3 rounded-lg px-3" style={{ minHeight: "var(--control-lg)", background: i === 0 && r.value > 0 ? "var(--color-cell-done)" : "var(--color-cell)" }}>
               <span className="font-display w-6 text-center" style={{ color: i === 0 ? "var(--color-gold)" : "var(--color-muted)" }}>{i + 1}</span>
               <span className="flex-1 min-w-0">
                 <span className="block truncate" style={{ color: "var(--color-cream)", fontWeight: 600 }}>{r.u.name}</span>
-                <span className="block" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>
+                <span className="block" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>
                   {coins(r.bal)} i kveld{r.stake > 0 ? ` · ${coins(r.stake)} på spill` : ""}
                 </span>
               </span>
-              <span className="tabular" style={{ color: tone(r.value), fontWeight: 700, fontSize: "1.05rem" }}>{signed(r.value)}</span>
+              <span className="tabular" style={{ color: tone(r.value), fontWeight: 700, fontSize: "var(--text-body)" }}>{signed(r.value)}</span>
             </li>
           ))}
         </ol>
@@ -565,7 +547,7 @@ function AccountsTab({ bet }: { bet: ReturnType<typeof useBet> }) {
     <>
       <Card title="Hvem skylder hvem" hint={`Kveld ${bet.night}`}>
         {books.users.length < 2 ? (
-          <p style={{ color: "var(--color-muted)", fontSize: "0.9rem" }}>Legg til minst to deltakere for å gjøre opp mellom dere.</p>
+          <p style={{ color: "var(--color-muted)", fontSize: "var(--text-body)" }}>Legg til minst to deltakere for å gjøre opp mellom dere.</p>
         ) : transfers.length === 0 ? (
           <p style={{ color: "var(--color-cream)" }}>Alle står likt. Ingen skylder noe.</p>
         ) : (
@@ -575,13 +557,13 @@ function AccountsTab({ bet }: { bet: ReturnType<typeof useBet> }) {
                 <span style={{ color: "var(--color-cream)" }}>
                   <strong>{name(t.from)}</strong> skylder <strong>{name(t.to)}</strong>
                 </span>
-                <span className="tabular font-display" style={{ color: "var(--color-gold-strong)", fontSize: "1.3rem" }}>{coins(t.amount)}</span>
+                <span className="tabular font-display" style={{ color: "var(--color-gold-strong)", fontSize: "var(--text-title)" }}>{coins(t.amount)}</span>
               </li>
             ))}
           </ul>
         )}
         {books.users.length >= 2 && (
-          <p className="mt-3" style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>
+          <p className="mt-3" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
             Hvert spill er mellom to av dere, så regnskapet går opp i null. Det er satt opp med færrest mulig overføringer.
           </p>
         )}
@@ -595,11 +577,11 @@ function AccountsTab({ bet }: { bet: ReturnType<typeof useBet> }) {
               <span className="flex items-center gap-3">
                 <span className="tabular" style={{ color: tone(nets[u.id] ?? 0), fontWeight: 700 }}>{signed(nets[u.id] ?? 0)}</span>
                 {confirm === u.id ? (
-                  <button type="button" onClick={async () => { const r = await removeUser(u.id); if (!r.ok) setError(r.reason); setConfirm(null); await bet.refresh(); }} className={`rounded-lg px-3 ${FOCUS_RING}`} style={{ minHeight: "2.75rem", color: "var(--color-red)", border: "1px solid var(--color-red)", fontSize: "0.8rem" }}>
+                  <button type="button" onClick={async () => { const r = await removeUser(u.id); if (!r.ok) setError(r.reason); setConfirm(null); await bet.refresh(); }} className={`rounded-lg px-3 ${FOCUS_RING}`} style={{ minHeight: "var(--control)", color: "var(--color-red)", border: "1px solid var(--color-red)", fontSize: "var(--text-small)" }}>
                     Slett for godt
                   </button>
                 ) : (
-                  <button type="button" onClick={() => setConfirm(u.id)} aria-label={`Fjern ${u.name}`} className={`rounded-lg px-3 ${FOCUS_RING}`} style={{ minHeight: "2.75rem", color: "var(--color-muted)", fontSize: "0.8rem" }}>
+                  <button type="button" onClick={() => setConfirm(u.id)} aria-label={`Fjern ${u.name}`} className={`rounded-lg px-3 ${FOCUS_RING}`} style={{ minHeight: "var(--control)", color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
                     Fjern
                   </button>
                 )}
@@ -607,25 +589,25 @@ function AccountsTab({ bet }: { bet: ReturnType<typeof useBet> }) {
             </li>
           ))}
         </ul>
-        {error && <p className="mt-2" style={{ color: "var(--color-red)", fontSize: "0.85rem" }}>{error}</p>}
+        {error && <p className="mt-2" style={{ color: "var(--color-red)", fontSize: "var(--text-small)" }}>{error}</p>}
       </Card>
 
       <Card title="Ny kveld">
-        <p className="mb-3" style={{ color: "var(--color-muted)", fontSize: "0.85rem" }}>
+        <p className="mb-3" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
           Alle starter på {coins(START_COINS)} igjen. Regnskapet for kveldene som har vært blir stående under «Alle kvelder».
           {pending && " Spill som ikke er avgjort bør avgjøres først."}
         </p>
         {confirm === "night" ? (
           <div className="flex gap-2">
-            <button type="button" onClick={async () => { const r = await newNight(books.users, bet.night); if (!r.ok) setError(r.reason); setConfirm(null); await bet.refresh(); }} className={`glossy flex-1 rounded-lg ${FOCUS_RING}`} style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", minHeight: "2.75rem", fontWeight: 700 } as React.CSSProperties}>
+            <button type="button" onClick={async () => { const r = await newNight(books.users, bet.night); if (!r.ok) setError(r.reason); setConfirm(null); await bet.refresh(); }} className={`glossy flex-1 rounded-lg ${FOCUS_RING}`} style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", minHeight: "var(--control)", fontWeight: 700 } as React.CSSProperties}>
               Ja, start kveld {bet.night + 1}
             </button>
-            <button type="button" onClick={() => setConfirm(null)} className={`tactile rounded-lg px-4 ${FOCUS_RING}`} style={{ minHeight: "2.75rem", background: "var(--color-cell)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}>
+            <button type="button" onClick={() => setConfirm(null)} className={`tactile rounded-lg px-4 ${FOCUS_RING}`} style={{ minHeight: "var(--control)", background: "var(--color-cell)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}>
               Avbryt
             </button>
           </div>
         ) : (
-          <button type="button" disabled={books.users.length === 0} onClick={() => setConfirm("night")} className={`tactile w-full rounded-lg ${FOCUS_RING}`} style={{ minHeight: "2.75rem", background: "var(--color-cell)", color: "var(--color-cream)", border: "1px solid var(--color-border)", opacity: books.users.length === 0 ? 0.5 : 1 }}>
+          <button type="button" disabled={books.users.length === 0} onClick={() => setConfirm("night")} className={`tactile w-full rounded-lg ${FOCUS_RING}`} style={{ minHeight: "var(--control)", background: "var(--color-cell)", color: "var(--color-cream)", border: "1px solid var(--color-border)", opacity: books.users.length === 0 ? 0.5 : 1 }}>
             Start ny kveld
           </button>
         )}
@@ -638,7 +620,7 @@ function HowItWorks() {
   return (
     <details className="mb-8 rounded-xl p-4" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
       <summary className="cursor-pointer" style={{ color: "var(--color-cream)", fontWeight: 600 }}>Slik fungerer det</summary>
-      <ul className="mt-3 space-y-2 list-disc pl-5" style={{ color: "var(--color-cream)", fontSize: "0.9rem" }}>
+      <ul className="mt-3 space-y-2 list-disc pl-5" style={{ color: "var(--color-cream)", fontSize: "var(--text-body)" }}>
         <li>Alle starter kvelden med {coins(START_COINS)} mynter. Det er bare på morro.</li>
         <li>Det er ingen bank. Et spill er alltid mellom to av dere: du legger ut «jeg tror Kari vinner, 100 til 1,87», og en annen tar imot motsatt side.</li>
         <li>Den som tar imot risikerer innsatsen ganger oddsen minus én (87 i eksempelet). Vinneren tar hele potten.</li>

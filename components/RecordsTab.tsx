@@ -27,13 +27,13 @@ export function RecordsTab() {
           <ol className="space-y-2">
             {l.holders.map((h, i) => (
               <li key={`${h.name}-${i}`}>
-                <Link href={`/spillere/${encodeURIComponent(h.name)}`} className={`flex items-center gap-3 rounded-lg ${FOCUS_RING}`} style={{ minHeight: "2.75rem" }}>
-                  <span className="font-display shrink-0 w-6 text-center" style={{ color: MEDAL[i], fontSize: "1.1rem" }}>{i + 1}</span>
+                <Link href={`/spillere/${encodeURIComponent(h.name)}`} className={`flex items-center gap-3 rounded-lg ${FOCUS_RING}`} style={{ minHeight: "var(--control)" }}>
+                  <span className="font-display shrink-0 w-6 text-center" style={{ color: MEDAL[i], fontSize: "var(--text-title)" }}>{i + 1}</span>
                   <span className="flex-1 min-w-0">
                     <span className="block truncate" style={{ color: "var(--color-cream)", fontWeight: i === 0 ? 700 : 500 }}>{h.name}</span>
-                    {h.note && <span className="block truncate tabular" style={{ color: "var(--color-muted)", fontSize: "0.7rem" }}>{h.note}</span>}
+                    {h.note && <span className="block truncate tabular" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>{h.note}</span>}
                   </span>
-                  <span className="tabular shrink-0" style={{ color: i === 0 ? "var(--color-gold-strong)" : "var(--color-teal-strong)", fontSize: "1.05rem", fontWeight: 700 }}>{l.format(h.value)}</span>
+                  <span className="tabular shrink-0" style={{ color: i === 0 ? "var(--color-gold-strong)" : "var(--color-teal-strong)", fontSize: "var(--text-body)", fontWeight: 700 }}>{l.format(h.value)}</span>
                 </Link>
               </li>
             ))}

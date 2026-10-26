@@ -35,10 +35,10 @@ function ResultCard({ tournament, match }: { tournament: Tournament; match: Tour
     const pct = hitPct(s);
     return (
       <div className="flex items-baseline justify-between gap-3" style={{ color: name === winner ? "var(--color-gold)" : "var(--color-muted)" }}>
-        <span className="truncate font-display" style={{ fontSize: name === winner ? "1.3rem" : "1.05rem" }}>
+        <span className="truncate font-display" style={{ fontSize: name === winner ? "var(--text-title)" : "var(--text-body)" }}>
           {name}
         </span>
-        <span className="tabular shrink-0" style={{ fontSize: "0.85rem" }}>
+        <span className="tabular shrink-0" style={{ fontSize: "var(--text-small)" }}>
           {s ? `${s.darts} piler` : ""}
           {pct !== null ? ` · ${pct} % treff` : ""}
         </span>
@@ -53,9 +53,9 @@ function ResultCard({ tournament, match }: { tournament: Tournament; match: Tour
         {row(loser)}
       </div>
       {match.isBronzeMatch ? (
-        <p style={{ color: "var(--color-cream)", fontSize: "0.9rem" }}>{winner} tar bronsen.</p>
+        <p style={{ color: "var(--color-cream)", fontSize: "var(--text-body)" }}>{winner} tar bronsen.</p>
       ) : match.bracketRoundSize === 1 ? null : (
-        <p style={{ color: "var(--color-cream)", fontSize: "0.9rem" }}>
+        <p style={{ color: "var(--color-cream)", fontSize: "var(--text-body)" }}>
           {winner} går videre til {nextOne ? roundName(nextOne).toLowerCase() : "neste runde"}
           {opponent ? <>, mot {opponent}.</> : waitingFor ? <>, der de møter {waitingFor.toLowerCase()}.</> : "."}
         </p>
@@ -71,14 +71,14 @@ function NextUpCard({ tournament, match, onPlay }: { tournament: Tournament; mat
   const [a, b] = [match.participantA!, match.participantB!];
   const side = (name: string, p: number | null) => (
     <div className="flex-1 min-w-0 text-center">
-      <p className="tabular" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>
+      <p className="tabular" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>
         {seedOf(tournament, name) ? `#${seedOf(tournament, name)}` : ""}
       </p>
-      <p className="font-display truncate" style={{ color: isHouseName(tournament, name) ? "var(--color-teal-strong)" : "var(--color-cream)", fontSize: "1.35rem" }}>
+      <p className="font-display truncate" style={{ color: isHouseName(tournament, name) ? "var(--color-teal-strong)" : "var(--color-cream)", fontSize: "var(--text-title)" }}>
         {name}
       </p>
       {p !== null && (
-        <p className="tabular" style={{ color: "var(--color-gold)", fontSize: "0.95rem", fontWeight: 600 }}>
+        <p className="tabular" style={{ color: "var(--color-gold)", fontSize: "var(--text-body)", fontWeight: 600 }}>
           {Math.round(p * 100)} %
         </p>
       )}
@@ -104,7 +104,7 @@ function NextUpCard({ tournament, match, onPlay }: { tournament: Tournament; mat
         type="button"
         onClick={onPlay}
         className={`glossy w-full rounded-xl font-semibold text-lg ${FOCUS_RING}`}
-        style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", minHeight: "3.25rem" } as React.CSSProperties}
+        style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", minHeight: "var(--control-lg)" } as React.CSSProperties}
       >
         Start kampen
       </button>
@@ -116,7 +116,7 @@ function NextUpCard({ tournament, match, onPlay }: { tournament: Tournament; mat
 function MatchSheet({ tournament, match, onClose }: { tournament: Tournament; match: TournamentMatch; onClose: () => void }) {
   const names = [match.participantA, match.participantB].filter((n): n is string => !!n);
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4" role="dialog" aria-modal="true" aria-label={roundName(match)} style={{ background: "rgba(0,0,0,0.6)" }}>
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4" role="dialog" aria-modal="true" aria-label={roundName(match)} style={{ background: "var(--scrim)" }}>
       <button type="button" aria-label="Lukk" onClick={onClose} className="absolute inset-0 w-full h-full" />
       <div className="relative w-full max-w-sm rounded-2xl p-4" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
         <p className="section-label mb-3">{roundName(match).toUpperCase()}</p>
@@ -127,21 +127,21 @@ function MatchSheet({ tournament, match, onClose }: { tournament: Tournament; ma
             const out = outIn(tournament, n);
             return (
               <div key={n} className="flex items-baseline justify-between gap-3" style={{ color: match.winner === n ? "var(--color-gold)" : "var(--color-cream)" }}>
-                <span className="font-display truncate" style={{ fontSize: "1.2rem" }}>
+                <span className="font-display truncate" style={{ fontSize: "var(--text-title)" }}>
                   {seedOf(tournament, n) ? `#${seedOf(tournament, n)} ` : ""}
                   {n}
                 </span>
-                <span className="tabular shrink-0" style={{ color: "var(--color-muted)", fontSize: "0.85rem" }}>
+                <span className="tabular shrink-0" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
                   {s ? `${s.darts} piler${pct !== null ? ` · ${pct} %` : ""}` : out && !match.winner ? `ute i ${roundName(out).toLowerCase()}` : ""}
                 </span>
               </div>
             );
           })}
         </div>
-        <p style={{ color: "var(--color-muted)", fontSize: "0.85rem" }}>
+        <p style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
           {match.isBye ? "Walkover" : match.winner ? `${match.winner} vant` : ""}
         </p>
-        <button type="button" onClick={onClose} className={`tactile w-full rounded-lg mt-4 ${FOCUS_RING}`} style={{ minHeight: "2.75rem", background: "var(--color-cell)", color: "var(--color-cream)" }}>
+        <button type="button" onClick={onClose} className={`tactile w-full rounded-lg mt-4 ${FOCUS_RING}`} style={{ minHeight: "var(--control)", background: "var(--color-cell)", color: "var(--color-cream)" }}>
           Lukk
         </button>
       </div>
@@ -182,7 +182,7 @@ export function KnockoutOverview({
   const elsewhere = elsewhereIds.map((id) => tournament.matches.find((m) => m.id === id)).filter((m): m is TournamentMatch => !!m && !!m.winner);
   const undoable = undoableMatch(tournament);
   return (
-    <div className="animate-screen-enter screen" style={{ background: "var(--color-bg)" }}>
+    <div className="animate-screen-push screen" style={{ background: "var(--color-bg)" }}>
       {confirm === "cancel" && (
         <ConfirmDialog
           message="Slette turneringen?"
@@ -203,10 +203,10 @@ export function KnockoutOverview({
       )}
       {selected && <MatchSheet tournament={tournament} match={selected} onClose={() => setSelected(null)} />}
       <div className="screen-inner" style={{ maxWidth: "min(100%, 64rem)" }}>
-        <ScreenTop title={tournamentTitle(tournament)} onBack={onExitToHome} right={onHistory ? <button type="button" onClick={onHistory} className={`tactile rounded-lg text-sm px-3 ${FOCUS_RING}`} style={{ minHeight: "2.75rem", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}>Pokaler</button> : undefined} />
+        <ScreenTop title={tournamentTitle(tournament)} onBack={onExitToHome} right={onHistory ? <button type="button" onClick={onHistory} className={`tactile rounded-lg text-sm px-3 ${FOCUS_RING}`} style={{ minHeight: "var(--control)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}>Pokaler</button> : undefined} />
         <StepStrip step={2} />
         {tournament.cup && (
-          <p className="mb-4 text-center" style={{ color: "var(--color-muted)", fontSize: "0.85rem" }}>
+          <p className="mb-4 text-center" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
             Dere spiller om {tournament.cup.trophy}
           </p>
         )}
@@ -217,7 +217,7 @@ export function KnockoutOverview({
               <p className="section-label mb-2">ANDRE KAMPER</p>
               <div className="space-y-1">
                 {elsewhere.map((m) => (
-                  <p key={m.id} className="flex justify-between gap-3" style={{ fontSize: "0.88rem" }}>
+                  <p key={m.id} className="flex justify-between gap-3" style={{ fontSize: "var(--text-body)" }}>
                     <span className="truncate" style={{ color: "var(--color-cream)" }}>
                       <span style={{ color: "var(--color-gold)", fontWeight: 600 }}>{m.winner}</span> slo {m.participantA === m.winner ? m.participantB : m.participantA}
                     </span>
@@ -236,11 +236,11 @@ export function KnockoutOverview({
         </div>
         <div className="mx-auto space-y-2" style={{ maxWidth: "28rem" }}>
           {undoable && (
-            <button type="button" onClick={() => setConfirm("undo")} className={`tactile w-full rounded-lg text-sm ${FOCUS_RING}`} style={{ minHeight: "2.75rem", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}>
+            <button type="button" onClick={() => setConfirm("undo")} className={`tactile w-full rounded-lg text-sm ${FOCUS_RING}`} style={{ minHeight: "var(--control)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}>
               Angre siste resultat
             </button>
           )}
-          <button type="button" onClick={() => setConfirm("cancel")} className={`tactile w-full rounded-lg text-sm ${FOCUS_RING}`} style={{ minHeight: "2.75rem", background: "var(--color-surface)", color: "var(--color-red)", border: "1px solid var(--color-border)" }}>
+          <button type="button" onClick={() => setConfirm("cancel")} className={`tactile w-full rounded-lg text-sm ${FOCUS_RING}`} style={{ minHeight: "var(--control)", background: "var(--color-surface)", color: "var(--color-red)", border: "1px solid var(--color-border)" }}>
             Slett turnering
           </button>
         </div>

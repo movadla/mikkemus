@@ -40,16 +40,16 @@ export function OddsBar({ rows, compact = false }: { rows: OddsRow[]; compact?: 
             <div
               key={r.name}
               className="rounded-lg px-2 min-w-0"
-              style={{ background: "var(--color-surface)", border: `1px ${unsure ? "dashed" : "solid"} ${r.active ? "var(--color-teal)" : "var(--color-border)"}`, borderTop: r.color ? `3px solid ${r.color}` : undefined }}
+              style={{ background: "var(--color-surface)", borderWidth: 1, borderStyle: unsure ? "dashed" : "solid", borderColor: r.active ? "var(--color-teal)" : "var(--color-border)", ...(r.color ? { borderTopWidth: 3, borderTopStyle: "solid", borderTopColor: r.color } : {}) }}
             >
-              <p className="truncate" style={{ color: "var(--color-muted)", fontSize: compact ? "0.66rem" : "0.72rem", lineHeight: 1.2, paddingTop: 2 }}>
+              <p className="truncate" style={{ color: "var(--color-muted)", fontSize: compact ? "var(--text-micro)" : "var(--text-micro)", lineHeight: 1.2, paddingTop: 2 }}>
                 {r.name}
               </p>
               <p className="flex items-baseline gap-2">
-                <span className="font-display tabular" style={{ fontSize: compact ? "1.05rem" : "1.3rem", color: "var(--color-cream)", lineHeight: 1.1 }}>
+                <span className="font-display tabular" style={{ fontSize: compact ? "var(--text-body)" : "var(--text-title)", color: "var(--color-cream)", lineHeight: 1.1 }}>
                   {formatOdds(r.odds)}
                 </span>
-                <span className="tabular" style={{ fontSize: "0.7rem", color: up ? "#58b072" : down ? "#e25a45" : "var(--color-muted)", fontWeight: 700 }} title={`Vinnersjanse ${formatPct(r.p)}`}>
+                <span className="tabular" style={{ fontSize: "var(--text-micro)", color: up ? "var(--color-green)" : down ? "var(--color-red)" : "var(--color-muted)", fontWeight: 700 }} title={`Vinnersjanse ${formatPct(r.p)}`}>
                   {up ? "▲" : down ? "▼" : "–"} {formatPct(r.p)}
                 </span>
               </p>

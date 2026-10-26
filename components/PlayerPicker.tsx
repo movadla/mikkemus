@@ -6,7 +6,8 @@ import { BOT_LEVEL_PICKABLE, botDisplayName, type BotLevel } from "@/lib/botLeve
 import { avatarAccent } from "@/lib/avatarAccent";
 import { nextBotName, sameName, type Person } from "@/lib/people";
 import { filterNames, readUsage, sortByRecent } from "@/lib/recentPlayers";
-import { GuestIcon } from "./icons";
+import { BotIcon, CloseIcon, GuestIcon } from "./icons";
+import { LevelBadge } from "./LevelBadge";
 
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
@@ -100,9 +101,9 @@ export function PlayerPicker({
           onClick={() => open("player")}
           aria-expanded={adding === "player"}
           className={`${addButton} ${FOCUS_RING}`}
-          style={{ minHeight: "2.75rem", background: "var(--color-surface)", border: "1.5px dashed var(--color-teal)", color: "var(--color-teal)" }}
+          style={{ minHeight: "var(--control)", background: "var(--color-surface)", border: "1.5px dashed var(--color-teal)", color: "var(--color-teal)" }}
         >
-          <span aria-hidden style={{ fontSize: "1.05rem", lineHeight: 1, fontWeight: 700 }}>
+          <span aria-hidden style={{ fontSize: "var(--text-body)", lineHeight: 1, fontWeight: 700 }}>
             +
           </span>
           Ny spiller
@@ -113,7 +114,7 @@ export function PlayerPicker({
             onClick={() => open("guest")}
             aria-expanded={adding === "guest"}
             className={`${addButton} ${FOCUS_RING}`}
-            style={{ minHeight: "2.75rem", background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-cream)" }}
+            style={{ minHeight: "var(--control)", background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-cream)" }}
           >
             <GuestIcon className="w-3.5 h-3.5" />
             Gjest
@@ -125,9 +126,9 @@ export function PlayerPicker({
           disabled={!botsAllowed}
           aria-expanded={adding === "bot"}
           className={`${addButton} ${FOCUS_RING}`}
-          style={{ minHeight: "2.75rem", background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-cream)", opacity: botsAllowed ? 1 : 0.4 }}
+          style={{ minHeight: "var(--control)", background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-cream)", opacity: botsAllowed ? 1 : 0.4 }}
         >
-          <span aria-hidden>🤖</span>
+          <BotIcon className="w-4 h-4" />
           Bot
         </button>
       </div>
@@ -145,13 +146,13 @@ export function PlayerPicker({
             placeholder={adding === "guest" ? "Gjestens navn" : "Spillernavn"}
             aria-label={adding === "guest" ? "Gjestens navn" : "Spillernavn"}
             className={`flex-1 min-w-0 px-4 rounded-lg ${FOCUS_RING}`}
-            style={{ minHeight: "2.75rem", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
+            style={{ minHeight: "var(--control)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
           />
           <button
             type="button"
             onClick={() => addName(adding === "guest")}
             className={`glossy px-4 rounded-lg font-medium ${FOCUS_RING}`}
-            style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", minHeight: "2.75rem" } as React.CSSProperties}
+            style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", minHeight: "var(--control)" } as React.CSSProperties}
           >
             Legg til
           </button>
@@ -160,9 +161,9 @@ export function PlayerPicker({
             onClick={() => setAdding(null)}
             aria-label="Avbryt"
             className={`tactile rounded-lg flex items-center justify-center shrink-0 ${FOCUS_RING}`}
-            style={{ width: "2.75rem", minHeight: "2.75rem", background: "var(--color-surface)", color: "var(--color-muted)", border: "1px solid var(--color-border)" }}
+            style={{ width: "2.75rem", minHeight: "var(--control)", background: "var(--color-surface)", color: "var(--color-muted)", border: "1px solid var(--color-border)" }}
           >
-            ✕
+            <CloseIcon className="w-4 h-4" />
           </button>
         </div>
       )}
@@ -173,16 +174,17 @@ export function PlayerPicker({
               key={level}
               type="button"
               onClick={() => addBot(level)}
-              className={`tactile rounded-lg text-sm truncate px-2 ${FOCUS_RING}`}
-              style={{ minHeight: "2.75rem", background: "var(--color-cell)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
+              className={`tactile rounded-lg text-sm px-2 inline-flex items-center justify-center gap-1 ${FOCUS_RING}`}
+              style={{ minHeight: "var(--control)", background: "var(--color-cell)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
             >
               {botDisplayName(level)}
+              <LevelBadge level={level} />
             </button>
           ))}
         </div>
       )}
       {error && (
-        <p role="alert" className="text-center mb-4" style={{ color: "var(--color-red)", fontSize: "0.75rem" }}>
+        <p role="alert" className="text-center mb-4" style={{ color: "var(--color-red)", fontSize: "var(--text-micro)" }}>
           {error}
         </p>
       )}
@@ -195,7 +197,7 @@ export function PlayerPicker({
           placeholder="Søk"
           aria-label="Søk etter spiller"
           className={`w-full px-4 rounded-lg mb-4 ${FOCUS_RING}`}
-          style={{ minHeight: "2.75rem", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)", fontSize: "0.9rem" }}
+          style={{ minHeight: "var(--control)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)", fontSize: "var(--text-body)" }}
         />
       )}
 
@@ -228,7 +230,7 @@ export function PlayerPicker({
                 onClick={() => toggle(person)}
                 className={`tactile flex items-center gap-2 pl-2 pr-2 rounded-lg text-left ${FOCUS_RING}`}
                 style={{
-                  minHeight: "2.75rem",
+                  minHeight: "var(--control)",
                   background: selected ? "var(--teal-soft)" : "var(--color-surface)",
                   border: selected ? "1px solid var(--color-teal)" : `1px ${dashed ? "dashed" : "solid"} var(--color-border)`,
                 }}
@@ -239,24 +241,24 @@ export function PlayerPicker({
                   aria-hidden
                 >
                   {person.isBot ? (
-                    <span style={{ fontSize: "0.9rem" }}>🤖</span>
+                    <BotIcon className="w-4 h-4" />
                   ) : person.isGuest ? (
                     <GuestIcon className="w-3.5 h-3.5" />
                   ) : photo ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={photo} alt="" className="w-full h-full object-cover" />
                   ) : (
-                    <span style={{ color: avatarAccent(person.name), fontSize: "0.75rem" }}>{person.name.charAt(0).toUpperCase()}</span>
+                    <span style={{ color: avatarAccent(person.name), fontSize: "var(--text-micro)" }}>{person.name.charAt(0).toUpperCase()}</span>
                   )}
                 </span>
-                <span className="flex-1 min-w-0 truncate" style={{ color: botBlocked ? "var(--color-red)" : selected ? "var(--color-cream)" : "var(--color-muted)", fontSize: "0.9rem", fontWeight: selected ? 600 : 400 }}>
+                <span className="flex-1 min-w-0 truncate" style={{ color: botBlocked ? "var(--color-red)" : selected ? "var(--color-cream)" : "var(--color-muted)", fontSize: "var(--text-body)", fontWeight: selected ? 600 : 400 }}>
                   {person.name}
-                  {person.isGuest && <span style={{ color: "var(--color-muted)", fontSize: "0.75rem", fontWeight: 400 }}> · gjest</span>}
+                  {person.isGuest && <span style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)", fontWeight: 400 }}> · gjest</span>}
                 </span>
                 {selected && (
                   <span
                     className="tabular rounded-full shrink-0 flex items-center justify-center"
-                    style={{ width: "1.375rem", height: "1.375rem", background: "var(--color-teal)", color: "var(--color-bg)", fontSize: "0.75rem", fontWeight: 700 }}
+                    style={{ width: "1.375rem", height: "1.375rem", background: "var(--color-teal)", color: "var(--color-bg)", fontSize: "var(--text-micro)", fontWeight: 700 }}
                     aria-label={`nummer ${order + 1}`}
                   >
                     {order + 1}
@@ -268,7 +270,7 @@ export function PlayerPicker({
         </div>
       )}
       {shown.length === 0 && query && (
-        <p style={{ color: "var(--color-muted)", fontSize: "0.85rem" }}>Ingen spillere heter noe slikt.</p>
+        <p style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>Ingen spillere heter noe slikt.</p>
       )}
     </div>
   );

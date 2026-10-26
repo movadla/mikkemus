@@ -19,9 +19,9 @@ const num = (v: number | null | undefined, digits = 0) => (v === null || v === u
 
 function Tile({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl px-2 py-3 text-center" style={{ background: "var(--color-surface-2)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06), inset 0 1px 0 rgba(255,255,255,0.07), 0 1px 2px rgba(0,0,0,0.4)" }}>
-      <p style={{ color: "var(--color-muted)", fontSize: "0.65rem", fontWeight: 600, letterSpacing: "0.14em" }}>{label}</p>
-      <p className="tabular" style={{ color: "var(--color-cream)", fontSize: "1.4rem", lineHeight: 1.15, fontWeight: 700, letterSpacing: "-0.01em" }}>{value}</p>
+    <div className="rounded-xl px-2 py-3 text-center" style={{ background: "var(--color-surface-2)", boxShadow: "inset 0 0 0 1px var(--veil), inset 0 1px 0 var(--veil), 0 1px 2px rgba(0,0,0,0.4)" }}>
+      <p style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)", fontWeight: 600, letterSpacing: "0.14em" }}>{label}</p>
+      <p className="tabular" style={{ color: "var(--color-cream)", fontSize: "var(--text-title)", lineHeight: 1.15, fontWeight: 700, letterSpacing: "-0.01em" }}>{value}</p>
     </div>
   );
 }
@@ -42,7 +42,7 @@ const RING_ROWS: Step[] = ["D", "T"];
 /** D and T count a hit whenever one lands, also a slenger thrown at a number, but a miss only while the row is the one being worked. */
 function RingNote() {
   return (
-    <p className="mt-1" style={{ color: "var(--color-muted)", fontSize: "0.7rem" }}>
+    <p className="mt-1" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>
       * D og T teller også treff slengt på siden, men bom bare når raden er aktiv. Prosenten er for høy og kan ikke sammenlignes med tallradene.
     </p>
   );
@@ -52,13 +52,13 @@ function Rows({ view }: { view: View }) {
   if (!view.rows) return null;
   return (
     <>
-      <p className="section-label mt-4 mb-2" style={{ fontSize: "0.75rem" }}>TREFF PER RAD</p>
+      <p className="section-label mt-4 mb-2" style={{ fontSize: "var(--text-micro)" }}>TREFF PER RAD</p>
       <div className="grid grid-cols-5 gap-2">
         {view.rows.map((r) => (
-          <div key={r.step} className="rounded-xl py-2 text-center tabular" style={{ background: "var(--color-surface-2)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06), inset 0 1px 0 rgba(255,255,255,0.07), 0 1px 2px rgba(0,0,0,0.4)" }}>
-            <p style={{ color: "var(--color-muted)", fontSize: "0.7rem" }}>{STEP_LABELS[r.step]}</p>
-            <p style={{ color: "var(--color-cream)", fontSize: "0.8rem", fontWeight: 600 }}>{pct(r.pct)}{RING_ROWS.includes(r.step) && r.pct !== null ? "*" : ""}</p>
-            <p style={{ color: "var(--color-muted)", fontSize: "0.65rem" }}>{r.hits + r.misses === 0 ? "ingen kast" : `${r.hits} av ${r.hits + r.misses}`}</p>
+          <div key={r.step} className="rounded-xl py-2 text-center tabular" style={{ background: "var(--color-surface-2)", boxShadow: "inset 0 0 0 1px var(--veil), inset 0 1px 0 var(--veil), 0 1px 2px rgba(0,0,0,0.4)" }}>
+            <p style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>{STEP_LABELS[r.step]}</p>
+            <p style={{ color: "var(--color-cream)", fontSize: "var(--text-small)", fontWeight: 600 }}>{pct(r.pct)}{RING_ROWS.includes(r.step) && r.pct !== null ? "*" : ""}</p>
+            <p style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>{r.hits + r.misses === 0 ? "ingen kast" : `${r.hits} av ${r.hits + r.misses}`}</p>
           </div>
         ))}
       </div>
@@ -83,7 +83,7 @@ function RowDarts({ view, who, source }: { view: View; who: string; source: Sour
   return (
     <>
       <div className="flex items-center justify-between mt-4 mb-2 gap-2">
-        <p className="section-label" style={{ fontSize: "0.75rem" }}>{shownUnit === "pct" ? "TREFF PER RAD" : "PILER PER RAD"}</p>
+        <p className="section-label" style={{ fontSize: "var(--text-micro)" }}>{shownUnit === "pct" ? "TREFF PER RAD" : "PILER PER RAD"}</p>
         <div className="flex rounded-full p-0.5" role="group" aria-label="Piler eller treffprosent" style={{ background: "var(--color-cell)", border: "1px solid var(--color-border)" }}>
           {(["darts", "pct"] as const).map((u) => {
             const missing = u === "pct" ? !pctValues : !dartValues;
@@ -95,7 +95,7 @@ function RowDarts({ view, who, source }: { view: View; who: string; source: Sour
                 disabled={missing}
                 onClick={() => setUnit(u)}
                 className={`rounded-full px-3 ${FOCUS_RING}`}
-                style={{ minHeight: "2rem", background: shownUnit === u ? "var(--color-teal)" : "transparent", color: shownUnit === u ? "var(--color-bg)" : "var(--color-cream)", fontWeight: 600, fontSize: "0.75rem", opacity: missing ? 0.4 : 1 }}
+                style={{ minHeight: "var(--control)", background: shownUnit === u ? "var(--color-teal)" : "transparent", color: shownUnit === u ? "var(--color-bg)" : "var(--color-cream)", fontWeight: 600, fontSize: "var(--text-micro)", opacity: missing ? 0.4 : 1 }}
               >
                 {u === "darts" ? "Piler" : "Treff %"}
               </button>
@@ -105,13 +105,13 @@ function RowDarts({ view, who, source }: { view: View; who: string; source: Sour
       </div>
       <RowDartsChart key={`${who}-${source}-${shownUnit}`} values={values} unit={shownUnit} who={who} />
       {shownUnit === "darts" && (
-        <p className="mt-1" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>
+        <p className="mt-1" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>
           Over {n} {n === 1 ? "kamp" : "kamper"}
           {view.rowDartsApprox > 0 ? ` — ${view.rowDartsApprox} eldre ${view.rowDartsApprox === 1 ? "kamp er" : "kamper er"} regnet som kryss pluss bom, der en trippel teller tre.` : "."}
         </p>
       )}
       {shownUnit === "pct" && STEPS.some((s) => values[s] === null) && (
-        <p className="mt-1" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>En rad uten tall er ikke kastet på i disse kampene.</p>
+        <p className="mt-1" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>En rad uten tall er ikke kastet på i disse kampene.</p>
       )}
     </>
   );
@@ -127,10 +127,10 @@ function CoachBox({ player, all }: { player: PlayerRecord; all: PlayerRecord[] }
   const bias = sumBias(player);
   const hasDirection = !!bias && bias.n >= 30;
   return (
-    <div className="mt-4 rounded-xl p-3" style={{ background: "var(--color-surface-2)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06), inset 0 1px 0 rgba(255,255,255,0.07)" }}>
-      <p className="section-label mb-2" style={{ fontSize: "0.75rem" }}>TRENEREN SIER</p>
+    <div className="mt-4 rounded-xl p-3" style={{ background: "var(--color-surface-2)", boxShadow: "inset 0 0 0 1px var(--veil), inset 0 1px 0 var(--veil)" }}>
+      <p className="section-label mb-2" style={{ fontSize: "var(--text-micro)" }}>TRENEREN SIER</p>
       {tips.length === 0 ? (
-        <p style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>Ingen råd ennå: tallene sier ikke noe tydelig, og det er et godt tegn.</p>
+        <p style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>Ingen råd ennå: tallene sier ikke noe tydelig, og det er et godt tegn.</p>
       ) : (
         <ul className="space-y-2.5">
           {tips.map((t) => (
@@ -141,14 +141,14 @@ function CoachBox({ player, all }: { player: PlayerRecord; all: PlayerRecord[] }
                 style={{ width: 8, height: 8, marginTop: "0.4rem", background: t.tone === "good" ? "var(--color-green)" : "var(--color-gold)", boxShadow: `0 0 8px ${t.tone === "good" ? "rgba(88,176,114,0.6)" : "rgba(217,174,79,0.6)"}` }}
               />
               <span>
-                <span className="block" style={{ color: "var(--color-cream)", fontWeight: 600, fontSize: "0.9rem" }}>{t.title}</span>
-                <span className="block" style={{ color: "var(--color-text-2)", fontSize: "0.8rem", lineHeight: 1.45 }}>{t.text}</span>
+                <span className="block" style={{ color: "var(--color-cream)", fontWeight: 600, fontSize: "var(--text-body)" }}>{t.title}</span>
+                <span className="block" style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)", lineHeight: 1.45 }}>{t.text}</span>
               </span>
             </li>
           ))}
         </ul>
       )}
-      <p className="mt-2.5" style={{ color: "var(--color-muted)", fontSize: "0.7rem" }}>
+      <p className="mt-2.5" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>
         Bygget på {darts} kast målt av Scolia.{hasDirection ? "" : " Retning (for høyt, lavt, venstre eller høyre) kommer etter noen kamper med Scolia fra nå."}
       </p>
     </div>
@@ -163,10 +163,10 @@ function MemberTable({ team }: { team: PlayerRecord }) {
   return (
     <div className="mt-4 rounded-xl px-3 py-2" style={{ background: "var(--color-surface-2)" }}>
       <div className="grid items-baseline gap-x-2" style={{ gridTemplateColumns: "minmax(0,1fr) 3.5rem 3.5rem 3.5rem" }}>
-        <span className="section-label" style={{ fontSize: "0.75rem" }}>SPILLER</span>
-        <span className="section-label text-right" style={{ fontSize: "0.75rem" }}>TREFF</span>
-        <span className="section-label text-right" style={{ fontSize: "0.75rem" }}>MED</span>
-        <span className="section-label text-right" style={{ fontSize: "0.75rem" }}>PILER</span>
+        <span className="section-label" style={{ fontSize: "var(--text-micro)" }}>SPILLER</span>
+        <span className="section-label text-right" style={{ fontSize: "var(--text-micro)" }}>TREFF</span>
+        <span className="section-label text-right" style={{ fontSize: "var(--text-micro)" }}>MED</span>
+        <span className="section-label text-right" style={{ fontSize: "var(--text-micro)" }}>PILER</span>
         {members.map((m) => {
           const pct = memberHitPct(stats[m]);
           const med = memberMed(stats[m]);
@@ -174,8 +174,8 @@ function MemberTable({ team }: { team: PlayerRecord }) {
             <div key={m} className="contents">
               <span className="truncate py-1" style={{ color: "var(--color-cream)", fontWeight: 600 }}>{m}</span>
               <span className="tabular text-right" style={{ color: "var(--color-teal)", fontWeight: 700 }}>{pct === null ? "–" : `${pct}%`}</span>
-              <span className="tabular text-right" style={{ color: "var(--color-cream)", fontSize: "0.85rem" }}>{med === null ? "–" : `${Math.round(med)}mm`}</span>
-              <span className="tabular text-right" style={{ color: "var(--color-muted)", fontSize: "0.85rem" }}>{stats[m].darts}</span>
+              <span className="tabular text-right" style={{ color: "var(--color-cream)", fontSize: "var(--text-small)" }}>{med === null ? "–" : `${Math.round(med)}mm`}</span>
+              <span className="tabular text-right" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>{stats[m].darts}</span>
             </div>
           );
         })}
@@ -205,7 +205,7 @@ function Panel({ player, all, source, onSource }: { player: PlayerRecord; all: P
             aria-selected={tab === t}
             onClick={() => setTab(t)}
             className={`tactile rounded-lg ${FOCUS_RING}`}
-            style={{ minHeight: "2.75rem", background: tab === t ? "var(--color-teal)" : "var(--color-cell)", color: tab === t ? "var(--color-bg)" : "var(--color-cream)", border: "1px solid var(--color-border)", fontWeight: 600, fontSize: "0.9rem" }}
+            style={{ minHeight: "var(--control)", background: tab === t ? "var(--color-teal)" : "var(--color-cell)", color: tab === t ? "var(--color-bg)" : "var(--color-cream)", border: "1px solid var(--color-border)", fontWeight: 600, fontSize: "var(--text-body)" }}
           >
             {t === "single" ? "Singel" : "Lag"}
           </button>
@@ -213,7 +213,7 @@ function Panel({ player, all, source, onSource }: { player: PlayerRecord; all: P
       </div>
       )}
 
-      <div className="flex rounded-full p-1 mb-4" role="group" aria-label="Hvor kastene er registrert" style={{ background: "rgba(0, 0, 0, 0.35)", boxShadow: "inset 0 1px 2px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(255, 255, 255, 0.05)" }}>
+      <div className="flex rounded-full p-1 mb-4" role="group" aria-label="Hvor kastene er registrert" style={{ background: "rgba(0, 0, 0, 0.35)", boxShadow: "inset 0 1px 2px var(--scrim), inset 0 0 0 1px rgba(255, 255, 255, 0.05)" }}>
         {SOURCES.map((s) => (
           <button
             key={s.value}
@@ -221,7 +221,7 @@ function Panel({ player, all, source, onSource }: { player: PlayerRecord; all: P
             aria-pressed={source === s.value}
             onClick={() => onSource(s.value)}
             className={`flex-1 rounded-full ${FOCUS_RING}`}
-            style={{ minHeight: "2.5rem", background: source === s.value ? "var(--color-surface-2)" : "transparent", color: source === s.value ? "var(--color-cream)" : "var(--color-muted)", boxShadow: source === s.value ? "0 1px 2px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1)" : "none", fontWeight: 600, fontSize: "0.85rem" }}
+            style={{ minHeight: "var(--control)", background: source === s.value ? "var(--color-surface-2)" : "transparent", color: source === s.value ? "var(--color-cream)" : "var(--color-muted)", boxShadow: source === s.value ? "0 1px 2px var(--scrim-soft), inset 0 1px 0 rgba(255, 255, 255, 0.1)" : "none", fontWeight: 600, fontSize: "var(--text-small)" }}
           >
             {s.label}
           </button>
@@ -230,7 +230,7 @@ function Panel({ player, all, source, onSource }: { player: PlayerRecord; all: P
 
       {tab === "single" ? (
         single.matches === 0 && source === "both" ? (
-          <p style={{ color: "var(--color-muted)", fontSize: "0.9rem" }}>{isTeamRecord ? "Ingen kamper ennå." : "Ingen singelkamper ennå."}</p>
+          <p style={{ color: "var(--color-muted)", fontSize: "var(--text-body)" }}>{isTeamRecord ? "Ingen kamper ennå." : "Ingen singelkamper ennå."}</p>
         ) : (
           <>
             <div className="grid grid-cols-3 gap-2">
@@ -245,7 +245,7 @@ function Panel({ player, all, source, onSource }: { player: PlayerRecord; all: P
               <Tile label="REKKE" value={source === "both" ? num(single.bestRun) : "–"} />
               {source === "both" && <Tile label="RATING" value={ratingOf(player).toLocaleString("nb-NO").replace(/\s/g, " ")} />}
             </div>
-            <div className="flex items-center gap-3 mt-3" style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>
+            <div className="flex items-center gap-3 mt-3" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
               <span>Siste ti</span>
               <Dots results={single.results} />
               {single.results.length === 0 && <span>–</span>}
@@ -253,11 +253,11 @@ function Panel({ player, all, source, onSource }: { player: PlayerRecord; all: P
             <Rows view={single} />
             <RowDarts view={single} who={player.name} source={source} />
             {isTeamRecord ? <MemberTable team={player} /> : <CoachBox player={player} all={all} />}
-            {single.unsorted > 0 && <p className="mt-3" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>{single.unsorted} eldre {single.unsorted === 1 ? "kamp" : "kamper"} mangler kilde og er ikke med.</p>}
+            {single.unsorted > 0 && <p className="mt-3" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>{single.unsorted} eldre {single.unsorted === 1 ? "kamp" : "kamper"} mangler kilde og er ikke med.</p>}
           </>
         )
       ) : team.teams.length === 0 ? (
-        <p style={{ color: "var(--color-muted)", fontSize: "0.9rem" }}>{player.name} har ikke spilt på lag ennå.</p>
+        <p style={{ color: "var(--color-muted)", fontSize: "var(--text-body)" }}>{player.name} har ikke spilt på lag ennå.</p>
       ) : (
         <>
           <div className="grid grid-cols-3 gap-2">
@@ -270,35 +270,35 @@ function Panel({ player, all, source, onSource }: { player: PlayerRecord; all: P
             <Tile label="MED" value={mm(team.med)} />
             <Tile label="REKKE" value={source === "both" ? num(team.bestRun) : "–"} />
           </div>
-          <div className="flex items-center gap-3 mt-3" style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>
+          <div className="flex items-center gap-3 mt-3" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
             <span>Siste ti</span>
             <Dots results={team.results} />
             {team.results.length === 0 && <span>–</span>}
           </div>
-          <p className="section-label mt-4 mb-2" style={{ fontSize: "0.75rem" }}>LAGENE</p>
+          <p className="section-label mt-4 mb-2" style={{ fontSize: "var(--text-micro)" }}>LAGENE</p>
           <div className="space-y-2">
             {team.teams.map((t) => (
-              <div key={t.name} className="rounded-xl px-3 py-2 flex items-center justify-between gap-3" style={{ background: "var(--color-surface-2)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06), inset 0 1px 0 rgba(255,255,255,0.07), 0 1px 2px rgba(0,0,0,0.4)" }}>
+              <div key={t.name} className="rounded-xl px-3 py-2 flex items-center justify-between gap-3" style={{ background: "var(--color-surface-2)", boxShadow: "inset 0 0 0 1px var(--veil), inset 0 1px 0 var(--veil), 0 1px 2px rgba(0,0,0,0.4)" }}>
                 <span className="min-w-0">
                   <span className="block truncate" style={{ color: "var(--color-cream)", fontWeight: 600 }}>{t.name}</span>
-                  <span className="block truncate" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>med {t.partners.join(", ") || "–"}</span>
+                  <span className="block truncate" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>med {t.partners.join(", ") || "–"}</span>
                 </span>
-                <span className="tabular shrink-0" style={{ color: "var(--color-cream)", fontSize: "0.9rem" }}>{t.wins}–{t.matches - t.wins}</span>
+                <span className="tabular shrink-0" style={{ color: "var(--color-cream)", fontSize: "var(--text-body)" }}>{t.wins}–{t.matches - t.wins}</span>
               </div>
             ))}
           </div>
           <Rows view={team} />
           <RowDarts view={team} who={player.name} source={source} />
-          <p className="mt-3" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>
+          <p className="mt-3" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>
             Dine egne tall i lagkamper samles inn fra og med 2026-10-17{team.ownMatches === 0 ? ", så de fylles ut etter hvert som dere spiller." : "."}
             {source === "manual" ? " Lagets treff er fra kampene uten målte kast." : ""}
           </p>
-          {splitNote && <p className="mt-1" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>{splitNote}</p>}
+          {splitNote && <p className="mt-1" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>{splitNote}</p>}
         </>
       )}
-      {tab === "single" && splitNote && <p className="mt-1" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>{splitNote}</p>}
+      {tab === "single" && splitNote && <p className="mt-1" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>{splitNote}</p>}
 
-      <Link href={`/spillere/${encodeURIComponent(player.name)}`} className={`block mt-4 text-center rounded-lg ${FOCUS_RING}`} style={{ color: "var(--color-teal-strong)", fontSize: "0.85rem", minHeight: "2.75rem", lineHeight: "2.75rem" }}>
+      <Link href={`/spillere/${encodeURIComponent(player.name)}`} className={`block mt-4 text-center rounded-lg ${FOCUS_RING}`} style={{ color: "var(--color-teal-strong)", fontSize: "var(--text-small)", minHeight: "var(--control)", lineHeight: "2.75rem" }}>
         {isTeamRecord ? "Åpne lagsiden ›" : "Åpne spillersiden ›"}
       </Link>
     </div>
@@ -326,7 +326,7 @@ export function PlayerStatsAccordion({ players, all }: { players: PlayerRecord[]
               aria-expanded={isOpen}
               onClick={() => setOpen(isOpen ? null : p.name)}
               className={`w-full flex items-center gap-4 px-4 text-left ${FOCUS_RING}`}
-              style={{ minHeight: "3.75rem" }}
+              style={{ minHeight: "var(--control-lg)" }}
             >
               <span className="rounded-full overflow-hidden shrink-0 flex items-center justify-center" style={{ width: "2.5rem", height: "2.5rem", background: "var(--color-cell)", border: "1px solid var(--color-border)" }}>
                 {p.photo ? (
@@ -338,11 +338,11 @@ export function PlayerStatsAccordion({ players, all }: { players: PlayerRecord[]
               </span>
               <span className="flex-1 min-w-0">
                 <span className="block truncate" style={{ color: "var(--color-cream)", fontWeight: 600 }}>{p.name}</span>
-                <span className="block truncate" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>
+                <span className="block truncate" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>
                   {t ? `Singel ${s.matches} · Lag ${t.matches}` : `${p.members?.length ? `${p.members.join(", ")} · ` : ""}${s.matches} ${s.matches === 1 ? "kamp" : "kamper"}`}
                 </span>
               </span>
-              <span aria-hidden style={{ color: "var(--color-muted)", fontSize: "1.2rem", transform: isOpen ? "rotate(90deg)" : "none", transition: "transform 150ms" }}>›</span>
+              <span aria-hidden style={{ color: "var(--color-muted)", fontSize: "var(--text-title)", transform: isOpen ? "rotate(90deg)" : "none", transition: "transform 150ms" }}>›</span>
             </button>
             {isOpen && <Panel player={p} all={all} source={source} onSource={setSource} />}
           </div>

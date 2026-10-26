@@ -67,7 +67,7 @@ export function ConfirmDialog({
       aria-describedby={messageId}
       onKeyDown={handleKeyDown}
       className="fixed inset-0 flex items-center justify-center p-6 z-50"
-      style={{ background: "rgba(0,0,0,0.6)" }}
+      style={{ background: "var(--scrim)" }}
     >
       {/* shadow-panel matters most here of anywhere: a modal floating over a scrim is the
           one surface that should carry the deepest elevation, and it was the only card in

@@ -32,9 +32,9 @@ export function PinGate({ children }: { children: ReactNode }) {
 function NotForThisCode() {
   return (
     <main className="min-h-screen flex flex-col items-center justify-center gap-4 px-6 text-center" style={{ background: "var(--color-bg)", color: "var(--color-cream)" }}>
-      <h1 className="font-display" style={{ fontSize: "1.5rem" }}>Ikke tilgjengelig</h1>
+      <h1 className="font-display" style={{ fontSize: "var(--text-num)" }}>Ikke tilgjengelig</h1>
       <p style={{ color: "var(--color-muted)" }}>Denne siden åpnes ikke med koden du brukte.</p>
-      <Link href="/" className={`tactile rounded-lg px-6 ${FOCUS_RING}`} style={{ minHeight: "2.75rem", lineHeight: "2.75rem", background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
+      <Link href="/" className={`tactile rounded-lg px-6 ${FOCUS_RING}`} style={{ minHeight: "var(--control)", lineHeight: "2.75rem", background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
         Til forsiden
       </Link>
     </main>
@@ -110,12 +110,12 @@ function PinScreen({ onUnlocked }: { onUnlocked: (level: AccessLevel) => void })
   }, [press, back]);
 
   const keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
-  const keyStyle = { width: "4.5rem", height: "4.5rem", borderRadius: 999, background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)", fontSize: "1.6rem" } as const;
+  const keyStyle = { width: "4.5rem", height: "4.5rem", borderRadius: 999, background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)", fontSize: "var(--text-num)" } as const;
   return (
     <main className="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-8 px-6" style={{ background: "var(--color-bg)", color: "var(--color-cream)" }}>
       <div className="text-center">
-        <h1 className="font-display" style={{ fontSize: "1.8rem" }}>Mikke Mus</h1>
-        <p style={{ color: "var(--color-muted)", fontSize: "0.9rem", marginTop: 6 }}>Skriv inn koden</p>
+        <h1 className="font-display" style={{ fontSize: "var(--text-num)" }}>Mikke Mus</h1>
+        <p style={{ color: "var(--color-muted)", fontSize: "var(--text-body)", marginTop: 6 }}>Skriv inn koden</p>
       </div>
       <div className="flex gap-4" style={{ animation: wrong ? "pin-shake 420ms" : undefined }} aria-hidden>
         {Array.from({ length: PIN_LENGTH }).map((_, i) => (
@@ -125,7 +125,7 @@ function PinScreen({ onUnlocked }: { onUnlocked: (level: AccessLevel) => void })
           />
         ))}
       </div>
-      <p role="status" aria-live="polite" style={{ minHeight: "1.3rem", color: lockedFor > 0 ? "var(--color-gold-strong)" : "var(--color-red)", fontSize: "0.9rem" }}>
+      <p role="status" aria-live="polite" style={{ minHeight: "1.3rem", color: lockedFor > 0 ? "var(--color-gold-strong)" : "var(--color-red)", fontSize: "var(--text-body)" }}>
         {lockedFor > 0 ? `For mange feil forsøk. Vent ${lockedFor} s.` : wrong ? "Feil kode" : ""}
       </p>
       <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(3, 4.5rem)" }}>
@@ -138,11 +138,11 @@ function PinScreen({ onUnlocked }: { onUnlocked: (level: AccessLevel) => void })
         <button type="button" onClick={() => press("0")} className={`tactile ${FOCUS_RING}`} style={keyStyle} disabled={lockedFor > 0} aria-label="0">
           0
         </button>
-        <button type="button" onClick={back} className={`tactile ${FOCUS_RING}`} style={{ ...keyStyle, fontSize: "1.1rem", color: "var(--color-muted)" }} disabled={lockedFor > 0} aria-label="Slett siste siffer">
+        <button type="button" onClick={back} className={`tactile ${FOCUS_RING}`} style={{ ...keyStyle, fontSize: "var(--text-title)", color: "var(--color-muted)" }} disabled={lockedFor > 0} aria-label="Slett siste siffer">
           ⌫
         </button>
       </div>
-      <p style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>Enheten husker koden. Låser seg {LOCK_SECONDS} s etter {MAX_TRIES} feil.</p>
+      <p style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>Enheten husker koden. Låser seg {LOCK_SECONDS} s etter {MAX_TRIES} feil.</p>
     </main>
   );
 }

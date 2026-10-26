@@ -1107,6 +1107,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     const closed = hitResult?.find((h) => h.newCount >= getRules().target && h.prevCount < getRules().target);
     if (closed && !replayingRef.current) {
       setClosedStep({ token: ++pulseTokenRef.current, step: closed.step });
+      haptics.close();
     }
 
     // A triple or double has landed: the word and the shockwave (Full party).
@@ -1637,6 +1638,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     const closed = hits.find((h) => h.newCount >= getRules().target && h.prevCount < getRules().target);
     if (closed) {
       setClosedStep({ token: ++pulseTokenRef.current, step: closed.step });
+      haptics.close();
     }
   }
 

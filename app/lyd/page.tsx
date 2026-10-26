@@ -50,8 +50,8 @@ function Slider({
   return (
     <div className="mb-4">
       <div className="flex justify-between items-baseline mb-1">
-        <span style={{ color: "var(--color-cream)", fontSize: "0.8rem" }}>{label}</span>
-        <span className="tabular" style={{ color: accent, fontWeight: 700, fontSize: "1rem" }}>
+        <span style={{ color: "var(--color-cream)", fontSize: "var(--text-small)" }}>{label}</span>
+        <span className="tabular" style={{ color: accent, fontWeight: 700, fontSize: "var(--text-body)" }}>
           {value}
         </span>
       </div>
@@ -66,7 +66,7 @@ function Slider({
         style={{ accentColor: accent, height: "28px" }}
         aria-label={label}
       />
-      <div className="flex justify-between" style={{ color: "var(--color-muted)", fontSize: "0.62rem" }}>
+      <div className="flex justify-between" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>
         <span>{low}</span>
         <span>{high}</span>
       </div>
@@ -116,13 +116,13 @@ export default function LydPage() {
 
   return (
     <div
-      className="animate-screen-enter min-h-screen w-full p-4"
+      className="animate-screen-push min-h-screen w-full p-4"
       style={{ background: "var(--color-bg)" }}
       // Any tap here unlocks audio playback for the page — see primeAudio.
       onPointerDownCapture={primeAudio}
     >
       <div className="max-w-md mx-auto pb-8">
-        <ScreenTop title="Lyder" backHref="/" />
+        <ScreenTop title="Lyder" backHref="/mer" />
 
         <Panel title="BOOM — DYPT ANSLAG VED TREFF">
           <Slider
@@ -178,7 +178,7 @@ export default function LydPage() {
                   playBoom(p.params);
                 }}
                 className={`tactile py-2 rounded-lg ${FOCUS_RING}`}
-                style={{ background: "var(--color-cell)", color: "var(--color-cream)", fontSize: "0.75rem" }}
+                style={{ background: "var(--color-cell)", color: "var(--color-cream)", fontSize: "var(--text-micro)" }}
               >
                 {p.label}
               </button>
@@ -224,7 +224,7 @@ export default function LydPage() {
                   playCrowd(p.params);
                 }}
                 className={`tactile py-2 rounded-lg ${FOCUS_RING}`}
-                style={{ background: "var(--color-cell)", color: "var(--color-cream)", fontSize: "0.75rem" }}
+                style={{ background: "var(--color-cell)", color: "var(--color-cream)", fontSize: "var(--text-micro)" }}
               >
                 {p.label}
               </button>
@@ -233,7 +233,7 @@ export default function LydPage() {
         </Panel>
 
         <Panel title="OPPTRAPPING — SLIK DET VILLE HØRTES UT I SPILLET">
-          <p className="mb-4" style={{ color: "var(--color-muted)", fontSize: "0.72rem", lineHeight: 1.5 }}>
+          <p className="mb-4" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)", lineHeight: 1.5 }}>
             Boomen blir lengre og hardere per treff, jubelen høyere og tettere — begge bygget på innstillingene dine
             over. Mørkheten holdes fast, så de tre leses som samme slag hardere, ikke tre ulike lyder.
           </p>
@@ -254,7 +254,7 @@ export default function LydPage() {
               ▶ Bare boomene etter hverandre (1 → 2 → 3)
             </PlayButton>
           </div>
-          <p className="mt-5 mb-3" style={{ color: "var(--color-muted)", fontSize: "0.72rem", lineHeight: 1.5 }}>
+          <p className="mt-5 mb-3" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)", lineHeight: 1.5 }}>
             Og videre: piler på rad over flere runder. Fra 4 øker trøkket for hver pil, fra 5 kommer et messingakkord som
             stiger et trinn for hver, og jubelen vokser. Slik høres det ut i Full party.
           </p>
@@ -275,7 +275,7 @@ export default function LydPage() {
               ▶ En serie på 10, pil for pil
             </PlayButton>
           </div>
-          <p className="mt-5 mb-3" style={{ color: "var(--color-muted)", fontSize: "0.72rem", lineHeight: 1.5 }}>
+          <p className="mt-5 mb-3" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)", lineHeight: 1.5 }}>
             Fanfaren som kommer på hver tredje pil på rad. Større og større, og fra 15 løftes tonearten.
           </p>
           <div className="space-y-2">
@@ -290,7 +290,7 @@ export default function LydPage() {
           </div>
         </Panel>
 
-        <p className="mb-4 mt-6 px-1" style={{ color: "var(--color-muted)", fontSize: "0.75rem", lineHeight: 1.5 }}>
+        <p className="mb-4 mt-6 px-1" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)", lineHeight: 1.5 }}>
           Under ligger de gamle messing-lydene, i tilfelle du vil sammenligne. Ingenting her er koblet inn i spillet
           ennå — alt spilles bare på denne siden til du har bestemt deg.
         </p>
@@ -318,7 +318,7 @@ export default function LydPage() {
           </div>
         </Panel>
 
-        <p className="mt-6 px-1 text-center" style={{ color: "var(--color-muted)", fontSize: "0.7rem", lineHeight: 1.5 }}>
+        <p className="mt-6 px-1 text-center" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)", lineHeight: 1.5 }}>
           Hører du ingenting: sjekk at telefonen ikke står på stille, og trykk én gang til — første trykk låser opp lyd
           i nettleseren. De dypeste boom-ene gjengis dårlig på telefonhøyttaler; hør dem på en ordentlig høyttaler før
           du forkaster dem.

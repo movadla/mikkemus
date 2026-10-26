@@ -61,7 +61,7 @@ export function LiveSidePanel({
           // eslint-disable-next-line @next/next/no-img-element
           <img src={photo} alt={playerName} className="w-full h-full object-cover" />
         ) : (
-          <span className="font-display" style={{ color: "var(--color-teal)", fontSize: "1.6rem" }}>
+          <span className="font-display" style={{ color: "var(--color-teal)", fontSize: "var(--text-num)" }}>
             {playerName.charAt(0).toUpperCase()}
           </span>
         )}
@@ -76,7 +76,7 @@ export function LiveSidePanel({
         // off Scolia rather than something being broken — say so instead of showing a blank.
         <div
           className="min-h-0 flex-1 flex items-center justify-center text-center px-1"
-          style={{ color: "var(--color-muted)", fontSize: "0.6rem", lineHeight: 1.3 }}
+          style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)", lineHeight: 1.3 }}
         >
           Treffbilde krever Scolia
         </div>
@@ -100,14 +100,14 @@ function Stat({ label, value }: { label: string; value: string }) {
       className="rounded-md px-0.5 py-0.5 text-center overflow-hidden"
       style={{ background: "var(--color-panel)", border: "1px solid var(--color-border)" }}
     >
-      <div className="section-label" style={{ fontSize: "0.48rem" }}>
+      <div className="section-label" style={{ fontSize: "var(--text-micro)" }}>
         {label}
       </div>
       {/* Big and light against the tiny tracked label — the same contrast CardHeader's stat
           slot uses elsewhere, so a number reads as a number at a glance. */}
       <div
         className="truncate"
-        style={{ fontSize: "0.72rem", fontWeight: 300, letterSpacing: "-0.02em", color: "var(--color-cream)" }}
+        style={{ fontSize: "var(--text-micro)", fontWeight: 300, letterSpacing: "-0.02em", color: "var(--color-cream)" }}
       >
         {value}
       </div>

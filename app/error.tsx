@@ -8,7 +8,7 @@ export default function ErrorPage({ reset }: { error: Error & { digest?: string 
   return (
     <div className="screen" style={{ background: "var(--color-bg)" }}>
       <div className="screen-inner text-center" style={{ paddingTop: "4rem" }}>
-        <h1 className="font-display" style={{ color: "var(--color-cream)", fontSize: "1.8rem" }}>
+        <h1 className="font-display" style={{ color: "var(--color-cream)", fontSize: "var(--text-num)" }}>
           Noe gikk galt
         </h1>
         <p className="mt-2 mb-6" style={{ color: "var(--color-muted)" }}>
@@ -19,7 +19,7 @@ export default function ErrorPage({ reset }: { error: Error & { digest?: string 
             type="button"
             onClick={reset}
             className="glossy rounded-xl font-semibold"
-            style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", minHeight: "2.75rem" } as React.CSSProperties}
+            style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", minHeight: "var(--control)" } as React.CSSProperties}
           >
             Prøv igjen
           </button>
@@ -27,7 +27,7 @@ export default function ErrorPage({ reset }: { error: Error & { digest?: string 
             type="button"
             onClick={() => router.push("/")}
             className="rounded-xl"
-            style={{ minHeight: "2.75rem", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
+            style={{ minHeight: "var(--control)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
           >
             Til forsiden
           </button>

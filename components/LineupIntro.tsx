@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { avatarAccent } from "@/lib/avatarAccent";
 import type { Kit } from "@/lib/teamKit";
 import { TeamKit } from "./TeamKit";
+import { BotIcon } from "./icons";
 import { formatOdds } from "@/lib/odds/price";
 
 export type LineupSide = {
@@ -100,7 +101,7 @@ export function LineupIntro({ sides, onDone }: { sides: LineupSide[]; onDone: ()
         style={{ width: size * 0.8, height: size * 0.8, border: `3px solid ${avatarAccent(s.name)}`, background: "var(--color-cell)", color: avatarAccent(s.name), fontSize: size * 0.34 }}
         aria-hidden
       >
-        {s.isBot ? "🤖" : s.photo ? (
+        {s.isBot ? <BotIcon className="w-1/2 h-1/2" /> : s.photo ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={s.photo} alt="" className="w-full h-full object-cover" />
         ) : (
@@ -117,27 +118,27 @@ export function LineupIntro({ sides, onDone }: { sides: LineupSide[]; onDone: ()
         aspectRatio: "0.72",
         background: "linear-gradient(160deg, #3a5e46 0%, #1f3a2a 55%, #17281d 100%)",
         border: "2px solid var(--color-gold)",
-        boxShadow: "0 18px 36px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.12)",
+        boxShadow: "0 18px 36px var(--scrim-soft), inset 0 0 0 1px rgba(255,255,255,0.12)",
         animation: `foil-in 800ms ${i * 160}ms cubic-bezier(0.2,0.8,0.2,1) both`,
         isolation: "isolate",
       }}
     >
       {s.chance !== undefined && (
-        <span className="absolute font-display" style={{ left: 10, top: 8, color: "var(--color-gold-strong)", fontSize: "1.5rem", lineHeight: 1 }}>
+        <span className="absolute font-display" style={{ left: 10, top: 8, color: "var(--color-gold-strong)", fontSize: "var(--text-num)", lineHeight: 1 }}>
           {Math.round(s.chance * 100)}
-          <small style={{ display: "block", fontFamily: "var(--font-sans)", fontSize: "0.6rem", letterSpacing: "0.14em", color: "var(--color-muted)" }}>SJANSE</small>
+          <small style={{ display: "block", fontFamily: "var(--font-sans)", fontSize: "var(--text-micro)", letterSpacing: "0.14em", color: "var(--color-muted)" }}>SJANSE</small>
         </span>
       )}
       <div className="mt-6">{picture(s, 84)}</div>
-      <p className="font-display mt-2 w-full truncate" style={{ fontSize: "1.25rem", color: "var(--color-cream)", letterSpacing: "0.03em" }}>
+      <p className="font-display mt-2 w-full truncate" style={{ fontSize: "var(--text-title)", color: "var(--color-cream)", letterSpacing: "0.03em" }}>
         {s.name}
       </p>
       {s.members && s.members.length > 0 && (
-        <p className="w-full truncate" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>
+        <p className="w-full truncate" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>
           {s.members.join(" og ")}
         </p>
       )}
-      {s.record && <p className="mt-auto" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>{s.record}</p>}
+      {s.record && <p className="mt-auto" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>{s.record}</p>}
       <span aria-hidden className="foil-sheen" />
     </div>
   );
@@ -160,7 +161,7 @@ export function LineupIntro({ sides, onDone }: { sides: LineupSide[]; onDone: ()
             {sides.map(card)}
             <span
               className="absolute flex items-center justify-center font-display rounded-full"
-              style={{ left: "50%", top: "50%", width: 54, height: 54, marginLeft: -27, marginTop: -27, background: "var(--color-gold)", color: "#2b2000", fontSize: "1.3rem", animation: "lineup-vs 450ms 700ms cubic-bezier(0.2,0.9,0.3,1.3) both", zIndex: 5, border: "3px solid var(--color-bg)" }}
+              style={{ left: "50%", top: "50%", width: 54, height: 54, marginLeft: -27, marginTop: -27, background: "var(--color-gold)", color: "#2b2000", fontSize: "var(--text-title)", animation: "lineup-vs 450ms 700ms cubic-bezier(0.2,0.9,0.3,1.3) both", zIndex: 5, border: "3px solid var(--color-bg)" }}
             >
               VS
             </span>
@@ -179,11 +180,11 @@ export function LineupIntro({ sides, onDone }: { sides: LineupSide[]; onDone: ()
                 );
                 return (
                   <div key={r.label} className="grid items-center gap-2" style={{ gridTemplateColumns: "3.4rem 1fr 3rem 1fr 3.4rem" }}>
-                    <span className="font-display tabular" style={{ fontSize: "0.95rem", color: "var(--color-cream)" }}>{r.fmt(r.a)}</span>
+                    <span className="font-display tabular" style={{ fontSize: "var(--text-body)", color: "var(--color-cream)" }}>{r.fmt(r.a)}</span>
                     {bar(r.a, true, aBetter)}
-                    <span style={{ textAlign: "center", fontSize: "0.65rem", letterSpacing: "0.12em", color: "var(--color-muted)" }}>{r.label}</span>
+                    <span style={{ textAlign: "center", fontSize: "var(--text-micro)", letterSpacing: "0.12em", color: "var(--color-muted)" }}>{r.label}</span>
                     {bar(r.b, false, !aBetter)}
-                    <span className="font-display tabular" style={{ fontSize: "0.95rem", color: "var(--color-cream)", textAlign: "right" }}>{r.fmt(r.b)}</span>
+                    <span className="font-display tabular" style={{ fontSize: "var(--text-body)", color: "var(--color-cream)", textAlign: "right" }}>{r.fmt(r.b)}</span>
                   </div>
                 );
               })}
@@ -195,8 +196,8 @@ export function LineupIntro({ sides, onDone }: { sides: LineupSide[]; onDone: ()
           {sides.map((s, i) => (
             <div key={s.name} className="flex items-center gap-3 rounded-xl px-4 py-2" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", animation: `lineup-in-left 500ms ${i * 90}ms cubic-bezier(0.2,0.9,0.3,1.1) both` }}>
               {picture(s, 52)}
-              <span className="font-display flex-1 truncate" style={{ fontSize: "1.3rem" }}>{s.name}</span>
-              {s.record && <span style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>{s.record}</span>}
+              <span className="font-display flex-1 truncate" style={{ fontSize: "var(--text-title)" }}>{s.name}</span>
+              {s.record && <span style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>{s.record}</span>}
               {s.odds !== undefined && <span className="font-display" style={{ color: "var(--color-gold)" }}>{formatOdds(s.odds)}</span>}
             </div>
           ))}
@@ -208,11 +209,11 @@ export function LineupIntro({ sides, onDone }: { sides: LineupSide[]; onDone: ()
             key={count}
             aria-live="polite"
             className="absolute font-display"
-            style={{ left: 0, right: 0, bottom: "10%", textAlign: "center", fontSize: "2.4rem", color: "var(--color-gold)", animation: count >= 0 ? "lineup-count 380ms ease-out both" : undefined, minHeight: "3rem" }}
+            style={{ left: 0, right: 0, bottom: "10%", textAlign: "center", fontSize: "2.4rem", color: "var(--color-gold)", animation: count >= 0 ? "lineup-count 380ms ease-out both" : undefined, minHeight: "var(--control-lg)" }}
           >
             {count >= 0 ? COUNT[count] : ""}
           </p>
-          <p className="absolute" style={{ left: 0, right: 0, bottom: "4%", textAlign: "center", color: "var(--color-muted)", fontSize: "0.8rem" }}>
+          <p className="absolute" style={{ left: 0, right: 0, bottom: "4%", textAlign: "center", color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
             Trykk for å hoppe over
           </p>
         </>
@@ -222,7 +223,7 @@ export function LineupIntro({ sides, onDone }: { sides: LineupSide[]; onDone: ()
           autoFocus
           onClick={() => setGo(true)}
           className="glossy absolute rounded-full font-semibold outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]"
-          style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", left: "50%", bottom: "7%", transform: "translateX(-50%)", minHeight: "3rem", padding: "0 2.5rem", fontSize: "1.1rem", animation: "lineup-count 400ms 900ms ease-out both" } as React.CSSProperties}
+          style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", left: "50%", bottom: "7%", transform: "translateX(-50%)", minHeight: "var(--control-lg)", padding: "0 2.5rem", fontSize: "var(--text-title)", animation: "lineup-count 400ms 900ms ease-out both" } as React.CSSProperties}
         >
           Fortsett
         </button>

@@ -208,14 +208,14 @@ export function ChromeControls({
   onOpenFx: () => void;
 }) {
   const icon = stacked
-    ? `tactile w-full h-8 rounded-lg flex items-center justify-center gap-2 text-sm ${FOCUS_RING}`
-    : `tactile w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${FOCUS_RING}`;
+    ? `tactile w-full h-11 rounded-lg flex items-center justify-center gap-2 text-sm ${FOCUS_RING}`
+    : `tactile w-11 h-11 rounded-lg flex items-center justify-center shrink-0 ${FOCUS_RING}`;
   return (
     <>
       <button
         type="button"
         onClick={onHome}
-        className={`tactile rounded-lg text-sm ${stacked ? "w-full h-8" : "px-3 py-2"} ${FOCUS_RING}`}
+        className={`tactile rounded-lg text-sm ${stacked ? "w-full h-11" : "px-3 h-11"} ${FOCUS_RING}`}
         style={{ background: "var(--color-surface)", color: "var(--color-cream)" }}
       >
         ← Hjem
@@ -228,7 +228,7 @@ export function ChromeControls({
         style={{ background: "var(--color-surface)", color: announcerOn ? "var(--color-teal)" : "var(--color-muted)" }}
       >
         {announcerOn ? <SpeakerIcon className="w-4 h-4" /> : <SpeakerMuteIcon className="w-4 h-4" />}
-        {stacked && <span style={{ fontSize: "0.7rem" }}>{announcerOn ? "Lyd på" : "Lyd av"}</span>}
+        {stacked && <span style={{ fontSize: "var(--text-micro)" }}>{announcerOn ? "Lyd på" : "Lyd av"}</span>}
       </button>
       <button
         type="button"
@@ -239,7 +239,7 @@ export function ChromeControls({
         style={{ background: "var(--color-surface)", color: shakeOn ? "var(--color-teal)" : "var(--color-muted)" }}
       >
         <ShakeIcon className="w-4 h-4" />
-        {stacked && <span style={{ fontSize: "0.7rem" }}>{shakeOn ? "Risting på" : "Risting av"}</span>}
+        {stacked && <span style={{ fontSize: "var(--text-micro)" }}>{shakeOn ? "Risting på" : "Risting av"}</span>}
       </button>
       {/* The stand rule can be switched on (or off) while the match is on — for the match that was
           started with it forgotten. It counts from the moment it is switched. */}
@@ -258,7 +258,7 @@ export function ChromeControls({
           }}
         >
           <PeopleIcon className="w-4 h-4" />
-          {stacked && <span style={{ fontSize: "0.7rem" }}>{standOn ? "Står ved 3: på" : "Står ved 3: av"}</span>}
+          {stacked && <span style={{ fontSize: "var(--text-micro)" }}>{standOn ? "Står ved 3: på" : "Står ved 3: av"}</span>}
         </button>
       )}
       {/* The animation level, changeable in the match: Vanlig, Party or Full party. */}
@@ -273,7 +273,7 @@ export function ChromeControls({
         <svg viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor" aria-hidden>
           <path d="M12 2l2.4 6.2L21 9l-5 4.2L17.5 20 12 16.5 6.5 20 8 13.2 3 9l6.6-.8z" />
         </svg>
-        {stacked && <span style={{ fontSize: "0.7rem" }}>{fxLabel}</span>}
+        {stacked && <span style={{ fontSize: "var(--text-micro)" }}>{fxLabel}</span>}
       </button>
       {/* AirPlay: an audio context created before mirroring started keeps the sound on the
           phone. Only offered inside the panel — it is a recovery action, not something you
@@ -287,7 +287,7 @@ export function ChromeControls({
           style={{ background: "var(--color-surface)", color: "var(--color-muted)" }}
         >
           <SpeakerIcon className="w-4 h-4" />
-          <span style={{ fontSize: "0.7rem" }}>Start lyd på nytt</span>
+          <span style={{ fontSize: "var(--text-micro)" }}>Start lyd på nytt</span>
         </button>
       )}
       <button
@@ -309,7 +309,7 @@ export function ChromeControls({
         }}
       >
         <CalibrateIcon className="w-4 h-4" />
-        {stacked && <span style={{ fontSize: "0.7rem" }}>Kalibrer</span>}
+        {stacked && <span style={{ fontSize: "var(--text-micro)" }}>Kalibrer</span>}
       </button>
     </>
   );
@@ -349,7 +349,7 @@ function ShotIndicator({
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: "0.85rem",
+              fontSize: "var(--text-small)",
               fontWeight: 700,
               background: shot ? (shot.hit ? "var(--color-green)" : "var(--color-red)") : "transparent",
               border: shot ? "none" : "1px dashed var(--color-border)",
@@ -416,10 +416,10 @@ function ChoiceBox({
         } as React.CSSProperties
       }
     >
-      <span className="block font-semibold" style={{ fontSize: compact ? "0.85rem" : "1.05rem" }}>
+      <span className="block font-semibold" style={{ fontSize: compact ? "var(--text-small)" : "var(--text-body)" }}>
         {title}
       </span>
-      <span className="block" style={{ color: "var(--color-gold-strong)", fontSize: compact ? "0.68rem" : "0.78rem" }}>
+      <span className="block" style={{ color: "var(--color-gold-strong)", fontSize: compact ? "var(--text-micro)" : "var(--text-small)" }}>
         {detail}
       </span>
     </button>
@@ -435,7 +435,7 @@ function ChoiceBox({
         padding: compact ? "0.4rem" : "0.6rem",
       }}
     >
-      <p className="text-center mb-1.5" style={{ color: "var(--color-gold-strong)", fontSize: compact ? "0.72rem" : "0.9rem", fontWeight: 700 }}>
+      <p className="text-center mb-1.5" style={{ color: "var(--color-gold-strong)", fontSize: compact ? "var(--text-micro)" : "var(--text-body)", fontWeight: 700 }}>
         {choice.redirected ? `${label} ble satt på ${STEP_LABELS[choice.number]} – hold den der?` : `${label} – hva skal den telle som?`}
         {queued > 0 && <span style={{ fontWeight: 400 }}> ({queued} til venter)</span>}
       </p>
@@ -469,10 +469,10 @@ function StandBox({ thrower, onAnswer, compact = false }: { thrower: string | nu
         } as React.CSSProperties
       }
     >
-      <span className="block font-semibold" style={{ fontSize: compact ? "0.85rem" : "1.05rem" }}>
+      <span className="block font-semibold" style={{ fontSize: compact ? "var(--text-small)" : "var(--text-body)" }}>
         {title}
       </span>
-      <span className="block" style={{ color: "var(--color-gold-strong)", fontSize: compact ? "0.68rem" : "0.78rem" }}>
+      <span className="block" style={{ color: "var(--color-gold-strong)", fontSize: compact ? "var(--text-micro)" : "var(--text-small)" }}>
         {detail}
       </span>
     </button>
@@ -488,7 +488,7 @@ function StandBox({ thrower, onAnswer, compact = false }: { thrower: string | nu
         padding: compact ? "0.4rem" : "0.6rem",
       }}
     >
-      <p className="text-center mb-1.5" style={{ color: "var(--color-gold-strong)", fontSize: compact ? "0.72rem" : "0.9rem", fontWeight: 700 }}>
+      <p className="text-center mb-1.5" style={{ color: "var(--color-gold-strong)", fontSize: compact ? "var(--text-micro)" : "var(--text-body)", fontWeight: 700 }}>
         Tre tellende piler?
       </p>
       <div className={`flex gap-2 ${compact ? "flex-col" : ""}`}>
@@ -530,7 +530,7 @@ function DartPicker({
 }) {
   const [ring, setRing] = useState<"S" | "D" | "T">(() => (current ? ringOfLabel(current.label) : "T"));
   const chip = (selected: boolean): React.CSSProperties => ({
-    "--btn-fill": selected ? "var(--color-teal)" : "var(--color-surface-2, rgba(255,255,255,0.06))",
+    "--btn-fill": selected ? "var(--color-teal)" : "var(--color-surface-2, var(--veil))",
     color: selected ? "var(--color-bg)" : "var(--color-cream)",
     border: selected ? "none" : "1px solid var(--color-border)",
   }) as React.CSSProperties;
@@ -541,13 +541,13 @@ function DartPicker({
       aria-modal="true"
       aria-label={current ? `Rett pil ${index + 1}` : `Legg inn pil ${index + 1}`}
       className="fixed inset-0 flex items-center justify-center p-4 z-50"
-      style={{ background: "rgba(0,0,0,0.6)" }}
+      style={{ background: "var(--scrim)" }}
       onKeyDown={(e) => {
         if (e.key === "Escape") onClose();
       }}
     >
       <div className="shadow-panel w-full max-w-sm rounded-xl p-4" style={{ background: "var(--color-surface)" }}>
-        <p className="text-center mb-3" style={{ color: "var(--color-cream)", fontSize: "1rem" }}>
+        <p className="text-center mb-3" style={{ color: "var(--color-cream)", fontSize: "var(--text-body)" }}>
           {current ? (
             <>
               Pil {index + 1} ble lest som <strong>{current.label}</strong>. Hva var det egentlig?
@@ -631,7 +631,7 @@ function DartEntry({
       aria-modal="true"
       aria-label={`Legg inn pil ${index + 1}`}
       className="fixed inset-0 flex items-end sm:items-center justify-center p-4 z-50"
-      style={{ background: "rgba(0,0,0,0.6)" }}
+      style={{ background: "var(--scrim)" }}
       onKeyDown={(e) => {
         if (e.key === "Escape") onClose();
       }}
@@ -651,7 +651,7 @@ function DartEntry({
               }}
             >
               {i + 1}. pil
-              <span className="block tabular" style={{ fontSize: "0.75rem", fontWeight: 400, minHeight: "1.1rem" }}>
+              <span className="block tabular" style={{ fontSize: "var(--text-micro)", fontWeight: 400, minHeight: "1.1rem" }}>
                 {entered[i] ?? ""}
               </span>
             </div>
@@ -664,7 +664,7 @@ function DartEntry({
               type="button"
               onClick={() => onPick(c.sector)}
               className={`glossy py-4 rounded-xl font-semibold text-lg ${FOCUS_RING}`}
-              style={{ "--btn-fill": c.label === "Bom" ? "var(--color-surface-2, rgba(255,255,255,0.06))" : "var(--color-teal)", color: c.label === "Bom" ? "var(--color-cream)" : "var(--color-bg)", border: c.label === "Bom" ? "1px solid var(--color-border)" : "none" } as React.CSSProperties}
+              style={{ "--btn-fill": c.label === "Bom" ? "var(--color-surface-2, var(--veil))" : "var(--color-teal)", color: c.label === "Bom" ? "var(--color-cream)" : "var(--color-bg)", border: c.label === "Bom" ? "1px solid var(--color-border)" : "none" } as React.CSSProperties}
             >
               {c.label}
             </button>
@@ -999,7 +999,7 @@ export function GameScreen({
               border: "1px solid var(--color-border)",
             }}
           >
-            <span style={{ fontFamily: "var(--font-display)", fontSize: "0.95rem", lineHeight: 1 }}>i</span>
+            <span style={{ fontFamily: "var(--font-display)", fontSize: "var(--text-body)", lineHeight: 1 }}>i</span>
             {/* The board's status still has to be glanceable with the panel shut — the label
                 is hidden, the colour is not. */}
             {scolia && (
@@ -1018,7 +1018,7 @@ export function GameScreen({
       {compactLandscape && rewound && (
         <p
           className="rewind-flag"
-          style={{ color: "var(--color-red)", fontSize: "0.55rem", letterSpacing: "0.12em" }}
+          style={{ color: "var(--color-red)", fontSize: "var(--text-micro)", letterSpacing: "0.12em" }}
         >
           REDIGERER
         </p>
@@ -1040,7 +1040,7 @@ export function GameScreen({
                   className="rounded-full shrink-0"
                   style={{ width: "0.5rem", height: "0.5rem", background: scolia.color, boxShadow: `0 0 5px 1px ${scolia.color}` }}
                 />
-                <span style={{ color: "var(--color-cream)", fontSize: "0.68rem" }}>{scolia.label}</span>
+                <span style={{ color: "var(--color-cream)", fontSize: "var(--text-micro)" }}>{scolia.label}</span>
               </div>
             )}
             <ChromeControls
@@ -1189,7 +1189,7 @@ export function GameScreen({
                     className="darts-badge absolute top-1 right-1.5 tabular px-1.5 rounded flex items-center gap-0.5"
                     style={{
                       color: "var(--color-muted)",
-                      fontSize: "0.66rem",
+                      fontSize: "var(--text-micro)",
                       background: "rgba(0,0,0,0.25)",
                       lineHeight: "1.35",
                     }}
@@ -1214,7 +1214,7 @@ export function GameScreen({
                           color: isActive ? "var(--color-bg)" : "var(--color-cream)",
                           // One fixed size for both states. The old jump from 0.85 to 1.05rem
                           // shifted the whole header's layout on every single turn change.
-                          fontSize: "0.95rem",
+                          fontSize: "var(--text-body)",
                           fontWeight: isActive ? 700 : 500,
                           background: isActive ? accent : "rgba(255,255,255,0.04)",
                           boxShadow: isActive
@@ -1256,7 +1256,7 @@ export function GameScreen({
                     // Numbers are the run you work through in order; D/T/BULL are a different
                     // kind of target, so they're set apart rather than dressed identically.
                     fontFamily: isNumberStep(s) ? "var(--font-display)" : "var(--font-sans)",
-                    fontSize: isNumberStep(s) ? "1.35rem" : "0.95rem",
+                    fontSize: isNumberStep(s) ? "var(--text-title)" : "var(--text-body)",
                     fontWeight: isNumberStep(s) ? 600 : 700,
                     letterSpacing: isNumberStep(s) ? "0" : "0.08em",
                     background: "var(--color-panel)",
@@ -1418,7 +1418,7 @@ export function GameScreen({
             <p
               role="status"
               className="text-center mb-1 px-2 py-1 rounded-lg shrink-0"
-              style={{ background: "var(--gold-soft)", border: "1px solid var(--color-gold)", color: "var(--color-gold-strong)", fontSize: "0.7rem", fontWeight: 600 }}
+              style={{ background: "var(--gold-soft)", border: "1px solid var(--color-gold)", color: "var(--color-gold-strong)", fontSize: "var(--text-micro)", fontWeight: 600 }}
             >
               {choicePrompt}
             </p>
@@ -1441,14 +1441,14 @@ export function GameScreen({
             <ShotIndicator shots={turnShots} onEdit={shotsEditable ? setEditingShot : undefined} highlight={shotHighlight} />
             {(showChoiceBox || showStandBox) && <div className="mt-2">{choiceBox(false)}</div>}
             {choicePrompt && !showChoiceBox && (
-              <p role="status" className="text-center mt-1" style={{ color: "var(--color-gold-strong)", fontSize: "0.78rem", fontWeight: 600 }}>
+              <p role="status" className="text-center mt-1" style={{ color: "var(--color-gold-strong)", fontSize: "var(--text-small)", fontWeight: 600 }}>
                 {choicePrompt}
               </p>
             )}
             {/* Why the turn has not moved on yet — and, implicitly, that the boxes can still be
                 corrected until it does. */}
             {!choicePrompt && awaitingTakeoutToConfirm && (
-              <p className="text-center mt-1" style={{ color: "var(--color-muted)", fontSize: "0.72rem" }}>
+              <p className="text-center mt-1" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>
                 Ta ut pilene for å bekrefte turen
               </p>
             )}
@@ -1456,7 +1456,7 @@ export function GameScreen({
         )}
         {recordChase && (
           <div className="max-w-3xl mx-auto w-full mb-3" role="img" aria-label={recordChase.slack >= 0 ? `Rekordsjanse: ${recordChase.left} piler å gå` : "Rekorden er utenfor rekkevidde"}>
-            <div className="flex justify-between" style={{ color: "var(--color-muted)", fontSize: "0.68rem", letterSpacing: "0.06em" }}>
+            <div className="flex justify-between" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)", letterSpacing: "0.06em" }}>
               <span className="truncate">REKORD {recordChase.record} PILER · {recordChase.holder.toUpperCase()}</span>
               <span>{recordChase.slack >= 0 ? `${recordChase.left} ${recordChase.left === 1 ? "pil" : "piler"} å gå` : "utenfor rekkevidde"}</span>
             </div>

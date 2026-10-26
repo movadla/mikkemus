@@ -7,7 +7,7 @@ import type { OddsSnapshot } from "@/lib/oddsLog";
 import { buildTimeline } from "@/lib/timeMachine";
 import { Mark } from "./Mark";
 
-const COLORS = ["#4b8be8", "#e25a45", "#e6bd57", "#34c3d2"];
+const COLORS = ["#4b8be8", "var(--color-red)", "#e6bd57", "var(--color-teal)"];
 const FOCUS_RING = "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
 const STEP_MS = 700;
 
@@ -65,13 +65,13 @@ export function TimeMachine({ players, turnLog, snapshots, winner }: { players: 
       <div className="grid gap-1 mb-3" style={{ gridTemplateColumns: `2.6rem repeat(${players.length}, minmax(0, 1fr))` }}>
         <span />
         {players.map((p, i) => (
-          <span key={p} className="font-display text-center truncate" style={{ color: COLORS[i % 4], fontSize: "0.95rem" }}>
+          <span key={p} className="font-display text-center truncate" style={{ color: COLORS[i % 4], fontSize: "var(--text-body)" }}>
             {p}
           </span>
         ))}
         {STEPS.map((s) => (
           <div key={s} className="contents">
-            <span className="font-display flex items-center justify-center rounded" style={{ background: "rgba(0,0,0,0.2)", color: "var(--color-cream)", fontSize: "0.8rem" }}>
+            <span className="font-display flex items-center justify-center rounded" style={{ background: "rgba(0,0,0,0.2)", color: "var(--color-cream)", fontSize: "var(--text-small)" }}>
               {STEP_LABELS[s]}
             </span>
             {players.map((p) => {
@@ -118,10 +118,10 @@ export function TimeMachine({ players, turnLog, snapshots, winner }: { players: 
         onChange={(e) => go(Number(e.target.value))}
         aria-label="Spol kampen"
         className={`w-full ${FOCUS_RING}`}
-        style={{ accentColor: "var(--color-gold)", minHeight: "2rem" }}
+        style={{ accentColor: "var(--color-gold)", minHeight: "var(--control)" }}
       />
       <div className="flex items-center justify-between gap-3 mb-3">
-        <p className="tabular" style={{ color: "var(--color-cream)", fontSize: "0.85rem" }}>
+        <p className="tabular" style={{ color: "var(--color-cream)", fontSize: "var(--text-small)" }}>
           {narration}
           {haveChance && (
             <span style={{ color: "var(--color-muted)" }}>
@@ -140,7 +140,7 @@ export function TimeMachine({ players, turnLog, snapshots, winner }: { players: 
             }
           }}
           className={`tactile shrink-0 rounded-full px-4 ${FOCUS_RING}`}
-          style={{ minHeight: "2.75rem", background: "linear-gradient(180deg, var(--color-teal-strong) 0%, var(--color-teal) 55%, var(--color-teal-deep) 100%)", color: "var(--color-bg)", fontWeight: 600 }}
+          style={{ minHeight: "var(--control)", background: "linear-gradient(180deg, var(--color-teal-strong) 0%, var(--color-teal) 55%, var(--color-teal-deep) 100%)", color: "var(--color-bg)", fontWeight: 600 }}
         >
           {playing ? "Pause" : "Spill av"}
         </button>
@@ -153,7 +153,7 @@ export function TimeMachine({ players, turnLog, snapshots, winner }: { players: 
             type="button"
             onClick={() => go(e.turn)}
             className={`tactile rounded-full px-3 ${FOCUS_RING}`}
-            style={{ minHeight: "2.75rem", background: t === e.turn ? "var(--color-teal)" : "var(--color-cell)", color: t === e.turn ? "var(--color-bg)" : "var(--color-cream)", border: "1px solid var(--color-border)", fontSize: "0.8rem" }}
+            style={{ minHeight: "var(--control)", background: t === e.turn ? "var(--color-teal)" : "var(--color-cell)", color: t === e.turn ? "var(--color-bg)" : "var(--color-cream)", border: "1px solid var(--color-border)", fontSize: "var(--text-small)" }}
           >
             {e.turn} · {e.text}
           </button>

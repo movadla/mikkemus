@@ -4,6 +4,7 @@ import { avatarAccent } from "@/lib/avatarAccent";
 import type { Kit } from "@/lib/teamKit";
 import { useEffect, useRef } from "react";
 import { TeamKit } from "./TeamKit";
+import { BotIcon } from "./icons";
 
 export type Thrower = { name: string; photo?: string | null; isBot: boolean };
 
@@ -40,7 +41,7 @@ function Avatar({ who, size, active = true, ring = false }: { who: Thrower; size
       aria-hidden
     >
       {who.isBot ? (
-        "🤖"
+        <BotIcon className="w-1/2 h-1/2" />
       ) : who.photo ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={who.photo} alt="" className="w-full h-full object-cover" />
@@ -190,17 +191,17 @@ export function ThrowerBar({
         )}
       </span>
       <div className="min-w-0 flex-1">
-        <p style={{ color: "var(--color-teal)", fontSize: compact ? "0.62rem" : "0.72rem", letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: 700, lineHeight: 1.2 }}>
+        <p style={{ color: "var(--color-teal)", fontSize: compact ? "var(--text-micro)" : "var(--text-micro)", letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: 700, lineHeight: 1.2 }}>
           {thrower.isBot ? "Kaster …" : "Kaster"}
         </p>
         <p
           className="truncate"
-          style={{ color: "var(--color-cream)", fontFamily: "var(--font-display)", fontSize: compact ? "1.25rem" : "1.9rem", lineHeight: 1.05 }}
+          style={{ color: "var(--color-cream)", fontFamily: "var(--font-display)", fontSize: compact ? "var(--text-title)" : "var(--text-num)", lineHeight: 1.05 }}
         >
           {thrower.name}
         </p>
         {team && (
-          <p className="truncate flex items-center gap-1.5 mt-1" style={{ color: "var(--color-cream)", opacity: 0.85, fontSize: compact ? "0.72rem" : "0.85rem", fontWeight: 600 }}>
+          <p className="truncate flex items-center gap-1.5 mt-1" style={{ color: "var(--color-cream)", opacity: 0.85, fontSize: compact ? "var(--text-micro)" : "var(--text-small)", fontWeight: 600 }}>
             {team.photo && (
               <span className="rounded-full overflow-hidden shrink-0" style={{ width: teamPhotoSize, height: teamPhotoSize, border: "1px solid var(--color-border)" }} aria-hidden>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -211,12 +212,12 @@ export function ThrowerBar({
           </p>
         )}
         {run >= 2 && (
-          <p className="tabular truncate whitespace-nowrap" style={{ color: "var(--color-gold-strong)", fontSize: compact ? "0.72rem" : "0.85rem", fontWeight: 700 }}>
+          <p className="tabular truncate whitespace-nowrap" style={{ color: "var(--color-gold-strong)", fontSize: compact ? "var(--text-micro)" : "var(--text-small)", fontWeight: 700 }}>
             {compact ? `${run} på rad` : `${run} piler på rad`}
           </p>
         )}
         {stood && (
-          <p className="truncate whitespace-nowrap" style={{ color: "var(--color-gold-strong)", fontSize: "0.72rem", fontWeight: 600 }}>{compact ? "Står igjen" : "Står – kaster igjen"}</p>
+          <p className="truncate whitespace-nowrap" style={{ color: "var(--color-gold-strong)", fontSize: "var(--text-micro)", fontWeight: 600 }}>{compact ? "Står igjen" : "Står – kaster igjen"}</p>
         )}
       </div>
       </Wrap>
@@ -226,13 +227,13 @@ export function ThrowerBar({
             const inner = (
               <>
                 {!compact && (
-                  <span style={{ color: i === 0 ? "var(--color-muted)" : "transparent", fontSize: "0.6rem", letterSpacing: "0.1em", textTransform: "uppercase", lineHeight: 1.2 }}>
+                  <span style={{ color: i === 0 ? "var(--color-muted)" : "transparent", fontSize: "var(--text-micro)", letterSpacing: "0.1em", textTransform: "uppercase", lineHeight: 1.2 }}>
                     neste
                   </span>
                 )}
                 <Avatar who={m} size={compact ? 26 : 38} active={false} />
                 {!compact && (
-                  <span className="truncate w-full text-center" style={{ color: "var(--color-muted)", fontSize: "0.68rem" }}>
+                  <span className="truncate w-full text-center" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>
                     {m.name}
                   </span>
                 )}

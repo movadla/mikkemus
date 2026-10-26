@@ -47,7 +47,7 @@ export function ChalkboardScreen({ players, kits, onExit }: { players: string[];
         >
           ← Hjem
         </button>
-        <p className="flex-1 text-center" style={{ color: "var(--color-red)", fontSize: "0.72rem", letterSpacing: "0.06em" }}>
+        <p className="flex-1 text-center" style={{ color: "var(--color-red)", fontSize: "var(--text-micro)", letterSpacing: "0.06em" }}>
           ENKEL: TELLER IKKE I STATISTIKKEN
         </p>
       </div>
@@ -75,7 +75,7 @@ export function ChalkboardScreen({ players, kits, onExit }: { players: string[];
             <div className="sticky left-0 z-10" style={{ background: "var(--color-panel)" }} />
             {players.map((p) => (
               <div key={p} className="player-head flex flex-col items-center justify-center gap-1.5 p-2 pb-2.5 text-center grid-rule-left" style={{ borderBottom: "2px solid var(--color-border)" }}>
-                <span className="block max-w-full truncate px-3 py-0.5 rounded-full" style={{ color: "var(--color-cream)", fontSize: "0.95rem", fontWeight: 600, background: "rgba(255,255,255,0.06)" }}>
+                <span className="block max-w-full truncate px-3 py-0.5 rounded-full" style={{ color: "var(--color-cream)", fontSize: "var(--text-body)", fontWeight: 600, background: "var(--veil)" }}>
                   {kits[p] && (
                     <span className="inline-block align-middle mr-1" style={{ marginTop: "-2px" }}>
                       <TeamKit kit={kits[p]} size={18} />
@@ -96,7 +96,7 @@ export function ChalkboardScreen({ players, kits, onExit }: { players: string[];
                     style={{
                       color: "var(--color-cream)",
                       fontFamily: isNumber ? "var(--font-display)" : "var(--font-sans)",
-                      fontSize: isNumber ? "1.35rem" : "0.95rem",
+                      fontSize: isNumber ? "var(--text-title)" : "var(--text-body)",
                       fontWeight: isNumber ? 600 : 700,
                       background: "var(--color-panel)",
                     }}

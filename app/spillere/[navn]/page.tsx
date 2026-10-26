@@ -15,7 +15,14 @@ import { SoundClipButton } from "@/components/SoundClipButton";
 import { PlayerKitEditor, TeamKitEditor, WalkOnPicker } from "@/components/KitSettings";
 import { TeamKit } from "@/components/TeamKit";
 import { teamKitsOf } from "@/lib/storage";
-import { TrashIcon } from "@/components/icons";
+import { EditIcon, TrashIcon } from "@/components/icons";
+import { avatarAccent } from "@/lib/avatarAccent";
+import { Button } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Row } from "@/components/ui/Row";
+import { Section } from "@/components/ui/Section";
+import { Sheet } from "@/components/ui/Sheet";
+import { SkeletonRows } from "@/components/ui/Skeleton";
 
 const RULES = { target: 3, ringChoice: true };
 const FOCUS_RING =
@@ -48,8 +55,8 @@ function Dots({ results }: { results: boolean[] }) {
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="cell-tile rounded-lg p-3 text-center flex flex-col justify-center" style={{ minHeight: "4.5rem" }}>
-      <p style={{ color: "var(--color-muted)", fontSize: "0.75rem", letterSpacing: "0.05em" }}>{label}</p>
-      <p className="tabular" style={{ color: "var(--color-cream)", fontSize: "1.15rem", fontWeight: 700 }}>
+      <p style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)", letterSpacing: "0.05em" }}>{label}</p>
+      <p className="tabular" style={{ color: "var(--color-cream)", fontSize: "var(--text-title)", fontWeight: 700 }}>
         {children}
       </p>
     </div>
@@ -67,6 +74,7 @@ export default function PlayerDetailPage() {
   const loaded = useRosterLoaded();
   const player = roster.find((p) => p.name.toLowerCase() === name.toLowerCase());
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [editing, setEditing] = useState(false);
   // The limited code deletes no player or team, and sees no seeding, rating, record or form.
   const { limited } = useAccess();
   const [newName, setNewName] = useState<string | null>(null);
@@ -87,12 +95,10 @@ export default function PlayerDetailPage() {
 
   if (!player) {
     return (
-      <div className="animate-screen-enter screen" style={{ background: "var(--color-bg)" }}>
+      <div className="animate-screen-push screen" style={{ background: "var(--color-bg)" }}>
         <div className="screen-inner">
-          <ScreenTop title="Spiller" backHref="/spillere" backLabel="← Tilbake" />
-          <p className="text-center py-8" style={{ color: "var(--color-muted)" }}>
-            {loaded ? `Fant ikke «${name}»` : "Henter …"}
-          </p>
+          <ScreenTop title="Spiller" backHref="/spillere" />
+          {loaded ? <EmptyState title={`Fant ikke «${name}»`} /> : <SkeletonRows count={2} />}
         </div>
       </div>
     );
@@ -103,34 +109,21 @@ export default function PlayerDetailPage() {
   const teams = isTeam ? [] : roster.filter((r) => r.kind === "team" && (r.members ?? []).some((m) => m.toLowerCase() === player.name.toLowerCase()));
 
   return (
-    <div className="animate-screen-enter screen" style={{ background: "var(--color-bg)" }}>
+    <div className="animate-screen-push screen" style={{ background: "var(--color-bg)" }}>
       <div className="screen-inner">
         <ScreenTop
-          title={isTeam ? "Lag" : "Spiller"}
+          title={player.name}
           backHref="/spillere"
-          backLabel="← Tilbake"
-          right={
-            limited ? undefined : (
-            <button
-              type="button"
-              onClick={() => setConfirmingDelete(true)}
-              aria-label={`Slett ${player.name}`}
-              className={`tactile rounded-lg flex items-center justify-center ${FOCUS_RING}`}
-              style={{ width: "2.75rem", height: "2.75rem", background: "var(--color-surface)", color: "var(--color-red)", border: "1px solid var(--color-border)" }}
-            >
-              <TrashIcon className="w-4 h-4" />
-            </button>
-            )
-          }
+          right={<Button label={`Rediger ${player.name}`} icon={<EditIcon className="w-5 h-5" />} onClick={() => setEditing(true)} />}
         />
 
         {confirmingDelete && (
           <ConfirmDialog
             message={`Slette ${player.name}? Statistikken slettes også, og det kan ikke angres.`}
             buttons={[
-              { label: "Nei, behold", onClick: () => setConfirmingDelete(false), background: "var(--color-green)" },
+              { label: "Behold", onClick: () => setConfirmingDelete(false), background: "var(--color-green)" },
               {
-                label: "Ja, slett",
+                label: "Slett",
                 onClick: () => {
                   deletePlayer(player.name);
                   router.push("/spillere");
@@ -141,18 +134,114 @@ export default function PlayerDetailPage() {
           />
         )}
 
-        <div className="shadow-panel rounded-2xl p-5 mb-4 text-center" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
+        {editing && (
+          <Sheet title="Rediger" onClose={() => setEditing(false)}>
+            <div className="space-y-5">
+              <div className="flex justify-center">
+                <PhotoButton name={player.name} photo={player.photo} />
+              </div>
+
+              {/* A team can be called anything — it does not have to be its players' names. */}
+              {isTeam && (
+                <div>
+                  <label htmlFor="rename-team" className="mb-2 section-label block">
+                    LAGNAVN
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      id="rename-team"
+                      value={newName ?? player.name}
+                      onChange={(e) => {
+                        setNewName(e.target.value);
+                        setNameError("");
+                      }}
+                      maxLength={TEAM_NAME_MAX}
+                      className={`flex-1 min-w-0 px-4 ${FOCUS_RING}`}
+                      style={{ minHeight: "var(--control)", borderRadius: "var(--radius-s)", background: "var(--color-cell)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
+                    />
+                    <Button
+                      variant="primary"
+                      disabled={newName === null || newName.trim() === player.name}
+                      onClick={() => {
+                        const result = renameTeam(player.name, newName ?? "");
+                        if (!result.ok) {
+                          setNameError(result.error);
+                          return;
+                        }
+                        setNewName(null);
+                        setEditing(false);
+                        router.replace(`/spillere/${encodeURIComponent(result.name)}`);
+                      }}
+                    >
+                      Lagre
+                    </Button>
+                  </div>
+                  {nameError && (
+                    <p role="alert" className="mt-2" style={{ color: "var(--color-red)", fontSize: "var(--text-micro)" }}>
+                      {nameError}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* The shirts and the tune a team walks on to. */}
+              {isTeam && (
+                <div>
+                  <p className="mb-3 section-label">DRAKTER OG INNMARSJ</p>
+                  <TeamKitEditor team={player} />
+                </div>
+              )}
+
+              {/* A clip plays when it becomes someone's turn; in a team that is a member's turn, so a team has none. */}
+              {!isTeam && (
+                <div>
+                  <p className="mb-3 section-label">LYDKLIPP</p>
+                  <SoundClipButton name={player.name} />
+                </div>
+              )}
+              {!isTeam && (
+                <div>
+                  <p className="mb-3 section-label">DRAKT OG INNMARSJ</p>
+                  <WalkOnPicker record={player} />
+                  <PlayerKitEditor player={player} />
+                </div>
+              )}
+
+              {!limited && (
+                <Button
+                  variant="danger"
+                  block
+                  icon={<TrashIcon className="w-4 h-4" />}
+                  onClick={() => {
+                    setEditing(false);
+                    setConfirmingDelete(true);
+                  }}
+                >
+                  Slett
+                </Button>
+              )}
+            </div>
+          </Sheet>
+        )}
+
+        <div className="shadow-panel p-5 mb-6 text-center" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-l)" }}>
           <div className="flex justify-center mb-3">
-            <PhotoButton name={player.name} photo={player.photo} />
+            <span className="rounded-full overflow-hidden flex items-center justify-center" style={{ width: "6rem", height: "6rem", background: "var(--color-cell)", border: "2px solid " + avatarAccent(player.name) }}>
+              {player.photo ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={player.photo} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <span className="font-display" style={{ color: avatarAccent(player.name), fontSize: "var(--text-num)" }}>
+                  {player.name.charAt(0).toUpperCase()}
+                </span>
+              )}
+            </span>
           </div>
-          <h1 className="font-display" style={{ color: "var(--color-cream)", fontSize: "2rem", lineHeight: 1.1 }}>
-            {player.name}
-          </h1>
-          <div className="flex justify-center mt-2">
+          <div className="flex justify-center">
             <TeamKit kit={teamKitsOf(player).home} size={44} title="Drakt" />
           </div>
           {isTeam && (
-            <p className="mt-1" style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>
+            <p className="mt-2" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
               {(player.members ?? []).map((m, i) => (
                 <span key={m}>
                   {i > 0 && ", "}
@@ -175,10 +264,8 @@ export default function PlayerDetailPage() {
                 </Fact>
               </div>
 
-              <div className="mt-4 rounded-lg p-3" style={{ background: "var(--color-cell)" }}>
-                <p className="section-label mb-2" style={{ fontSize: "0.75rem" }}>
-                  FORM · SISTE 10
-                </p>
+              <div className="mt-4 p-3" style={{ background: "var(--color-cell)", borderRadius: "var(--radius-s)" }}>
+                <p className="section-label mb-2">FORM · SISTE 10</p>
                 <div className="flex items-center justify-center gap-3">
                   <Dots results={form.results} />
                   <span style={{ color: FORM_COLOR[form.label], fontWeight: 700 }}>{form.label}</span>
@@ -188,99 +275,21 @@ export default function PlayerDetailPage() {
           )}
         </div>
 
-        {/* The shirts and the tune a team walks on to. */}
-        {isTeam && (
-          <div className="shadow-panel rounded-xl p-4 mb-4" style={{ background: "var(--color-surface)" }}>
-            <p className="mb-4 section-label">DRAKTER OG INNMARSJ</p>
-            <TeamKitEditor team={player} />
-          </div>
-        )}
-
-        {/* A team can be called anything — it does not have to be its players' names. */}
-        {isTeam && (
-          <div className="shadow-panel rounded-xl p-4 mb-4" style={{ background: "var(--color-surface)" }}>
-            <label htmlFor="rename-team" className="mb-2 section-label block">
-              LAGNAVN
-            </label>
-            <div className="flex gap-2">
-              <input
-                id="rename-team"
-                value={newName ?? player.name}
-                onChange={(e) => {
-                  setNewName(e.target.value);
-                  setNameError("");
-                }}
-                maxLength={TEAM_NAME_MAX}
-                className={`flex-1 min-w-0 px-4 rounded-lg ${FOCUS_RING}`}
-                style={{ minHeight: "2.75rem", background: "var(--color-cell)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
-              />
-              <button
-                type="button"
-                disabled={newName === null || newName.trim() === player.name}
-                onClick={() => {
-                  const result = renameTeam(player.name, newName ?? "");
-                  if (!result.ok) {
-                    setNameError(result.error);
-                    return;
-                  }
-                  setNewName(null);
-                  router.replace(`/spillere/${encodeURIComponent(result.name)}`);
-                }}
-                className={`glossy px-4 rounded-lg font-medium ${FOCUS_RING}`}
-                style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", minHeight: "2.75rem" } as React.CSSProperties}
-              >
-                Lagre
-              </button>
-            </div>
-            {nameError && (
-              <p role="alert" className="mt-2" style={{ color: "var(--color-red)", fontSize: "0.75rem" }}>
-                {nameError}
-              </p>
-            )}
-          </div>
-        )}
-
         {/* The teams this player is in. */}
         {teams.length > 0 && (
-          <div className="shadow-panel rounded-xl p-4 mb-4" style={{ background: "var(--color-surface)" }}>
-            <p className="mb-4 section-label">LAG</p>
+          <Section label="Lag">
             <div className="space-y-2">
               {teams.map((t) => (
-                <Link
-                  key={t.name}
-                  href={`/spillere/${encodeURIComponent(t.name)}`}
-                  className={`tactile flex items-center justify-between gap-2 px-4 rounded-lg ${FOCUS_RING}`}
-                  style={{ minHeight: "2.75rem", background: "var(--color-cell)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
-                >
-                  <span className="truncate">{t.name}</span>
-                  <span className="tabular shrink-0" style={{ color: "var(--color-muted)", fontSize: "0.85rem" }}>
-                    {t.matchesWon} av {t.matchesPlayed} {t.matchesPlayed === 1 ? "kamp" : "kamper"}
-                  </span>
-                </Link>
+                <Row key={t.name} href={`/spillere/${encodeURIComponent(t.name)}`} title={t.name} value={`${t.matchesWon} av ${t.matchesPlayed}`} />
               ))}
             </div>
-          </div>
-        )}
-
-        {/* A clip plays when it becomes someone's turn; in a team that is a member's turn, so a team has none. */}
-        {!isTeam && (
-          <div className="shadow-panel rounded-xl p-4 mb-4" style={{ background: "var(--color-surface)" }}>
-            <p className="mb-4 section-label">LYDKLIPP</p>
-            <SoundClipButton name={player.name} />
-          </div>
-        )}
-        {!isTeam && (
-          <div className="shadow-panel rounded-xl p-4 mb-4" style={{ background: "var(--color-surface)" }}>
-            <p className="mb-4 section-label">DRAKT OG INNMARSJ</p>
-            <WalkOnPicker record={player} />
-            <PlayerKitEditor player={player} />
-          </div>
+          </Section>
         )}
 
         {!limited && (
-          <Link href="/statistikk" className={`tactile block text-center rounded-lg ${FOCUS_RING}`} style={{ lineHeight: "2.75rem", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}>
-            Se statistikken ›
-          </Link>
+          <Button href="/statistikk" block>
+            Statistikk
+          </Button>
         )}
       </div>
     </div>

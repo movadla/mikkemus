@@ -1,7 +1,6 @@
 "use client";
 
 import { Fragment, useEffect, useRef } from "react";
-import Link from "next/link";
 import { STEPS, STEP_LABELS } from "@/lib/game";
 import { useLiveMatch, type LiveMatchState } from "@/lib/liveMatch";
 import { emitFx } from "@/lib/fxBus";
@@ -15,6 +14,7 @@ import { RULES, baseOf } from "@/lib/rules";
 import { avatarAccent } from "@/lib/avatarAccent";
 import { DartboardGlyph } from "@/components/DartboardGlyph";
 import { Mark } from "@/components/Mark";
+import { TvFrame } from "@/components/TvFrame";
 
 const CONFETTI = [
   { left: "6%", rotate: "-18deg", delay: "0ms", color: "var(--color-gold)" },
@@ -30,20 +30,6 @@ const CONFETTI = [
   { left: "94%", rotate: "-22deg", delay: "260ms", color: "var(--color-gold)" },
   { left: "50%", rotate: "8deg", delay: "300ms", color: "var(--color-cream)" },
 ];
-
-/** Deliberately understated — this page's whole point is to fill a TV/room, so a normal nav
- *  chrome would compete with that. Stays nearly invisible until someone actually reaches for it. */
-function HomeLink() {
-  return (
-    <Link
-      href="/"
-      className="fixed top-2 left-2 z-40 inline-flex items-center px-4 text-xs opacity-20 hover:opacity-100 focus-visible:opacity-100 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)] transition-opacity"
-      style={{ color: "var(--color-cream)", minHeight: "2.75rem" }}
-    >
-      ← Hjem
-    </Link>
-  );
-}
 
 /**
  * Read-only spectator view, meant for a TV/second screen while the tablet at the board stays
@@ -95,8 +81,7 @@ export default function StorskjermPage() {
 
   if (!live || live.screen === "setup" || live.players.length === 0) {
     return (
-      <div className="min-h-screen w-full flex flex-col items-center justify-center gap-6" style={{ background: "var(--color-bg)" }}>
-        <HomeLink />
+      <TvFrame label="Venter" className="items-center justify-center gap-6">
         <h1 className="sr-only">Venter på kamp</h1>
         <div className="relative flex items-center justify-center">
           <div
@@ -106,17 +91,16 @@ export default function StorskjermPage() {
           />
           <DartboardGlyph className="relative w-24 h-24" />
         </div>
-        <p className="font-display" style={{ color: "var(--color-muted)", fontSize: "1.6rem" }}>
+        <p className="font-display" style={{ color: "var(--color-muted)", fontSize: "var(--text-num)" }}>
           Venter på at en kamp skal starte …
         </p>
-      </div>
+      </TvFrame>
     );
   }
 
   if (live.screen === "winner" && live.winner) {
     return (
-      <div className="min-h-screen w-full flex flex-col items-center justify-center" style={{ background: "var(--color-bg)" }}>
-        <HomeLink />
+      <TvFrame label="Vinner" className="items-center justify-center">
         <h1 className="sr-only">Kampvinner: {live.winner}</h1>
         <div className="relative flex flex-col items-center">
           <div
@@ -143,7 +127,7 @@ export default function StorskjermPage() {
           </div>
           {fxFlags(fxLevel).trophy && <div className="relative z-20 mb-2"><Trophy cannons /></div>}
           <div className="card-gold shadow-panel animate-winner-pop relative z-20 rounded-2xl px-16 py-10 text-center">
-            <p className="font-display italic" style={{ fontSize: "1.4rem", letterSpacing: "0.04em", marginBottom: "0.5rem" }}>
+            <p className="font-display italic" style={{ fontSize: "var(--text-title)", letterSpacing: "0.04em", marginBottom: "0.5rem" }}>
               Vinner
             </p>
             <p className="font-display" style={{ fontSize: "5rem", lineHeight: 1 }}>
@@ -151,13 +135,12 @@ export default function StorskjermPage() {
             </p>
           </div>
         </div>
-      </div>
+      </TvFrame>
     );
   }
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-4 sm:p-6 md:p-10" style={{ background: "var(--color-bg)" }}>
-      <HomeLink />
+    <TvFrame label="Kamp" className="items-center justify-center p-4 sm:p-6 md:p-10">
       <FxStage />
       <h1 className="sr-only">Kampoversikt – storskjerm</h1>
       {showOdds && live.odds && live.odds.length > 0 && (
@@ -206,14 +189,14 @@ export default function StorskjermPage() {
                     style={
                       {
                         color: isActive ? "var(--color-teal)" : avatarAccent(p),
-                        fontSize: "2rem",
+                        fontSize: "var(--text-num)",
                         background: isActive ? "rgba(52, 195, 210, 0.16)" : "transparent",
                         "--glow-color": "var(--teal-ring)",
                       } as React.CSSProperties
                     }
                   >
                     {p}
-                    {isGuest && <span style={{ color: "var(--color-muted)", fontSize: "1.1rem" }}> (gjest)</span>}
+                    {isGuest && <span style={{ color: "var(--color-muted)", fontSize: "var(--text-title)" }}> (gjest)</span>}
                   </span>
                 </span>
               </div>
@@ -241,7 +224,7 @@ export default function StorskjermPage() {
                         background: isDone ? "linear-gradient(180deg, var(--color-cell-done-top), var(--color-cell-done-bottom))" : "var(--color-cell)",
                         boxShadow: isDone
                           ? "inset 0 0 0 1px rgba(217, 174, 79, 0.6), inset 0 1px 0 rgba(255, 235, 190, 0.25), 0 0 22px rgba(217, 174, 79, 0.22)"
-                          : "inset 0 0 0 1px rgba(255,255,255,0.06), inset 0 1px 0 rgba(255,255,255,0.08), 0 1px 2px rgba(0,0,0,0.35)",
+                          : "inset 0 0 0 1px var(--veil), inset 0 1px 0 rgba(255,255,255,0.08), 0 1px 2px rgba(0,0,0,0.35)",
                       }}
                     >
                       <div className="w-full h-full p-2">
@@ -255,6 +238,6 @@ export default function StorskjermPage() {
           ))}
         </div>
       </div>
-    </div>
+    </TvFrame>
   );
 }

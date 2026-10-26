@@ -1,52 +1,82 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAccess } from "@/lib/access";
+import { loadActiveMatch } from "@/lib/activeMatch";
+import { dayLabel } from "@/lib/formatDate";
+import { groupNights } from "@/lib/nights";
+import { useNavSpace } from "@/lib/navSpace";
 import { finishSpotifyLogin } from "@/lib/spotify";
-import { preloadRoster } from "@/lib/storage";
+import { preloadRoster, useRoster } from "@/lib/storage";
 import { loadActiveTournamentId } from "@/lib/tournamentStorage";
 import { useScolia } from "@/lib/useScolia";
 import { BullDuelApp } from "./BullDuelApp";
 import { HeroMascot } from "./HeroMascot";
-import { BullseyeIcon, DartIcon, TrophyIcon, TvIcon } from "./icons";
+import { BullseyeIcon, DartIcon, TrophyIcon } from "./icons";
 import { MikkeMusApp } from "./MikkeMusApp";
 import { RulesIntro } from "./RulesIntro";
-import { SettingsScreen } from "./SettingsScreen";
 import { ScoliaDot, summarizeScolia } from "./ScoliaStatusBadge";
 import { TournamentApp } from "./TournamentApp";
+import { BottomNav } from "./ui/BottomNav";
+import { Button } from "./ui/Button";
+import { Row } from "./ui/Row";
+import { Section } from "./ui/Section";
+import { FOCUS_RING } from "./ui/focus";
 
-const FOCUS_RING =
-  "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
-
-const shortcut = "tactile rounded-lg text-sm flex items-center justify-center gap-2";
-const shortcutStyle = { minHeight: "2.75rem", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" } as const;
-
-type Mode = "home" | "single" | "tournament" | "bullduel" | "settings";
+type Mode = "home" | "single" | "tournament" | "bullduel";
 
 const TOURNAMENTS_OFFERED = true;
 
-/** The very first thing rendered — chooses between a one-off "Singel game" (today's app,
- *  unchanged) and "Tournament" mode. Replaces the old direct `<MikkeMusApp />` in app/page.tsx. */
+/** A way in to a kind of game: its icon above its name. */
+function Tile({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`tactile flex flex-col items-center justify-center gap-2 ${FOCUS_RING}`}
+      style={{ minHeight: "5.5rem", borderRadius: "var(--radius-m)", background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-cream)", fontSize: "var(--text-body)", fontWeight: 600 }}
+    >
+      <span style={{ color: "var(--color-teal)" }}>{icon}</span>
+      {label}
+    </button>
+  );
+}
+
+/** The very first thing rendered: the front page, and the way into a kind of game. What is already under way comes first. */
 export function AppRoot() {
   const { limited } = useAccess();
+  const roster = useRoster();
   const [mode, setMode] = useState<Mode>("home");
   const [hasActiveTournament, setHasActiveTournament] = useState(false);
-  // The rules introduction, on request from the home screen. The first-time showing is MikkeMusApp's.
+  const [matchUnderway, setMatchUnderway] = useState<string[] | null>(null);
+  // The rules introduction, on request (the address ?m=regler, from Mer). The first-time showing is MikkeMusApp's.
   const [showRules, setShowRules] = useState(false);
   // Only connected while the home screen itself is showing — MikkeMusApp/TournamentApp own their
   // own connection once a mode is picked, so this never runs two connections at once.
-  const scolia = useScolia(mode === "home", {});
+  const scolia = useScolia(mode === "home" && !showRules, {});
+  useNavSpace(mode === "home" && !showRules);
 
   // Re-read external state (localStorage) every time the home screen itself comes back into
   // view, not just on first mount — otherwise cancelling or finishing a tournament wouldn't
-  // update this button until a hard refresh, since returning here is just a mode change, not a
+  // update the card until a hard refresh, since returning here is just a mode change, not a
   // remount. Same "you might not need an effect" exception already used by MikkeMusApp's/
   // TournamentApp's own resume-on-load effects, not a render-loop.
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    if (mode === "home") setHasActiveTournament(!!loadActiveTournamentId());
+    if (mode !== "home") return;
+    setHasActiveTournament(!!loadActiveTournamentId());
+    const active = loadActiveMatch();
+    setMatchUnderway(active && active.screen === "game" ? active.players : null);
   }, [mode]);
+
+  // Another page (the bottom bar, Mer) asking for a place on this one: /?m=turnering or /?m=regler.
+  useEffect(() => {
+    const m = new URLSearchParams(window.location.search).get("m");
+    if (!m) return;
+    window.history.replaceState({}, "", "/");
+    if (m === "turnering") setMode("tournament");
+    if (m === "regler") setShowRules(true);
+  }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   // The players are fetched while the home screen is up, not when the setup screen first asks.
@@ -60,89 +90,69 @@ export function AppRoot() {
   }, []);
 
   if (showRules) return <RulesIntro onDone={() => setShowRules(false)} />;
-  if (mode === "settings") return <SettingsScreen onBack={() => setMode("home")} />;
   if (mode === "single") return <MikkeMusApp onExitToHome={() => setMode("home")} />;
   if (mode === "tournament") return <TournamentApp onExitToHome={() => setMode("home")} />;
   if (mode === "bullduel") return <BullDuelApp onExitToHome={() => setMode("home")} />;
 
+  const tournamentsOn = !limited && (TOURNAMENTS_OFFERED || hasActiveTournament);
+  const lastNight = groupNights(roster)[0];
+  const winner = lastNight?.players[0];
+  const resume = matchUnderway ? { title: matchUnderway.join(" mot "), label: "Kamp pågår", go: () => setMode("single") } : tournamentsOn && hasActiveTournament ? { title: "Turnering", label: "Pågår", go: () => setMode("tournament") } : null;
+
   return (
-    <div className="animate-screen-enter screen flex items-center justify-center" style={{ background: "var(--color-bg)" }}>
+    <div className="animate-screen-enter screen" style={{ background: "var(--color-bg)" }}>
       {/* The board's status as a dot in the corner — the words are one tap away. */}
       <div className="fixed top-2 right-2 z-40">
         <ScoliaDot summary={summarizeScolia(scolia.state)} />
       </div>
       <div className="screen-inner">
-        {/* The mascot replaces the emoji that was the one cartoon element on an otherwise
-            considered screen — see HeroMascot. */}
-        <HeroMascot />
-        <h1 className="text-center mb-8 font-display" style={{ color: "var(--color-cream)", fontSize: "2.5rem", letterSpacing: "0.02em" }}>
+        <h1 className="page-title mb-4" style={{ fontSize: "var(--text-num)" }}>
           Mikke Mus
         </h1>
-        <div className="space-y-4">
-          <button
-            type="button"
-            onClick={() => setMode("single")}
-            className={`glossy w-full py-4 rounded-xl font-semibold text-lg flex items-center justify-center gap-2 ${FOCUS_RING}`}
-            style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)" } as React.CSSProperties}
-          >
-            <DartIcon className="w-5 h-5" />
-            Enkeltkamp
-          </button>
-          {/* Tournaments are off the home screen for now (2026-10-15, on request) — the code is
-              all still here, and a tournament already under way can still be picked up. */}
-          {/* Tournaments are for the full code (9696) only. */}
-          {!limited && (TOURNAMENTS_OFFERED || hasActiveTournament) ? (
-            <button
-              type="button"
-              onClick={() => setMode("tournament")}
-              className={`glossy w-full py-4 rounded-xl font-semibold text-lg flex items-center justify-center gap-2 ${FOCUS_RING}`}
-              style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)" } as React.CSSProperties}
-            >
-              <TrophyIcon className="w-5 h-5" />
-              {hasActiveTournament ? "Fortsett turnering" : "Turnering"}
-            </button>
-          ) : null}
-          <button
-            type="button"
-            onClick={() => setMode("bullduel")}
-            className={`tactile w-full py-4 rounded-xl font-semibold text-lg flex items-center justify-center gap-2 ${FOCUS_RING}`}
-            // Secondary, not gold: gold is earned (a closed row, a win), never a button.
-            style={{ background: "rgba(255, 255, 255, 0.03)", color: "var(--color-cream)", border: "1px solid var(--color-hairline)" }}
-          >
-            <BullseyeIcon className="w-5 h-5" />
-            Bull-duell
-          </button>
-        </div>
-        {/* The four places that are not a game, as four quiet buttons of the same size. They were
-            underlined links on 20 px that wrapped onto two lines. */}
-        <div className="grid grid-cols-2 gap-2 mt-8">
-          <button type="button" onClick={() => setShowRules(true)} className={`${shortcut} ${FOCUS_RING}`} style={shortcutStyle}>
-            Regler
-          </button>
-          <Link href="/spillere" className={`${shortcut} ${FOCUS_RING}`} style={shortcutStyle}>
-            Spillere
-          </Link>
-          {!limited && (
-            <Link href="/storskjerm" className={`${shortcut} ${FOCUS_RING}`} style={shortcutStyle}>
-              <TvIcon className="w-4 h-4" />
-              Storskjerm
-            </Link>
-          )}
-          <button type="button" onClick={() => setMode("settings")} className={`${shortcut} ${FOCUS_RING}`} style={shortcutStyle}>
-            Innstillinger
-          </button>
-          {!limited && (
+
+        <section
+          className="mb-6 text-center p-4"
+          style={{ borderRadius: "var(--radius-l)", background: "var(--color-panel)", border: "1px solid var(--color-border)", boxShadow: "var(--elevation-1)" }}
+        >
+          {resume ? (
             <>
-              <Link href="/statistikk" className={`${shortcut} ${FOCUS_RING}`} style={shortcutStyle}>
-                Statistikk
-              </Link>
-              <Link href="/bet" className={`${shortcut} ${FOCUS_RING}`} style={shortcutStyle}>
-                Spill på morro
-              </Link>
+              <p className="section-label mb-1">{resume.label.toUpperCase()}</p>
+              <p className="font-display mb-4" style={{ fontSize: "var(--text-title)", color: "var(--color-cream)" }}>
+                {resume.title}
+              </p>
+              <Button variant="primary" size="lg" block onClick={resume.go}>
+                Fortsett
+              </Button>
+            </>
+          ) : (
+            <>
+              <HeroMascot small />
+              <Button variant="primary" size="lg" block icon={<DartIcon className="w-5 h-5" />} onClick={() => setMode("single")}>
+                Ny kamp
+              </Button>
             </>
           )}
+        </section>
+
+        {/* The hero is already Enkeltkamp when nothing is under way, so its tile is only there when the hero is something else. */}
+        <div className={`grid gap-2 mb-6 ${(resume ? 1 : 0) + (tournamentsOn ? 1 : 0) + 1 === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
+          {resume && <Tile icon={<DartIcon className="w-6 h-6" />} label="Enkeltkamp" onClick={() => setMode("single")} />}
+          {tournamentsOn && <Tile icon={<TrophyIcon className="w-6 h-6" />} label="Turnering" onClick={() => setMode("tournament")} />}
+          <Tile icon={<BullseyeIcon className="w-6 h-6" />} label="Bull-duell" onClick={() => setMode("bullduel")} />
         </div>
+
+        {lastNight && (
+          <Section label="Siste kveld">
+            <Row
+              href={`/kveld/${lastNight.date}`}
+              title={dayLabel(lastNight.date)}
+              subtitle={winner && winner.wins > 0 ? `${winner.name} vant` : undefined}
+              leading={<TrophyIcon className="w-5 h-5" />}
+            />
+          </Section>
+        )}
       </div>
+      <BottomNav current="spill" onTurnering={tournamentsOn ? () => setMode("tournament") : undefined} />
     </div>
   );
 }

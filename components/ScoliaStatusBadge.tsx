@@ -51,7 +51,7 @@ export function ScoliaStatusBadge({ state }: { state: ScoliaState }) {
         }}
         aria-hidden
       />
-      <span className="scolia-badge-label" style={{ color: "var(--color-cream)", fontSize: "0.7rem" }}>{label}</span>
+      <span className="scolia-badge-label" style={{ color: "var(--color-cream)", fontSize: "var(--text-micro)" }}>{label}</span>
     </div>
   );
 }
@@ -91,7 +91,7 @@ export function ScoliaDot({ summary }: { summary: { label: string; color: string
         <span
           role="status"
           className="absolute right-0 top-full mt-1 whitespace-nowrap rounded-full px-3 py-1.5 shadow-panel"
-          style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-cream)", fontSize: "0.75rem", zIndex: 30 }}
+          style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-cream)", fontSize: "var(--text-micro)", zIndex: 30 }}
         >
           {summary.label}
         </span>

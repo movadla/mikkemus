@@ -86,13 +86,13 @@ export function MatchSummary({ facts }: { facts: MatchFacts | null }) {
           <span
             title="Skrevet av AI ut fra tallene i kampen"
             className="rounded-full px-2"
-            style={{ border: "1px solid var(--color-border)", color: "var(--color-teal)", fontSize: "0.75rem", letterSpacing: "0.08em" }}
+            style={{ border: "1px solid var(--color-border)", color: "var(--color-teal)", fontSize: "var(--text-micro)", letterSpacing: "0.08em" }}
           >
             AI
           </span>
         )}
       </p>
-      <p key={isAi ? "ai" : "rules"} className="animate-name-swap" style={{ color: "var(--color-cream)", fontSize: "0.95rem", lineHeight: 1.55 }}>
+      <p key={isAi ? "ai" : "rules"} className="animate-name-swap" style={{ color: "var(--color-cream)", fontSize: "var(--text-body)", lineHeight: 1.55 }}>
         {shown}
       </p>
     </div>

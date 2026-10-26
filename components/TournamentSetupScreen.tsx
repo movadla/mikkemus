@@ -20,11 +20,11 @@ import { TeamPicker } from "./TeamPicker";
 function Step({ n, children, aside }: { n: number; children: React.ReactNode; aside?: string }) {
   return (
     <div className="flex items-center gap-3 mb-3 mt-2">
-      <span aria-hidden className="tabular rounded-full shrink-0 flex items-center justify-center" style={{ width: "1.75rem", height: "1.75rem", background: "var(--teal-soft)", color: "var(--color-teal)", border: "1px solid var(--color-teal)", fontWeight: 700, fontSize: "0.85rem" }}>
+      <span aria-hidden className="tabular rounded-full shrink-0 flex items-center justify-center" style={{ width: "1.75rem", height: "1.75rem", background: "var(--teal-soft)", color: "var(--color-teal)", border: "1px solid var(--color-teal)", fontWeight: 700, fontSize: "var(--text-small)" }}>
         {n}
       </span>
-      <h2 className="font-display flex-1" style={{ color: "var(--color-cream)", fontSize: "1.25rem", lineHeight: 1.1 }}>{children}</h2>
-      {aside && <span className="tabular" style={{ color: "var(--color-muted)", fontSize: "0.9rem" }}>{aside}</span>}
+      <h2 className="font-display flex-1" style={{ color: "var(--color-cream)", fontSize: "var(--text-title)", lineHeight: 1.1 }}>{children}</h2>
+      {aside && <span className="tabular" style={{ color: "var(--color-muted)", fontSize: "var(--text-body)" }}>{aside}</span>}
     </div>
   );
 }
@@ -135,14 +135,14 @@ export function TournamentSetupScreen({
   }
 
   return (
-    <div className="animate-screen-enter screen has-sticky-action" style={{ background: "var(--color-bg)" }}>
+    <div className="animate-screen-push screen has-sticky-action" style={{ background: "var(--color-bg)" }}>
       <div className="screen-inner">
         <ScreenTop
           title="Ny turnering"
           onBack={onBack}
           right={
             onHistory ? (
-              <button type="button" onClick={onHistory} className="tactile rounded-lg text-sm px-3" style={{ minHeight: "2.75rem", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}>
+              <button type="button" onClick={onHistory} className="tactile rounded-lg text-sm px-3" style={{ minHeight: "var(--control)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}>
                 Pokaler
               </button>
             ) : undefined
@@ -189,9 +189,9 @@ export function TournamentSetupScreen({
           onClick={() => setMoreOpen((o) => !o)}
           aria-expanded={moreOpen}
           className={`tactile w-full rounded-lg px-4 flex items-center justify-between gap-3 text-left mb-4 ${FOCUS_RING}`}
-          style={{ minHeight: "2.75rem", background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+          style={{ minHeight: "var(--control)", background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
         >
-          <span style={{ color: "var(--color-cream)", fontWeight: 600, fontSize: "0.9rem" }}>Flere valg</span>
+          <span style={{ color: "var(--color-cream)", fontWeight: 600, fontSize: "var(--text-body)" }}>Flere valg</span>
           <span aria-hidden style={{ color: "var(--color-muted)" }}>{moreOpen ? "⌃" : "›"}</span>
         </button>
         {moreOpen && (
@@ -203,7 +203,7 @@ export function TournamentSetupScreen({
               placeholder="Navn (valgfritt)"
               aria-label="Navn på turneringen"
               className={`w-full px-4 rounded-lg mb-4 ${FOCUS_RING}`}
-              style={{ minHeight: "2.75rem", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
+              style={{ minHeight: "var(--control)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
             />
             <RulesPicker variant={variant} onChange={setVariant} teamPlay={mode === "team"} labelAlign="left" />
             {cupMode && <CupDetails value={{ ...cup, size: cupSize }} onChange={setCup} />}

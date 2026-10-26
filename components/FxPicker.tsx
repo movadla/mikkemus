@@ -27,11 +27,11 @@ export function FxPicker() {
               onClick={() => setFxLevel(l)}
               className={`tactile flex-1 rounded-lg font-medium ${FOCUS_RING}`}
               style={{
-                minHeight: "2.75rem",
+                minHeight: "var(--control)",
                 background: selected ? "var(--teal-soft)" : "var(--color-surface)",
                 color: selected ? "var(--color-teal)" : "var(--color-muted)",
                 border: selected ? "1px solid var(--color-teal)" : "1px solid var(--color-border)",
-                fontSize: "0.9rem",
+                fontSize: "var(--text-body)",
               }}
             >
               {FX_LABELS[l]}
@@ -40,7 +40,7 @@ export function FxPicker() {
         })}
       </div>
       {level === "simple" && (
-        <p className="text-center mt-2" style={{ color: "var(--color-red)", fontSize: "0.8rem" }}>
+        <p className="text-center mt-2" style={{ color: "var(--color-red)", fontSize: "var(--text-small)" }}>
           Teller ikke i statistikken
         </p>
       )}

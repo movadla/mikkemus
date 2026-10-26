@@ -73,23 +73,23 @@ export function TripleCelebration({ images, onDismiss }: { images: string[]; onD
         >
           TRE TRIPLER
         </p>
-        <p className="mb-4" style={{ color: "var(--color-cream)", fontSize: "0.9rem" }}>
+        <p className="mb-4" style={{ color: "var(--color-cream)", fontSize: "var(--text-body)" }}>
           Tre piler, tre trippel, alle på tallet du jaktet på.
         </p>
 
         {photo ? (
           <div
             className="animate-winner-photo-pulse rounded-xl overflow-hidden mx-auto"
-            style={{ border: "3px solid var(--color-gold)", boxShadow: "0 10px 40px rgba(0,0,0,0.6)" }}
+            style={{ border: "3px solid var(--color-gold)", boxShadow: "0 10px 40px var(--scrim)" }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element -- a data: URI straight from the board, nothing next/image can optimize */}
             <img src={photo} alt="Blinken etter runden" className="w-full h-auto block" />
           </div>
         ) : (
-          <p style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>Venter på bilde fra brettet …</p>
+          <p style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>Venter på bilde fra brettet …</p>
         )}
 
-        <p className="mt-4" style={{ color: "var(--color-muted)", fontSize: "0.7rem" }}>
+        <p className="mt-4" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>
           Trykk for å lukke
         </p>
       </div>

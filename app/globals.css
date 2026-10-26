@@ -24,13 +24,16 @@
   --color-cell-open-top: #263a2e;
   --color-cell-open-bottom: #22332a;
 
+  --color-silver: #b9c4bd;
+  --color-bronze: #c58a5a;
+
   --color-gold: #d9ae4f;
   --color-gold-strong: #f0d080;
   --color-gold-deep: #9c7a2c;
   --color-teal: #34c3d2;
   --color-teal-strong: #7be0ea;
   --color-teal-deep: #1e8e9b;
-  --color-red: #e25a45;
+  --color-red: #f0725e;
   --color-green: #58b072;
 
   /* The two accents at their fixed steps: a faint tint for a chosen tab or a wash, and a hairline ring. */
@@ -74,9 +77,23 @@
      different sizes for the same page heading, and two for the same section label. Same
      role, same size — that is most of what makes a set of screens read as one app. */
   --text-page-title: 1.625rem;
-  --text-section-label: 0.6875rem;
-  --text-body: 0.85rem;
-  --text-meta: 0.7rem;
+  --text-section-label: 0.75rem;
+  --text-meta: 0.75rem;
+
+  /* The five sizes of text, and nothing in between. Micro is the floor (12 px): nothing is set smaller. Num is for the
+     figures people read first (scores, ratings); the celebration screens may go bigger, as display. */
+  --text-micro: 0.75rem;
+  --text-small: 0.8125rem;
+  --text-body: 0.9375rem;
+  --text-title: 1.25rem;
+  --text-num: 1.75rem;
+
+  /* Three corner radii and two control heights. Chips and fields 8, cards and buttons 12, sheets and big surfaces 20. */
+  --radius-s: 0.5rem;
+  --radius-m: 0.75rem;
+  --radius-l: 1.25rem;
+  --control: 2.75rem;
+  --control-lg: 3.5rem;
 
   /* Shared motion vocabulary — every UI-driven animation (not the confetti's
      gravity-fall) pulls its easing from one of these two curves, so a press,
@@ -95,12 +112,28 @@
   --color-foreground: var(--color-cream);
   --font-sans: var(--font-sans);
   --font-display: var(--font-display);
+
+  /* Tailwind's own text sizes and radii are the app's five and three, so a class and a token cannot disagree. */
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1.4;
+  --text-sm: 0.8125rem;
+  --text-sm--line-height: 1.45;
+  --text-base: 0.9375rem;
+  --text-base--line-height: 1.5;
+  --text-lg: 1.25rem;
+  --text-lg--line-height: 1.3;
+  --text-xl: 1.25rem;
+  --text-xl--line-height: 1.3;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1.25rem;
 }
 
 html,
 body {
   /* A light source above the screen: the top of the page a shade warmer, the rest the deep ground. */
-  background: radial-gradient(130% 70% at 50% -8%, #1a2a1f 0%, var(--color-bg) 58%) fixed, var(--color-bg);
+  background: radial-gradient(ellipse at 50% 30%, transparent 0%, var(--page-vignette) 100%) fixed, radial-gradient(130% 70% at 50% -8%, var(--page-glow) 0%, var(--color-bg) 58%) fixed, var(--color-bg);
   color: var(--color-cream);
   font-family: var(--font-sans);
   /* Every number in the app lines up: tellers, columns and the score never jump as digits change. */
@@ -111,29 +144,22 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Film-grain overlay so flat dark surfaces read as a chalkboard/felt
-   texture rather than a plain digital fill. Decorative only. */
+/* Film grain, behind the content and drawn without a blend mode: flat dark surfaces read as chalkboard felt, and the phone
+   has nothing to mix over the board on every frame. It can be switched off in Innstillinger (html[data-texture="off"]). The
+   vignette that used to be a second layer is now part of the page background above. */
 body::before {
   content: "";
   position: fixed;
   inset: 0;
-  z-index: 9999;
+  z-index: -1;
   pointer-events: none;
-  opacity: 0.07;
-  mix-blend-mode: overlay;
+  opacity: 0.04;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-/* Soft vignette — the center of the screen reads a shade lighter than the
-   corners, so large flat stretches of background feel lit rather than like
-   a solid digital fill. */
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 9998;
-  pointer-events: none;
-  background: radial-gradient(ellipse at 50% 30%, transparent 0%, rgba(0, 0, 0, 0.3) 100%);
+html[data-texture="off"] body::before,
+html[data-tv] body::before {
+  display: none;
 }
 
 button {
@@ -172,7 +198,7 @@ button {
 .screen {
   min-height: 100dvh;
   width: 100%;
-  padding: 1rem 1rem 2.5rem;
+  padding: 1rem 1rem calc(2.5rem + var(--nav-space, 0px) + env(safe-area-inset-bottom, 0px));
 }
 
 .screen.has-sticky-action {
@@ -1158,8 +1184,30 @@ button {
   }
 }
 
+@keyframes screen-push {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 .animate-screen-enter {
   animation: screen-enter var(--duration-base) var(--ease-standard) both;
+}
+
+/* A page you have gone into (it has an arrow back) comes in from the side; the pages of the bottom bar fade up. */
+.animate-screen-push {
+  animation: screen-push var(--duration-base) var(--ease-standard) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-screen-push {
+    animation: none;
+  }
 }
 
 @keyframes name-swap {
@@ -1558,4 +1606,125 @@ button {
 .bt-in { animation: bt-in 0.8s cubic-bezier(0.2, 0.9, 0.25, 1) 0.5s both; }
 @media (prefers-reduced-motion: reduce) {
   .bt-pop, .bt-in { animation: none; }
+}
+
+/* -- shared pieces: scrim, sheet, skeleton -- */
+:root {
+  --scrim: rgba(0, 0, 0, 0.6);
+  --page-glow: #1a2a1f;
+  --page-vignette: rgba(0, 0, 0, 0.3);
+  --scrim-soft: rgba(0, 0, 0, 0.5);
+  --veil: rgba(255, 255, 255, 0.06);
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+.sheet-in {
+  animation: sheet-up var(--duration-base) var(--ease-standard) both;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--color-surface) 25%, var(--color-surface-2) 50%, var(--color-surface) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s linear infinite;
+  border: 1px solid var(--color-border);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton,
+  .sheet-in {
+    animation: none;
+  }
+}
+
+/* -- accessibility floor --
+   Any control without a ring of its own gets the teal one for the keyboard, and nothing moves for someone who has asked for less. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--color-teal);
+    outline-offset: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* -- Dag: the same palette in daylight --
+   Warm paper for the ground, dark green for the ink, and the three accents deepened so they hold on a light surface. Chosen in
+   Innstillinger; the dark theme stays the default and is the one the matches are made for. The names of the tokens stay: "cream" is
+   the main text colour, whichever it is. */
+html[data-theme="light"] {
+  color-scheme: light;
+  --color-bg: #f3f0e6;
+  --color-panel: #faf8f1;
+  --color-surface: #ffffff;
+  --color-surface-2: #ece9dd;
+  --color-cell: #e4e0d0;
+  --color-cell-done: #efe0b4;
+  --color-cell-done-top: #f2e4ba;
+  --color-cell-done-bottom: #e8d79f;
+  --color-cell-open-top: #ece9dd;
+  --color-cell-open-bottom: #e4e0d0;
+  --color-border: rgba(20, 40, 28, 0.12);
+  --color-hairline: rgba(20, 40, 28, 0.2);
+  --color-cream: #16241b;
+  --color-text-2: #35493c;
+  --color-muted: #56695b;
+  --color-label: #56695b;
+  --color-teal: #0b7f8c;
+  --color-teal-strong: #08626c;
+  --color-teal-deep: #075660;
+  --color-gold: #94700f;
+  --color-gold-strong: #7d5d08;
+  --color-gold-deep: #6a4f08;
+  --color-red: #bf3f2b;
+  --color-green: #2a7a47;
+  --teal-soft: rgba(11, 127, 140, 0.1);
+  --teal-ring: rgba(11, 127, 140, 0.35);
+  --gold-soft: rgba(148, 112, 15, 0.1);
+  --gold-ring: rgba(148, 112, 15, 0.35);
+  --glass: rgba(250, 248, 241, 0.78);
+  --page-glow: #fbf8ee;
+  --page-vignette: rgba(60, 50, 20, 0.08);
+  --veil: rgba(20, 40, 28, 0.06);
+  --elevation-1: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 1px 2px rgba(40, 40, 20, 0.12), 0 10px 24px -14px rgba(40, 40, 20, 0.3);
+  --elevation-2: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 2px 4px rgba(40, 40, 20, 0.14), 0 20px 40px -18px rgba(40, 40, 20, 0.35);
+  --elevation-3: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 0 0 1px rgba(20, 40, 28, 0.08), 0 4px 8px rgba(40, 40, 20, 0.16), 0 30px 60px -24px rgba(40, 40, 20, 0.4);
+}
+
+html[data-theme="light"] .tactile {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 1px 2px rgba(40, 40, 20, 0.14),
+    0 8px 18px -12px rgba(40, 40, 20, 0.3);
+}
+
+html[data-theme="light"] body::before {
+  opacity: 0.025;
 }

@@ -214,11 +214,11 @@ export function WinnerScreen({
           title="Angre siste pil og gå tilbake til brettet"
           className={`absolute top-4 right-4 z-40 px-4 rounded-lg ${FOCUS_RING}`}
           style={{
-            minHeight: "2.75rem",
+            minHeight: "var(--control)",
             background: "var(--color-surface)",
             border: "1px solid var(--color-border)",
             color: "var(--color-muted)",
-            fontSize: "0.75rem",
+            fontSize: "var(--text-micro)",
           }}
         >
           ↩ Angre
@@ -296,7 +296,7 @@ export function WinnerScreen({
                 style={{
                   border: "5px solid var(--color-gold)",
                   background: "var(--color-surface)",
-                  boxShadow: "0 10px 30px rgba(0,0,0,0.55), 0 0 40px rgba(217, 174, 79, 0.35)",
+                  boxShadow: "0 10px 30px var(--scrim-soft), 0 0 40px rgba(217, 174, 79, 0.35)",
                 }}
               >
                 {photo ? (
@@ -318,7 +318,7 @@ export function WinnerScreen({
               className="font-display"
               style={{
                 color: "var(--color-bg)",
-                fontSize: "1.05rem",
+                fontSize: "var(--text-body)",
                 fontStyle: "italic",
                 letterSpacing: "0.04em",
                 marginBottom: "0.4rem",
@@ -332,7 +332,7 @@ export function WinnerScreen({
             {/* xH belongs up here, not only in a card three scrolls down — it is the one number
                 that says whether the win was thrown or fell out of the sky. Omitted rather than
                 dashed when no dart could be judged; a "–" beside the headline reads as broken. */}
-            <p className="tabular" style={{ color: "var(--color-bg)", opacity: 0.7, fontSize: "0.85rem", marginTop: "0.4rem" }}>
+            <p className="tabular" style={{ color: "var(--color-bg)", opacity: 0.7, fontSize: "var(--text-small)", marginTop: "0.4rem" }}>
               {/* Singular is reachable now that a leg won on the first dart of a turn counts one. */}
               {totalDarts(stats[winner])} {totalDarts(stats[winner]) === 1 ? "pil" : "piler"} brukt
               {winnerLuck !== null && <> · xH {formatLuck(winnerLuck)} /{" "}
@@ -347,7 +347,7 @@ export function WinnerScreen({
               <path d="M2 20 L5 6 L11 13 L16 3 L21 13 L27 6 L30 20Z" fill="#2b2000" />
             </svg>
             <div>
-              <p style={{ fontSize: "0.72rem", letterSpacing: "0.14em", fontWeight: 700 }}>NY REKORD</p>
+              <p style={{ fontSize: "var(--text-micro)", letterSpacing: "0.14em", fontWeight: 700 }}>NY REKORD</p>
               {newRecords.map((r) => (
                 <p key={r} style={{ fontWeight: 700 }}>
                   {r}
@@ -368,7 +368,7 @@ export function WinnerScreen({
             <div
               role="row"
               className="grid items-end pb-1"
-              style={{ gridTemplateColumns: "minmax(0, 1fr) 4.2rem 4.2rem", color: "var(--color-label)", fontSize: "0.75rem", letterSpacing: "0.1em" }}
+              style={{ gridTemplateColumns: "minmax(0, 1fr) 4.2rem 4.2rem", color: "var(--color-label)", fontSize: "var(--text-micro)", letterSpacing: "0.1em" }}
             >
               <span role="columnheader" />
               <span role="columnheader" className="text-right">TREFF</span>
@@ -387,10 +387,10 @@ export function WinnerScreen({
                   }}
                 >
                   <span role="cell" className="truncate">{p}</span>
-                  <span role="cell" className="tabular text-right font-display" style={{ fontSize: "1.4rem" }}>
+                  <span role="cell" className="tabular text-right font-display" style={{ fontSize: "var(--text-title)" }}>
                     {treffPct(stats[p])} %
                   </span>
-                  <span role="cell" className="tabular text-right font-display" style={{ fontSize: "1.4rem" }}>
+                  <span role="cell" className="tabular text-right font-display" style={{ fontSize: "var(--text-title)" }}>
                     {totalDarts(stats[p])}
                   </span>
                 </div>
@@ -407,7 +407,7 @@ export function WinnerScreen({
             <div
               role="row"
               className="grid items-end pb-1"
-              style={{ gridTemplateColumns: "minmax(0, 1fr) 3.2rem 3.2rem 5.8rem", color: "var(--color-label)", fontSize: "0.75rem", letterSpacing: "0.1em" }}
+              style={{ gridTemplateColumns: "minmax(0, 1fr) 4rem 3.5rem 6rem", color: "var(--color-label)", fontSize: "var(--text-micro)", letterSpacing: "0.1em" }}
             >
               <span role="columnheader" />
               <span role="columnheader" className="text-right">TREFF</span>
@@ -421,7 +421,7 @@ export function WinnerScreen({
                 return (
                   <div key={p}>
                     {isTeam && (
-                      <p className="truncate text-left" style={{ color: p === winner ? "var(--color-gold)" : "var(--color-cream)", fontWeight: 600, fontSize: "0.85rem" }}>
+                      <p className="truncate text-left" style={{ color: p === winner ? "var(--color-gold)" : "var(--color-cream)", fontWeight: 600, fontSize: "var(--text-small)" }}>
                         {p}
                       </p>
                     )}
@@ -430,19 +430,19 @@ export function WinnerScreen({
                         key={r.name}
                         role="row"
                         className="grid items-baseline"
-                        style={{ gridTemplateColumns: "minmax(0, 1fr) 3.2rem 3.2rem 5.8rem", color: p === winner ? "var(--color-gold)" : "var(--color-cream)", paddingLeft: isTeam ? "0.75rem" : 0 }}
+                        style={{ gridTemplateColumns: "minmax(0, 1fr) 4rem 3.5rem 6rem", color: p === winner ? "var(--color-gold)" : "var(--color-cream)", paddingLeft: isTeam ? "0.75rem" : 0 }}
                       >
                         <span role="cell" className="truncate text-left">{r.name}</span>
-                        <span role="cell" className="tabular text-right font-display" style={{ fontSize: "1.2rem" }}>
+                        <span role="cell" className="tabular text-right font-display" style={{ fontSize: "var(--text-title)" }}>
                           {r.hitPct} %
                         </span>
-                        <span role="cell" className="tabular text-right font-display" style={{ fontSize: "1.2rem" }}>
+                        <span role="cell" className="tabular text-right font-display" style={{ fontSize: "var(--text-title)" }}>
                           {r.darts}
                         </span>
-                        <span role="cell" className="tabular text-right font-display whitespace-nowrap" style={{ fontSize: "1.2rem" }}>
+                        <span role="cell" className="tabular text-right font-display whitespace-nowrap" style={{ fontSize: "var(--text-title)" }}>
                           {r.perfectTurns}
                           {r.bestRun >= 1 && (
-                            <span className="font-sans" style={{ color: "var(--color-muted)", fontSize: "0.75rem", marginLeft: "0.35rem" }}>{r.bestRun * 3} piler på rad</span>
+                            <span className="font-sans" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)", marginLeft: "0.35rem" }}>{r.bestRun * 3} piler på rad</span>
                           )}
                         </span>
                       </div>
@@ -462,7 +462,7 @@ export function WinnerScreen({
               <div
                 role="row"
                 className="grid items-end pb-1"
-                style={{ gridTemplateColumns: "1.5rem minmax(0, 1fr) 3.2rem 3.2rem", color: "var(--color-label)", fontSize: "0.75rem", letterSpacing: "0.1em" }}
+                style={{ gridTemplateColumns: "1.5rem minmax(0, 1fr) 3.2rem 3.2rem", color: "var(--color-label)", fontSize: "var(--text-micro)", letterSpacing: "0.1em" }}
               >
                 <span role="columnheader" />
                 <span role="columnheader" />
@@ -473,13 +473,13 @@ export function WinnerScreen({
                 {teamRanking.map((r, i) => (
                   <div key={`${r.team}-${r.name}`} role="row">
                     <div className="grid items-baseline" style={{ gridTemplateColumns: "1.5rem minmax(0, 1fr) 3.2rem 3.2rem", color: r.team === winner ? "var(--color-gold)" : "var(--color-cream)" }}>
-                      <span role="cell" className="tabular text-left" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>{i + 1}</span>
+                      <span role="cell" className="tabular text-left" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>{i + 1}</span>
                       <span role="cell" className="truncate text-left">
                         {r.name}
-                        <span style={{ color: "var(--color-muted)", fontSize: "0.75rem", marginLeft: "0.4rem" }}>{r.team}</span>
+                        <span style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)", marginLeft: "0.4rem" }}>{r.team}</span>
                       </span>
-                      <span role="cell" className="tabular text-right font-display" style={{ fontSize: "1.2rem" }}>{r.hitPct} %</span>
-                      <span role="cell" className="tabular text-right font-display" style={{ fontSize: "1.2rem" }}>{r.darts}</span>
+                      <span role="cell" className="tabular text-right font-display" style={{ fontSize: "var(--text-title)" }}>{r.hitPct} %</span>
+                      <span role="cell" className="tabular text-right font-display" style={{ fontSize: "var(--text-title)" }}>{r.darts}</span>
                     </div>
                     <div aria-hidden className="rounded-full mt-1" style={{ height: "0.25rem", marginLeft: "1.5rem", background: "var(--color-cell)" }}>
                       <div className="rounded-full" style={{ height: "100%", width: `${Math.max(2, r.hitPct)}%`, background: r.team === winner ? "var(--color-gold)" : "var(--color-teal)" }} />
@@ -517,7 +517,7 @@ export function WinnerScreen({
             type="button"
             onClick={() => setShowMore(true)}
             className={`tactile w-full rounded-lg text-sm mb-4 ${FOCUS_RING}`}
-            style={{ minHeight: "2.75rem", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
+            style={{ minHeight: "var(--control)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
           >
             Mer statistikk
           </button>
@@ -527,7 +527,7 @@ export function WinnerScreen({
         <div className="shadow-panel rounded-xl p-4 mb-4" style={{ background: "var(--color-surface)" }}>
           <p className="mb-4 section-label">FORVENTEDE TREFF</p>
           {!players.some((p) => STEPS.some((s) => luckByPlayer[p]?.[s].count > 0)) ? (
-            <p style={{ color: "var(--color-muted)", fontSize: "0.8rem", lineHeight: 1.45 }}>
+            <p style={{ color: "var(--color-muted)", fontSize: "var(--text-small)", lineHeight: 1.45 }}>
               Ingen piler i denne kampen kunne bedømmes. xH regnes ut fra koordinatene til
               hvert kast, så manuelt registrerte piler teller ikke — det kreves at Scolia var
               tilkoblet.
@@ -561,8 +561,8 @@ export function WinnerScreen({
                             <div
                               key={s}
                               className="cell-tile rounded-md py-2 text-center tabular section-label">
-                              <p style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>{STEP_LABELS[s]}</p>
-                              <p style={{ color: "var(--color-cream)", fontSize: "0.75rem", fontWeight: 600 }}>
+                              <p style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>{STEP_LABELS[s]}</p>
+                              <p style={{ color: "var(--color-cream)", fontSize: "var(--text-micro)", fontWeight: 600 }}>
                                 {/* The actual count is only worth printing when it isn't the
                                     3 that closing a field always means — for the winner that
                                     is every field, so it was pure noise. A loser's unfinished
@@ -596,7 +596,7 @@ export function WinnerScreen({
                 .filter((p) => (throwsByPlayer[p]?.length ?? 0) > 0)
                 .map((p) => (
                   <div key={p}>
-                    <p className="mb-1" style={{ color: "var(--color-cream)", fontSize: "0.8rem" }}>
+                    <p className="mb-1" style={{ color: "var(--color-cream)", fontSize: "var(--text-small)" }}>
                       {p}
                     </p>
                     <div className="max-w-[220px] mx-auto">
@@ -616,7 +616,7 @@ export function WinnerScreen({
         {onToggleStats && (
           <div className="mb-4 text-center">
             {statsOff && (
-              <p role="status" className="mb-2" style={{ color: "var(--color-gold-strong)", fontSize: "0.85rem" }}>
+              <p role="status" className="mb-2" style={{ color: "var(--color-gold-strong)", fontSize: "var(--text-small)" }}>
                 Denne kampen teller ikke i statistikken.
               </p>
             )}
@@ -624,7 +624,7 @@ export function WinnerScreen({
               type="button"
               onClick={onToggleStats}
               className={`tactile w-full rounded-xl ${FOCUS_RING}`}
-              style={{ minHeight: "2.75rem", background: "transparent", color: statsOff ? "var(--color-cream)" : "var(--color-red)", border: `1px solid ${statsOff ? "var(--color-border)" : "var(--color-red)"}`, fontSize: "0.9rem" }}
+              style={{ minHeight: "var(--control)", background: "transparent", color: statsOff ? "var(--color-cream)" : "var(--color-red)", border: `1px solid ${statsOff ? "var(--color-border)" : "var(--color-red)"}`, fontSize: "var(--text-body)" }}
             >
               {statsOff ? "Ta kampen med i statistikken likevel" : "Fjern denne kampen fra statistikken"}
             </button>
@@ -635,7 +635,7 @@ export function WinnerScreen({
             type="button"
             onClick={onPlayAgain}
             className={`glossy w-full rounded-xl font-semibold text-lg mb-2 ${FOCUS_RING}`}
-            style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", minHeight: "3.25rem" } as React.CSSProperties}
+            style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", minHeight: "var(--control-lg)" } as React.CSSProperties}
           >
             Revansj
           </button>
@@ -645,7 +645,7 @@ export function WinnerScreen({
             type="button"
             onClick={onNewMatch}
             className={`tactile w-full rounded-xl font-semibold text-lg mb-2 ${FOCUS_RING}`}
-            style={{ minHeight: "3.25rem", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
+            style={{ minHeight: "var(--control-lg)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
           >
             Ny kamp
           </button>
@@ -660,8 +660,8 @@ export function WinnerScreen({
           }
           style={
             onPlayAgain
-              ? { minHeight: "3.25rem", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }
-              : ({ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", minHeight: "3.25rem" } as React.CSSProperties)
+              ? { minHeight: "var(--control-lg)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }
+              : ({ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", minHeight: "var(--control-lg)" } as React.CSSProperties)
           }
         >
           {homeLabel}

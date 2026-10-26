@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { BracketTree } from "@/components/BracketTree";
+import { TvFrame } from "@/components/TvFrame";
 import { roundName } from "@/components/KnockoutOverview";
 import { nextToThrow } from "@/lib/botSim";
 import { isKnockout } from "@/lib/knockout";
@@ -45,21 +45,14 @@ export default function StorskjermTurneringPage() {
 
   const next = tournament && isKnockout(tournament) ? nextToThrow(tournament) : null;
   return (
-    <main className="min-h-screen w-full px-6 py-6" style={{ background: "var(--color-bg)", color: "var(--color-cream)" }}>
-      <Link
-        href="/"
-        className="fixed top-2 left-2 z-40 inline-flex items-center px-4 text-xs opacity-20 hover:opacity-100 focus-visible:opacity-100 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)] transition-opacity"
-        style={{ color: "var(--color-cream)", minHeight: "2.75rem" }}
-      >
-        ← Hjem
-      </Link>
-      {tournament === undefined && <p className="text-center pt-24" style={{ color: "var(--color-muted)", fontSize: "1.4rem" }}>Henter turneringen …</p>}
-      {tournament === null && <p className="text-center pt-24" style={{ color: "var(--color-muted)", fontSize: "1.4rem" }}>Ingen turnering er i gang.</p>}
-      {tournament && !isKnockout(tournament) && <p className="text-center pt-24" style={{ color: "var(--color-muted)", fontSize: "1.4rem" }}>Den siste turneringen har gruppespill og vises ikke her.</p>}
+    <TvFrame label="Turnering" className="px-6 pt-14 pb-10">
+      {tournament === undefined && <p className="text-center pt-24" style={{ color: "var(--color-muted)", fontSize: "var(--text-title)" }}>Henter turneringen …</p>}
+      {tournament === null && <p className="text-center pt-24" style={{ color: "var(--color-muted)", fontSize: "var(--text-title)" }}>Ingen turnering er i gang.</p>}
+      {tournament && !isKnockout(tournament) && <p className="text-center pt-24" style={{ color: "var(--color-muted)", fontSize: "var(--text-title)" }}>Den siste turneringen har gruppespill og vises ikke her.</p>}
       {tournament && isKnockout(tournament) && (
         <>
           <header className="text-center mb-6">
-            <p className="section-label" style={{ fontSize: "0.9rem" }}>{tournamentTitle(tournament).toUpperCase()}</p>
+            <p className="section-label" style={{ fontSize: "var(--text-body)" }}>{tournamentTitle(tournament).toUpperCase()}</p>
             {tournament.status === "done" ? (
               <h1 className="font-display" style={{ color: "var(--color-gold)", fontSize: "clamp(2.5rem, 7vw, 5rem)", lineHeight: 1.05 }}>
                 {tournament.winner} er mester
@@ -69,15 +62,15 @@ export default function StorskjermTurneringPage() {
                 <span style={{ color: "var(--color-teal)" }}>{roundName(next)}</span>: {next.participantA} mot {next.participantB}
               </h1>
             ) : (
-              <h1 className="font-display" style={{ fontSize: "2rem" }}>Venter på neste kamp</h1>
+              <h1 className="font-display" style={{ fontSize: "var(--text-num)" }}>Venter på neste kamp</h1>
             )}
-            {tournament.cup && tournament.status !== "done" && <p style={{ color: "var(--color-muted)", fontSize: "1.1rem" }}>Spiller om {tournament.cup.trophy}</p>}
+            {tournament.cup && tournament.status !== "done" && <p style={{ color: "var(--color-muted)", fontSize: "var(--text-title)" }}>Spiller om {tournament.cup.trophy}</p>}
           </header>
           <div className="rounded-2xl p-4 mx-auto" style={{ background: "var(--color-panel)", border: "1px solid var(--color-border)", maxWidth: "100rem" }}>
             <BracketTree tournament={tournament} nextId={next?.id ?? null} justDecidedId={justDecided} large />
           </div>
         </>
       )}
-    </main>
+    </TvFrame>
   );
 }

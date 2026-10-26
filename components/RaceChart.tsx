@@ -111,7 +111,7 @@ export function RaceChart({
       {/* Who is which line. */}
       <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 mt-1">
         {series.map((s) => (
-          <span key={s.player} className="inline-flex items-center gap-1.5" style={{ color: "var(--color-cream)", fontSize: "0.75rem" }}>
+          <span key={s.player} className="inline-flex items-center gap-1.5" style={{ color: "var(--color-cream)", fontSize: "var(--text-micro)" }}>
             <span aria-hidden className="inline-block rounded-full" style={{ width: "0.55rem", height: "0.55rem", background: s.colour }} />
             {s.player}
           </span>

@@ -46,7 +46,7 @@ export function RowDartsChart({ values, unit = "darts", who }: { values: Record<
         })}
       </svg>
       {shown && (
-        <p className="mt-2" style={{ color: "var(--color-muted)", fontSize: "0.85rem" }}>
+        <p className="mt-2" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
           {shown === worst ? (
             <>
               <b style={{ color: "var(--color-cream)" }}>{STEP_LABELS[worst!]}</b> var {unit === "pct" ? "vanskeligst" : "tregest"} for {who}: {text(values[worst!])}

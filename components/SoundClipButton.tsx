@@ -62,7 +62,7 @@ export function SoundClipButton({ name }: { name: string }) {
       disabled={recording}
       className={`tactile w-full rounded-lg flex items-center justify-center gap-2 ${FOCUS_RING}`}
       style={{
-        minHeight: "2.75rem",
+        minHeight: "var(--control)",
         background: recording ? "var(--color-red)" : "var(--color-surface)",
         color: recording ? "var(--color-cream)" : hasSound ? "var(--color-teal)" : "var(--color-cream)",
         border: "1px solid var(--color-border)",

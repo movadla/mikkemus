@@ -18,7 +18,7 @@ export function sameName(a: string, b: string): boolean {
   return a.trim().toLowerCase() === b.trim().toLowerCase();
 }
 
-/** The bot's name for this match: "Littler 🥇", or "Littler 🥇 (2)" when one is in already. */
+/** The bot's name for this match: "Littler", or "Littler (2)" when one is in already. */
 export function nextBotName(level: BotLevel, taken: string[]): string {
   const base = botDisplayName(level);
   let name = base;

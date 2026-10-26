@@ -5,6 +5,7 @@ import { setKits, setWalkOn, teamKitsOf, type PlayerRecord } from "@/lib/storage
 import { WALK_ON_LABELS, playWalkOnTune, primeAudio } from "@/lib/fanfare";
 import { KIT_COLOURS, PATTERNS, PATTERN_LABELS, colourName, defaultKits, makeKit, usesSecondColour, type Kit, type TeamKits } from "@/lib/teamKit";
 import { TeamKit } from "./TeamKit";
+import { CheckIcon } from "./icons";
 
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
@@ -26,7 +27,7 @@ function KitEditor({ label, kit, onChange }: { label: string; kit: Kit; onChange
     if (two && active === "primary") setSlot("secondary");
   }
   const slotStyle = (s: Slot, off = false) => ({
-    minHeight: "3.25rem",
+    minHeight: "var(--control-lg)",
     background: active === s ? "var(--teal-soft)" : "var(--color-surface)",
     border: active === s ? "1px solid var(--color-teal)" : "1px solid var(--color-border)",
     opacity: off ? 0.5 : 1,
@@ -49,7 +50,7 @@ function KitEditor({ label, kit, onChange }: { label: string; kit: Kit; onChange
               style={{ minHeight: "4.25rem", background: selected ? "var(--teal-soft)" : "var(--color-surface)", border: selected ? "1px solid var(--color-teal)" : "1px solid var(--color-border)" }}
             >
               <TeamKit kit={makeKit(p, kit.primary, kit.secondary)} size={34} />
-              <span style={{ color: selected ? "var(--color-teal)" : "var(--color-muted)", fontSize: "0.72rem" }}>{PATTERN_LABELS[p]}</span>
+              <span style={{ color: selected ? "var(--color-teal)" : "var(--color-muted)", fontSize: "var(--text-micro)" }}>{PATTERN_LABELS[p]}</span>
             </button>
           );
         })}
@@ -60,7 +61,7 @@ function KitEditor({ label, kit, onChange }: { label: string; kit: Kit; onChange
           <span className="rounded-full shrink-0" style={{ width: 28, height: 28, background: kit.primary, border: "2px solid rgba(255,255,255,0.35)" }} />
           <span className="min-w-0">
             <span className="block truncate text-sm font-semibold">Hovedfarge</span>
-            <span className="block truncate" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>{colourName(kit.primary)}</span>
+            <span className="block truncate" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>{colourName(kit.primary)}</span>
           </span>
         </button>
         <button
@@ -77,7 +78,7 @@ function KitEditor({ label, kit, onChange }: { label: string; kit: Kit; onChange
           <span className="rounded-full shrink-0" style={{ width: 28, height: 28, background: two ? kit.secondary : "transparent", border: "2px solid rgba(255,255,255,0.35)" }} />
           <span className="min-w-0">
             <span className="block truncate text-sm font-semibold">Mønsterfarge</span>
-            <span className="block truncate" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>{two ? colourName(kit.secondary) : "ikke brukt"}</span>
+            <span className="block truncate" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>{two ? colourName(kit.secondary) : "ikke brukt"}</span>
           </span>
         </button>
       </div>
@@ -94,9 +95,9 @@ function KitEditor({ label, kit, onChange }: { label: string; kit: Kit; onChange
               title={c.name}
               onClick={() => pick(c.hex)}
               className={`tactile rounded-lg flex items-center justify-center ${FOCUS_RING}`}
-              style={{ minHeight: "2.75rem", background: c.hex, border: selected ? "3px solid #fff" : "2px solid rgba(255,255,255,0.18)", color: "#0b0b0b" }}
+              style={{ minHeight: "var(--control)", background: c.hex, border: selected ? "3px solid #fff" : "2px solid rgba(255,255,255,0.18)", color: "#0b0b0b" }}
             >
-              {selected && <span aria-hidden style={{ fontWeight: 700, textShadow: "0 0 3px #fff" }}>✓</span>}
+              {selected && <CheckIcon className="w-5 h-5" />}
             </button>
           );
         })}
@@ -127,7 +128,7 @@ export function WalkOnPicker({ record }: { record: PlayerRecord }) {
                   }
                 }}
                 className={`tactile rounded-lg text-sm ${FOCUS_RING}`}
-                style={{ minHeight: "2.75rem", background: selected ? "var(--teal-soft)" : "var(--color-surface)", color: selected ? "var(--color-teal)" : "var(--color-muted)", border: selected ? "1px solid var(--color-teal)" : "1px solid var(--color-border)" }}
+                style={{ minHeight: "var(--control)", background: selected ? "var(--teal-soft)" : "var(--color-surface)", color: selected ? "var(--color-teal)" : "var(--color-muted)", border: selected ? "1px solid var(--color-teal)" : "1px solid var(--color-border)" }}
               >
                 {WALK_ON_LABELS[w]}
               </button>
@@ -148,7 +149,7 @@ export function PlayerKitEditor({ player }: { player: PlayerRecord }) {
         type="button"
         onClick={() => setKits(player.name, defaultKits([player.name]))}
         className={`tactile w-full rounded-lg text-sm ${FOCUS_RING}`}
-        style={{ minHeight: "2.75rem", background: "var(--color-surface)", color: "var(--color-muted)", border: "1px solid var(--color-border)" }}
+        style={{ minHeight: "var(--control)", background: "var(--color-surface)", color: "var(--color-muted)", border: "1px solid var(--color-border)" }}
       >
         Standard
       </button>
@@ -173,7 +174,7 @@ export function TeamKitEditor({ team }: { team: PlayerRecord }) {
         type="button"
         onClick={() => save(defaultKits(team.members ?? []))}
         className={`tactile w-full rounded-lg text-sm ${FOCUS_RING}`}
-        style={{ minHeight: "2.75rem", background: "var(--color-surface)", color: "var(--color-muted)", border: "1px solid var(--color-border)" }}
+        style={{ minHeight: "var(--control)", background: "var(--color-surface)", color: "var(--color-muted)", border: "1px solid var(--color-border)" }}
       >
         Standard
       </button>

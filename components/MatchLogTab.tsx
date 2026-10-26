@@ -6,16 +6,16 @@ import { buildMatchLog, type MatchRow } from "@/lib/matchLog";
 import { listArchivedIds } from "@/lib/matchArchive";
 import { useRoster } from "@/lib/storage";
 import { shownHitPct } from "@/lib/playerRows";
+import { whenLabel } from "@/lib/formatDate";
+import { plainName } from "@/lib/botLevels";
+import { ChevronRightIcon } from "./icons";
+import { EmptyState } from "./ui/EmptyState";
 
 const PAGE_SIZE = 10;
 const FOCUS_RING = "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
 
-const two = (n: number) => String(n).padStart(2, "0");
-/** 2026-10-17 18:20, in the viewer's own time. */
-function when(iso: string): string {
-  const d = new Date(iso);
-  return `${d.getFullYear()}-${two(d.getMonth() + 1)}-${two(d.getDate())} ${two(d.getHours())}:${two(d.getMinutes())}`;
-}
+/** "I går 23:08", in the viewer's own time. */
+const when = whenLabel;
 
 function resultText(m: MatchRow): string {
   if (!m.winner) return "Ukjent resultat";
@@ -25,14 +25,14 @@ function resultText(m: MatchRow): string {
 function Card({ m, archived }: { m: MatchRow; archived: boolean }) {
   return (
     <div className="px-4 pb-4 pt-1">
-      <p className="mb-3" style={{ color: "var(--color-gold-strong)", fontFamily: "var(--font-display)", fontSize: "1.2rem" }}>{resultText(m)}</p>
+      <p className="mb-3" style={{ color: "var(--color-gold-strong)", fontFamily: "var(--font-display)", fontSize: "var(--text-title)" }}>{resultText(m)}</p>
       <div className="grid gap-2 mb-3" style={{ gridTemplateColumns: `repeat(${Math.min(2, m.sides.length)}, minmax(0, 1fr))` }}>
         {m.sides.map((s) => (
           <div key={s.name} className="rounded-lg p-3" style={{ background: "var(--color-cell)", border: s.won ? "1px solid var(--color-gold)" : "1px solid transparent" }}>
-            <p className="truncate" style={{ color: "var(--color-cream)", fontWeight: 600 }}>{s.name}</p>
-            {s.members && <p className="truncate" style={{ color: "var(--color-muted)", fontSize: "0.7rem" }}>{s.members.join(", ")}</p>}
+            <p className="truncate" style={{ color: "var(--color-cream)", fontWeight: 600 }}>{plainName(s.name)}</p>
+            {s.members && <p className="truncate" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>{s.members.join(", ")}</p>}
             {s.entry ? (
-              <dl className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 tabular" style={{ fontSize: "0.8rem" }}>
+              <dl className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 tabular" style={{ fontSize: "var(--text-small)" }}>
                 <dt style={{ color: "var(--color-muted)" }}>Treff</dt>
                 <dd className="text-right" style={{ color: "var(--color-teal-strong)", fontWeight: 700 }}>{Math.round(shownHitPct(s.entry))} %</dd>
                 <dt style={{ color: "var(--color-muted)" }}>Piler</dt>
@@ -51,17 +51,17 @@ function Card({ m, archived }: { m: MatchRow; archived: boolean }) {
                 )}
               </dl>
             ) : (
-              <p className="mt-2" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>{s.kind === "other" ? "Bot eller gjest: ingen statistikk." : "Ingen tall for denne siden."}</p>
+              <p className="mt-2" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>{s.kind === "other" ? "Bot eller gjest: ingen statistikk." : "Ingen tall for denne siden."}</p>
             )}
           </div>
         ))}
       </div>
       {archived ? (
-        <Link href={`/kamp/${encodeURIComponent(m.id)}`} className={`glossy block text-center rounded-xl font-semibold ${FOCUS_RING}`} style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", minHeight: "2.75rem", lineHeight: "2.75rem" } as React.CSSProperties}>
+        <Link href={`/kamp/${encodeURIComponent(m.id)}`} className={`glossy block text-center rounded-xl font-semibold ${FOCUS_RING}`} style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", minHeight: "var(--control)", lineHeight: "2.75rem" } as React.CSSProperties}>
           Se alle tall om kampen ›
         </Link>
       ) : (
-        <p style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>Hele kampen ble ikke lagret for denne, så det er bare tallene over. Kamper fra nå av kan åpnes helt.</p>
+        <p style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>Hele kampen ble ikke lagret for denne, så det er bare tallene over. Kamper fra nå av kan åpnes helt.</p>
       )}
     </div>
   );
@@ -86,11 +86,7 @@ export function MatchLogTab() {
   }, []);
 
   if (log.length === 0) {
-    return (
-      <p className="text-center py-8" style={{ color: "var(--color-muted)" }}>
-        Ingen kamper ennå
-      </p>
-    );
+    return <EmptyState title="Ingen kamper ennå" />;
   }
   const pages = Math.ceil(log.length / PAGE_SIZE);
   const current = Math.min(page, pages - 1);
@@ -104,15 +100,17 @@ export function MatchLogTab() {
           const isOpen = open === m.id;
           return (
             <div key={m.id} className="shadow-panel rounded-xl overflow-hidden" style={{ background: "var(--color-surface)" }}>
-              <button type="button" aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : m.id)} className={`w-full text-left px-4 py-3 flex items-center gap-3 ${FOCUS_RING}`} style={{ minHeight: "3.75rem" }}>
+              <button type="button" aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : m.id)} className={`w-full text-left px-4 py-3 flex items-center gap-3 ${FOCUS_RING}`} style={{ minHeight: "var(--control-lg)" }}>
                 <span className="flex-1 min-w-0">
-                  <span className="block truncate" style={{ color: "var(--color-cream)", fontWeight: 600 }}>{m.sides.map((s) => s.name).join(" mot ")}</span>
-                  <span className="block tabular" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>{when(m.date)}</span>
+                  <span className="block line-clamp-2" style={{ color: "var(--color-cream)", fontWeight: 600 }}>{m.sides.map((s) => plainName(s.name)).join(" mot ")}</span>
+                  <span className="block tabular" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>{when(m.date)}</span>
                 </span>
-                <span className="shrink-0 text-right" style={{ color: m.winner ? "var(--color-gold-strong)" : "var(--color-muted)", fontSize: "0.8rem", fontWeight: 600, maxWidth: "8rem" }}>
+                <span className="shrink-0 text-right" style={{ color: m.winner ? "var(--color-gold-strong)" : "var(--color-muted)", fontSize: "var(--text-small)", fontWeight: 600, maxWidth: "8rem" }}>
                   <span className="block truncate">{m.winner ? `${m.winner} vant` : "Ukjent"}</span>
                 </span>
-                <span aria-hidden style={{ color: "var(--color-muted)", fontSize: "1.2rem", transform: isOpen ? "rotate(90deg)" : "none", transition: "transform 150ms" }}>›</span>
+                <span aria-hidden className="shrink-0 flex" style={{ color: "var(--color-muted)", transform: isOpen ? "rotate(90deg)" : "none", transition: "transform var(--duration-fast) var(--ease-standard)" }}>
+                  <ChevronRightIcon className="w-4 h-4" />
+                </span>
               </button>
               {isOpen && <Card m={m} archived={archived.has(m.id)} />}
             </div>
@@ -121,11 +119,11 @@ export function MatchLogTab() {
       </div>
       {pages > 1 && (
         <div className="flex items-center justify-between gap-3 mt-4">
-          <button type="button" disabled={current === 0} onClick={() => { setPage(current - 1); setOpen(null); }} className={`tactile rounded-full px-5 ${FOCUS_RING}`} style={{ minHeight: "2.75rem", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)", opacity: current === 0 ? 0.4 : 1 }}>
+          <button type="button" disabled={current === 0} onClick={() => { setPage(current - 1); setOpen(null); }} className={`tactile rounded-full px-5 ${FOCUS_RING}`} style={{ minHeight: "var(--control)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)", opacity: current === 0 ? 0.4 : 1 }}>
             ‹ Nyere
           </button>
-          <span className="tabular" style={{ color: "var(--color-muted)", fontSize: "0.85rem" }}>Side {current + 1} av {pages}</span>
-          <button type="button" disabled={current >= pages - 1} onClick={() => { setPage(current + 1); setOpen(null); }} className={`tactile rounded-full px-5 ${FOCUS_RING}`} style={{ minHeight: "2.75rem", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)", opacity: current >= pages - 1 ? 0.4 : 1 }}>
+          <span className="tabular" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>Side {current + 1} av {pages}</span>
+          <button type="button" disabled={current >= pages - 1} onClick={() => { setPage(current + 1); setOpen(null); }} className={`tactile rounded-full px-5 ${FOCUS_RING}`} style={{ minHeight: "var(--control)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)", opacity: current >= pages - 1 ? 0.4 : 1 }}>
             Eldre ›
           </button>
         </div>

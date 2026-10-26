@@ -14,7 +14,7 @@ function ToastLine({ message, id }: { message: string; id: number }) {
         border: "1px solid var(--color-border)",
         borderLeft: "3px solid var(--color-red)",
         color: "var(--color-cream)",
-        fontSize: "0.8rem",
+        fontSize: "var(--text-small)",
         maxWidth: "26rem",
       }}
     >

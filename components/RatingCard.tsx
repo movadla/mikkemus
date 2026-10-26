@@ -94,7 +94,7 @@ export function RatingCard({ players, winner }: { players: string[]; winner: str
               <span className="font-display tabular text-right" style={{ color: "var(--color-cream)" }}>
                 {Math.round(shownRating[r.name] ?? r.before).toLocaleString("nb-NO").replace(/\s/g, " ")}
               </span>
-              <span className="tabular text-right" style={{ fontSize: "0.8rem", fontWeight: 600, color: up ? "var(--color-green)" : down ? "var(--color-red)" : "var(--color-muted)" }}>
+              <span className="tabular text-right" style={{ fontSize: "var(--text-small)", fontWeight: 600, color: up ? "var(--color-green)" : down ? "var(--color-red)" : "var(--color-muted)" }}>
                 {after && r.delta !== 0 ? `${r.delta > 0 ? "+" : "−"}${Math.abs(r.delta)}${moved !== 0 ? ` ${moved > 0 ? "▲" : "▼"}${Math.abs(moved)}` : ""}` : ""}
               </span>
             </div>
@@ -102,7 +102,7 @@ export function RatingCard({ players, winner }: { players: string[]; winner: str
         })}
       </div>
       {winnerRow && loserRow && (
-        <p className="mt-3" style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>
+        <p className="mt-3" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
           {winnerRow.name} +{winnerRow.delta}, {loserRow.name} −{Math.abs(loserRow.delta)}
           {expectedScore(winnerRow.before, loserRow.before) < UPSET_BELOW ? ". Uventet seier, stor gevinst" : ""}. * Foreløpig rating, den flytter seg raskere de første {PROVISIONAL_MATCHES} kampene.
         </p>

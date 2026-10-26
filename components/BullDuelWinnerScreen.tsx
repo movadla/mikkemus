@@ -14,7 +14,7 @@ const FOCUS_RING =
 
 const CONFETTI_COUNT = 40;
 const RAIN_COUNT = 90;
-const SIDE_COLORS = ["#4b8be8", "#e25a45", "#e6bd57", "#34c3d2"];
+const SIDE_COLORS = ["#4b8be8", "var(--color-red)", "#e6bd57", "var(--color-teal)"];
 
 // xG is an expected-points value (0-2, same unit the game scores in, like football xG) rather than a signed luck delta
 // — always non-negative, so no "+" prefix.
@@ -27,12 +27,12 @@ function Tile({ label, value, unit }: { label: string; value: string; unit?: str
   return (
     <div
       className="rounded-xl px-2 py-3 text-center"
-      style={{ background: "var(--color-surface-2)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06), inset 0 1px 0 rgba(255,255,255,0.07), 0 1px 2px rgba(0,0,0,0.4)" }}
+      style={{ background: "var(--color-surface-2)", boxShadow: "inset 0 0 0 1px var(--veil), inset 0 1px 0 var(--veil), 0 1px 2px rgba(0,0,0,0.4)" }}
     >
-      <p style={{ color: "var(--color-muted)", fontSize: "0.65rem", fontWeight: 600, letterSpacing: "0.14em" }}>{label}</p>
-      <p className="tabular" style={{ color: "var(--color-cream)", fontSize: "1.4rem", lineHeight: 1.15, fontWeight: 700, letterSpacing: "-0.01em" }}>
+      <p style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)", fontWeight: 600, letterSpacing: "0.14em" }}>{label}</p>
+      <p className="tabular" style={{ color: "var(--color-cream)", fontSize: "var(--text-title)", lineHeight: 1.15, fontWeight: 700, letterSpacing: "-0.01em" }}>
         {value}
-        {unit && <span style={{ color: "var(--color-muted)", fontSize: "0.75rem", fontWeight: 500 }}> {unit}</span>}
+        {unit && <span style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)", fontWeight: 500 }}> {unit}</span>}
       </p>
     </div>
   );
@@ -51,7 +51,7 @@ function PointsRace({ duel, winner }: { duel: BullDuelState; winner: string }) {
       <line x1={8} x2={W - 8} y1={H - 8} y2={H - 8} stroke="rgba(255,255,255,0.14)" />
       {duel.players.map((p, i) => {
         const series = [0, ...duel.pointsByTurn[p]];
-        const color = p === winner ? "#f0d080" : SIDE_COLORS[i % SIDE_COLORS.length];
+        const color = p === winner ? "var(--color-gold-strong)" : SIDE_COLORS[i % SIDE_COLORS.length];
         const points = series.map((v, k) => `${x(k)},${y(v)}`).join(" ");
         const last = series.length - 1;
         return (
@@ -148,7 +148,7 @@ export function BullDuelWinnerScreen({
               <span aria-hidden className="animate-winner-shockwave absolute inset-0 rounded-full pointer-events-none" style={{ border: "3px solid var(--color-gold)" }} />
               <div
                 className="animate-winner-photo-pulse rounded-full overflow-hidden flex items-center justify-center w-full h-full"
-                style={{ border: "5px solid var(--color-gold)", background: "var(--color-surface)", boxShadow: "0 10px 30px rgba(0,0,0,0.55), 0 0 40px rgba(217, 174, 79, 0.35)" }}
+                style={{ border: "5px solid var(--color-gold)", background: "var(--color-surface)", boxShadow: "0 10px 30px var(--scrim-soft), 0 0 40px rgba(217, 174, 79, 0.35)" }}
               >
                 {photo ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -162,19 +162,19 @@ export function BullDuelWinnerScreen({
             </div>
           </div>
           <div className="animate-winner-pop card-gold shadow-panel relative z-20 rounded-2xl pt-24 pb-8 px-8 mb-6">
-            <p className="font-display" style={{ color: "var(--color-bg)", fontSize: "1.05rem", fontStyle: "italic", letterSpacing: "0.04em", marginBottom: "0.4rem" }}>
+            <p className="font-display" style={{ color: "var(--color-bg)", fontSize: "var(--text-body)", fontStyle: "italic", letterSpacing: "0.04em", marginBottom: "0.4rem" }}>
               Vinner
             </p>
             <h2 className="font-display" style={{ color: "var(--color-bg)", fontSize: "2.2rem" }}>
               {winner}
             </h2>
-            <p className="tabular" style={{ color: "var(--color-bg)", opacity: 0.75, fontSize: "0.9rem", marginTop: "0.4rem", fontWeight: 600 }}>
+            <p className="tabular" style={{ color: "var(--color-bg)", opacity: 0.75, fontSize: "var(--text-body)", marginTop: "0.4rem", fontWeight: 600 }}>
               {duel.points[winner]} / {duel.target} poeng · {winnerStats.throws} {winnerStats.throws === 1 ? "pil" : "piler"}
               {winnerPct !== null ? ` · ${winnerPct} % treff` : ""}
             </p>
             {/* xH up here too, as in the main game: the one number that says whether the win was thrown or fell out of the sky. */}
             {winnerLuck !== null && (
-              <p className="tabular" style={{ color: "var(--color-bg)", opacity: 0.65, fontSize: "0.8rem", marginTop: "0.2rem" }}>
+              <p className="tabular" style={{ color: "var(--color-bg)", opacity: 0.65, fontSize: "var(--text-small)", marginTop: "0.2rem" }}>
                 xH {formatLuck(winnerStats.luckSum)} forventet / {winnerStats.points} faktisk
               </p>
             )}
@@ -190,9 +190,9 @@ export function BullDuelWinnerScreen({
         <div className="shadow-panel rounded-xl p-4 mb-6" style={{ background: "var(--color-surface)" }}>
           <p className="mb-4 section-label">BULL-DUELL — DENNE KAMPEN</p>
           <div className="grid gap-x-2 gap-y-4 text-left" style={{ gridTemplateColumns: "1fr repeat(5, auto)" }}>
-            <span style={{ color: "var(--color-muted)", fontSize: "0.75rem" }} />
+            <span style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }} />
             {["KAST", "POENG", "%", "MED", "XG"].map((h) => (
-              <span key={h} className="text-right" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>
+              <span key={h} className="text-right" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>
                 {h}
               </span>
             ))}
@@ -229,7 +229,7 @@ export function BullDuelWinnerScreen({
                     <span className="tabular text-right" style={{ color: luck === null ? "var(--color-muted)" : "var(--color-gold-strong)" }}>{luck === null ? "–" : formatLuck(luck)}</span>
                   </div>
                   {isExpanded && (
-                    <div className="tabular text-left flex items-center gap-4 flex-wrap" style={{ gridColumn: "1 / -1", fontSize: "0.78rem", color: "var(--color-muted)", paddingBottom: "0.15rem" }}>
+                    <div className="tabular text-left flex items-center gap-4 flex-wrap" style={{ gridColumn: "1 / -1", fontSize: "var(--text-small)", color: "var(--color-muted)", paddingBottom: "0.15rem" }}>
                       <span className="flex items-center gap-1">
                         <span style={{ width: "9px", height: "9px", borderRadius: "2px", background: "var(--color-red)", display: "inline-block" }} />
                         {stats.redHits} rød
@@ -257,10 +257,10 @@ export function BullDuelWinnerScreen({
             <p className="mb-4 section-label">DET SOM STAKK UT</p>
             <div className="grid grid-cols-2 gap-3">
               {insights.map((a) => (
-                <div key={a.title} className="rounded-xl p-3 text-left" style={{ background: "var(--color-surface-2)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06), inset 0 1px 0 rgba(255,255,255,0.07)" }}>
-                  <p style={{ color: "var(--color-gold)", fontSize: "0.65rem", letterSpacing: "0.14em", fontWeight: 600, textTransform: "uppercase" }}>{a.title}</p>
-                  <p className="font-display truncate" style={{ color: "var(--color-cream)", fontSize: "1.2rem" }}>{a.who}</p>
-                  <p style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>{a.detail}</p>
+                <div key={a.title} className="rounded-xl p-3 text-left" style={{ background: "var(--color-surface-2)", boxShadow: "inset 0 0 0 1px var(--veil), inset 0 1px 0 var(--veil)" }}>
+                  <p style={{ color: "var(--color-gold)", fontSize: "var(--text-micro)", letterSpacing: "0.14em", fontWeight: 600, textTransform: "uppercase" }}>{a.title}</p>
+                  <p className="font-display truncate" style={{ color: "var(--color-cream)", fontSize: "var(--text-title)" }}>{a.who}</p>
+                  <p style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>{a.detail}</p>
                 </div>
               ))}
             </div>
@@ -271,10 +271,10 @@ export function BullDuelWinnerScreen({
           <div className="shadow-panel rounded-xl p-4 mb-6" style={{ background: "var(--color-surface)" }}>
             <p className="mb-3 section-label">POENG RUNDE FOR RUNDE</p>
             <PointsRace duel={duel} winner={winner} />
-            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 justify-center" style={{ fontSize: "0.75rem", color: "var(--color-muted)" }}>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 justify-center" style={{ fontSize: "var(--text-micro)", color: "var(--color-muted)" }}>
               {duel.players.map((p, i) => (
                 <span key={p} className="flex items-center gap-1.5">
-                  <span aria-hidden style={{ width: 10, height: 3, borderRadius: 2, background: p === winner ? "#f0d080" : SIDE_COLORS[i % SIDE_COLORS.length], display: "inline-block" }} />
+                  <span aria-hidden style={{ width: 10, height: 3, borderRadius: 2, background: p === winner ? "var(--color-gold-strong)" : SIDE_COLORS[i % SIDE_COLORS.length], display: "inline-block" }} />
                   {p}
                 </span>
               ))}
@@ -295,7 +295,7 @@ export function BullDuelWinnerScreen({
                     aria-checked={p === spreadFor}
                     onClick={() => setSpreadFor(p)}
                     className={`tactile px-4 rounded-lg text-sm ${FOCUS_RING}`}
-                    style={{ minHeight: "2.5rem", background: p === spreadFor ? "var(--teal-soft)" : "var(--color-cell)", color: p === spreadFor ? "var(--color-teal)" : "var(--color-muted)", border: p === spreadFor ? "1px solid var(--color-teal)" : "1px solid var(--color-border)" }}
+                    style={{ minHeight: "var(--control)", background: p === spreadFor ? "var(--teal-soft)" : "var(--color-cell)", color: p === spreadFor ? "var(--color-teal)" : "var(--color-muted)", border: p === spreadFor ? "1px solid var(--color-teal)" : "1px solid var(--color-border)" }}
                   >
                     {p}
                   </button>

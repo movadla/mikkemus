@@ -18,7 +18,7 @@ export function FxMenu({ onClose }: { onClose: () => void }) {
   const [askSimple, setAskSimple] = useState(false);
   return (
     <div className="fixed inset-0 z-[56] flex items-start justify-center px-4" role="dialog" aria-modal="true" aria-label="Effekter">
-      <button type="button" aria-label="Lukk" onClick={onClose} className="absolute inset-0 w-full h-full" style={{ background: "rgba(0,0,0,0.5)" }} />
+      <button type="button" aria-label="Lukk" onClick={onClose} className="absolute inset-0 w-full h-full" style={{ background: "var(--scrim-soft)" }} />
       <div className="relative mt-16 w-full max-w-sm rounded-2xl p-4" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
         <p className="section-label text-center mb-3">ANIMASJON OG LYD</p>
         <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Animasjon og lyd">
@@ -41,11 +41,11 @@ export function FxMenu({ onClose }: { onClose: () => void }) {
                 }}
                 className={`tactile rounded-lg font-medium ${FOCUS_RING}`}
                 style={{
-                  minHeight: "3rem",
+                  minHeight: "var(--control-lg)",
                   background: selected ? "var(--teal-soft)" : "var(--color-cell)",
                   color: selected ? "var(--color-teal)" : "var(--color-muted)",
                   border: selected ? "1px solid var(--color-teal)" : "1px solid var(--color-border)",
-                  fontSize: "0.9rem",
+                  fontSize: "var(--text-body)",
                 }}
               >
                 {FX_LABELS[l]}
@@ -55,9 +55,9 @@ export function FxMenu({ onClose }: { onClose: () => void }) {
         </div>
         {askSimple && (
           <div className="mt-3 rounded-lg p-3 text-center" style={{ background: "var(--color-cell)", border: "1px solid var(--color-red)" }}>
-            <p style={{ color: "var(--color-cream)", fontSize: "0.9rem" }}>Bytt til Enkel? Kampen teller ikke.</p>
+            <p style={{ color: "var(--color-cream)", fontSize: "var(--text-body)" }}>Bytt til Enkel? Kampen teller ikke.</p>
             <div className="flex gap-2 mt-2">
-              <button type="button" onClick={() => setAskSimple(false)} className={`tactile flex-1 rounded-lg ${FOCUS_RING}`} style={{ minHeight: "2.75rem", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}>
+              <button type="button" onClick={() => setAskSimple(false)} className={`tactile flex-1 rounded-lg ${FOCUS_RING}`} style={{ minHeight: "var(--control)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}>
                 Avbryt
               </button>
               <button
@@ -67,7 +67,7 @@ export function FxMenu({ onClose }: { onClose: () => void }) {
                   onClose();
                 }}
                 className={`tactile flex-1 rounded-lg font-medium ${FOCUS_RING}`}
-                style={{ minHeight: "2.75rem", background: "var(--color-red)", color: "var(--color-bg)" }}
+                style={{ minHeight: "var(--control)", background: "var(--color-red)", color: "var(--color-bg)" }}
               >
                 Bytt til Enkel
               </button>

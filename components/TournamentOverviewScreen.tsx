@@ -20,7 +20,7 @@ function MovementMark({ placesGained }: { placesGained: number | null }) {
   return (
     <span
       aria-label={up ? `opp ${placesGained} plasser` : `ned ${-placesGained} plasser`}
-      style={{ color: up ? "var(--color-green)" : "var(--color-red)", fontSize: "0.75rem", marginLeft: "0.5rem" }}
+      style={{ color: up ? "var(--color-green)" : "var(--color-red)", fontSize: "var(--text-micro)", marginLeft: "0.5rem" }}
     >
       {up ? "▲" : "▼"}
       {Math.abs(placesGained)}
@@ -49,30 +49,30 @@ function StandingsTable({ names, matches, justPlayedId = null }: { names: string
             style={{
               gridTemplateColumns: TABLE_COLUMNS,
               gap: "0.25rem",
-              minHeight: "2.75rem",
+              minHeight: "var(--control)",
               background: "var(--color-surface)",
               border: r.inMatch ? "1px solid var(--color-teal)" : "1px solid transparent",
             }}
           >
-            <span role="cell" className="tabular" style={{ color: i === 0 && r.played > 0 ? "var(--color-gold)" : "var(--color-muted)", fontSize: "0.9rem" }}>
+            <span role="cell" className="tabular" style={{ color: i === 0 && r.played > 0 ? "var(--color-gold)" : "var(--color-muted)", fontSize: "var(--text-body)" }}>
               {i + 1}
             </span>
-            <span role="cell" className="flex items-center min-w-0" style={{ color: "var(--color-cream)", fontSize: "0.92rem" }}>
+            <span role="cell" className="flex items-center min-w-0" style={{ color: "var(--color-cream)", fontSize: "var(--text-body)" }}>
               <span className="truncate">{r.name}</span>
               <MovementMark placesGained={r.placesGained} />
             </span>
-            <span role="cell" className="tabular text-center" style={{ color: "var(--color-muted)", fontSize: "0.85rem" }}>
+            <span role="cell" className="tabular text-center" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
               {r.played}
             </span>
-            <span role="cell" className="tabular text-center" style={{ color: "var(--color-cream)", fontSize: "0.85rem" }}>
+            <span role="cell" className="tabular text-center" style={{ color: "var(--color-cream)", fontSize: "var(--text-small)" }}>
               {r.wins}
             </span>
-            <span role="cell" className="tabular text-center" style={{ color: "var(--color-muted)", fontSize: "0.85rem" }}>
+            <span role="cell" className="tabular text-center" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
               {r.losses}
             </span>
-            <span role="cell" className="tabular text-right" style={{ color: "var(--color-teal)", fontSize: "0.95rem", fontWeight: 700 }}>
+            <span role="cell" className="tabular text-right" style={{ color: "var(--color-teal)", fontSize: "var(--text-body)", fontWeight: 700 }}>
               {r.points}
-              {r.pointsGained > 0 && <span style={{ color: "var(--color-green)", fontSize: "0.75rem", marginLeft: "0.25rem" }}>+{r.pointsGained}</span>}
+              {r.pointsGained > 0 && <span style={{ color: "var(--color-green)", fontSize: "var(--text-micro)", marginLeft: "0.25rem" }}>+{r.pointsGained}</span>}
             </span>
           </div>
         ))}
@@ -92,13 +92,13 @@ function JustPlayedCard({ match, tournament }: { match: TournamentMatch; tournam
   return (
     <div className="shadow-panel rounded-xl p-4 mb-4" style={{ background: "var(--color-panel)", border: "1px solid var(--color-teal)" }}>
       <p className="section-label mb-2">RESULTAT · {round.toUpperCase()}</p>
-      <p className="mb-4" style={{ color: "var(--color-cream)", fontSize: "1.1rem" }}>
-        <span className="font-display" style={{ color: "var(--color-gold)", fontSize: "1.3rem" }}>
+      <p className="mb-4" style={{ color: "var(--color-cream)", fontSize: "var(--text-title)" }}>
+        <span className="font-display" style={{ color: "var(--color-gold)", fontSize: "var(--text-title)" }}>
           {winner}
         </span>{" "}
         {participants.length === 2 ? <>vant over {participants.find((p) => p !== winner)}</> : <>vant · {match.placements?.join(" › ")}</>}
         {participants.every((p) => darts(p) !== undefined) && (
-          <span className="tabular" style={{ color: "var(--color-muted)", fontSize: "0.85rem" }}>
+          <span className="tabular" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
             {" "}
             · {participants.map((p) => darts(p)).join("–")} piler
           </span>
@@ -115,8 +115,8 @@ function MatchRow({ match }: { match: TournamentMatch }) {
   const darts = participants.map((p) => match.stats?.[p]?.darts);
   const showDarts = done && !match.isBye && darts.every((d) => d !== undefined);
   return (
-    <div className="flex items-center justify-between gap-4 px-4 py-2 rounded-lg" style={{ background: "var(--color-surface)", minHeight: "2.75rem" }}>
-      <span style={{ color: "var(--color-cream)", fontSize: "0.85rem" }}>
+    <div className="flex items-center justify-between gap-4 px-4 py-2 rounded-lg" style={{ background: "var(--color-surface)", minHeight: "var(--control)" }}>
+      <span style={{ color: "var(--color-cream)", fontSize: "var(--text-small)" }}>
         {participants.map((p, i) => (
           <span key={p}>
             {i > 0 && " vs "}
@@ -125,7 +125,7 @@ function MatchRow({ match }: { match: TournamentMatch }) {
         ))}
       </span>
       {done && (
-        <span className="tabular text-right shrink-0" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>
+        <span className="tabular text-right shrink-0" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>
           {/* A pod with more than 2 players shows the full finishing order, since "vant" alone
               wouldn't say who came 2nd/3rd; a normal 1-vs-1 match keeps today's plain wording. A
               bye never actually played, so it gets its own wording instead of reading as a win. */}
@@ -190,7 +190,7 @@ function PodiumCard({ podium, trophy }: { podium: Podium; trophy?: string }) {
         {places.map(({ name, place, height }) => (
           <div key={place} role="listitem" className="flex-1 min-w-0 flex flex-col items-center gap-2">
             {place === 1 && <TrophyIcon className="w-6 h-6" />}
-            <p className="font-display truncate w-full text-center" style={{ color: place === 1 ? "var(--color-gold)" : "var(--color-cream)", fontSize: place === 1 ? "1.3rem" : "1rem" }}>
+            <p className="font-display truncate w-full text-center" style={{ color: place === 1 ? "var(--color-gold)" : "var(--color-cream)", fontSize: place === 1 ? "var(--text-title)" : "var(--text-body)" }}>
               {name ?? "–"}
             </p>
             <div
@@ -202,7 +202,7 @@ function PodiumCard({ podium, trophy }: { podium: Podium; trophy?: string }) {
                 borderBottom: "none",
               }}
             >
-              <span className="font-display" style={{ fontSize: "1.6rem", color: place === 1 ? "var(--color-bg)" : "var(--color-muted)" }}>
+              <span className="font-display" style={{ fontSize: "var(--text-num)", color: place === 1 ? "var(--color-bg)" : "var(--color-muted)" }}>
                 {place}
               </span>
             </div>
@@ -261,7 +261,7 @@ export function TournamentOverviewScreen({
         <ScreenTop title={tournament.cup?.name ?? "Turnering"} onBack={onExitToHome} />
 
         {tournament.cup && !finished && (
-          <p className="mb-4 text-center" style={{ color: "var(--color-muted)", fontSize: "0.85rem" }}>
+          <p className="mb-4 text-center" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
             Dere spiller om {tournament.cup.trophy}
           </p>
         )}
@@ -287,7 +287,7 @@ export function TournamentOverviewScreen({
             type="button"
             onClick={() => onPlayNext(nextMatch)}
             className={`glossy w-full rounded-xl font-semibold text-lg mb-4 ${FOCUS_RING}`}
-            style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", minHeight: "3.25rem" } as React.CSSProperties}
+            style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", minHeight: "var(--control-lg)" } as React.CSSProperties}
           >
             Neste kamp: {matchParticipants(nextMatch).join(" vs ")}
           </button>
@@ -300,7 +300,7 @@ export function TournamentOverviewScreen({
               {/* The group that has just played has its table in the result card above; showing it
                   again right under would only be the same numbers twice. */}
               {justPlayed?.round === "group" && justPlayed.groupIndex === gi ? (
-                <p style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>Tabellen står i resultatkortet over.</p>
+                <p style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>Tabellen står i resultatkortet over.</p>
               ) : (
                 <StandingsTable names={group} matches={tournament.matches.filter((m) => m.groupIndex === gi)} />
               )}
@@ -323,8 +323,8 @@ export function TournamentOverviewScreen({
                   </p>
                   <div className="space-y-2">
                     {preview.matches.map((m, i) => (
-                      <div key={i} className="flex items-center px-4 rounded-lg" style={{ background: "var(--color-surface)", minHeight: "2.75rem" }}>
-                        <span style={{ color: "var(--color-cream)", fontSize: "0.85rem" }}>
+                      <div key={i} className="flex items-center px-4 rounded-lg" style={{ background: "var(--color-surface)", minHeight: "var(--control)" }}>
+                        <span style={{ color: "var(--color-cream)", fontSize: "var(--text-small)" }}>
                           {m.labelA}
                           {m.labelB ? ` vs ${m.labelB}` : " · walkover"}
                         </span>
@@ -372,7 +372,7 @@ export function TournamentOverviewScreen({
             type="button"
             onClick={() => setShowCancelConfirm(true)}
             className={`tactile w-full rounded-lg text-sm ${FOCUS_RING}`}
-            style={{ minHeight: "2.75rem", background: "var(--color-surface)", color: "var(--color-red)", border: "1px solid var(--color-border)" }}
+            style={{ minHeight: "var(--control)", background: "var(--color-surface)", color: "var(--color-red)", border: "1px solid var(--color-border)" }}
           >
             Avbryt turnering
           </button>

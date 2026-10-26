@@ -7,10 +7,10 @@ const SLIDE_MS = 2800;
 
 /** The colours of the cards, in turn: each a gradient with the text colour that reads on it. */
 const LOOKS: { bg: string; fg: string }[] = [
-  { bg: "linear-gradient(160deg,#d9ae4f,#7a5815)", fg: "#1a1508" },
-  { bg: "linear-gradient(160deg,#34c3d2,#124e57)", fg: "#04181b" },
-  { bg: "linear-gradient(160deg,#e25a45,#5c1a10)", fg: "#fff2ee" },
-  { bg: "linear-gradient(160deg,#58b072,#173323)", fg: "#eaf7ee" },
+  { bg: "linear-gradient(160deg,var(--color-gold),#7a5815)", fg: "#1a1508" },
+  { bg: "linear-gradient(160deg,var(--color-teal),#124e57)", fg: "#04181b" },
+  { bg: "linear-gradient(160deg,var(--color-red),#5c1a10)", fg: "#fff2ee" },
+  { bg: "linear-gradient(160deg,var(--color-green),#173323)", fg: "#eaf7ee" },
 ];
 
 /**
@@ -59,10 +59,10 @@ export function NightStory({ slides, onClose }: { slides: StorySlide[]; onClose:
           ))}
         </div>
         <div key={i} style={{ animation: "story-in 600ms cubic-bezier(0.2,0.9,0.2,1) both" }}>
-          <p style={{ fontSize: "0.72rem", letterSpacing: "0.18em", fontWeight: 600, opacity: 0.85 }}>{s.label}</p>
+          <p style={{ fontSize: "var(--text-micro)", letterSpacing: "0.18em", fontWeight: 600, opacity: 0.85 }}>{s.label}</p>
           <p className="font-display" style={{ fontSize: s.big.length > 6 ? "2.8rem" : "4.6rem", lineHeight: 1.02, margin: "14px 0 10px", wordBreak: "break-word" }}>{s.big}</p>
-          <p className="font-display" style={{ fontSize: "1.4rem", lineHeight: 1.2 }}>{s.title}</p>
-          {s.sub && <p style={{ fontSize: "0.9rem", opacity: 0.85, marginTop: 10 }}>{s.sub}</p>}
+          <p className="font-display" style={{ fontSize: "var(--text-title)", lineHeight: 1.2 }}>{s.title}</p>
+          {s.sub && <p style={{ fontSize: "var(--text-body)", opacity: 0.85, marginTop: 10 }}>{s.sub}</p>}
         </div>
       </div>
       <button
@@ -70,7 +70,7 @@ export function NightStory({ slides, onClose }: { slides: StorySlide[]; onClose:
         onClick={onClose}
         aria-label="Lukk"
         className="absolute rounded-full flex items-center justify-center outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]"
-        style={{ top: "calc(env(safe-area-inset-top, 0px) + 12px)", right: 12, width: 44, height: 44, background: "rgba(255,255,255,0.12)", color: "var(--color-cream)", fontSize: "1.3rem" }}
+        style={{ top: "calc(env(safe-area-inset-top, 0px) + 12px)", right: 12, width: 44, height: 44, background: "rgba(255,255,255,0.12)", color: "var(--color-cream)", fontSize: "var(--text-title)" }}
       >
         ×
       </button>

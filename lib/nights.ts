@@ -1,5 +1,6 @@
 import type { MatchHistoryEntry, PlayerRecord } from "./storage";
 import { shownHitPct } from "./playerRows";
+import { dayLabel } from "./formatDate";
 
 /** The hour a dart night is taken to end: a match after midnight still belongs to the evening before. */
 const NIGHT_ENDS_HOUR = 5;
@@ -46,8 +47,7 @@ export function groupNights(roster: PlayerRecord[]): NightSummary[] {
 }
 
 export function formatNightDate(iso: string): string {
-  const d = new Date(`${iso}T00:00:00`);
-  return d.toLocaleDateString("nb-NO", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  return dayLabel(iso);
 }
 
 function avg(values: number[]): number | null {

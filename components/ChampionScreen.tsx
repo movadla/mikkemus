@@ -51,7 +51,7 @@ export function ChampionScreen({
       {shirts && <ShirtRain kit={shirts} heavy={fx.bigConfetti} />}
       <div className="relative z-10 mx-auto w-full px-4 pt-6 pb-10" style={{ maxWidth: "36rem" }}>
         {onClose && (
-          <button type="button" onClick={onClose} className={`tactile rounded-lg text-sm mb-4 ${FOCUS_RING}`} style={{ minHeight: "2.75rem", padding: "0 1rem", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}>
+          <button type="button" onClick={onClose} className={`tactile rounded-lg text-sm mb-4 ${FOCUS_RING}`} style={{ minHeight: "var(--control)", padding: "0 1rem", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}>
             ← Tilbake
           </button>
         )}
@@ -68,12 +68,12 @@ export function ChampionScreen({
           </p>
         )}
         {winnerSide?.members && (
-          <p className="text-center" style={{ color: "var(--color-muted)", fontSize: "0.9rem" }}>
+          <p className="text-center" style={{ color: "var(--color-muted)", fontSize: "var(--text-body)" }}>
             {winnerSide.members.map((m) => m.name).join(" og ")}
           </p>
         )}
         {houseOut.length > 0 && !isHouseName(tournament, winner) && (
-          <p className="text-center mt-2" style={{ color: "var(--color-muted)", fontSize: "0.9rem" }}>
+          <p className="text-center mt-2" style={{ color: "var(--color-muted)", fontSize: "var(--text-body)" }}>
             {houseOut.map((p) => `${p.name} ute i ${roundName(outIn(tournament, p.name)!).toLowerCase()}`).join(" · ")}
           </p>
         )}
@@ -87,13 +87,13 @@ export function ChampionScreen({
                 const theirs = r.opponent ? r.match.stats?.[r.opponent] : undefined;
                 return (
                   <li key={r.match.id} className="flex items-baseline justify-between gap-3">
-                    <span style={{ color: "var(--color-muted)", fontSize: "0.8rem", minWidth: "6.5rem" }}>{r.label}</span>
+                    <span style={{ color: "var(--color-muted)", fontSize: "var(--text-small)", minWidth: "6.5rem" }}>{r.label}</span>
                     <span className="flex-1 truncate" style={{ color: "var(--color-cream)" }}>
                       {r.won ? "slo " : "tapte for "}
                       <span style={{ fontWeight: 600 }}>{r.opponent ?? "walkover"}</span>
                     </span>
                     {mine && theirs && (
-                      <span className="tabular shrink-0" style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>
+                      <span className="tabular shrink-0" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
                         {mine.darts}–{theirs.darts} piler
                       </span>
                     )}
@@ -110,10 +110,10 @@ export function ChampionScreen({
             <div className="space-y-2">
               {prizes.map((a) => (
                 <div key={a.title} className="flex items-baseline justify-between gap-3">
-                  <span style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>{a.title}</span>
+                  <span style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>{a.title}</span>
                   <span className="text-right" style={{ color: "var(--color-cream)" }}>
                     <span style={{ color: "var(--color-gold)", fontWeight: 600 }}>{a.name}</span>
-                    <span className="block" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>
+                    <span className="block" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>
                       {a.detail}
                     </span>
                   </span>
@@ -133,7 +133,7 @@ export function ChampionScreen({
           </section>
         )}
 
-        <button type="button" onClick={() => setShowBracket((v) => !v)} className={`tactile w-full rounded-lg mt-4 ${FOCUS_RING}`} style={{ minHeight: "2.75rem", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}>
+        <button type="button" onClick={() => setShowBracket((v) => !v)} className={`tactile w-full rounded-lg mt-4 ${FOCUS_RING}`} style={{ minHeight: "var(--control)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}>
           Brakett
         </button>
         {showBracket && (
@@ -144,17 +144,17 @@ export function ChampionScreen({
 
         <div className="space-y-2 mt-6">
           {onNewWithSame && (
-            <button type="button" onClick={onNewWithSame} className={`glossy w-full rounded-xl font-semibold text-lg ${FOCUS_RING}`} style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", minHeight: "3.25rem" } as React.CSSProperties}>
+            <button type="button" onClick={onNewWithSame} className={`glossy w-full rounded-xl font-semibold text-lg ${FOCUS_RING}`} style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", minHeight: "var(--control-lg)" } as React.CSSProperties}>
               Spill igjen
             </button>
           )}
           {onUndo && undoableMatch(tournament) && (
-            <button type="button" onClick={onUndo} className={`tactile w-full rounded-lg text-sm ${FOCUS_RING}`} style={{ minHeight: "2.75rem", background: "transparent", color: "var(--color-muted)", border: "1px solid var(--color-border)" }}>
+            <button type="button" onClick={onUndo} className={`tactile w-full rounded-lg text-sm ${FOCUS_RING}`} style={{ minHeight: "var(--control)", background: "transparent", color: "var(--color-muted)", border: "1px solid var(--color-border)" }}>
               Angre finalen
             </button>
           )}
           {onHome && (
-            <button type="button" onClick={onHome} className={`tactile w-full rounded-lg ${FOCUS_RING}`} style={{ minHeight: "2.75rem", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}>
+            <button type="button" onClick={onHome} className={`tactile w-full rounded-lg ${FOCUS_RING}`} style={{ minHeight: "var(--control)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}>
               Til forsiden
             </button>
           )}

@@ -51,3 +51,7 @@ scolia-relay-run.log
 
 .vercel
 .env*
+
+# playwright
+/test-results/
+/playwright-report/

@@ -16,14 +16,19 @@ export const BOT_LEVEL_ORDER: BotLevel[] = ["1", "2", "3", "4", "5", "6"];
  *  (just under Vadla and just under Hans). Level 6 still exists for matches that already have it. */
 export const BOT_LEVEL_PICKABLE: BotLevel[] = ["1", "2", "3", "4", "5"];
 
-/** The level as a medal — gold is the strongest, as with the players it is named after. */
-export function botLevelBadge(level: BotLevel): string {
-  return level === "1" ? "🥇" : level === "2" ? "🥈" : level === "3" ? "🥉" : level === "4" || level === "5" ? "" : `(${level})`;
+/** Which medal a level carries, if any: gold is the strongest, as with the players it is named after. */
+export function botLevelMedal(level: BotLevel): 0 | 1 | 2 | null {
+  return level === "1" ? 0 : level === "2" ? 1 : level === "3" ? 2 : null;
 }
 
-/** The name a bot plays under: "Littler 🥇". No robot suffix — everyone at the board knows. */
+/** The name a bot plays under: "Littler". The medal is drawn beside it where it matters (see LevelBadge), not written into the name. */
 export function botDisplayName(level: BotLevel): string {
-  return `${BOT_LEVELS[level].name} ${botLevelBadge(level)}`.trim();
+  return BOT_LEVELS[level].name;
+}
+
+/** A name as older matches wrote it, with the medal after it ("Littler 🥇"), without the medal. */
+export function plainName(name: string): string {
+  return name.replace(/\s*[\u{1F947}-\u{1F949}]/gu, "").replace(/\s{2,}/g, " ").trim();
 }
 
 /** One entrant in a shared-board team — a real person or a bot, mixed freely. The game engine

@@ -105,7 +105,7 @@ export function TeamPicker({ teams, onChange, botsAllowed }: { teams: PickedTeam
                 onClick={() => toggle(tile)}
                 className={`tactile flex items-center gap-2 pl-2 pr-2 rounded-lg text-left ${FOCUS_RING}`}
                 style={{
-                  minHeight: "3.25rem",
+                  minHeight: "var(--control-lg)",
                   background: selected ? "var(--teal-soft)" : "var(--color-surface)",
                   border: selected ? "1px solid var(--color-teal)" : "1px solid var(--color-border)",
                   opacity: blocked ? 0.4 : 1,
@@ -113,17 +113,17 @@ export function TeamPicker({ teams, onChange, botsAllowed }: { teams: PickedTeam
               >
                 <TeamKit kit={tile.kit} size={28} />
                 <span className="flex-1 min-w-0">
-                  <span className="block truncate" style={{ color: selected ? "var(--color-cream)" : "var(--color-muted)", fontSize: "0.9rem", fontWeight: selected ? 600 : 400 }}>
+                  <span className="block truncate" style={{ color: selected ? "var(--color-cream)" : "var(--color-muted)", fontSize: "var(--text-body)", fontWeight: selected ? 600 : 400 }}>
                     {tile.name}
                   </span>
-                  <span className="block truncate" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>
+                  <span className="block truncate" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>
                     {tile.members.join(", ")}
                   </span>
                 </span>
                 {selected && (
                   <span
                     className="tabular rounded-full shrink-0 flex items-center justify-center"
-                    style={{ width: "1.375rem", height: "1.375rem", background: "var(--color-teal)", color: "var(--color-bg)", fontSize: "0.75rem", fontWeight: 700 }}
+                    style={{ width: "1.375rem", height: "1.375rem", background: "var(--color-teal)", color: "var(--color-bg)", fontSize: "var(--text-micro)", fontWeight: 700 }}
                     aria-label={`nummer ${order + 1}`}
                   >
                     {order + 1}
@@ -140,9 +140,9 @@ export function TeamPicker({ teams, onChange, botsAllowed }: { teams: PickedTeam
           type="button"
           onClick={openComposer}
           className={`tactile w-full rounded-lg text-sm font-medium flex items-center justify-center gap-2 ${FOCUS_RING}`}
-          style={{ minHeight: "2.75rem", background: "var(--color-surface)", border: "1.5px dashed var(--color-teal)", color: "var(--color-teal)" }}
+          style={{ minHeight: "var(--control)", background: "var(--color-surface)", border: "1.5px dashed var(--color-teal)", color: "var(--color-teal)" }}
         >
-          <span aria-hidden style={{ fontSize: "1.05rem", lineHeight: 1, fontWeight: 700 }}>
+          <span aria-hidden style={{ fontSize: "var(--text-body)", lineHeight: 1, fontWeight: 700 }}>
             +
           </span>
           Nytt lag
@@ -168,10 +168,10 @@ export function TeamPicker({ teams, onChange, botsAllowed }: { teams: PickedTeam
             placeholder={defaultTeamName(members.map((m) => m.name)) || "Lagnavn"}
             aria-label="Lagnavn"
             className={`w-full px-4 rounded-lg mb-4 ${FOCUS_RING}`}
-            style={{ minHeight: "2.75rem", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
+            style={{ minHeight: "var(--control)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
           />
           {error && (
-            <p role="alert" className="mb-4" style={{ color: "var(--color-red)", fontSize: "0.75rem" }}>
+            <p role="alert" className="mb-4" style={{ color: "var(--color-red)", fontSize: "var(--text-micro)" }}>
               {error}
             </p>
           )}
@@ -180,7 +180,7 @@ export function TeamPicker({ teams, onChange, botsAllowed }: { teams: PickedTeam
               type="button"
               onClick={addTeam}
               className={`glossy flex-1 rounded-lg font-medium ${FOCUS_RING}`}
-              style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", minHeight: "2.75rem" } as React.CSSProperties}
+              style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", minHeight: "var(--control)" } as React.CSSProperties}
             >
               Legg til laget
             </button>
@@ -188,7 +188,7 @@ export function TeamPicker({ teams, onChange, botsAllowed }: { teams: PickedTeam
               type="button"
               onClick={() => setComposing(false)}
               className={`tactile px-4 rounded-lg ${FOCUS_RING}`}
-              style={{ minHeight: "2.75rem", background: "var(--color-surface)", color: "var(--color-muted)", border: "1px solid var(--color-border)" }}
+              style={{ minHeight: "var(--control)", background: "var(--color-surface)", color: "var(--color-muted)", border: "1px solid var(--color-border)" }}
             >
               Avbryt
             </button>

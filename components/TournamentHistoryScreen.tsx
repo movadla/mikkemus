@@ -2,13 +2,16 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { listFinishedTournaments } from "@/lib/tournamentStorage";
-import { podium, type Tournament } from "@/lib/tournament";
+import { dayLabel } from "@/lib/formatDate";
+import { podium, tournamentTitle, type Tournament } from "@/lib/tournament";
 import { ChampionScreen } from "./ChampionScreen";
 import { ScreenTop } from "./ScreenTop";
 import { TrophyIcon } from "./icons";
-
-const FOCUS_RING =
-  "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
+import { EmptyState } from "./ui/EmptyState";
+import { Row } from "./ui/Row";
+import { Section } from "./ui/Section";
+import { SkeletonRows } from "./ui/Skeleton";
+import { FOCUS_RING } from "./ui/focus";
 
 /** Cups won by each winner, most first. A cup played for fun against bots counts like any other: it is theirs to show. */
 export function trophyCount(tournaments: Tournament[]): { name: string; cups: number }[] {
@@ -17,7 +20,50 @@ export function trophyCount(tournaments: Tournament[]): { name: string; cups: nu
   return [...counts.entries()].map(([name, cups]) => ({ name, cups })).sort((a, b) => b.cups - a.cups || a.name.localeCompare(b.name, "no"));
 }
 
-/** The trophy cabinet: every cup that was played to the end, newest first, and who has won most of them. */
+/** Cups a shelf holds before the next one starts. */
+const PER_SHELF = 5;
+
+/** One winner's trophies, standing on a shelf: tap one to see how it was won. */
+function Shelf({ name, cups, onOpen }: { name: string; cups: Tournament[]; onOpen: (t: Tournament) => void }) {
+  const rows: Tournament[][] = [];
+  for (let i = 0; i < cups.length; i += PER_SHELF) rows.push(cups.slice(i, i + PER_SHELF));
+  return (
+    <div className="mb-5">
+      <p className="flex items-baseline justify-between gap-3 mb-2">
+        <span className="font-display" style={{ color: "var(--color-cream)", fontSize: "var(--text-title)" }}>
+          {name}
+        </span>
+        <span className="tabular" style={{ color: "var(--color-gold)", fontSize: "var(--text-body)", fontWeight: 700 }}>
+          {cups.length}
+        </span>
+      </p>
+      <div style={{ borderRadius: "var(--radius-m)", background: "var(--color-panel)", border: "1px solid var(--color-border)", overflow: "hidden" }}>
+        {rows.map((row, r) => (
+          <div key={r}>
+            <div className="flex items-end gap-1 px-3 pt-3" style={{ minHeight: "4.5rem" }}>
+              {row.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => onOpen(t)}
+                  aria-label={`${tournamentTitle(t)}, ${dayLabel(t.completedAt ?? t.createdAt)}`}
+                  className={`tactile flex flex-col items-center justify-end ${FOCUS_RING}`}
+                  style={{ width: "3rem", minHeight: "var(--control-lg)", color: "var(--color-gold)", background: "transparent", boxShadow: "none" }}
+                >
+                  <TrophyIcon className="w-9 h-9" />
+                </button>
+              ))}
+            </div>
+            {/* The shelf board the trophies stand on. */}
+            <div style={{ height: "0.5rem", background: "linear-gradient(to bottom, var(--color-surface-2), var(--color-cell))", borderTop: "1px solid var(--color-hairline)" }} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** The trophy cabinet: a shelf for each winner with a trophy for every cup won, and below it every cup that was played to the end, newest first. */
 export function TournamentHistoryScreen({ onBack }: { onBack: () => void }) {
   const [list, setList] = useState<Tournament[] | null>(null);
   const [open, setOpen] = useState<Tournament | null>(null);
@@ -34,55 +80,33 @@ export function TournamentHistoryScreen({ onBack }: { onBack: () => void }) {
 
   if (open) return <ChampionScreen tournament={open} onClose={() => setOpen(null)} />;
   return (
-    <div className="animate-screen-enter screen" style={{ background: "var(--color-bg)" }}>
+    <div className="animate-screen-push screen" style={{ background: "var(--color-bg)" }}>
       <div className="screen-inner">
-        <ScreenTop title="Pokaler" onBack={onBack} backLabel="← Tilbake" />
-        {list === null && <p className="text-center" style={{ color: "var(--color-muted)" }}>Henter …</p>}
-        {list !== null && list.length === 0 && (
-          <p className="text-center py-8" style={{ color: "var(--color-muted)" }}>
-            Ingen pokaler ennå
-          </p>
+        <ScreenTop title="Pokaler" onBack={onBack} />
+        {list === null && <SkeletonRows count={3} />}
+        {list !== null && list.length === 0 && <EmptyState icon={<TrophyIcon className="w-6 h-6" />} title="Ingen pokaler ennå" />}
+        {counts.map((c) => (
+          <Shelf key={c.name} name={c.name} cups={(list ?? []).filter((t) => t.winner === c.name)} onOpen={setOpen} />
+        ))}
+        {(list ?? []).length > 0 && (
+          <Section label="Alle">
+            <div className="space-y-2">
+              {(list ?? []).map((t) => {
+                const places = podium(t);
+                return (
+                  <Row
+                    key={t.id}
+                    onClick={() => setOpen(t)}
+                    leading={<TrophyIcon className="w-5 h-5" />}
+                    title={t.winner ?? "Turnering"}
+                    subtitle={`${t.name ?? t.cup?.trophy ?? "Turnering"} · ${dayLabel(t.completedAt ?? t.createdAt)}${places?.second ? ` · finale mot ${places.second}` : ""}`}
+                    tone="gold"
+                  />
+                );
+              })}
+            </div>
+          </Section>
         )}
-        {counts.length > 0 && (
-          <section className="shadow-panel rounded-xl p-4 mb-4" style={{ background: "var(--color-panel)", border: "1px solid var(--color-border)" }}>
-            <ol className="space-y-1">
-              {counts.map((c, i) => (
-                <li key={c.name} className="flex items-center justify-between gap-3" style={{ color: "var(--color-cream)" }}>
-                  <span className="truncate">
-                    <span className="tabular" style={{ color: "var(--color-muted)", marginRight: "0.5rem" }}>{i + 1}.</span>
-                    {c.name}
-                  </span>
-                  <span className="flex items-center gap-1 shrink-0" style={{ color: "var(--color-gold)" }}>
-                    {Array.from({ length: Math.min(c.cups, 6) }).map((_, k) => (
-                      <TrophyIcon key={k} className="w-4 h-4" />
-                    ))}
-                    <span className="tabular" style={{ marginLeft: "0.25rem" }}>{c.cups}</span>
-                  </span>
-                </li>
-              ))}
-            </ol>
-          </section>
-        )}
-        <div className="space-y-2">
-          {(list ?? []).map((t) => {
-            const places = podium(t);
-            return (
-              <button key={t.id} type="button" onClick={() => setOpen(t)} className={`tactile w-full text-left rounded-xl p-4 ${FOCUS_RING}`} style={{ background: "var(--color-panel)", border: "1px solid var(--color-border)" }}>
-                <div className="flex items-baseline justify-between gap-3">
-                  <span className="font-display" style={{ color: "var(--color-gold)", fontSize: "1.2rem" }}>{t.winner}</span>
-                  <span className="tabular shrink-0" style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>{(t.completedAt ?? t.createdAt).slice(0, 10)}</span>
-                </div>
-                <p style={{ color: "var(--color-cream)", fontSize: "0.9rem" }}>
-                  {t.name ?? t.cup?.trophy ?? "Turnering"}
-                  {places?.second ? ` · finale mot ${places.second}` : ""}
-                </p>
-                <p style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>
-                  {t.participants.length} {t.mode === "team" ? "lag" : "deltakere"}
-                </p>
-              </button>
-            );
-          })}
-        </div>
       </div>
     </div>
   );

@@ -90,7 +90,7 @@ export function DrawScreen({
         aria-pressed={picked !== null && order[picked].name === name}
         className={`flex-1 min-w-0 overflow-hidden flex items-center text-left px-3 rounded-lg ${FOCUS_RING}`}
         style={{
-          minHeight: "2.75rem",
+          minHeight: "var(--control)",
           background: picked !== null && order[picked].name === name ? "var(--teal-soft, rgba(52,195,210,0.16))" : "var(--color-cell)",
           border: picked !== null && order[picked].name === name ? "1px solid var(--color-teal)" : "1px solid transparent",
           color: "var(--color-cream)",
@@ -99,24 +99,24 @@ export function DrawScreen({
           transition: "opacity 260ms ease, transform 260ms ease",
         }}
       >
-        <span className="tabular shrink-0" style={{ color: "var(--color-muted)", fontSize: "0.75rem", marginRight: "0.4rem" }}>
+        <span className="tabular shrink-0" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)", marginRight: "0.4rem" }}>
           {seedNo(name)}
         </span>
         <span className="min-w-0 truncate">{name}</span>
       </button>
     ) : (
-      <span className="flex-1 px-3 flex items-center" style={{ minHeight: "2.75rem", color: "var(--color-muted)", fontStyle: "italic", fontSize: "0.85rem", opacity: shown ? 1 : 0, transition: "opacity 260ms ease" }}>
+      <span className="flex-1 px-3 flex items-center" style={{ minHeight: "var(--control)", color: "var(--color-muted)", fontStyle: "italic", fontSize: "var(--text-small)", opacity: shown ? 1 : 0, transition: "opacity 260ms ease" }}>
         Walkover
       </span>
     );
 
   return (
-    <div className="animate-screen-enter screen has-sticky-action" style={{ background: "var(--color-bg)" }}>
+    <div className="animate-screen-push screen has-sticky-action" style={{ background: "var(--color-bg)" }}>
       <div className="screen-inner">
         <ScreenTop title="Trekning" onBack={onBack} backLabel="← Tilbake" />
         <StepStrip step={1} />
         {summary && (
-          <button type="button" onClick={onBack} className={`tactile w-full rounded-lg px-4 flex items-center justify-between gap-3 mb-4 ${FOCUS_RING}`} style={{ minHeight: "2.75rem", background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-cream)", fontSize: "0.9rem" }}>
+          <button type="button" onClick={onBack} className={`tactile w-full rounded-lg px-4 flex items-center justify-between gap-3 mb-4 ${FOCUS_RING}`} style={{ minHeight: "var(--control)", background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-cream)", fontSize: "var(--text-body)" }}>
             <span className="truncate">{summary}</span>
             <span style={{ color: "var(--color-teal)" }}>Endre</span>
           </button>
@@ -130,14 +130,14 @@ export function DrawScreen({
               aria-checked={mode === m}
               onClick={() => choose(m)}
               className={`tactile flex-1 rounded-lg font-medium ${FOCUS_RING}`}
-              style={{ minHeight: "2.75rem", background: mode === m ? "var(--teal-soft)" : "var(--color-surface)", color: mode === m ? "var(--color-teal)" : "var(--color-muted)", border: mode === m ? "1px solid var(--color-teal)" : "1px solid var(--color-border)" }}
+              style={{ minHeight: "var(--control)", background: mode === m ? "var(--teal-soft)" : "var(--color-surface)", color: mode === m ? "var(--color-teal)" : "var(--color-muted)", border: mode === m ? "1px solid var(--color-teal)" : "1px solid var(--color-border)" }}
             >
               {m === "seeded" ? "Seedet" : "Tilfeldig"}
             </button>
           ))}
         </div>
         {mode === "open" && (
-          <p className="mb-3" style={{ color: "var(--color-muted)", fontSize: "0.85rem" }}>
+          <p className="mb-3" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
             Trykk to navn for å bytte
           </p>
         )}
@@ -154,7 +154,7 @@ export function DrawScreen({
         </div>
         {mode === "open" && (
           <div className="flex justify-center mb-4">
-            <button type="button" onClick={again} className={`tactile px-4 rounded-lg text-sm ${FOCUS_RING}`} style={{ minHeight: "2.75rem", color: "var(--color-cream)", background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
+            <button type="button" onClick={again} className={`tactile px-4 rounded-lg text-sm ${FOCUS_RING}`} style={{ minHeight: "var(--control)", color: "var(--color-cream)", background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
               Trekk på nytt
             </button>
           </div>

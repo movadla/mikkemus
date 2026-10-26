@@ -18,7 +18,7 @@ export function RulesPicker({
   variant,
   onChange,
   teamPlay,
-  labelAlign = "center",
+  labelAlign = "left",
 }: {
   variant: GameVariant;
   onChange: (next: GameVariant) => void;
@@ -44,8 +44,8 @@ export function RulesPicker({
               onClick={() => onChange(withBase(variant, v))}
               className={`tactile flex-1 rounded-lg font-medium tabular ${FOCUS_RING}`}
               style={{
-                minHeight: "2.75rem",
-                fontSize: "1.05rem",
+                minHeight: "var(--control)",
+                fontSize: "var(--text-body)",
                 background: selected ? "var(--teal-soft)" : "var(--color-surface)",
                 color: selected ? "var(--color-teal)" : "var(--color-muted)",
                 border: selected ? "1px solid var(--color-teal)" : "1px solid var(--color-border)",
@@ -57,7 +57,7 @@ export function RulesPicker({
         })}
       </div>
       {!RULES[base].countsForStats && (
-        <p className="text-center mt-2" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>
+        <p className="text-center mt-2" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>
           Teller ikke i statistikken
         </p>
       )}
@@ -70,12 +70,12 @@ export function RulesPicker({
           onClick={() => onChange(withStandRule(variant, !stand))}
           className={`tactile w-full mt-4 px-4 rounded-lg flex items-center justify-between gap-4 text-left ${FOCUS_RING}`}
           style={{
-            minHeight: "2.75rem",
+            minHeight: "var(--control)",
             background: stand ? "var(--teal-soft)" : "var(--color-surface)",
             border: stand ? "1px solid var(--color-teal)" : "1px solid var(--color-border)",
           }}
         >
-          <span className="font-medium" style={{ color: stand ? "var(--color-teal)" : "var(--color-cream)", fontSize: "0.9rem" }}>
+          <span className="font-medium" style={{ color: stand ? "var(--color-teal)" : "var(--color-cream)", fontSize: "var(--text-body)" }}>
             Stå ved 3 tellende piler
           </span>
           <span

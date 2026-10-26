@@ -1,16 +1,16 @@
 "use client";
 
-import { Fragment, useEffect, useRef } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { bracketRounds, bronzeMatch, isHouseName, placeholderLabel, seedOf } from "@/lib/knockout";
 import type { Tournament, TournamentMatch } from "@/lib/tournament";
-import { TrophyIcon } from "./icons";
+import { MinusIcon, PlusIcon, TrophyIcon } from "./icons";
 
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
 
 type Metrics = { w: number; h: number; pitch: number; gap: number; top: number; font: string; small: string };
-const NORMAL: Metrics = { w: 160, h: 54, pitch: 68, gap: 30, top: 34, font: "0.8rem", small: "0.62rem" };
-const LARGE: Metrics = { w: 250, h: 70, pitch: 92, gap: 48, top: 44, font: "1.15rem", small: "0.8rem" };
+const NORMAL: Metrics = { w: 160, h: 54, pitch: 68, gap: 30, top: 34, font: "var(--text-small)", small: "var(--text-micro)" };
+const LARGE: Metrics = { w: 250, h: 70, pitch: 92, gap: 48, top: 44, font: "var(--text-title)", small: "var(--text-small)" };
 
 /**
  * The whole knockout as a tree: a column for each round, a box for each match, and a line from every match into the one its winner
@@ -46,15 +46,29 @@ export function BracketTree({
   const just = justDecidedId ? tournament.matches.find((x) => x.id === justDecidedId) : undefined;
   const scroller = useRef<HTMLDivElement>(null);
   const focus = useRef<HTMLDivElement>(null);
+  // Zoom: a tree of five or more rounds (32 and up) starts small enough to be seen whole, and can be pinched or stepped.
+  const [scale, setScale] = useState(rounds.length >= 5 ? 0.5 : 1);
+  const pointers = useRef(new Map<number, { x: number; y: number }>());
+  const pinch = useRef<{ dist: number; scale: number } | null>(null);
+  const zoomable = !large;
+  const zoomTo = (next: number) => setScale(Math.min(1.6, Math.max(0.3, Math.round(next * 100) / 100)));
+  const fit = () => {
+    const box = scroller.current;
+    if (box) zoomTo(Math.min(1, box.clientWidth / width));
+  };
+  const pointerDistance = () => {
+    const [a, b] = [...pointers.current.values()];
+    return Math.hypot(a.x - b.x, a.y - b.y);
+  };
 
   // The match to play next is brought into view, so a long bracket opens where the action is.
   useEffect(() => {
     const box = scroller.current;
     const el = focus.current;
     if (!box || !el) return;
-    const target = el.offsetLeft - (box.clientWidth - el.offsetWidth) / 2;
+    const target = el.offsetLeft * scale - (box.clientWidth - el.offsetWidth * scale) / 2;
     box.scrollTo({ left: Math.max(0, target), behavior: "smooth" });
-  }, [nextId, justDecidedId]);
+  }, [nextId, justDecidedId, scale]);
 
   const side = (match: TournamentMatch, which: "A" | "B") => {
     const name = which === "A" ? match.participantA : match.participantB;
@@ -107,17 +121,17 @@ export function BracketTree({
         {side(match, "A")}
         {side(match, "B")}
         {isNext && (
-          <span className="absolute font-bold" style={{ top: -9, right: 8, background: "var(--color-teal)", color: "var(--color-bg)", fontSize: "0.6rem", letterSpacing: "0.1em", padding: "1px 6px", borderRadius: 4 }}>
+          <span className="absolute font-bold" style={{ top: -9, right: 8, background: "var(--color-teal)", color: "var(--color-bg)", fontSize: "var(--text-micro)", letterSpacing: "0.1em", padding: "1px 6px", borderRadius: 4 }}>
             NESTE
           </span>
         )}
         {match.isBye && (
-          <span className="absolute" style={{ top: -8, left: 8, background: "var(--color-surface)", padding: "0 4px", color: "var(--color-muted)", fontSize: "0.55rem", letterSpacing: "0.08em" }}>
+          <span className="absolute" style={{ top: -8, left: 8, background: "var(--color-surface)", padding: "0 4px", color: "var(--color-muted)", fontSize: "var(--text-micro)", letterSpacing: "0.08em" }}>
             WALKOVER
           </span>
         )}
         {match.simulated && (
-          <span className="absolute" style={{ top: -8, left: 8, background: "var(--color-surface)", padding: "0 4px", color: "var(--color-muted)", fontSize: "0.55rem", letterSpacing: "0.08em" }}>
+          <span className="absolute" style={{ top: -8, left: 8, background: "var(--color-surface)", padding: "0 4px", color: "var(--color-muted)", fontSize: "var(--text-micro)", letterSpacing: "0.08em" }}>
             AUTO
           </span>
         )}
@@ -185,8 +199,45 @@ export function BracketTree({
   }
 
   return (
-    <div ref={scroller} className="overflow-x-auto" style={{ paddingBottom: 8 }}>
-      <div className="relative" style={{ width, height, minWidth: width }} role="group" aria-label="Utslagsbrakett">
+    <div>
+      {zoomable && (
+        <div className="flex items-center justify-end gap-2 mb-2">
+          <button type="button" onClick={fit} className={`tactile px-3 ${FOCUS_RING}`} style={{ minHeight: "var(--control)", borderRadius: "var(--radius-s)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)", fontSize: "var(--text-small)" }}>
+            Tilpass
+          </button>
+          <button type="button" aria-label="Zoom ut" onClick={() => zoomTo(scale - 0.2)} className={`tactile flex items-center justify-center ${FOCUS_RING}`} style={{ width: "var(--control)", height: "var(--control)", borderRadius: "var(--radius-s)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}>
+            <MinusIcon className="w-5 h-5" />
+          </button>
+          <button type="button" aria-label="Zoom inn" onClick={() => zoomTo(scale + 0.2)} className={`tactile flex items-center justify-center ${FOCUS_RING}`} style={{ width: "var(--control)", height: "var(--control)", borderRadius: "var(--radius-s)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}>
+            <PlusIcon className="w-5 h-5" />
+          </button>
+        </div>
+      )}
+    <div
+      ref={scroller}
+      className="overflow-x-auto"
+      style={{ paddingBottom: 8, touchAction: zoomable ? "pan-x pan-y" : undefined }}
+      onPointerDown={(e) => {
+        if (!zoomable) return;
+        pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (pointers.current.size === 2) pinch.current = { dist: pointerDistance(), scale };
+      }}
+      onPointerMove={(e) => {
+        if (!pointers.current.has(e.pointerId)) return;
+        pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (pointers.current.size === 2 && pinch.current && pinch.current.dist > 0) zoomTo(pinch.current.scale * (pointerDistance() / pinch.current.dist));
+      }}
+      onPointerUp={(e) => {
+        pointers.current.delete(e.pointerId);
+        pinch.current = null;
+      }}
+      onPointerCancel={(e) => {
+        pointers.current.delete(e.pointerId);
+        pinch.current = null;
+      }}
+    >
+      <div style={{ width: width * scale, height: height * scale }}>
+      <div className="relative" style={{ width, height, minWidth: width, transform: `scale(${scale})`, transformOrigin: "0 0" }} role="group" aria-label="Utslagsbrakett">
         {rounds.map((r, ci) => (
           <div key={r.size} className="absolute text-center section-label" style={{ left: colX(ci), top: 0, width: m.w, borderBottom: "1px solid var(--color-border)", paddingBottom: 6 }}>
             {r.label.toUpperCase()}
@@ -204,7 +255,7 @@ export function BracketTree({
           style={{ left: colX(rounds.length), top: finalY - m.h * 0.75, width: m.w, height: m.h * 1.5, borderRadius: 10, border: `1px ${tournament.winner ? "solid" : "dashed"} var(--color-gold)`, color: "var(--color-gold)", background: tournament.winner ? "rgba(217,174,79,0.1)" : "transparent" }}
         >
           <TrophyIcon className={large ? "w-9 h-9" : "w-6 h-6"} />
-          <span className="font-display w-full px-2" style={{ lineHeight: 1.1, fontSize: large ? "1.4rem" : "0.95rem", color: tournament.winner ? "var(--color-cream)" : "var(--color-gold)" }}>
+          <span className="font-display w-full px-2" style={{ lineHeight: 1.1, fontSize: large ? "var(--text-title)" : "var(--text-body)", color: tournament.winner ? "var(--color-cream)" : "var(--color-gold)" }}>
             {tournament.winner ?? tournament.cup?.trophy ?? "Pokalen"}
           </span>
         </div>
@@ -217,6 +268,8 @@ export function BracketTree({
           </>
         )}
       </div>
+      </div>
+    </div>
     </div>
   );
 }

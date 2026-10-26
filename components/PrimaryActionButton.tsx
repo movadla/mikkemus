@@ -32,7 +32,7 @@ export function PrimaryActionButton({
         {children}
       </button>
       {!ready && hint && (
-        <p className="text-center mt-4" style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>
+        <p className="text-center mt-4" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
           {hint}
         </p>
       )}

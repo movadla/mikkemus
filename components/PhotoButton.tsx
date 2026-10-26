@@ -45,7 +45,7 @@ export function PhotoButton({ name, photo, size = "3.5rem" }: { name: string; ph
           // eslint-disable-next-line @next/next/no-img-element
           <img src={photo} alt="" className="w-full h-full object-cover" />
         ) : (
-          <span className="font-display" style={{ color: avatarAccent(name), fontSize: "1.3rem" }}>
+          <span className="font-display" style={{ color: avatarAccent(name), fontSize: "var(--text-title)" }}>
             {name.charAt(0).toUpperCase()}
           </span>
         )}

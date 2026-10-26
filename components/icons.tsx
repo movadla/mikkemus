@@ -252,3 +252,199 @@ export function CalibrateIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+/** The base of the icons added later: the same 24-unit grid, the same 2-unit round stroke as the ones above. */
+function Svg({ className, children }: IconProps & { children: React.ReactNode }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+      {children}
+    </svg>
+  );
+}
+
+export function ChevronRightIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="m9 5 7 7-7 7" />
+    </Svg>
+  );
+}
+
+export function ArrowLeftIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="M19 12H5" />
+      <path d="m11 6-6 6 6 6" />
+    </Svg>
+  );
+}
+
+export function CheckIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="m5 12.5 4.5 4.5L19 7.5" />
+    </Svg>
+  );
+}
+
+export function CloseIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="M6 6l12 12" />
+      <path d="M18 6 6 18" />
+    </Svg>
+  );
+}
+
+export function ChartIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="M4 20V10" />
+      <path d="M10 20V4" />
+      <path d="M16 20v-7" />
+      <path d="M22 20H2" />
+    </Svg>
+  );
+}
+
+export function MoreIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <circle cx="5" cy="12" r="1.2" />
+      <circle cx="12" cy="12" r="1.2" />
+      <circle cx="19" cy="12" r="1.2" />
+    </Svg>
+  );
+}
+
+export function SettingsIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="M4 7h10" />
+      <path d="M18 7h2" />
+      <circle cx="16" cy="7" r="2" />
+      <path d="M4 17h2" />
+      <path d="M10 17h10" />
+      <circle cx="8" cy="17" r="2" />
+    </Svg>
+  );
+}
+
+export function BotIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <rect x="4" y="8" width="16" height="11" rx="3" />
+      <path d="M12 8V4.5" />
+      <circle cx="12" cy="3.5" r="1" />
+      <circle cx="9" cy="13.5" r="1" />
+      <circle cx="15" cy="13.5" r="1" />
+    </Svg>
+  );
+}
+
+/** A medal for a place or a level: the ribbon and a disc. Coloured by the text colour of its parent. */
+export function MedalIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="m8.5 3 3.5 6 3.5-6" />
+      <circle cx="12" cy="15" r="5" />
+      <path d="m12 12.6.8 1.6 1.7.2-1.2 1.2.3 1.7-1.6-.8-1.6.8.3-1.7-1.2-1.2 1.7-.2z" />
+    </Svg>
+  );
+}
+
+export function EditIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="M4 20h4L19 9l-4-4L4 16z" />
+      <path d="m13.5 6.5 4 4" />
+    </Svg>
+  );
+}
+
+export function SunIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6" />
+    </Svg>
+  );
+}
+
+export function MoonIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="M20 14.5A8 8 0 0 1 9.5 4 8.5 8.5 0 1 0 20 14.5z" />
+    </Svg>
+  );
+}
+
+export function PlusIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="M12 5v14" />
+      <path d="M5 12h14" />
+    </Svg>
+  );
+}
+
+export function UndoIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="M9 14 4 9l5-5" />
+      <path d="M4 9h10a6 6 0 0 1 0 12h-3" />
+    </Svg>
+  );
+}
+
+export function BookIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5z" />
+      <path d="M4 21.5V5.5" />
+    </Svg>
+  );
+}
+
+export function CoinIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M14.5 9.2c-.5-.8-1.4-1.2-2.5-1.2-1.4 0-2.4.7-2.4 1.8s.9 1.5 2.4 1.9 2.4.8 2.4 1.9S13.4 16 12 16c-1.2 0-2.1-.5-2.6-1.3" />
+      <path d="M12 6.5V8M12 16v1.5" />
+    </Svg>
+  );
+}
+
+export function FlameIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="M12 3c.5 3-1.5 4.5-3 6.5-1.3 1.8-2 3-2 5a5 5 0 0 0 10 0c0-2-.8-3-1.8-4.2-.3 1.2-1 1.7-1.6 1.7C13.5 9.5 14 6 12 3z" />
+    </Svg>
+  );
+}
+
+export function BoltIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="M13 2.5 5 13.5h6l-1 8 8-11h-6z" />
+    </Svg>
+  );
+}
+
+export function SparkIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="M12 3v4M12 17v4M3 12h4M17 12h4" />
+      <path d="m6.3 6.3 2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4" />
+    </Svg>
+  );
+}
+
+export function MinusIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="M5 12h14" />
+    </Svg>
+  );
+}

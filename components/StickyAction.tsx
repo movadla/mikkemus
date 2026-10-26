@@ -40,7 +40,7 @@ export function StickyAction({
     >
       <div className="max-w-md mx-auto" style={{ pointerEvents: "auto" }}>
         {line && (
-          <p className="text-center mb-2 tabular" style={{ color: ready ? "var(--color-muted)" : "var(--color-red)", fontSize: "0.75rem" }}>
+          <p className="text-center mb-2 tabular" style={{ color: ready ? "var(--color-muted)" : "var(--color-red)", fontSize: "var(--text-micro)" }}>
             {line}
           </p>
         )}
@@ -49,7 +49,7 @@ export function StickyAction({
           disabled={!ready}
           onClick={onClick}
           className={`glossy w-full rounded-xl font-semibold text-lg transition-opacity ${FOCUS_RING}`}
-          style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", opacity: ready ? 1 : 0.4, minHeight: "3.25rem" } as React.CSSProperties}
+          style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", opacity: ready ? 1 : 0.4, minHeight: "var(--control-lg)" } as React.CSSProperties}
         >
           {children}
         </button>

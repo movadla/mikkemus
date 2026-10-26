@@ -15,7 +15,7 @@ function Form({ points }: { points: number[] }) {
   const up = points[points.length - 1] >= points[0];
   return (
     <svg viewBox="0 0 208 40" className="w-full" height={40} role="img" aria-label="Treffprosent de siste kampene">
-      <polyline points={line} fill="none" stroke={up ? "#58b072" : "#e25a45"} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
+      <polyline points={line} fill="none" stroke={up ? "var(--color-green)" : "var(--color-red)"} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -31,10 +31,10 @@ function Numbers({ rec }: { rec: PlayerRecord }) {
           { v: `${rec.matchesWon}–${Math.max(0, rec.matchesPlayed - rec.matchesWon)}`, l: "SEIRER" },
         ].map((n) => (
           <div key={n.l}>
-            <p className="font-display tabular" style={{ fontSize: "1.6rem" }}>
+            <p className="font-display tabular" style={{ fontSize: "var(--text-num)" }}>
               {n.v}
             </p>
-            <p style={{ color: "var(--color-muted)", fontSize: "0.72rem", letterSpacing: "0.1em" }}>{n.l}</p>
+            <p style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)", letterSpacing: "0.1em" }}>{n.l}</p>
           </div>
         ))}
       </div>
@@ -58,7 +58,7 @@ export function PlayerSheet({ name, team, onClose }: { name: string; team: strin
 
   return (
     <div className="fixed inset-0 z-[57]" role="dialog" aria-modal="true" aria-label={`Statistikk for ${name}`}>
-      <button type="button" aria-label="Lukk" onClick={onClose} className="absolute inset-0 w-full h-full" style={{ background: "rgba(0,0,0,0.55)" }} />
+      <button type="button" aria-label="Lukk" onClick={onClose} className="absolute inset-0 w-full h-full" style={{ background: "var(--scrim-soft)" }} />
       <div
         className="absolute left-0 right-0 bottom-0 rounded-t-2xl px-4 pb-6 pt-2 max-w-3xl mx-auto"
         style={{ background: "var(--color-surface)", borderTop: "1px solid var(--color-border)", transform: `translateY(${dy}px)`, transition: dragging ? "none" : "transform 250ms ease", touchAction: "none" }}
@@ -80,7 +80,7 @@ export function PlayerSheet({ name, team, onClose }: { name: string; team: strin
       >
         <div className="mx-auto mb-3 rounded-full" style={{ width: 40, height: 5, background: "var(--color-border)" }} aria-hidden />
         <div className="flex items-center gap-3 mb-4">
-          <span className="rounded-full flex items-center justify-center font-display shrink-0 overflow-hidden" style={{ width: 48, height: 48, border: `3px solid ${avatarAccent(name)}`, background: "var(--color-cell)", color: avatarAccent(name), fontSize: "1.2rem" }} aria-hidden>
+          <span className="rounded-full flex items-center justify-center font-display shrink-0 overflow-hidden" style={{ width: 48, height: 48, border: `3px solid ${avatarAccent(name)}`, background: "var(--color-cell)", color: avatarAccent(name), fontSize: "var(--text-title)" }} aria-hidden>
             {rec?.photo ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={rec.photo} alt="" className="w-full h-full object-cover" />
@@ -88,10 +88,10 @@ export function PlayerSheet({ name, team, onClose }: { name: string; team: strin
               name.charAt(0).toUpperCase()
             )}
           </span>
-          <p className="font-display flex-1 truncate" style={{ fontSize: "1.5rem" }}>
+          <p className="font-display flex-1 truncate" style={{ fontSize: "var(--text-num)" }}>
             {name}
           </p>
-          <button type="button" onClick={onClose} className="tactile px-4 rounded-lg text-sm" style={{ minHeight: "2.75rem", background: "var(--color-cell)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}>
+          <button type="button" onClick={onClose} className="tactile px-4 rounded-lg text-sm" style={{ minHeight: "var(--control)", background: "var(--color-cell)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}>
             Lukk
           </button>
         </div>
