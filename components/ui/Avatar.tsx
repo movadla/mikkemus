@@ -1,3 +1,4 @@
+import { ViewTransition } from "react";
 import { avatarAccent } from "@/lib/avatarAccent";
 import { BotIcon } from "../icons";
 
@@ -50,5 +51,16 @@ export function Avatar({
         name.charAt(0).toUpperCase()
       )}
     </span>
+  );
+}
+
+/** A face that grows into the same face on the player's own page (and shrinks back): the two carry one transition name. */
+export function MorphAvatar(props: Parameters<typeof Avatar>[0]) {
+  return (
+    <ViewTransition name={`avatar-${props.name}`} share="morph" default="none">
+      <span className="inline-flex">
+        <Avatar {...props} />
+      </span>
+    </ViewTransition>
   );
 }

@@ -9,6 +9,8 @@ import { ratingOf, type PlayerRecord } from "@/lib/storage";
 import { coachTips, sumBias } from "@/lib/coach";
 import { memberHitPct, memberMed } from "@/lib/memberStats";
 import { RowDartsChart, type RowChartUnit } from "./RowDartsChart";
+import { Segmented } from "./ui/Segmented";
+import { Sheet } from "./ui/Sheet";
 import { STEPS, type Step } from "@/lib/game";
 
 const FOCUS_RING = "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
@@ -17,9 +19,35 @@ const pct = (v: number | null | undefined) => (v === null || v === undefined ? "
 const mm = (v: number | null | undefined) => (v === null || v === undefined ? "–" : `${Math.round(v)} mm`);
 const num = (v: number | null | undefined, digits = 0) => (v === null || v === undefined ? "–" : v.toFixed(digits).replace(".", ","));
 
+/** A group of figures under a small heading. The distances carry a "?" that explains them in two sentences. */
+function TileGroup({ label, help = false, children }: { label: string; help?: boolean; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mb-4">
+      <div className="flex items-center justify-between mb-2">
+        <p className="section-label">{label}</p>
+        {help && (
+          <button type="button" onClick={() => setOpen(true)} aria-label="Hva betyr tallene?" className={`tactile flex items-center justify-center ${FOCUS_RING}`} style={{ width: "var(--control)", height: "var(--control)", borderRadius: "var(--radius-s)", color: "var(--color-muted)", boxShadow: "none", background: "transparent", fontSize: "var(--text-body)", fontWeight: 700 }}>
+            ?
+          </button>
+        )}
+      </div>
+      <div className="grid grid-cols-3 gap-2">{children}</div>
+      {open && (
+        <Sheet title="Avstand fra midten" onClose={() => setOpen(false)}>
+          <div className="space-y-3" style={{ color: "var(--color-text-2)", fontSize: "var(--text-body)" }}>
+            <p>Snitt er hvor langt fra midten av brettet pilene lander, i millimeter. Lavere er bedre.</p>
+            <p>Sideavvik og høydeavvik viser hvilken vei du bommer: til siden, og opp eller ned. Er tallet nær null, bommer du like mye begge veier.</p>
+          </div>
+        </Sheet>
+      )}
+    </div>
+  );
+}
+
 function Tile({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl px-2 py-3 text-center" style={{ background: "var(--color-surface-2)", boxShadow: "inset 0 0 0 1px var(--veil), inset 0 1px 0 var(--veil), 0 1px 2px rgba(0,0,0,0.4)" }}>
+    <div className="rounded-xl px-2 py-3 text-center" style={{ background: "var(--color-surface-2)", boxShadow: "inset 0 0 0 1px var(--veil), inset 0 1px 0 var(--veil), 0 1px 2px color-mix(in srgb, var(--shade) 40%, transparent)" }}>
       <p style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)", fontWeight: 600, letterSpacing: "0.14em" }}>{label}</p>
       <p className="tabular" style={{ color: "var(--color-cream)", fontSize: "var(--text-title)", lineHeight: 1.15, fontWeight: 700, letterSpacing: "-0.01em" }}>{value}</p>
     </div>
@@ -55,7 +83,7 @@ function Rows({ view }: { view: View }) {
       <p className="section-label mt-4 mb-2" style={{ fontSize: "var(--text-micro)" }}>TREFF PER RAD</p>
       <div className="grid grid-cols-5 gap-2">
         {view.rows.map((r) => (
-          <div key={r.step} className="rounded-xl py-2 text-center tabular" style={{ background: "var(--color-surface-2)", boxShadow: "inset 0 0 0 1px var(--veil), inset 0 1px 0 var(--veil), 0 1px 2px rgba(0,0,0,0.4)" }}>
+          <div key={r.step} className="rounded-xl py-2 text-center tabular" style={{ background: "var(--color-surface-2)", boxShadow: "inset 0 0 0 1px var(--veil), inset 0 1px 0 var(--veil), 0 1px 2px color-mix(in srgb, var(--shade) 40%, transparent)" }}>
             <p style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>{STEP_LABELS[r.step]}</p>
             <p style={{ color: "var(--color-cream)", fontSize: "var(--text-small)", fontWeight: 600 }}>{pct(r.pct)}{RING_ROWS.includes(r.step) && r.pct !== null ? "*" : ""}</p>
             <p style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>{r.hits + r.misses === 0 ? "ingen kast" : `${r.hits} av ${r.hits + r.misses}`}</p>
@@ -138,7 +166,7 @@ function CoachBox({ player, all }: { player: PlayerRecord; all: PlayerRecord[] }
               <span
                 aria-hidden
                 className="shrink-0 rounded-full"
-                style={{ width: 8, height: 8, marginTop: "0.4rem", background: t.tone === "good" ? "var(--color-green)" : "var(--color-gold)", boxShadow: `0 0 8px ${t.tone === "good" ? "rgba(88,176,114,0.6)" : "rgba(217,174,79,0.6)"}` }}
+                style={{ width: 8, height: 8, marginTop: "0.4rem", background: t.tone === "good" ? "var(--color-green)" : "var(--color-gold)", boxShadow: `0 0 8px ${t.tone === "good" ? "color-mix(in srgb, var(--color-green) 60%, transparent)" : "color-mix(in srgb, var(--color-gold) 60%, transparent)"}` }}
               />
               <span>
                 <span className="block" style={{ color: "var(--color-cream)", fontWeight: 600, fontSize: "var(--text-body)" }}>{t.title}</span>
@@ -196,36 +224,13 @@ function Panel({ player, all, source, onSource }: { player: PlayerRecord; all: P
   return (
     <div className="px-4 pb-4 pt-1">
       {!isTeamRecord && (
-      <div className="grid grid-cols-2 gap-2 mb-3" role="tablist">
-        {(["single", "team"] as const).map((t) => (
-          <button
-            key={t}
-            type="button"
-            role="tab"
-            aria-selected={tab === t}
-            onClick={() => setTab(t)}
-            className={`tactile rounded-lg ${FOCUS_RING}`}
-            style={{ minHeight: "var(--control)", background: tab === t ? "var(--color-teal)" : "var(--color-cell)", color: tab === t ? "var(--color-bg)" : "var(--color-cream)", border: "1px solid var(--color-border)", fontWeight: 600, fontSize: "var(--text-body)" }}
-          >
-            {t === "single" ? "Singel" : "Lag"}
-          </button>
-        ))}
-      </div>
+        <div className="mb-3">
+          <Segmented value={tab} onChange={setTab} label="Alene eller på lag" options={[{ value: "single", label: "Singel" }, { value: "team", label: "Lag" }]} />
+        </div>
       )}
 
-      <div className="flex rounded-full p-1 mb-4" role="group" aria-label="Hvor kastene er registrert" style={{ background: "rgba(0, 0, 0, 0.35)", boxShadow: "inset 0 1px 2px var(--scrim), inset 0 0 0 1px rgba(255, 255, 255, 0.05)" }}>
-        {SOURCES.map((s) => (
-          <button
-            key={s.value}
-            type="button"
-            aria-pressed={source === s.value}
-            onClick={() => onSource(s.value)}
-            className={`flex-1 rounded-full ${FOCUS_RING}`}
-            style={{ minHeight: "var(--control)", background: source === s.value ? "var(--color-surface-2)" : "transparent", color: source === s.value ? "var(--color-cream)" : "var(--color-muted)", boxShadow: source === s.value ? "0 1px 2px var(--scrim-soft), inset 0 1px 0 rgba(255, 255, 255, 0.1)" : "none", fontWeight: 600, fontSize: "var(--text-small)" }}
-          >
-            {s.label}
-          </button>
-        ))}
+      <div className="mb-4">
+        <Segmented value={source} onChange={onSource} label="Hvor kastene er registrert" options={SOURCES.map((x) => ({ value: x.value, label: x.label }))} />
       </div>
 
       {tab === "single" ? (
@@ -233,18 +238,22 @@ function Panel({ player, all, source, onSource }: { player: PlayerRecord; all: P
           <p style={{ color: "var(--color-muted)", fontSize: "var(--text-body)" }}>{isTeamRecord ? "Ingen kamper ennå." : "Ingen singelkamper ennå."}</p>
         ) : (
           <>
-            <div className="grid grid-cols-3 gap-2">
+            <TileGroup label="Resultater">
               <Tile label="KAMPER" value={String(single.matches)} />
               <Tile label="SEIRE" value={String(single.wins)} />
               <Tile label="SEIER %" value={pct(single.winPct)} />
+            </TileGroup>
+            <TileGroup label="Treff">
               <Tile label="TREFF %" value={pct(single.hitPct)} />
-              <Tile label="MED" value={mm(single.med)} />
-              <Tile label="PILER/SEIER" value={num(single.dartsPerWin)} />
-              <Tile label="MHD" value={mm(single.mhd)} />
-              <Tile label="MVD" value={mm(single.mvd)} />
-              <Tile label="REKKE" value={source === "both" ? num(single.bestRun) : "–"} />
-              {source === "both" && <Tile label="RATING" value={ratingOf(player).toLocaleString("nb-NO").replace(/\s/g, " ")} />}
-            </div>
+              <Tile label="PILER PER SEIER" value={num(single.dartsPerWin)} />
+              <Tile label="LENGSTE SERIE" value={source === "both" ? num(single.bestRun) : "–"} />
+              {source === "both" && <Tile label="RATING" value={ratingOf(player).toLocaleString("nb-NO").replace(/\s/g, " ")} />}
+            </TileGroup>
+            <TileGroup label="Avstand fra midten" help>
+              <Tile label="SNITT" value={mm(single.med)} />
+              <Tile label="SIDEAVVIK" value={mm(single.mhd)} />
+              <Tile label="HØYDEAVVIK" value={mm(single.mvd)} />
+            </TileGroup>
             <div className="flex items-center gap-3 mt-3" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
               <span>Siste ti</span>
               <Dots results={single.results} />
@@ -267,8 +276,8 @@ function Panel({ player, all, source, onSource }: { player: PlayerRecord; all: P
             <Tile label="LAGETS TREFF" value={pct(team.hitPct)} />
             <Tile label="DITT TREFF" value={pct(team.ownHitPct)} />
             <Tile label="DINE PILER" value={source === "both" ? String(team.ownDarts) : "–"} />
-            <Tile label="MED" value={mm(team.med)} />
-            <Tile label="REKKE" value={source === "both" ? num(team.bestRun) : "–"} />
+            <Tile label="SNITT" value={mm(team.med)} />
+            <Tile label="LENGSTE SERIE" value={source === "both" ? num(team.bestRun) : "–"} />
           </div>
           <div className="flex items-center gap-3 mt-3" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
             <span>Siste ti</span>
@@ -278,7 +287,7 @@ function Panel({ player, all, source, onSource }: { player: PlayerRecord; all: P
           <p className="section-label mt-4 mb-2" style={{ fontSize: "var(--text-micro)" }}>LAGENE</p>
           <div className="space-y-2">
             {team.teams.map((t) => (
-              <div key={t.name} className="rounded-xl px-3 py-2 flex items-center justify-between gap-3" style={{ background: "var(--color-surface-2)", boxShadow: "inset 0 0 0 1px var(--veil), inset 0 1px 0 var(--veil), 0 1px 2px rgba(0,0,0,0.4)" }}>
+              <div key={t.name} className="rounded-xl px-3 py-2 flex items-center justify-between gap-3" style={{ background: "var(--color-surface-2)", boxShadow: "inset 0 0 0 1px var(--veil), inset 0 1px 0 var(--veil), 0 1px 2px color-mix(in srgb, var(--shade) 40%, transparent)" }}>
                 <span className="min-w-0">
                   <span className="block truncate" style={{ color: "var(--color-cream)", fontWeight: 600 }}>{t.name}</span>
                   <span className="block truncate" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>med {t.partners.join(", ") || "–"}</span>

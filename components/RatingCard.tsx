@@ -82,7 +82,7 @@ export function RatingCard({ players, winner }: { players: string[]; winner: str
                 height: ROW_H - 4,
                 gridTemplateColumns: "1.6rem 1fr 3.6rem 4.4rem",
                 transform: `translateY(${rank * ROW_H}px)`,
-                background: up ? "rgba(74,139,92,0.4)" : down ? "rgba(196,67,46,0.3)" : "rgba(0,0,0,0.2)",
+                background: up ? "rgba(74,139,92,0.4)" : down ? "rgba(196,67,46,0.3)" : "color-mix(in srgb, var(--shade) 20%, transparent)",
                 transition: "transform 800ms cubic-bezier(0.2,0.9,0.2,1), background 400ms",
               }}
             >

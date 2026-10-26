@@ -9,7 +9,7 @@ import { useSyncExternalStore } from "react";
  * FIT its box, so the glyph was using roughly a twentieth of a 590px-wide cell. Components
  * ask this to switch to the wide variant of the glyph instead.
  */
-const QUERY = "(orientation: landscape) and (max-height: 560px)";
+const QUERY = "(orientation: landscape) and (max-height: 720px)";
 
 function subscribe(onChange: () => void) {
   const mq = window.matchMedia(QUERY);

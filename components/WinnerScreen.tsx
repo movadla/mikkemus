@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { ViewTransition, startTransition, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
+import { Avatar } from "./ui/Avatar";
 import { ChartFrame } from "./ui/ChartFrame";
 import { Segmented } from "./ui/Segmented";
 import { useAccess } from "@/lib/access";
@@ -198,6 +199,7 @@ export function WinnerScreen({
     players.some((p) => (throwsByPlayer[p]?.length ?? 0) > 0);
   const [showMore, setShowMore] = useState(false);
   const [tab, setTab] = useState<"oppsummering" | "statistikk" | "replay">("oppsummering");
+  const compact = tab !== "oppsummering";
 
   // The way on, fixed to the window. It is drawn into the body: the screen above animates with a transform, and a fixed child of a
   // transformed element is fixed to that element, not to the window.
@@ -298,98 +300,121 @@ export function WinnerScreen({
         ))}
       </div>
       <div className="relative z-10 w-full max-w-md text-center" style={{ paddingBottom: "7rem" }}>
-        {/* The trophy rises above the winner; a team's own shirts rain instead of confetti cannons. */}
-        {fx.trophy && <Trophy cannons={!shirts} />}
-        <div className="relative">
-          <div
-            className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none"
-            style={{ transform: "translateY(-10%)" }}
-            aria-hidden
-          >
-            <div
-              className="animate-idle-glow"
-              style={{
-                width: "240px",
-                height: "240px",
-                borderRadius: "50%",
-                background: "var(--color-gold)",
-                filter: "blur(48px)",
-              }}
-            />
-          </div>
-          <div className="absolute inset-x-0 top-0 h-full overflow-hidden pointer-events-none z-10" aria-hidden>
-            {confetti.map((c, i) => (
-              <span
-                key={i}
-                className="confetti-piece"
-                style={{
-                  left: c.left,
-                  background: c.color,
-                  animationDelay: c.delay,
-                  "--r": c.rotate,
-                } as React.CSSProperties}
-              />
-            ))}
-          </div>
-          {/* The winner's face is the headline, not a token next to their name — at 88px it was
-              smaller than the name under it. Its lower half overlaps the card below, so the
-              card's top padding has to clear the same 84px the negative margin pulls up. */}
-          <div className="relative z-30 flex justify-center" style={{ marginBottom: "-84px" }}>
-            <div className="relative" style={{ width: "168px", height: "168px" }}>
-              <span
-                aria-hidden
-                className="animate-winner-shockwave absolute inset-0 rounded-full pointer-events-none"
-                style={{ border: "3px solid var(--color-gold)" }}
-              />
+        {/* The winner's card is one thing that changes size: all of it on the first tab, and a slim bar once the numbers or the replay
+            are open, so they get the room. Both carry the same transition name, so the card is seen shrinking into the bar. */}
+        {compact ? (
+          <ViewTransition name="winner-card" share="morph" default="none">
+            <div className="card-gold card-gold-pad flex items-center gap-3 mb-4 text-left">
+              {winnerKit ? <TeamKit kit={winnerKit} size={44} title={`Drakten til ${winner}`} /> : <Avatar name={winner} photo={photo} size="m" state="winner" />}
+              <div className="min-w-0 flex-1">
+                <p style={{ color: "var(--color-bg)", opacity: 0.7, fontSize: "var(--text-micro)", fontWeight: 700, letterSpacing: "0.12em" }}>VINNER</p>
+                <p className="font-display truncate" style={{ color: "var(--color-bg)", fontSize: "var(--text-title)", lineHeight: 1.1 }}>
+                  {winner}
+                </p>
+              </div>
+              <span className="tabular shrink-0" style={{ color: "var(--color-bg)", opacity: 0.75, fontSize: "var(--text-small)" }}>
+                {totalDarts(stats[winner])} {totalDarts(stats[winner]) === 1 ? "pil" : "piler"}
+              </span>
+            </div>
+          </ViewTransition>
+        ) : (
+          <ViewTransition name="winner-card" share="morph" default="none">
+            <div>
+            {/* The trophy rises above the winner; a team's own shirts rain instead of confetti cannons. */}
+            {fx.trophy && <Trophy cannons={!shirts} />}
+            <div className="relative">
               <div
-                className="animate-winner-photo-pulse rounded-full overflow-hidden flex items-center justify-center w-full h-full"
-                style={{
-                  border: "5px solid var(--color-gold)",
-                  background: "var(--color-surface)",
-                  boxShadow: "0 10px 30px var(--scrim-soft), 0 0 40px rgba(217, 174, 79, 0.35)",
-                }}
+                className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none"
+                style={{ transform: "translateY(-10%)" }}
+                aria-hidden
               >
-                {photo ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={photo} alt={winner} className="w-full h-full object-cover" />
-                ) : winnerKit ? (
-                  // A winning team has no face of its own: its shirt is the headline instead.
-                  <TeamKit kit={winnerKit} size={112} title={`Drakten til ${winner}`} />
-                ) : (
-                  <span className="font-display" style={{ color: "var(--color-gold)", fontSize: "4rem" }}>
-                    {winner.charAt(0).toUpperCase()}
-                  </span>
-                )}
+                <div
+                  className="animate-idle-glow"
+                  style={{
+                    width: "240px",
+                    height: "240px",
+                    borderRadius: "50%",
+                    background: "var(--color-gold)",
+                    filter: "blur(48px)",
+                  }}
+                />
+              </div>
+              <div className="absolute inset-x-0 top-0 h-full overflow-hidden pointer-events-none z-10" aria-hidden>
+                {confetti.map((c, i) => (
+                  <span
+                    key={i}
+                    className="confetti-piece"
+                    style={{
+                      left: c.left,
+                      background: c.color,
+                      animationDelay: c.delay,
+                      "--r": c.rotate,
+                    } as React.CSSProperties}
+                  />
+                ))}
+              </div>
+              {/* The winner's face is the headline, not a token next to their name — at 88px it was
+                  smaller than the name under it. Its lower half overlaps the card below, so the
+                  card's top padding has to clear the same 84px the negative margin pulls up. */}
+              <div className="relative z-30 flex justify-center" style={{ marginBottom: "-84px" }}>
+                <div className="relative" style={{ width: "168px", height: "168px" }}>
+                  <span
+                    aria-hidden
+                    className="animate-winner-shockwave absolute inset-0 rounded-full pointer-events-none"
+                    style={{ border: "3px solid var(--color-gold)" }}
+                  />
+                  <div
+                    className="animate-winner-photo-pulse rounded-full overflow-hidden flex items-center justify-center w-full h-full"
+                    style={{
+                      border: "5px solid var(--color-gold)",
+                      background: "var(--color-surface)",
+                      boxShadow: "0 10px 30px var(--scrim-soft), 0 0 40px color-mix(in srgb, var(--color-gold) 35%, transparent)",
+                    }}
+                  >
+                    {photo ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={photo} alt={winner} className="w-full h-full object-cover" />
+                    ) : winnerKit ? (
+                      // A winning team has no face of its own: its shirt is the headline instead.
+                      <TeamKit kit={winnerKit} size={112} title={`Drakten til ${winner}`} />
+                    ) : (
+                      <span className="font-display" style={{ color: "var(--color-gold)", fontSize: "4rem" }}>
+                        {winner.charAt(0).toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="animate-winner-pop card-gold shadow-panel relative z-20 rounded-2xl pt-24 pb-8 px-8 mb-6">
+                <p
+                  className="font-display"
+                  style={{
+                    color: "var(--color-bg)",
+                    fontSize: "var(--text-body)",
+                    fontStyle: "italic",
+                    letterSpacing: "0.04em",
+                    marginBottom: "0.4rem",
+                  }}
+                >
+                  Vinner
+                </p>
+                <h2 className="font-display" style={{ color: "var(--color-bg)", fontSize: "2.2rem" }}>
+                  {winner}
+                </h2>
+                {/* xH belongs up here, not only in a card three scrolls down — it is the one number
+                    that says whether the win was thrown or fell out of the sky. Omitted rather than
+                    dashed when no dart could be judged; a "–" beside the headline reads as broken. */}
+                <p className="tabular" style={{ color: "var(--color-bg)", opacity: 0.7, fontSize: "var(--text-small)", marginTop: "0.4rem" }}>
+                  {/* Singular is reachable now that a leg won on the first dart of a turn counts one. */}
+                  {totalDarts(stats[winner])} {totalDarts(stats[winner]) === 1 ? "pil" : "piler"} brukt
+                  {winnerLuck !== null && <> · xH {formatLuck(winnerLuck)} /{" "}
+                {(stats[winner]?.hits ?? 0) - (preBankedByPlayer[winner]?.D ?? 0) - (preBankedByPlayer[winner]?.T ?? 0)}</>}
+                </p>
               </div>
             </div>
-          </div>
-          <div className="animate-winner-pop card-gold shadow-panel relative z-20 rounded-2xl pt-24 pb-8 px-8 mb-6">
-            <p
-              className="font-display"
-              style={{
-                color: "var(--color-bg)",
-                fontSize: "var(--text-body)",
-                fontStyle: "italic",
-                letterSpacing: "0.04em",
-                marginBottom: "0.4rem",
-              }}
-            >
-              Vinner
-            </p>
-            <h2 className="font-display" style={{ color: "var(--color-bg)", fontSize: "2.2rem" }}>
-              {winner}
-            </h2>
-            {/* xH belongs up here, not only in a card three scrolls down — it is the one number
-                that says whether the win was thrown or fell out of the sky. Omitted rather than
-                dashed when no dart could be judged; a "–" beside the headline reads as broken. */}
-            <p className="tabular" style={{ color: "var(--color-bg)", opacity: 0.7, fontSize: "var(--text-small)", marginTop: "0.4rem" }}>
-              {/* Singular is reachable now that a leg won on the first dart of a turn counts one. */}
-              {totalDarts(stats[winner])} {totalDarts(stats[winner]) === 1 ? "pil" : "piler"} brukt
-              {winnerLuck !== null && <> · xH {formatLuck(winnerLuck)} /{" "}
-            {(stats[winner]?.hits ?? 0) - (preBankedByPlayer[winner]?.D ?? 0) - (preBankedByPlayer[winner]?.T ?? 0)}</>}
-            </p>
-          </div>
-        </div>
+            </div>
+          </ViewTransition>
+        )}
 
         {newRecords.length > 0 && (
           <div className="animate-winner-pop rounded-xl p-4 mb-6 flex items-center gap-3" style={{ background: "linear-gradient(90deg, #e6bd57, #f3d98a)", color: "#2b2000" }} role="status">
@@ -420,7 +445,7 @@ export function WinnerScreen({
         <div className="mb-4">
           <Segmented
             value={tab}
-            onChange={setTab}
+            onChange={(next) => startTransition(() => setTab(next))}
             label="Kampen"
             options={[
               { value: "oppsummering", label: "Oppsummering" },

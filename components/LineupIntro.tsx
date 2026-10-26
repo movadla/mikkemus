@@ -118,7 +118,7 @@ export function LineupIntro({ sides, onDone }: { sides: LineupSide[]; onDone: ()
         aspectRatio: "0.72",
         background: "linear-gradient(160deg, #3a5e46 0%, #1f3a2a 55%, #17281d 100%)",
         border: "2px solid var(--color-gold)",
-        boxShadow: "0 18px 36px var(--scrim-soft), inset 0 0 0 1px rgba(255,255,255,0.12)",
+        boxShadow: "0 18px 36px var(--scrim-soft), inset 0 0 0 1px color-mix(in srgb, var(--light) 12%, transparent)",
         animation: `foil-in 800ms ${i * 160}ms cubic-bezier(0.2,0.8,0.2,1) both`,
         isolation: "isolate",
       }}
@@ -172,7 +172,7 @@ export function LineupIntro({ sides, onDone }: { sides: LineupSide[]; onDone: ()
                 const aBetter = r.low ? r.a < r.b : r.a > r.b;
                 const tie = r.a === r.b;
                 const bar = (v: number, left: boolean, better: boolean) => (
-                  <div className="flex" style={{ height: 14, borderRadius: 7, background: "rgba(0,0,0,0.3)", overflow: "hidden", justifyContent: left ? "flex-end" : "flex-start" }}>
+                  <div className="flex" style={{ height: 14, borderRadius: 7, background: "color-mix(in srgb, var(--shade) 30%, transparent)", overflow: "hidden", justifyContent: left ? "flex-end" : "flex-start" }}>
                     <i
                       style={{ display: "block", height: "100%", borderRadius: 7, width: grow ? `${Math.min(100, share(r, v) * 170)}%` : 0, transition: `width 800ms ${i * 220}ms cubic-bezier(0.2,0.9,0.2,1)`, background: better && !tie ? "var(--color-gold-strong)" : "var(--color-muted)" }}
                     />

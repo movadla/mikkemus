@@ -39,7 +39,7 @@ export function TripleCelebration({ images, onDismiss }: { images: string[]; onD
       role="dialog"
       aria-label="Tre trippel"
       className="fixed inset-0 z-50 flex items-center justify-center p-6 overflow-hidden"
-      style={{ background: "rgba(0,0,0,0.82)" }}
+      style={{ background: "color-mix(in srgb, var(--shade) 82%, transparent)" }}
       onClick={() => {
         setVisible(false);
         onDismiss();

@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { ScreenTop } from "@/components/ScreenTop";
+import { Card as UiCard } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { TextField } from "@/components/ui/TextField";
 import { Segmented } from "@/components/ui/Segmented";
 import { SkeletonRows } from "@/components/ui/Skeleton";
 import { useLiveMatch } from "@/lib/liveMatch";
@@ -80,7 +82,7 @@ export default function BetPage() {
 
 function Card({ children, title, hint }: { children: React.ReactNode; title?: string; hint?: string }) {
   return (
-    <section className="card mb-4" style={{ background: "var(--color-surface)" }}>
+    <UiCard className="mb-4">
       {title && (
         <div className="flex items-baseline justify-between gap-2 mb-3">
           <h2 className="section-label">{title}</h2>
@@ -88,7 +90,7 @@ function Card({ children, title, hint }: { children: React.ReactNode; title?: st
         </div>
       )}
       {children}
-    </section>
+    </UiCard>
   );
 }
 
@@ -159,15 +161,9 @@ function PeopleBar({ users, bal, meId, onPick, night, onChanged, onAdded }: { us
             void add();
           }}
         >
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Navn"
-            maxLength={24}
-            aria-label="Navn på ny deltaker"
-            className={`flex-1 min-w-0 rounded-lg px-3 ${FOCUS_RING}`}
-            style={{ minHeight: "var(--control)", background: "var(--color-cell)", color: "var(--color-cream)", border: "1px solid var(--color-border)", fontSize: "var(--text-body)" }}
-          />
+          <div className="flex-1 min-w-0">
+            <TextField hideLabel value={name} onChange={setName} placeholder="Navn" maxLength={24} label="Navn på ny deltaker" />
+          </div>
           <button type="submit" disabled={busy || !name.trim()} className={`glossy rounded-lg px-4 ${FOCUS_RING}`} style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", minHeight: "var(--control)", fontWeight: 700, opacity: busy || !name.trim() ? 0.5 : 1 } as React.CSSProperties}>
             Start med {coins(START_COINS)}
           </button>

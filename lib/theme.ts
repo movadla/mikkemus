@@ -12,7 +12,7 @@ const STORAGE_KEY = "mikke-mus-theme";
 const listeners = new Set<() => void>();
 
 /** Run in the page head before anything is drawn. */
-export const THEME_BOOT = `try{var t=localStorage.getItem("${STORAGE_KEY}");if(t==="light")document.documentElement.dataset.theme="light"}catch(e){}`;
+export const THEME_BOOT = `try{var t=localStorage.getItem("${STORAGE_KEY}");if(t==="light"){document.documentElement.dataset.theme="light";var m=document.querySelectorAll("meta[name=theme-color]");for(var i=0;i<m.length;i++)m[i].content="#f3f0e6"}}catch(e){}`;
 
 export function getTheme(): Theme {
   if (typeof window === "undefined") return "dark";
@@ -23,8 +23,12 @@ export function getTheme(): Theme {
   }
 }
 
+/** The colour of the browser's own bar (the status bar of the installed app) follows the ground of the theme. */
+const THEME_COLOR: Record<Theme, string> = { dark: "#0c110e", light: "#f3f0e6" };
+
 export function applyTheme(theme: Theme): void {
   if (typeof document === "undefined") return;
+  document.querySelectorAll<HTMLMetaElement>("meta[name=\"theme-color\"]").forEach((m) => (m.content = THEME_COLOR[theme]));
   if (theme === "light") document.documentElement.dataset.theme = "light";
   else delete document.documentElement.dataset.theme;
 }

@@ -18,42 +18,31 @@ function sources(dir: string, pattern: RegExp): string[] {
 
 const read = (file: string) => readFileSync(join(ROOT, file), "utf8");
 
-/** Colours written as hex or rgb in a component. Most of what was here is now a token; what is left is art (the board, the
- *  confetti, the trophy, the shirts) and stays as it is. The number per file can go down and never up. */
+/** Colours written as hex or rgb in a component. Everything that could be a token is one (a shadow is a mix of --shade, an accent a mix
+ *  of its own token, so each follows the theme). What is left is art: the effects canvas (FxStage), the trophy's metal, the
+ *  heat map's ramp, the shirts, and a few chart series chosen to stay apart. The number per file can go down and never up. */
 const COLOUR_LITERALS: Record<string, number> = {
   "app/kamp/[id]/page.tsx": 1,
   "app/layout.tsx": 1,
-  "app/storskjerm/page.tsx": 7,
-  "components/BracketTree.tsx": 3,
-  "components/BullDuelGameScreen.tsx": 6,
-  "components/BullDuelWinnerScreen.tsx": 11,
-  "components/ChalkboardScreen.tsx": 1,
-  "components/ConfirmDialog.tsx": 1,
-  "components/DartboardHeatmap.tsx": 10,
-  "components/DrawScreen.tsx": 1,
-  "components/FxMenu.tsx": 1,
+  "app/storskjerm/page.tsx": 1,
+  "components/BullDuelGameScreen.tsx": 1,
+  "components/DartboardHeatmap.tsx": 8,
   "components/FxStage.tsx": 51,
-  "components/GameScreen.tsx": 12,
   "components/KitSettings.tsx": 5,
-  "components/KnockoutOverview.tsx": 1,
-  "components/LineupIntro.tsx": 9,
-  "components/MatchInsights.tsx": 2,
+  "components/LineupIntro.tsx": 6,
   "components/MomentumWave.tsx": 5,
-  "components/NightStory.tsx": 10,
-  "components/PlayerSheet.tsx": 1,
-  "components/PlayerStatsAccordion.tsx": 18,
-  "components/RatingCard.tsx": 3,
+  "components/NightStory.tsx": 9,
+  "components/RatingCard.tsx": 2,
   "components/RecordsTab.tsx": 1,
   "components/ReplayCard.tsx": 1,
   "components/RowDartsChart.tsx": 1,
-  "components/SeedingTab.tsx": 4,
+  "components/SeedingTab.tsx": 1,
   "components/StatsLineChart.tsx": 3,
   "components/TeamKit.tsx": 2,
   "components/ThrowerBar.tsx": 3,
-  "components/TimeMachine.tsx": 4,
-  "components/TripleCelebration.tsx": 2,
+  "components/TimeMachine.tsx": 2,
   "components/Trophy.tsx": 14,
-  "components/WinnerScreen.tsx": 6,
+  "components/WinnerScreen.tsx": 4,
 };
 
 const LITERAL = /#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b|rgba?\(/g;

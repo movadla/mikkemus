@@ -34,7 +34,7 @@ import { Mark } from "./Mark";
 import { ThrowerBar, type Thrower, type ThrowerTeam } from "./ThrowerBar";
 import { TeamKit } from "./TeamKit";
 import type { Kit } from "@/lib/teamKit";
-import { ArrowLeftIcon, CalibrateIcon, DartIcon, MoreIcon, PeopleIcon, ShakeIcon, SpeakerIcon, SpeakerMuteIcon } from "./icons";
+import { ArrowLeftIcon, CalibrateIcon, DartIcon, DoubleIcon, MissIcon, SingleIcon, TripleIcon, MoreIcon, PeopleIcon, ShakeIcon, SpeakerIcon, SpeakerMuteIcon } from "./icons";
 import { ScoliaDot } from "./ScoliaStatusBadge";
 import { Sheet } from "./ui/Sheet";
 
@@ -366,9 +366,9 @@ function ShotIndicator({
               cursor: editable ? "pointer" : "default",
               boxShadow:
                 asked === "active"
-                  ? "0 0 0 2px var(--color-gold), 0 0 16px rgba(217, 174, 79, 0.6)"
+                  ? "0 0 0 2px var(--color-gold), 0 0 16px color-mix(in srgb, var(--color-gold) 60%, transparent)"
                   : asked === "queued"
-                    ? "0 0 0 2px rgba(217, 174, 79, 0.45)"
+                    ? "0 0 0 2px color-mix(in srgb, var(--color-gold) 45%, transparent)"
                     : undefined,
             }}
           >
@@ -633,6 +633,7 @@ function DartEntry({
   const choices: { label: string; sector: string }[] = bull
     ? [{ label: "Enkel", sector: "25" }, { label: "Dobbel", sector: "Bull" }, { label: "Bom", sector: "None" }]
     : [{ label: "Enkel", sector: `S${number}` }, { label: "Dobbel", sector: `D${number}` }, { label: "Trippel", sector: `T${number}` }, { label: "Bom", sector: "None" }];
+  const ICON: Record<string, React.ReactNode> = { Enkel: <SingleIcon className="w-5 h-5" />, Dobbel: <DoubleIcon className="w-5 h-5" />, Trippel: <TripleIcon className="w-5 h-5" />, Bom: <MissIcon className="w-5 h-5" /> };
   return (
     <div
       role="dialog"
@@ -674,7 +675,10 @@ function DartEntry({
               className={`glossy py-4 rounded-xl font-semibold text-lg ${FOCUS_RING}`}
               style={{ "--btn-fill": c.label === "Bom" ? "var(--color-surface-2, var(--veil))" : "var(--color-teal)", color: c.label === "Bom" ? "var(--color-cream)" : "var(--color-bg)", border: c.label === "Bom" ? "1px solid var(--color-border)" : "none" } as React.CSSProperties}
             >
-              {c.label}
+              <span className="inline-flex items-center justify-center gap-2">
+                {ICON[c.label]}
+                {c.label}
+              </span>
             </button>
           ))}
         </div>
@@ -1104,6 +1108,12 @@ export function GameScreen({
       {fxMenuOpen && <FxMenu onClose={() => setFxMenuOpen(false)} />}
       {menuOpen && (
         <Sheet title="Kamp" onClose={() => setMenuOpen(false)}>
+          {scolia && (
+            <p className="flex items-center gap-2 mb-3" style={{ color: "var(--color-text-2)", fontSize: "var(--text-body)" }}>
+              <i className="inline-block rounded-full" style={{ width: 10, height: 10, background: scolia.color }} />
+              {scolia.label}
+            </p>
+          )}
           <div className="grid gap-2">
             <ChromeControls {...chromeProps} stacked hideHome />
           </div>
@@ -1199,7 +1209,7 @@ export function GameScreen({
               // cell to 275px around a 40px mark. On a phone the columns are narrower than the
               // cap anyway, so nothing changes there.
               gridTemplateColumns: compactLandscape
-                ? `48px repeat(${players.length}, minmax(0, 4.5rem))`
+                ? `clamp(48px, 9vh, 72px) repeat(${players.length}, minmax(0, clamp(4.5rem, 14vh, 8rem)))`
                 : `64px repeat(${players.length}, minmax(64px, 11rem))`,
               justifyContent: "center",
               // A floor, not a fixed height: rows still stretch to fill a tall portrait screen, but
@@ -1228,7 +1238,7 @@ export function GameScreen({
                     style={{
                       color: "var(--color-muted)",
                       fontSize: "var(--text-micro)",
-                      background: "rgba(0,0,0,0.25)",
+                      background: "color-mix(in srgb, var(--shade) 25%, transparent)",
                       lineHeight: "1.35",
                     }}
                     title={`${dartsThrown[p] ?? 0} piler kastet`}
@@ -1254,10 +1264,10 @@ export function GameScreen({
                           // shifted the whole header's layout on every single turn change.
                           fontSize: "var(--text-body)",
                           fontWeight: isActive ? 700 : 500,
-                          background: isActive ? accent : "rgba(255,255,255,0.04)",
+                          background: isActive ? accent : "color-mix(in srgb, var(--light) 4%, transparent)",
                           boxShadow: isActive
-                            ? "0 1px 0 rgba(255,255,255,0.3) inset, 0 2px 8px rgba(0,0,0,0.35)"
-                            : "0 1px 0 rgba(255,255,255,0.05) inset",
+                            ? "0 1px 0 color-mix(in srgb, var(--light) 30%, transparent) inset, 0 2px 8px color-mix(in srgb, var(--shade) 35%, transparent)"
+                            : "0 1px 0 color-mix(in srgb, var(--light) 5%, transparent) inset",
                           "--glow-color": glowColor,
                         } as React.CSSProperties
                       }
@@ -1341,7 +1351,7 @@ export function GameScreen({
                         <span
                           aria-hidden
                           className="animate-idle-glow absolute inset-1.5 rounded-md pointer-events-none"
-                          style={{ boxShadow: `0 0 14px ${choiceRole ? "rgba(217, 174, 79, 0.6)" : glowColor}` }}
+                          style={{ boxShadow: `0 0 14px ${choiceRole ? "color-mix(in srgb, var(--color-gold) 60%, transparent)" : glowColor}` }}
                         />
                       )}
                       <button

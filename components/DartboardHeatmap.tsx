@@ -145,7 +145,7 @@ export function DartboardHeatmap({
             cy={-y}
             r={isRecent ? dotRadius * 1.3 : dotRadius}
             fill={isRecent ? HIT_BLUE : "rgba(200, 205, 200, 0.75)"}
-            stroke={isRecent ? "rgba(255,255,255,0.9)" : "rgba(0,0,0,0.6)"}
+            stroke={isRecent ? "color-mix(in srgb, var(--light) 90%, transparent)" : "color-mix(in srgb, var(--shade) 60%, transparent)"}
             strokeWidth={isRecent ? 1.5 : 1}
             className={isLatest ? "hit-zoom" : undefined}
             style={isLatest ? { transformBox: "fill-box", transformOrigin: "center" } : undefined}

@@ -85,7 +85,7 @@ export function BracketTree({
         key={which}
         className={`flex items-center gap-1.5 px-2 flex-1 min-w-0 ${advanced ? "bt-in" : ""}`}
         style={{
-          background: won ? "var(--teal-soft, rgba(52,195,210,0.16))" : "transparent",
+          background: won ? "var(--teal-soft, color-mix(in srgb, var(--color-teal) 16%, transparent))" : "transparent",
           color: won ? "var(--color-cream)" : lost ? "var(--color-muted)" : "var(--color-cream)",
           fontWeight: won ? 700 : 500,
           fontSize: m.font,
@@ -151,7 +151,7 @@ export function BracketTree({
       borderRadius: 8,
       background: "var(--color-surface)",
       border: isNext ? "2px solid var(--color-teal)" : "1px solid var(--color-border)",
-      boxShadow: isNext ? "0 0 18px rgba(52,195,210,0.35)" : undefined,
+      boxShadow: isNext ? "0 0 18px color-mix(in srgb, var(--color-teal) 35%, transparent)" : undefined,
       opacity: decided && !isJust ? 0.95 : 1,
     };
         const selectable = !!onSelect && !!match.participantA && !!match.participantB;
@@ -254,7 +254,7 @@ export function BracketTree({
         {rounds.map((r, ci) => r.matches.map((match, i) => tie(match, colX(ci), centerY(ci, i) - m.h / 2)))}
         <div
           className="absolute flex flex-col items-center justify-center gap-1 text-center"
-          style={{ left: colX(rounds.length), top: finalY - m.h * 0.75, width: m.w, height: m.h * 1.5, borderRadius: 10, border: `1px ${tournament.winner ? "solid" : "dashed"} ${accent}`, color: accent, background: tournament.winner ? "rgba(217,174,79,0.1)" : "transparent" }}
+          style={{ left: colX(rounds.length), top: finalY - m.h * 0.75, width: m.w, height: m.h * 1.5, borderRadius: 10, border: `1px ${tournament.winner ? "solid" : "dashed"} ${accent}`, color: accent, background: tournament.winner ? "color-mix(in srgb, var(--color-gold) 10%, transparent)" : "transparent" }}
         >
           <TrophyIcon className={large ? "w-9 h-9" : "w-6 h-6"} />
           <span className="font-display w-full px-2" style={{ lineHeight: 1.1, fontSize: large ? "var(--text-title)" : "var(--text-body)", color: tournament.winner ? "var(--color-cream)" : "var(--color-gold)" }}>

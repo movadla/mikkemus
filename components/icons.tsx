@@ -448,3 +448,47 @@ export function MinusIcon({ className }: IconProps) {
     </Svg>
   );
 }
+
+/* -- the words of the game, as pictures: where on the board a dart lands. Same grid and stroke as the rest. -- */
+
+/** A single: the dart in the broad part of the segment. */
+export function SingleIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="5" opacity="0.4" />
+      <circle cx="9" cy="9" r="1.6" fill="currentColor" stroke="none" />
+    </Svg>
+  );
+}
+
+/** A double: the outer ring marked. */
+export function DoubleIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <circle cx="12" cy="12" r="9" strokeWidth={3.2} />
+      <circle cx="12" cy="12" r="5" opacity="0.4" />
+    </Svg>
+  );
+}
+
+/** A treble: the inner ring marked. */
+export function TripleIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <circle cx="12" cy="12" r="9" opacity="0.4" />
+      <circle cx="12" cy="12" r="5.2" strokeWidth={3.2} />
+    </Svg>
+  );
+}
+
+/** A miss: the board, and a dart that stayed outside it. */
+export function MissIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <circle cx="10" cy="10" r="7" strokeDasharray="2 3" opacity="0.6" />
+      <path d="m15 15 5.5 5.5" />
+      <path d="M17.5 14.5 21 18" opacity="0.7" />
+    </Svg>
+  );
+}

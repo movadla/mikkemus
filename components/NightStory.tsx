@@ -70,7 +70,7 @@ export function NightStory({ slides, onClose }: { slides: StorySlide[]; onClose:
         onClick={onClose}
         aria-label="Lukk"
         className="absolute rounded-full flex items-center justify-center outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]"
-        style={{ top: "calc(env(safe-area-inset-top, 0px) + 12px)", right: 12, width: 44, height: 44, background: "rgba(255,255,255,0.12)", color: "var(--color-cream)", fontSize: "var(--text-title)" }}
+        style={{ top: "calc(env(safe-area-inset-top, 0px) + 12px)", right: 12, width: 44, height: 44, background: "color-mix(in srgb, var(--light) 12%, transparent)", color: "var(--color-cream)", fontSize: "var(--text-title)" }}
       >
         ×
       </button>

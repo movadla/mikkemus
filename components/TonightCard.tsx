@@ -11,6 +11,7 @@ import { buildSeedTable } from "@/lib/seedingTable";
 import { useRoster } from "@/lib/storage";
 import { MedalIcon, TrophyIcon } from "./icons";
 import { Avatar } from "./ui/Avatar";
+import { CountUp } from "./ui/CountUp";
 import { Row } from "./ui/Row";
 import { Section } from "./ui/Section";
 
@@ -35,7 +36,7 @@ export function TonightCard() {
     <div className="wide-columns">
       {night && top.length > 0 && (
         <Section label={`Stilling · ${dayLabel(night.date)}`} aside={<Link href={`/kveld/${night.date}`} className="underline" style={{ color: "var(--color-teal)", fontSize: "var(--text-small)" }}>Hele kvelden</Link>}>
-          <div className="space-y-2">
+          <div className="space-y-2 stagger">
             {top.map((p, i) => {
               const record = roster.find((r) => r.name === p.name);
               return (
@@ -70,7 +71,7 @@ export function TonightCard() {
       )}
       {first && (
         <Section label="Nummer 1">
-          <Row href={`/spillere/${encodeURIComponent(first.name)}`} leading={<TrophyIcon className="w-5 h-5" />} title={first.name} value={Math.round(first.rating)} subtitle="Rating" />
+          <Row href={`/spillere/${encodeURIComponent(first.name)}`} leading={<TrophyIcon className="w-5 h-5" />} title={first.name} value={<CountUp value={Math.round(first.rating)} />} subtitle="Rating" />
         </Section>
       )}
     </div>

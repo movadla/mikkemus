@@ -1,10 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { useRoster, type MatchHistoryEntry, type PlayerRecord } from "@/lib/storage";
 import { dayLabel } from "@/lib/formatDate";
 import { groupNights } from "@/lib/nights";
 import { MedalIcon, TrophyIcon } from "./icons";
-import { Avatar } from "./ui/Avatar";
+import { MorphAvatar } from "./ui/Avatar";
+import { CountUp } from "./ui/CountUp";
 import { Button } from "./ui/Button";
 import { EmptyState } from "./ui/EmptyState";
 import { Row } from "./ui/Row";
@@ -41,21 +43,22 @@ const PLACE_COLOR = ["var(--color-gold)", "var(--color-silver)", "var(--color-br
 /** One of the three on the podium: the medal, the picture, the name and the win rate. The winner stands highest. */
 function PodiumPlace({ p, place }: { p: PlayerRecord; place: 0 | 1 | 2 }) {
   return (
-    <div
-      className="flex flex-col items-center gap-1 text-center px-2 py-3 min-w-0"
+    <Link
+      href={`/spillere/${encodeURIComponent(p.name)}`}
+      className="tactile flex flex-col items-center gap-1 text-center px-2 py-3 min-w-0"
       style={{ borderRadius: "var(--radius-m)", background: place === 0 ? "var(--gold-soft)" : "var(--color-surface)", border: `1px solid ${place === 0 ? "var(--gold-ring)" : "var(--color-border)"}`, marginTop: place === 0 ? 0 : "1.5rem" }}
     >
       <span style={{ color: PLACE_COLOR[place] }}>
         <MedalIcon className="w-6 h-6" />
       </span>
-      <Avatar name={p.name} photo={p.photo} size={place === 0 ? "l" : "m"} state={place === 0 ? "winner" : "idle"} />
+      <MorphAvatar name={p.name} photo={p.photo} size={place === 0 ? "l" : "m"} state={place === 0 ? "winner" : "idle"} />
       <span className="font-display truncate w-full" style={{ color: "var(--color-cream)", fontSize: "var(--text-body)" }}>
         {p.name}
       </span>
       <span className="tabular" style={{ color: PLACE_COLOR[place], fontSize: "var(--text-title)", fontWeight: 700 }}>
-        {winPct(p)} %
+        <CountUp value={winPct(p)} format={(n) => `${n} %`} />
       </span>
-    </div>
+    </Link>
   );
 }
 
@@ -84,7 +87,7 @@ export function HallOfFameTab() {
       </div>
 
       {ranked.length > 3 && (
-        <div className="space-y-2 mb-8">
+        <div className="space-y-2 mb-8 stagger">
           {ranked.slice(3).map((p, i) => {
             const streaks = winStreaks(p.matchHistory);
             return (
@@ -101,7 +104,7 @@ export function HallOfFameTab() {
       )}
 
       <Section label="Kvelder">
-        <div className="space-y-2 wide-list">
+        <div className="space-y-2 wide-list stagger">
           {nights.map((night) => {
             const best = night.players[0];
             return (

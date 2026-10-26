@@ -71,7 +71,7 @@ export function TimeMachine({ players, turnLog, snapshots, winner }: { players: 
         ))}
         {STEPS.map((s) => (
           <div key={s} className="contents">
-            <span className="font-display flex items-center justify-center rounded" style={{ background: "rgba(0,0,0,0.2)", color: "var(--color-cream)", fontSize: "var(--text-small)" }}>
+            <span className="font-display flex items-center justify-center rounded" style={{ background: "color-mix(in srgb, var(--shade) 20%, transparent)", color: "var(--color-cream)", fontSize: "var(--text-small)" }}>
               {STEP_LABELS[s]}
             </span>
             {players.map((p) => {
@@ -94,7 +94,7 @@ export function TimeMachine({ players, turnLog, snapshots, winner }: { players: 
       </div>
 
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto mb-1" role="img" aria-label={haveChance ? "Vinnersjanse gjennom kampen" : "Kryss gjennom kampen"}>
-        <rect width={W} height={H} fill="rgba(0,0,0,0.18)" rx={6} />
+        <rect width={W} height={H} fill="color-mix(in srgb, var(--shade) 18%, transparent)" rx={6} />
         {haveChance && <line x1={0} x2={W} y1={y(0.5)} y2={y(0.5)} stroke="var(--color-border)" strokeDasharray="4 4" />}
         {players.map((p, si) => (
           <polyline key={p} points={frames.map((_, i) => `${x(i).toFixed(1)},${y(value(i, p)).toFixed(1)}`).join(" ")} fill="none" stroke={COLORS[si % 4]} strokeWidth={p === winner ? 3 : 2} strokeLinejoin="round" strokeLinecap="round" opacity={p === winner ? 1 : 0.85} />

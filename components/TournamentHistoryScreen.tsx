@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { ViewTransition, startTransition, useEffect, useMemo, useState } from "react";
 import { listFinishedTournaments } from "@/lib/tournamentStorage";
 import { cupColor } from "@/lib/botCup";
 import { dayLabel } from "@/lib/formatDate";
@@ -48,12 +48,16 @@ function Shelf({ name, cups, onOpen }: { name: string; cups: Tournament[]; onOpe
                 <button
                   key={t.id}
                   type="button"
-                  onClick={() => onOpen(t)}
+                  onClick={() => startTransition(() => onOpen(t))}
                   aria-label={`${tournamentTitle(t)}, ${dayLabel(t.completedAt ?? t.createdAt)}`}
                   className={`tactile flex flex-col items-center justify-end ${FOCUS_RING}`}
                   style={{ width: "3rem", minHeight: "var(--control-lg)", color: cupColor(t.cup?.kind), background: "transparent", boxShadow: "none" }}
                 >
-                  <TrophyIcon className="w-9 h-9" />
+                  <ViewTransition name={`cup-${t.id}`} share="morph" default="none">
+                    <span className="inline-flex">
+                      <TrophyIcon className="w-9 h-9" />
+                    </span>
+                  </ViewTransition>
                 </button>
               ))}
             </div>
@@ -81,7 +85,7 @@ export function TournamentHistoryScreen({ onBack }: { onBack: () => void }) {
   }, []);
   const counts = useMemo(() => trophyCount(list ?? []), [list]);
 
-  if (open) return <ChampionScreen tournament={open} onClose={() => setOpen(null)} />;
+  if (open) return <ChampionScreen tournament={open} onClose={() => startTransition(() => setOpen(null))} />;
   return (
     <div className="animate-screen-push screen" style={{ background: "var(--color-bg)" }}>
       <div className="screen-inner">

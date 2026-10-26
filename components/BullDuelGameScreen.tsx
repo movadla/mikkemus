@@ -14,6 +14,8 @@ import { ChromeControls, HEAT_GLOW, SHAKE, SHAKE_NAMES } from "./GameScreen";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { FxMenu } from "./FxMenu";
 import { ThrowerBar, type Thrower } from "./ThrowerBar";
+import { ArrowLeftIcon, MoreIcon } from "./icons";
+import { Sheet } from "./ui/Sheet";
 
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
@@ -97,6 +99,7 @@ export function BullDuelGameScreen({
 }) {
   const [showHomeConfirm, setShowHomeConfirm] = useState(false);
   const [fxMenuOpen, setFxMenuOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [announcerOn, setAnnouncerOn] = useState(() => isAnnouncerEnabled());
   const [shakeOn, setShakeOn] = useState(() => isShakeEnabled());
   const [calibrating, setCalibrating] = useState<"idle" | "sending" | "sent" | "failed">("idle");
@@ -127,6 +130,30 @@ export function BullDuelGameScreen({
   const btn = (fill: string, extra: React.CSSProperties = {}): React.CSSProperties =>
     ({ "--btn-fill": fill, color: "var(--color-cream)", minHeight: "var(--control-lg)", ...extra }) as React.CSSProperties;
 
+  // The settings of the match, in the sheet behind the "⋯", as on the main board.
+  const chromeProps = {
+    onHome: () => setShowHomeConfirm(true),
+    announcerOn,
+    onToggleAnnouncer: () => {
+      const next = !announcerOn;
+      setAnnouncerOn(next);
+      setAnnouncerEnabled(next);
+    },
+    shakeOn,
+    onToggleShake: () => {
+      const next = !shakeOn;
+      setShakeOn(next);
+      setShakeEnabled(next);
+    },
+    onCalibrate: handleCalibrate,
+    calibrating,
+    standAvailable: false,
+    standOn: false,
+    onToggleStand: () => {},
+    fxLabel: FX_LABELS[fxLevelNow],
+    onOpenFx: () => setFxMenuOpen(true),
+  };
+
   return (
     <div
       className="game-root animate-screen-enter motion-hit relative w-full flex flex-col p-4"
@@ -140,28 +167,25 @@ export function BullDuelGameScreen({
       />
 
       <div className="game-header landscape-tight flex items-center gap-2 mb-2 max-w-3xl mx-auto w-full shrink-0">
-        <ChromeControls
-          onHome={() => setShowHomeConfirm(true)}
-          announcerOn={announcerOn}
-          onToggleAnnouncer={() => {
-            const next = !announcerOn;
-            setAnnouncerOn(next);
-            setAnnouncerEnabled(next);
-          }}
-          shakeOn={shakeOn}
-          onToggleShake={() => {
-            const next = !shakeOn;
-            setShakeOn(next);
-            setShakeEnabled(next);
-          }}
-          onCalibrate={handleCalibrate}
-          calibrating={calibrating}
-          standAvailable={false}
-          standOn={false}
-          onToggleStand={() => {}}
-          fxLabel={FX_LABELS[fxLevelNow]}
-          onOpenFx={() => setFxMenuOpen(true)}
-        />
+        <button
+          type="button"
+          onClick={() => setShowHomeConfirm(true)}
+          className={`tactile rounded-lg text-sm inline-flex items-center justify-center gap-2 px-3 h-11 ${FOCUS_RING}`}
+          style={{ background: "var(--color-surface)", color: "var(--color-cream)" }}
+        >
+          <ArrowLeftIcon className="w-4 h-4" />
+          Hjem
+        </button>
+        <span className="flex-1" />
+        <button
+          type="button"
+          onClick={() => setMenuOpen(true)}
+          aria-label="Meny"
+          className={`tactile w-11 h-11 rounded-lg flex items-center justify-center shrink-0 ${FOCUS_RING}`}
+          style={{ background: "var(--color-surface)", color: "var(--color-cream)" }}
+        >
+          <MoreIcon className="w-5 h-5" />
+        </button>
       </div>
 
       <div className="max-w-3xl mx-auto w-full mb-2 shrink-0">
@@ -169,6 +193,13 @@ export function BullDuelGameScreen({
       </div>
 
       {fxMenuOpen && <FxMenu onClose={() => setFxMenuOpen(false)} />}
+      {menuOpen && (
+        <Sheet title="Kamp" onClose={() => setMenuOpen(false)}>
+          <div className="grid gap-2">
+            <ChromeControls {...chromeProps} stacked hideHome />
+          </div>
+        </Sheet>
+      )}
       {showHomeConfirm && (
         <ConfirmDialog
           message="Avslutte Bull-duell? Kampen telles ikke."
@@ -202,7 +233,7 @@ export function BullDuelGameScreen({
                 className="rounded-xl px-4 py-3 transition-all duration-300"
                 style={{
                   background: isActive ? "var(--color-surface-2)" : "transparent",
-                  boxShadow: isActive ? "var(--glow-teal), inset 0 1px 0 rgba(255,255,255,0.08)" : "inset 0 0 0 1px rgba(255,255,255,0.05)",
+                  boxShadow: isActive ? "var(--glow-teal), inset 0 1px 0 color-mix(in srgb, var(--light) 8%, transparent)" : "inset 0 0 0 1px color-mix(in srgb, var(--light) 5%, transparent)",
                 }}
               >
                 <div className="flex items-baseline justify-between gap-3">
@@ -221,7 +252,7 @@ export function BullDuelGameScreen({
                       style={{
                         width: `${pct}%`,
                         background: finish ? "linear-gradient(90deg, #b8862e, var(--color-gold-strong))" : "linear-gradient(180deg, var(--color-teal-strong), var(--color-teal-deep))",
-                        boxShadow: finish ? "0 0 12px rgba(240, 208, 128, 0.5)" : undefined,
+                        boxShadow: finish ? "0 0 12px color-mix(in srgb, var(--color-gold-strong) 50%, transparent)" : undefined,
                         transition: "width 400ms var(--ease-standard, ease-out)",
                       }}
                     />

@@ -2888,7 +2888,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         />
       )}
       <FxStage matchDart={matchDartOn} />
-      {scoliaEnabled && <ScoliaStatusBadge state={scolia.state} />}
+      {/* On the board the status is the dot in the top row (its words are in the menu); the pill is for the screens around it. */}
+      {scoliaEnabled && screen !== "game" && <ScoliaStatusBadge state={scolia.state} />}
       <CameraImages images={cameraImages} />
       <GameScreen
         thrower={thrower}

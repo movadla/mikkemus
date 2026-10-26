@@ -1,6 +1,7 @@
 "use client";
 
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, startTransition, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { meanDistanceFor, type BullDuelState } from "@/lib/bullDuel";
 import { generateConfetti, generateConfettiRain } from "@/lib/confetti";
 import { fxFlags, useFxLevel } from "@/lib/fxLevel";
@@ -8,13 +9,15 @@ import { getPlayerRecord } from "@/lib/storage";
 import { DartboardHeatmap } from "./DartboardHeatmap";
 import { ReplayCard } from "./ReplayCard";
 import { Trophy } from "./Trophy";
+import { Button } from "./ui/Button";
+import { ChartFrame, seriesColor } from "./ui/ChartFrame";
+import { Segmented } from "./ui/Segmented";
 
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
 
 const CONFETTI_COUNT = 40;
 const RAIN_COUNT = 90;
-const SIDE_COLORS = ["#4b8be8", "var(--color-red)", "#e6bd57", "var(--color-teal)"];
 
 // xG is an expected-points value (0-2, same unit the game scores in, like football xG) rather than a signed luck delta
 // — always non-negative, so no "+" prefix.
@@ -27,7 +30,7 @@ function Tile({ label, value, unit }: { label: string; value: string; unit?: str
   return (
     <div
       className="rounded-xl px-2 py-3 text-center"
-      style={{ background: "var(--color-surface-2)", boxShadow: "inset 0 0 0 1px var(--veil), inset 0 1px 0 var(--veil), 0 1px 2px rgba(0,0,0,0.4)" }}
+      style={{ background: "var(--color-surface-2)", boxShadow: "inset 0 0 0 1px var(--veil), inset 0 1px 0 var(--veil), 0 1px 2px color-mix(in srgb, var(--shade) 40%, transparent)" }}
     >
       <p style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)", fontWeight: 600, letterSpacing: "0.14em" }}>{label}</p>
       <p className="tabular" style={{ color: "var(--color-cream)", fontSize: "var(--text-title)", lineHeight: 1.15, fontWeight: 700, letterSpacing: "-0.01em" }}>
@@ -47,11 +50,11 @@ function PointsRace({ duel, winner }: { duel: BullDuelState; winner: string }) {
   const y = (pts: number) => 8 + (1 - Math.min(1, pts / duel.target)) * (H - 16);
   return (
     <svg viewBox={`0 0 ${W} ${H + 6}`} className="w-full h-auto" role="img" aria-label="Poeng etter hver runde">
-      <line x1={8} x2={W - 8} y1={y(duel.target)} y2={y(duel.target)} stroke="rgba(255,255,255,0.14)" strokeDasharray="3 3" />
-      <line x1={8} x2={W - 8} y1={H - 8} y2={H - 8} stroke="rgba(255,255,255,0.14)" />
-      {duel.players.map((p, i) => {
+      <line x1={8} x2={W - 8} y1={y(duel.target)} y2={y(duel.target)} stroke="color-mix(in srgb, var(--light) 14%, transparent)" strokeDasharray="3 3" />
+      <line x1={8} x2={W - 8} y1={H - 8} y2={H - 8} stroke="color-mix(in srgb, var(--light) 14%, transparent)" />
+      {duel.players.map((p) => {
         const series = [0, ...duel.pointsByTurn[p]];
-        const color = p === winner ? "var(--color-gold-strong)" : SIDE_COLORS[i % SIDE_COLORS.length];
+        const color = p === winner ? "var(--color-gold-strong)" : seriesColor(p);
         const points = series.map((v, k) => `${x(k)},${y(v)}`).join(" ");
         const last = series.length - 1;
         return (
@@ -78,6 +81,7 @@ export function BullDuelWinnerScreen({
   const photo = getPlayerRecord(winner)?.photo;
   const [expanded, setExpanded] = useState<string | null>(null);
   const [spreadFor, setSpreadFor] = useState<string>(winner);
+  const [tab, setTab] = useState<"oppsummering" | "statistikk" | "replay">("oppsummering");
   // The celebration follows the chosen level, as in the main game: none at Vanlig, the usual at Party, twice the rain at Full party.
   const fx = fxFlags(useFxLevel());
   const confettiCount = fx.confetti ? CONFETTI_COUNT * (fx.bigConfetti ? 2 : 1) : 0;
@@ -107,6 +111,22 @@ export function BullDuelWinnerScreen({
   ].filter((i) => i.show);
   const measured = duel.players.some((p) => (duel.throws[p]?.length ?? 0) > 0);
 
+  // The way on, fixed to the window. It is drawn into the body: the screen animates with a transform, and a fixed child of a
+  // transformed element is fixed to that element, not to the window.
+  const actionBarEl = (
+    <div className="fixed left-0 right-0 bottom-0 z-40 px-4" style={{ background: "var(--glass)", backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)", borderTop: "1px solid var(--color-hairline)", paddingTop: "0.75rem", paddingBottom: "max(0.75rem, env(safe-area-inset-bottom, 0px))" }}>
+      <div className="mx-auto max-w-md grid gap-2" style={{ gridTemplateColumns: "1.5fr 1fr" }}>
+        <Button variant="primary" size="lg" block onClick={onPlayAgain}>
+          Revansj
+        </Button>
+        <Button size="lg" block onClick={onHome}>
+          Hjem
+        </Button>
+      </div>
+    </div>
+  );
+  const actionBar = typeof document === "undefined" ? actionBarEl : createPortal(actionBarEl, document.body);
+
   return (
     <div className="animate-screen-enter relative min-h-screen w-full flex items-start justify-center p-4 overflow-hidden" style={{ background: "var(--color-bg)" }}>
       {/* Full-screen rain behind the card — see WinnerScreen for the same treatment. */}
@@ -130,7 +150,7 @@ export function BullDuelWinnerScreen({
           />
         ))}
       </div>
-      <div className="relative z-10 w-full max-w-md text-center pt-4 pb-10">
+      <div className="relative z-10 w-full max-w-md text-center pt-4" style={{ paddingBottom: "7rem" }}>
         {/* The trophy rises above the winner (Full party). */}
         {fx.trophy && <Trophy cannons />}
         <div className="relative">
@@ -148,7 +168,7 @@ export function BullDuelWinnerScreen({
               <span aria-hidden className="animate-winner-shockwave absolute inset-0 rounded-full pointer-events-none" style={{ border: "3px solid var(--color-gold)" }} />
               <div
                 className="animate-winner-photo-pulse rounded-full overflow-hidden flex items-center justify-center w-full h-full"
-                style={{ border: "5px solid var(--color-gold)", background: "var(--color-surface)", boxShadow: "0 10px 30px var(--scrim-soft), 0 0 40px rgba(217, 174, 79, 0.35)" }}
+                style={{ border: "5px solid var(--color-gold)", background: "var(--color-surface)", boxShadow: "0 10px 30px var(--scrim-soft), 0 0 40px color-mix(in srgb, var(--color-gold) 35%, transparent)" }}
               >
                 {photo ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -181,6 +201,46 @@ export function BullDuelWinnerScreen({
           </div>
         </div>
 
+        <div className="mb-4">
+          <Segmented
+            value={tab}
+            onChange={(next) => startTransition(() => setTab(next))}
+            label="Kampen"
+            options={[
+              { value: "oppsummering", label: "Oppsummering" },
+              { value: "statistikk", label: "Statistikk" },
+              { value: "replay", label: "Replay" },
+            ]}
+          />
+        </div>
+
+        {tab === "oppsummering" && (
+          <>
+        {insights.length > 0 && (
+          <div className="card mb-6" style={{ background: "var(--color-surface)" }}>
+            <p className="mb-4 section-label">DET SOM STAKK UT</p>
+            <div className="grid grid-cols-2 gap-3">
+              {insights.map((a) => (
+                <div key={a.title} className="rounded-xl p-3 text-left" style={{ background: "var(--color-surface-2)", boxShadow: "inset 0 0 0 1px var(--veil), inset 0 1px 0 var(--veil)" }}>
+                  <p style={{ color: "var(--color-gold)", fontSize: "var(--text-micro)", letterSpacing: "0.14em", fontWeight: 600, textTransform: "uppercase" }}>{a.title}</p>
+                  <p className="font-display truncate" style={{ color: "var(--color-cream)", fontSize: "var(--text-title)" }}>{a.who}</p>
+                  <p style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>{a.detail}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {duel.players.some((p) => duel.pointsByTurn[p].length > 0) && (
+          <ChartFrame title="POENG RUNDE FOR RUNDE" legend={duel.players.map((n) => ({ name: n, won: n === winner }))}>
+            <PointsRace duel={duel} winner={winner} />
+          </ChartFrame>
+        )}
+          </>
+        )}
+
+        {tab === "statistikk" && (
+          <>
         <div className="grid grid-cols-3 gap-2 mb-6">
           <Tile label="TREFF" value={winnerPct === null ? "–" : String(winnerPct)} unit={winnerPct === null ? undefined : "%"} />
           <Tile label="REKKE" value={String(winnerStats.bestRun)} unit="piler" />
@@ -252,36 +312,11 @@ export function BullDuelWinnerScreen({
           </div>
         </div>
 
-        {insights.length > 0 && (
-          <div className="card mb-6" style={{ background: "var(--color-surface)" }}>
-            <p className="mb-4 section-label">DET SOM STAKK UT</p>
-            <div className="grid grid-cols-2 gap-3">
-              {insights.map((a) => (
-                <div key={a.title} className="rounded-xl p-3 text-left" style={{ background: "var(--color-surface-2)", boxShadow: "inset 0 0 0 1px var(--veil), inset 0 1px 0 var(--veil)" }}>
-                  <p style={{ color: "var(--color-gold)", fontSize: "var(--text-micro)", letterSpacing: "0.14em", fontWeight: 600, textTransform: "uppercase" }}>{a.title}</p>
-                  <p className="font-display truncate" style={{ color: "var(--color-cream)", fontSize: "var(--text-title)" }}>{a.who}</p>
-                  <p style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>{a.detail}</p>
-                </div>
-              ))}
-            </div>
-          </div>
+          </>
         )}
 
-        {duel.players.some((p) => duel.pointsByTurn[p].length > 0) && (
-          <div className="card mb-6" style={{ background: "var(--color-surface)" }}>
-            <p className="mb-3 section-label">POENG RUNDE FOR RUNDE</p>
-            <PointsRace duel={duel} winner={winner} />
-            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 justify-center" style={{ fontSize: "var(--text-micro)", color: "var(--color-muted)" }}>
-              {duel.players.map((p, i) => (
-                <span key={p} className="flex items-center gap-1.5">
-                  <span aria-hidden style={{ width: 10, height: 3, borderRadius: 2, background: p === winner ? "var(--color-gold-strong)" : SIDE_COLORS[i % SIDE_COLORS.length], display: "inline-block" }} />
-                  {p}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-
+        {tab === "replay" && (
+          <>
         {measured && (
           <div className="card mb-6" style={{ background: "var(--color-surface)" }}>
             <p className="mb-3 section-label">KASTSPREDNING</p>
@@ -308,22 +343,10 @@ export function BullDuelWinnerScreen({
 
         {replayThrows && <ReplayCard throws={replayThrows} />}
 
-        <button
-          type="button"
-          onClick={onPlayAgain}
-          className={`glossy w-full py-4 rounded-lg font-semibold text-lg mb-4 ${FOCUS_RING}`}
-          style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)" } as React.CSSProperties}
-        >
-          Revansj
-        </button>
-        <button
-          type="button"
-          onClick={onHome}
-          className={`tactile w-full py-4 rounded-lg font-semibold text-lg ${FOCUS_RING}`}
-          style={{ background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
-        >
-          Hjem
-        </button>
+          </>
+        )}
+
+        {actionBar}
       </div>
     </div>
   );

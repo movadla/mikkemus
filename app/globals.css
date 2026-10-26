@@ -600,8 +600,8 @@ button {
    underneath it left only three rows visible — you had to scroll to reach D and T, which
    makes the orientation useless for the game it is showing. Landscape has width to spare
    instead, so the buttons move to a column on the right and the whole board fits. Bounded by
-   max-height so tablets and desktops, which have room either way, are untouched. */
-@media (orientation: landscape) and (max-height: 560px) {
+   max-height. Up to 720 px high that is a phone sideways, a tablet or a laptop window: all of them have width to spare and not the height for a ten-row board stacked above its buttons. */
+@media (orientation: landscape) and (max-height: 720px) {
   /* Grid, not a wrapped flex row. Wrapping produced lines with no definite height, so the
      board collapsed and the page grew past the viewport instead — an explicit two-area grid
      over the root's own 100dvh gives the board a real height to divide among its ten rows. */
@@ -1620,6 +1620,9 @@ button {
 /* -- shared pieces: scrim, sheet, skeleton -- */
 :root {
   --scrim: rgba(0, 0, 0, 0.6);
+  /* The two colours shadows and highlights are mixed from, so they follow the theme. */
+  --shade: #000000;
+  --light: #ffffff;
   --page-glow: #1a2a1f;
   --page-vignette: rgba(0, 0, 0, 0.3);
   --scrim-soft: rgba(0, 0, 0, 0.5);
@@ -1721,19 +1724,21 @@ html[data-theme="light"] {
   --color-text-2: #35493c;
   --color-muted: #56695b;
   --color-label: #56695b;
-  --color-teal: #0b7f8c;
-  --color-teal-strong: #08626c;
-  --color-teal-deep: #075660;
+  --color-teal: #066a77;
+  --color-teal-strong: #054f5a;
+  --color-teal-deep: #044650;
   --color-gold: #94700f;
   --color-gold-strong: #7d5d08;
   --color-gold-deep: #6a4f08;
   --color-red: #bf3f2b;
   --color-green: #2a7a47;
-  --teal-soft: rgba(11, 127, 140, 0.1);
-  --teal-ring: rgba(11, 127, 140, 0.35);
+  --teal-soft: rgba(6, 106, 119, 0.1);
+  --teal-ring: rgba(6, 106, 119, 0.35);
   --gold-soft: rgba(148, 112, 15, 0.1);
   --gold-ring: rgba(148, 112, 15, 0.35);
   --glass: rgba(250, 248, 241, 0.78);
+  --shade: #28281a;
+  --light: #ffffff;
   --page-glow: #fbf8ee;
   --page-vignette: rgba(60, 50, 20, 0.08);
   --veil: rgba(20, 40, 28, 0.06);
@@ -1826,5 +1831,158 @@ html[data-theme="light"] {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.5rem 1.5rem;
     align-items: start;
+  }
+}
+
+/* -- the draw as a ceremony --
+   The pair being drawn comes in large on a stage in the cup's colour (the left name from the left, the right from the right, "mot"
+   popping between them), and when it settles in the list it flashes once in the same colour. */
+@keyframes draw-from-left {
+  from {
+    transform: translateX(-2rem);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+@keyframes draw-from-right {
+  from {
+    transform: translateX(2rem);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+@keyframes draw-pop {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.25);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes draw-flash {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--draw) 70%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 10px transparent;
+  }
+}
+
+@keyframes draw-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+}
+
+.draw-from-left {
+  animation: draw-from-left 260ms var(--ease-standard) both;
+}
+
+.draw-from-right {
+  animation: draw-from-right 260ms var(--ease-standard) 90ms both;
+}
+
+.draw-pop {
+  animation: draw-pop 320ms var(--ease-spring) 40ms both;
+}
+
+.draw-flash {
+  animation: draw-flash 700ms ease-out both;
+}
+
+.draw-pulse {
+  display: inline-flex;
+  animation: draw-pulse 1.2s ease-in-out infinite;
+}
+
+/* The board on a wide, low screen (a laptop window or a tablet on its side): the same layout as a phone sideways, but the board
+   column takes real width instead of hugging its content, and the panel beside it is wider. */
+@media (orientation: landscape) and (max-height: 720px) and (min-width: 900px) {
+  .game-root {
+    grid-template-columns: 2.6rem minmax(0, 1fr) minmax(22rem, 34rem) 3.6rem minmax(0, 1fr) 18rem;
+  }
+}
+
+/* -- alive, not busy --
+   A list comes in one row after another (the first ten; the rest are there at once), and an option that has just been chosen
+   gives a little. Both are short, and both are switched off by "reduce motion". */
+@keyframes rise-in {
+  from {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+.stagger > * {
+  animation: rise-in var(--duration-base) var(--ease-standard) both;
+}
+.stagger > *:nth-child(2) { animation-delay: 40ms; }
+.stagger > *:nth-child(3) { animation-delay: 80ms; }
+.stagger > *:nth-child(4) { animation-delay: 120ms; }
+.stagger > *:nth-child(5) { animation-delay: 160ms; }
+.stagger > *:nth-child(6) { animation-delay: 200ms; }
+.stagger > *:nth-child(7) { animation-delay: 240ms; }
+.stagger > *:nth-child(8) { animation-delay: 280ms; }
+.stagger > *:nth-child(9) { animation-delay: 320ms; }
+.stagger > *:nth-child(10) { animation-delay: 360ms; }
+
+@keyframes select-pop {
+  0% {
+    transform: scale(0.94);
+  }
+  60% {
+    transform: scale(1.03);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+[role="radio"][aria-checked="true"],
+button[aria-pressed="true"] {
+  animation: select-pop 240ms var(--ease-spring) both;
+}
+
+html[data-fx="simple"] .stagger > *,
+html[data-fx="simple"] [role="radio"][aria-checked="true"],
+html[data-fx="simple"] button[aria-pressed="true"] {
+  animation: none;
+}
+
+/* -- the big screen's match view: the board and a panel beside it, as a broadcast has its scoreboard and its graphics -- */
+.tv-live {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (min-width: 1000px) {
+  .tv-live {
+    grid-template-columns: minmax(0, 2fr) minmax(18rem, 1fr);
   }
 }

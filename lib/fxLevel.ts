@@ -112,6 +112,11 @@ export function getFxLevel(): FxLevel {
   }
 }
 
+/** Puts the level on the page, so the stylesheet can leave out the small movements in Enkel. */
+export function applyFxLevel(level: FxLevel): void {
+  if (typeof document !== "undefined") document.documentElement.dataset.fx = level;
+}
+
 export function setFxLevel(level: FxLevel): void {
   if (typeof window !== "undefined") {
     try {
@@ -120,6 +125,7 @@ export function setFxLevel(level: FxLevel): void {
       // Private mode / quota — the choice just won't outlive this session.
     }
   }
+  applyFxLevel(level);
   listeners.forEach((l) => l());
 }
 

@@ -15,6 +15,8 @@ import { avatarAccent } from "@/lib/avatarAccent";
 import { DartboardGlyph } from "@/components/DartboardGlyph";
 import { Mark } from "@/components/Mark";
 import { TvFrame } from "@/components/TvFrame";
+import { Avatar } from "@/components/ui/Avatar";
+import { useRoster } from "@/lib/storage";
 
 const CONFETTI = [
   { left: "6%", rotate: "-18deg", delay: "0ms", color: "var(--color-gold)" },
@@ -30,6 +32,47 @@ const CONFETTI = [
   { left: "94%", rotate: "-22deg", delay: "260ms", color: "var(--color-gold)" },
   { left: "50%", rotate: "8deg", delay: "300ms", color: "var(--color-cream)" },
 ];
+
+/** The panel beside the board: who is throwing, how far each side has come, and the odds. */
+function TvSide({ live, target, showOdds }: { live: LiveMatchState; target: number; showOdds: boolean }) {
+  const roster = useRoster();
+  const active = live.activePlayer;
+  const total = STEPS.length * target;
+  const done = (name: string) => STEPS.reduce((sum, st) => sum + Math.min(target, live.progress[name]?.[st] ?? 0), 0);
+  return (
+    <aside className="flex flex-col gap-4" aria-label="Stilling">
+      {active && (
+        <div className="card flex items-center gap-4">
+          <Avatar name={active} photo={roster.find((r) => r.name === active)?.photo} size="l" state="active" bot={!!live.botLevels?.[active]} />
+          <div className="min-w-0">
+            <p className="section-label">KASTER</p>
+            <p className="font-display truncate" style={{ color: "var(--color-cream)", fontSize: "var(--text-num)", lineHeight: 1.1 }}>
+              {active}
+            </p>
+          </div>
+        </div>
+      )}
+      <div className="card space-y-3">
+        {live.players.map((n) => (
+          <div key={n}>
+            <p className="flex items-baseline justify-between gap-3 mb-1">
+              <span className="truncate" style={{ color: n === active ? "var(--color-cream)" : "var(--color-text-2)", fontWeight: n === active ? 700 : 500, fontSize: "var(--text-title)" }}>
+                {n}
+              </span>
+              <span className="tabular shrink-0" style={{ color: "var(--color-muted)", fontSize: "var(--text-body)" }}>
+                {done(n)} av {total}
+              </span>
+            </p>
+            <div className="rounded-full overflow-hidden" style={{ height: "0.5rem", background: "var(--color-cell)" }}>
+              <div style={{ width: `${(done(n) / total) * 100}%`, height: "100%", background: avatarAccent(n), transition: "width 500ms var(--ease-standard)" }} />
+            </div>
+          </div>
+        ))}
+      </div>
+      {showOdds && live.odds && live.odds.length > 0 && <OddsBar rows={live.odds.map((o) => ({ ...o, lo: o.p, hi: o.p, active: o.name === live.activePlayer }))} />}
+    </aside>
+  );
+}
 
 /**
  * Read-only spectator view, meant for a TV/second screen while the tablet at the board stays
@@ -143,14 +186,8 @@ export default function StorskjermPage() {
     <TvFrame label="Kamp" className="items-center justify-center p-4 sm:p-6 md:p-10">
       <FxStage />
       <h1 className="sr-only">Kampoversikt – storskjerm</h1>
-      {showOdds && live.odds && live.odds.length > 0 && (
-        <div className="fixed left-0 right-0 top-2 z-30 px-16 pointer-events-none" style={{ transform: "scale(1)" }}>
-          <div className="max-w-5xl mx-auto">
-            <OddsBar rows={live.odds.map((o) => ({ ...o, lo: o.p, hi: o.p, active: o.name === live.activePlayer }))} />
-          </div>
-        </div>
-      )}
-      <div className="shadow-panel rounded-xl overflow-x-auto overflow-y-hidden w-full relative" style={{ background: "var(--color-panel)", marginTop: showOdds && live.odds?.length ? "5rem" : 0 }}>
+      <div className="tv-live w-full" style={{ marginTop: "2.5rem" }}>
+      <div className="shadow-panel rounded-xl overflow-x-auto overflow-y-hidden w-full relative" style={{ background: "var(--color-panel)" }}>
         {/* The win chance as a liquid border behind the board — only with two sides and odds on show. */}
         {showOdds && fxFlags(fxLevel).momentum && live.players.length === 2 && live.odds && live.odds.length === 2 && (
           <MomentumWave chance={live.odds.find((o) => o.name === live.players[0])?.p ?? 0.5} />
@@ -190,7 +227,7 @@ export default function StorskjermPage() {
                       {
                         color: isActive ? "var(--color-teal)" : avatarAccent(p),
                         fontSize: "var(--text-num)",
-                        background: isActive ? "rgba(52, 195, 210, 0.16)" : "transparent",
+                        background: isActive ? "color-mix(in srgb, var(--color-teal) 16%, transparent)" : "transparent",
                         "--glow-color": "var(--teal-ring)",
                       } as React.CSSProperties
                     }
@@ -223,8 +260,8 @@ export default function StorskjermPage() {
                         height: "clamp(3.2rem, 12vw, 5rem)",
                         background: isDone ? "linear-gradient(180deg, var(--color-cell-done-top), var(--color-cell-done-bottom))" : "var(--color-cell)",
                         boxShadow: isDone
-                          ? "inset 0 0 0 1px rgba(217, 174, 79, 0.6), inset 0 1px 0 rgba(255, 235, 190, 0.25), 0 0 22px rgba(217, 174, 79, 0.22)"
-                          : "inset 0 0 0 1px var(--veil), inset 0 1px 0 rgba(255,255,255,0.08), 0 1px 2px rgba(0,0,0,0.35)",
+                          ? "inset 0 0 0 1px color-mix(in srgb, var(--color-gold) 60%, transparent), inset 0 1px 0 rgba(255, 235, 190, 0.25), 0 0 22px color-mix(in srgb, var(--color-gold) 22%, transparent)"
+                          : "inset 0 0 0 1px var(--veil), inset 0 1px 0 color-mix(in srgb, var(--light) 8%, transparent), 0 1px 2px color-mix(in srgb, var(--shade) 35%, transparent)",
                       }}
                     >
                       <div className="w-full h-full p-2">
@@ -237,6 +274,8 @@ export default function StorskjermPage() {
             </Fragment>
           ))}
         </div>
+      </div>
+      <TvSide live={live} target={target} showOdds={showOdds} />
       </div>
     </TvFrame>
   );

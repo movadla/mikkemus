@@ -100,7 +100,7 @@ function SeedingCard({ rows }: { rows: SeedRow[] }) {
                 <Dots results={r.form.results} size={8} />
               </span>
             </div>
-            <div className="mt-2 rounded-full overflow-hidden" style={{ height: 5, background: "rgba(0,0,0,0.3)" }}>
+            <div className="mt-2 rounded-full overflow-hidden" style={{ height: 5, background: "color-mix(in srgb, var(--shade) 30%, transparent)" }}>
               <div style={{ width: `${Math.round(r.strength * 100)}%`, height: "100%", background: i === 0 ? "var(--color-gold)" : "var(--color-teal)" }} />
             </div>
           </div>
@@ -195,7 +195,7 @@ function KeyFigures({ players, ratings }: { players: PlayerRecord[]; ratings: Ma
               <tr key={p.name}>
                 <td className="py-2 pr-2 truncate" style={{ position: "sticky", left: 0, background: "var(--color-surface)", color: "var(--color-cream)", fontWeight: 600, maxWidth: "7rem" }}>{p.name}</td>
                 {COLS.map((c) => (
-                  <td key={c.key} className="py-2 px-2 text-right" style={{ color: sort.key === c.key ? "var(--color-cream)" : "var(--color-muted)", background: sort.key === c.key ? "rgba(255,255,255,0.04)" : undefined }}>
+                  <td key={c.key} className="py-2 px-2 text-right" style={{ color: sort.key === c.key ? "var(--color-cream)" : "var(--color-muted)", background: sort.key === c.key ? "color-mix(in srgb, var(--light) 4%, transparent)" : undefined }}>
                     {c.show(c.value(p, ratings.get(p.name) ?? 0))}
                   </td>
                 ))}
@@ -383,7 +383,7 @@ function TournamentOdds({ roster }: { roster: PlayerRecord[] }) {
                         <span className="block tabular" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>{pct(r.win * 100, r.win < 0.1 ? 1 : 0)}</span>
                       </span>
                     </div>
-                    <div className="mt-2 rounded-full overflow-hidden" style={{ height: 5, background: "rgba(0,0,0,0.3)" }}>
+                    <div className="mt-2 rounded-full overflow-hidden" style={{ height: 5, background: "color-mix(in srgb, var(--shade) 30%, transparent)" }}>
                       <div style={{ width: `${top > 0 ? (r.win / top) * 100 : 0}%`, height: "100%", background: i === 0 ? "var(--color-gold)" : "var(--color-teal)" }} />
                     </div>
                   </div>

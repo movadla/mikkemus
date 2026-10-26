@@ -6,8 +6,12 @@ import type { Participant } from "@/lib/tournament";
 import { ScreenTop } from "./ScreenTop";
 import { StepStrip } from "./StepStrip";
 import { CupBanner } from "./CupBanner";
-import type { CupConfig } from "@/lib/botCup";
+import { cupColor, type CupConfig } from "@/lib/botCup";
 import { StickyAction } from "./StickyAction";
+import { Button } from "./ui/Button";
+import { CupEmblem } from "./ui/CupEmblem";
+import { TrophyIcon } from "./icons";
+import { drawSound } from "@/lib/uiSound";
 
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
@@ -43,20 +47,29 @@ export function DrawScreen({
   const [picked, setPicked] = useState<number | null>(null);
   const [revealed, setRevealed] = useState(0);
   const [round, setRound] = useState(0);
+  // The draw that has been skipped to its end (by its number), so a new draw plays out again.
+  const [skipped, setSkipped] = useState(-1);
   const pairs = useMemo(() => firstRoundPairs(order.map((p) => p.name)), [order]);
 
   // Each draw shows its pairs one at a time. The pause is short: the point is that it is a draw, not that anyone waits.
   useEffect(() => {
-    if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    if (skipped === round || matchMedia("(prefers-reduced-motion: reduce)").matches) {
       const t = setTimeout(() => setRevealed(pairs.length), 0);
       return () => clearTimeout(t);
     }
     const timers: ReturnType<typeof setTimeout>[] = [];
-    // A cup of 128 would take a minute at this pace, so the whole reveal is held to about three seconds.
-    const step = Math.min(380, 3000 / pairs.length);
-    for (let i = 1; i <= pairs.length; i++) timers.push(setTimeout(() => setRevealed(i), step * i));
+    // A pair every 0.7 s for a small cup; a cup of 128 would take over a minute at that pace, so the whole draw is held to four seconds.
+    const step = Math.min(700, 4000 / pairs.length);
+    for (let i = 1; i <= pairs.length; i++) {
+      timers.push(
+        setTimeout(() => {
+          setRevealed(i);
+          drawSound(i / pairs.length, i === pairs.length);
+        }, step * i),
+      );
+    }
     return () => timers.forEach(clearTimeout);
-  }, [round, pairs.length]);
+  }, [round, pairs.length, skipped]);
 
   function choose(next: Mode) {
     setMode(next);
@@ -86,6 +99,9 @@ export function DrawScreen({
     }
   }
 
+  const drawing = revealed < pairs.length;
+  const now = revealed > 0 ? pairs[revealed - 1] : null;
+  const colour = cupColor(cup?.kind);
   const seedNo = (name: string) => (mode === "seeded" ? `#${order.findIndex((p) => p.name === name) + 1}` : "");
   const slot = (name: string | null, shown: boolean) =>
     name ? (
@@ -96,7 +112,7 @@ export function DrawScreen({
         className={`flex-1 min-w-0 overflow-hidden flex items-center text-left px-3 rounded-lg ${FOCUS_RING}`}
         style={{
           minHeight: "var(--control)",
-          background: picked !== null && order[picked].name === name ? "var(--teal-soft, rgba(52,195,210,0.16))" : "var(--color-cell)",
+          background: picked !== null && order[picked].name === name ? "var(--teal-soft, color-mix(in srgb, var(--color-teal) 16%, transparent))" : "var(--color-cell)",
           border: picked !== null && order[picked].name === name ? "1px solid var(--color-teal)" : "1px solid transparent",
           color: "var(--color-cream)",
           opacity: shown ? 1 : 0,
@@ -147,9 +163,44 @@ export function DrawScreen({
             Trykk to navn for å bytte
           </p>
         )}
+        {drawing && (
+          <div
+            className="draw-stage mb-4 text-center"
+            style={{ "--draw": colour, borderRadius: "var(--radius-m)", background: `linear-gradient(180deg, color-mix(in srgb, ${colour} 16%, var(--color-surface)), var(--color-surface))`, border: `1px solid color-mix(in srgb, ${colour} 55%, var(--color-border))`, padding: "1rem" } as React.CSSProperties}
+            aria-live="polite"
+          >
+            <div className="flex items-center justify-center gap-3" style={{ minHeight: "4.5rem" }}>
+              {now ? (
+                <div key={revealed} className="draw-stage-pair flex items-center justify-center gap-3 w-full">
+                  <span className="draw-from-left font-display flex-1 min-w-0 truncate text-right" style={{ color: "var(--color-cream)", fontSize: "var(--text-title)" }}>
+                    {now.a ?? "Walkover"}
+                  </span>
+                  <span className="draw-pop font-display" style={{ color: colour }}>
+                    mot
+                  </span>
+                  <span className="draw-from-right font-display flex-1 min-w-0 truncate text-left" style={{ color: "var(--color-cream)", fontSize: "var(--text-title)" }}>
+                    {now.b ?? "Walkover"}
+                  </span>
+                </div>
+              ) : (
+                <span className="draw-pulse" style={{ color: colour }}>
+                  {cup ? <CupEmblem kind={cup.kind} className="w-12 h-12" /> : <TrophyIcon className="w-12 h-12" />}
+                </span>
+              )}
+            </div>
+            <div className="mt-3 rounded-full overflow-hidden" style={{ height: "0.3rem", background: "var(--color-cell)" }} aria-hidden>
+              <div style={{ width: `${(revealed / pairs.length) * 100}%`, height: "100%", background: colour, transition: "width 300ms var(--ease-standard)" }} />
+            </div>
+            <div className="mt-2 flex justify-end">
+              <Button variant="ghost" onClick={() => setSkipped(round)}>
+                Hopp over
+              </Button>
+            </div>
+          </div>
+        )}
         <div className="space-y-2 mb-4">
           {pairs.map((p, i) => (
-            <div key={`${round}-${i}`} className="flex items-center gap-2 rounded-xl p-2" style={{ background: "var(--color-panel)", border: "1px solid var(--color-border)" }}>
+            <div key={`${round}-${i}`} className={`flex items-center gap-2 rounded-xl p-2 ${i === revealed - 1 && drawing ? "draw-flash" : ""}`} style={{ "--draw": colour, background: "var(--color-panel)", border: "1px solid var(--color-border)" } as React.CSSProperties}>
               {slot(p.a, i < revealed)}
               <span className="font-display" style={{ color: "var(--color-muted)", opacity: i < revealed ? 1 : 0 }}>
                 mot

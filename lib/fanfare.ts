@@ -1073,3 +1073,42 @@ export function playUiSound(kind: "click" | "confirm" | "undo") {
     // A sound that fails to play must never get in the way of the tap that asked for it.
   }
 }
+
+/**
+ * The draw, one pair at a time: a short bright note that climbs with the draw, and a chord when the last pair is drawn.
+ * `progress` runs from 0 to 1 over the draw.
+ */
+export function playDrawTick(progress: number, last = false) {
+  const ctx = getContext();
+  if (!ctx) return;
+  try {
+    if (ctx.state === "suspended") ctx.resume().catch(() => {});
+    const buses = getBuses(ctx);
+    if (!buses) return;
+    const t0 = ctx.currentTime + 0.005;
+    const tone = (freq: number, start: number, length: number, peak: number) => {
+      const env = ctx.createGain();
+      env.gain.setValueAtTime(0.0001, start);
+      env.gain.exponentialRampToValueAtTime(peak, start + 0.008);
+      env.gain.exponentialRampToValueAtTime(0.0001, start + length);
+      env.connect(buses.master);
+      const osc = ctx.createOscillator();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(freq, start);
+      osc.connect(env);
+      osc.start(start);
+      osc.stop(start + length + 0.02);
+    };
+    if (last) {
+      [523, 659, 784, 1047].forEach((f, i) => tone(f, t0 + i * 0.06, 0.5, 0.16));
+    } else {
+      // Two octaves of a pentatonic climb, so a long draw rises instead of ticking on one note.
+      const scale = [0, 2, 4, 7, 9];
+      const step = Math.min(scale.length * 2 - 1, Math.floor(progress * scale.length * 2));
+      const semis = scale[step % scale.length] + 12 * Math.floor(step / scale.length);
+      tone(440 * Math.pow(2, semis / 12), t0, 0.14, 0.12);
+    }
+  } catch {
+    // A sound that fails to play must never get in the way of the draw.
+  }
+}

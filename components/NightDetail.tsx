@@ -1,103 +1,101 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState } from "react";
 import { nightSlides } from "@/lib/nightStory";
 import { NightStory } from "./NightStory";
-import { dayLabel } from "@/lib/formatDate";
+import { dayLabel, isoDay } from "@/lib/formatDate";
 import { formatNightDate, nightAverages, type NightSummary } from "@/lib/nights";
-import { TrophyIcon } from "@/components/icons";
+import { MedalIcon, TrophyIcon } from "@/components/icons";
 import { ScreenTop } from "./ScreenTop";
-
-const FOCUS_RING =
-  "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
+import { Avatar } from "./ui/Avatar";
+import { Button } from "./ui/Button";
+import { Card } from "./ui/Card";
+import { EmptyState } from "./ui/EmptyState";
+import { Row } from "./ui/Row";
+import { Section } from "./ui/Section";
 
 /**
  * Shared rendering for both /kveld (latest night) and /kveld/[dato] (a specific, shareable
  * date) — the two routes only differ in how they pick `night` out of groupNights(), see there.
  */
+const PLACE_COLOR = ["var(--color-gold)", "var(--color-silver)", "var(--color-bronze)"];
+
 export function NightDetail({ night, otherDates }: { night: NightSummary | null; otherDates: string[] }) {
   const [story, setStory] = useState(false);
   const slides = useMemo(() => (night ? nightSlides(night) : []), [night]);
+  const winner = night?.players[0];
   return (
     <div className="animate-screen-push screen" style={{ background: "var(--color-bg)" }}>
       <div className="screen-inner">
         <ScreenTop title={night ? formatNightDate(night.date) : "Kveld"} backHref="/hall-of-fame" />
+        {night && (
+          <p className="tabular -mt-2 mb-4" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
+            {isoDay(night.date)}
+          </p>
+        )}
 
         {!night ? (
-          <p className="text-center py-8" style={{ color: "var(--color-muted)" }}>
-            Ingen kamper denne kvelden
-          </p>
+          <EmptyState title="Ingen kamper denne kvelden" />
         ) : (
           <>
-            {slides.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setStory(true)}
-                className={`glossy w-full py-3 rounded-xl font-semibold mb-4 ${FOCUS_RING}`}
-                style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", minHeight: "var(--control)" } as React.CSSProperties}
-              >
-                Se kveldens oppsummering
-              </button>
-            )}
-            {story && <NightStory slides={slides} onClose={() => setStory(false)} />}
-            {night.players[0] && night.players[0].wins > 0 && (
-              <div className="card-gold shadow-panel rounded-xl p-4 mb-4 text-center">
+            {winner && winner.wins > 0 && (
+              <Card level="gold" className="mb-4 text-center">
                 <p className="font-display" style={{ color: "var(--color-bg)", fontStyle: "italic", fontSize: "var(--text-body)" }}>
                   Kveldens vinner
                 </p>
                 <p className="font-display flex items-center justify-center gap-2" style={{ color: "var(--color-bg)", fontSize: "var(--text-num)" }}>
                   <TrophyIcon className="w-6 h-6" />
-                  {night.players[0].name}
+                  {winner.name}
                 </p>
-              </div>
+              </Card>
             )}
 
-            <div className="space-y-2 mb-8">
-              {night.players.map((p, i) => {
-                const stats = nightAverages(p);
-                const rankClass = i === 0 ? "rank-glow-1" : i === 1 ? "rank-glow-2" : i === 2 ? "rank-glow-3" : "shadow-panel";
-                return (
-                  <div
-                    key={p.name}
-                    className={`${rankClass} rounded-xl px-4 flex items-center justify-between`}
-                    style={{ minHeight: "var(--control-lg)", ...(i < 3 ? {} : { background: "var(--color-surface)" }) }}
-                  >
-                    <div>
-                      <p style={{ color: "var(--color-cream)", fontWeight: 600 }}>{p.name}</p>
-                      <p style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>
-                        {p.wins}-{p.losses}
-                      </p>
-                    </div>
-                    <div className="text-right tabular">
-                      <p style={{ color: "var(--color-teal)", fontWeight: 700 }}>
-                        {stats.hitPct !== null ? `${Math.round(stats.hitPct)} %` : "–"}
-                      </p>
-                      <p className="section-label" style={{ fontSize: "var(--text-micro)" }}>TREFF</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            {slides.length > 0 && (
+              <div className="mb-4">
+                <Button variant="primary" size="lg" block onClick={() => setStory(true)}>
+                  Se kveldens oppsummering
+                </Button>
+              </div>
+            )}
+            {story && <NightStory slides={slides} onClose={() => setStory(false)} />}
+
+            <Section label="Stilling">
+              <div className="space-y-2">
+                {night.players.map((p, i) => {
+                  const stats = nightAverages(p);
+                  return (
+                    <Row
+                      key={p.name}
+                      leading={
+                        <span className="inline-flex items-center gap-2">
+                          {i < 3 && p.wins > 0 && (
+                            <span style={{ color: PLACE_COLOR[i] }}>
+                              <MedalIcon className="w-5 h-5" />
+                            </span>
+                          )}
+                          <Avatar name={p.name} size="s" state={i === 0 && p.wins > 0 ? "winner" : "idle"} />
+                        </span>
+                      }
+                      title={p.name}
+                      subtitle={`${p.wins}–${p.losses}`}
+                      value={stats.hitPct !== null ? `${Math.round(stats.hitPct)} %` : "–"}
+                      tone={i === 0 && p.wins > 0 ? "gold" : "default"}
+                    />
+                  );
+                })}
+              </div>
+            </Section>
           </>
         )}
 
         {otherDates.length > 0 && (
-          <>
-            <p className="mb-2 section-label">ANDRE KVELDER</p>
-            <div className="flex flex-wrap gap-2">
+          <Section label="Andre kvelder">
+            <div className="space-y-2">
               {otherDates.map((d) => (
-                <Link
-                  key={d}
-                  href={`/kveld/${d}`}
-                  className={`tactile inline-flex items-center px-4 rounded-full text-sm ${FOCUS_RING}`}
-                  style={{ minHeight: "var(--control)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}
-                >
-                  {dayLabel(d)}
-                </Link>
+                <Row key={d} href={`/kveld/${d}`} title={dayLabel(d)} subtitle={isoDay(d)} />
               ))}
             </div>
-          </>
+          </Section>
         )}
       </div>
     </div>

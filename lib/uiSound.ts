@@ -1,7 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { playUiSound } from "./fanfare";
+import { playDrawTick, playUiSound } from "./fanfare";
 import { getFxLevel } from "./fxLevel";
 
 /**
@@ -46,4 +46,12 @@ export function uiSound(kind: "click" | "confirm" | "undo"): void {
   if (level !== "party" && level !== "full") return;
   if (!getUiSound()) return;
   playUiSound(kind);
+}
+
+/** The draw's sounds: a note for each pair and a chord at the end, on the same terms as the rest (Party and up, and the setting). */
+export function drawSound(progress: number, last = false): void {
+  const level = getFxLevel();
+  if (level !== "party" && level !== "full") return;
+  if (!getUiSound()) return;
+  playDrawTick(progress, last);
 }

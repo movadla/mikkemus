@@ -29,8 +29,8 @@ export function TvFrame({ label, children, className = "" }: { label: string; ch
     <div className={`tv relative min-h-screen w-full flex flex-col ${className}`} style={{ background: "var(--color-bg)", color: "var(--color-cream)" }}>
       <Link
         href="/"
-        className="fixed top-2 left-2 z-40 inline-flex items-center px-4 text-xs opacity-20 hover:opacity-100 focus-visible:opacity-100 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)] transition-opacity"
-        style={{ color: "var(--color-cream)", minHeight: "var(--control)" }}
+        className="fixed top-2 left-2 z-40 inline-flex items-center px-4 text-xs hover:!text-[var(--color-cream)] outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)] transition-opacity"
+        style={{ color: "var(--color-muted)", minHeight: "var(--control)" }}
       >
         Hjem
       </Link>

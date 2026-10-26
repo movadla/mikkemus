@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { ViewTransition, useState } from "react";
 import { awards, isHouseName, outIn, roadOf, undoableMatch } from "@/lib/knockout";
 import { fxFlags, useFxLevel } from "@/lib/fxLevel";
 import { firstKit } from "@/lib/teamKit";
@@ -51,6 +51,9 @@ export function ChampionScreen({
     <div className="animate-winner-slam relative min-h-screen w-full overflow-x-hidden" style={{ background: "var(--color-bg)" }}>
       <div className="animate-winner-flash absolute inset-0 pointer-events-none z-50" style={{ background: "var(--color-gold)" }} aria-hidden />
       {shirts && <ShirtRain kit={shirts} heavy={fx.bigConfetti} />}
+      {/* The stage: the cup's own colour as a light from above, and a thin stripe of it along the top, behind everything. */}
+      <div className="absolute inset-x-0 top-0 pointer-events-none z-0" style={{ height: "32rem", background: `radial-gradient(60% 70% at 50% 0%, color-mix(in srgb, ${cupColor(tournament.cup?.kind)} 32%, transparent), transparent 100%)` }} aria-hidden />
+      <div className="absolute inset-x-0 top-0 pointer-events-none z-0" style={{ height: "0.25rem", background: cupColor(tournament.cup?.kind) }} aria-hidden />
       <div className="relative z-10 mx-auto w-full px-4 pt-6 pb-10" style={{ maxWidth: "36rem" }}>
         {onClose && (
           <button type="button" onClick={onClose} className={`tactile rounded-lg text-sm mb-4 ${FOCUS_RING}`} style={{ minHeight: "var(--control)", padding: "0 1rem", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}>
@@ -61,7 +64,11 @@ export function ChampionScreen({
           {tournament.cup && <CupEmblem kind={tournament.cup.kind} className="w-4 h-4" />}
           {tournamentTitle(tournament).toUpperCase()} · MESTER
         </p>
-        <Trophy cannons={fx.confetti && !shirts} />
+        <ViewTransition name={`cup-${tournament.id}`} share="morph" default="none">
+          <div>
+            <Trophy cannons={fx.confetti && !shirts} />
+          </div>
+        </ViewTransition>
         <h1 className="font-display text-center" style={{ color: "var(--color-gold)", fontSize: "clamp(2.2rem, 11vw, 3.4rem)", lineHeight: 1.05 }}>
           {winner}
         </h1>
