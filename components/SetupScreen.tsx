@@ -95,7 +95,8 @@ export function SetupScreen({
   const [teams, setTeams] = useState<PickedTeam[]>([]);
   // Ticked under the start button: the match is played without a trace in the statistics.
   const [statsOff, setStatsOff] = useState(false);
-  // Avanserte innstillinger: off by default, and the one thing in it is keying in every dart.
+  // Avanserte innstillinger: off by default. In it: crosses per row (three, as everyone plays it), the stand rule for teams, how much happens
+  // on screen, and keying in every dart.
   const [advanced, setAdvanced] = useState(false);
   const [exactEntry, setExactEntry] = useState(false);
 
@@ -143,12 +144,22 @@ export function SetupScreen({
           checked={advanced}
           onChange={(e) => {
             setAdvanced(e.target.checked);
-            if (!e.target.checked) setExactEntry(false);
+            // What is hidden is not left on: closing it puts the game back as everyone plays it.
+            if (!e.target.checked) {
+              setExactEntry(false);
+              setVariant("standard");
+            }
           }}
           style={{ width: 22, height: 22, accentColor: "var(--color-gold)" }}
         />
         Avanserte innstillinger
       </label>
+      {advanced && variantSelectable && (
+        // Kryss per rad, and in team play the stand rule: the game is three crosses unless this says otherwise.
+        <div className="w-full pt-2 text-left">
+          <RulesPicker variant={variant} onChange={setVariant} teamPlay={mode === "team"} />
+        </div>
+      )}
       {advanced && (
         <div className="w-full pb-1">
           {/* Enkel, Vanlig, Party, Full party: the same device setting as in Innstillinger, chosen here before the match. */}
@@ -195,10 +206,6 @@ export function SetupScreen({
             { value: "team", label: "Lag", icon: <PeopleIcon className="w-4 h-4" /> },
           ]}
         />
-
-        {/* Which game. Shared by both modes, with the stand rule offered only where a team has
-            several members to alternate between. */}
-        {variantSelectable && <RulesPicker variant={variant} onChange={setVariant} teamPlay={mode === "team"} />}
 
 
         {mode === "individual" && (
