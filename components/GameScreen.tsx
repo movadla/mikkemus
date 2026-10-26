@@ -1112,7 +1112,6 @@ export function GameScreen({
         </>
       )}
 
-      {fxMenuOpen && <FxMenu onClose={() => setFxMenuOpen(false)} />}
       {menuOpen && (
         <Sheet title="Kamp" onClose={() => setMenuOpen(false)}>
           {scolia && (
@@ -1126,6 +1125,8 @@ export function GameScreen({
           </div>
         </Sheet>
       )}
+      {/* After the match menu, so a choice made from it lies on top of it. */}
+      {fxMenuOpen && <FxMenu onClose={() => setFxMenuOpen(false)} />}
 
       {sheetOpen && thrower && <PlayerSheet name={thrower.name} team={throwerTeam?.name ?? null} onClose={() => setSheetOpen(false)} />}
 

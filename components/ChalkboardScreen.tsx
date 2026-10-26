@@ -6,6 +6,7 @@ import { getRules } from "@/lib/rules";
 import { avatarAccent } from "@/lib/avatarAccent";
 import type { Kit } from "@/lib/teamKit";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { FxMenu } from "./FxMenu";
 import { Mark } from "./Mark";
 import { TeamKit } from "./TeamKit";
 
@@ -23,6 +24,7 @@ export function ChalkboardScreen({ players, kits, onExit }: { players: string[];
   const target = getRules().target;
   const [taps, setTaps] = useState<Tap[]>([]);
   const [confirmExit, setConfirmExit] = useState(false);
+  const [fxOpen, setFxOpen] = useState(false);
 
   const board: Record<string, Partial<Record<Step, number>>> = {};
   for (const p of players) board[p] = {};
@@ -50,6 +52,15 @@ export function ChalkboardScreen({ players, kits, onExit }: { players: string[];
         <p className="flex-1 text-center" style={{ color: "var(--color-red)", fontSize: "var(--text-micro)", letterSpacing: "0.06em" }}>
           ENKEL: TELLER IKKE I STATISTIKKEN
         </p>
+        {/* The way back: Enkel is a level like the others, and it can be left from here. */}
+        <button
+          type="button"
+          onClick={() => setFxOpen(true)}
+          className={`tactile rounded-lg text-sm px-3 py-2 ${FOCUS_RING}`}
+          style={{ background: "var(--color-surface)", color: "var(--color-cream)" }}
+        >
+          Bytt modus
+        </button>
       </div>
 
       {done.length > 0 && (
@@ -142,6 +153,7 @@ export function ChalkboardScreen({ players, kits, onExit }: { players: string[];
         </div>
       </div>
 
+      {fxOpen && <FxMenu onClose={() => setFxOpen(false)} />}
       {confirmExit && (
         <ConfirmDialog
           message="Avslutte kampen? Stillingen forsvinner, og ingenting lagres."

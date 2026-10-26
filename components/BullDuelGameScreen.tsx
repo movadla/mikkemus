@@ -192,7 +192,6 @@ export function BullDuelGameScreen({
         <ThrowerBar key={turnToken} thrower={thrower} team={null} stood={false} run={run} fire={fxFire} animate={animate} />
       </div>
 
-      {fxMenuOpen && <FxMenu onClose={() => setFxMenuOpen(false)} />}
       {menuOpen && (
         <Sheet title="Kamp" onClose={() => setMenuOpen(false)}>
           <div className="grid gap-2">
@@ -200,6 +199,7 @@ export function BullDuelGameScreen({
           </div>
         </Sheet>
       )}
+      {fxMenuOpen && <FxMenu onClose={() => setFxMenuOpen(false)} />}
       {showHomeConfirm && (
         <ConfirmDialog
           message="Avslutte Bull-duell? Kampen telles ikke."
