@@ -24,7 +24,7 @@ const shortcutStyle = { minHeight: "2.75rem", background: "var(--color-surface)"
 
 type Mode = "home" | "single" | "tournament" | "bullduel" | "settings";
 
-const TOURNAMENTS_OFFERED = false;
+const TOURNAMENTS_OFFERED = true;
 
 /** The very first thing rendered — chooses between a one-off "Singel game" (today's app,
  *  unchanged) and "Tournament" mode. Replaces the old direct `<MikkeMusApp />` in app/page.tsx. */
