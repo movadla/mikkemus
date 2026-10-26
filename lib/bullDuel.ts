@@ -29,15 +29,29 @@ function emptyBullDuelStats(): BullDuelPlayerStats {
   return { throws: 0, points: 0, redHits: 0, greenHits: 0, luckSum: 0, luckCount: 0, bestRun: 0, run: 0, bestTurn: 0, perfectTurns: 0 };
 }
 
-/** Sensible default target for the picker screen — a normal handful of bull
- *  hits, not so low the match is over in one turn. */
-export const DEFAULT_BULL_DUEL_TARGET = 21;
+/** The two ways to play it: first to a number of points («Først til»), or the best of three darts each («Best av 3 piler»). */
+export type BullDuelMode = "first" | "best3";
+
+/** Where «Først til» starts in the picker, and the range it can be moved in. */
+export const DEFAULT_BULL_DUEL_TARGET = 10;
+export const MIN_BULL_DUEL_TARGET = 5;
+export const MAX_BULL_DUEL_TARGET = 99;
+
+/** The most three darts can score at the bull (two bullseyes' worth each), which is what «Best av 3 piler» is measured against. */
+export const BEST_OF_THREE_MAX = 3 * 2;
 
 /** One dart's outcome this turn, for the 3-box shot indicator. */
 export type BullDuelShot = { label: string; points: number };
 
 export type BullDuelState = {
   players: string[];
+  /** «Først til» when absent (a match saved before there was a choice). */
+  mode?: BullDuelMode;
+  /** Best of three darts: who is still throwing for the win. Everyone to begin with; after a tie only the ones who were level. */
+  contenders?: string[];
+  /** Best of three darts: which round this is, 1 for the first and one more for each tie that is thrown off. */
+  round?: number;
+  /** First to: the points that win. Best of three darts: the most three darts can score (a bar to fill, nothing that wins). */
   target: number;
   points: Record<string, number>;
   /** Each player's total after every one of their turns, in order (the race chart reads these). */
@@ -56,7 +70,7 @@ export type BullDuelState = {
   winner: string | null;
 };
 
-export function startBullDuel(players: string[], target: number): BullDuelState {
+export function startBullDuel(players: string[], target: number, mode: BullDuelMode = "first"): BullDuelState {
   const points: Record<string, number> = {};
   const stats: Record<string, BullDuelPlayerStats> = {};
   const pointsByTurn: Record<string, number[]> = {};
@@ -67,7 +81,10 @@ export function startBullDuel(players: string[], target: number): BullDuelState 
     pointsByTurn[p] = [];
     throws[p] = [];
   });
-  return { players, target, points, pointsByTurn, throws, turnPoints: 0, activeIdx: 0, dartsThisTurn: 0, turnShots: [], stats, winner: null };
+  // Best of three darts: the bar is filled by what three darts can give, and everyone is in the round.
+  return mode === "best3"
+    ? { players, mode, contenders: [...players], round: 1, target: BEST_OF_THREE_MAX, points, pointsByTurn, throws, turnPoints: 0, activeIdx: 0, dartsThisTurn: 0, turnShots: [], stats, winner: null }
+    : { players, target, points, pointsByTurn, throws, turnPoints: 0, activeIdx: 0, dartsThisTurn: 0, turnShots: [], stats, winner: null };
 }
 
 export function activePlayerFor(state: BullDuelState): string {
@@ -97,7 +114,18 @@ export function registerBullDart(state: BullDuelState, sector: string, coords: [
   const turnPoints = state.turnPoints + points;
   const newPoints = state.points[player] + points;
   const dartsThisTurn = state.dartsThisTurn + 1;
-  const winner = newPoints >= state.target ? player : null;
+  // First to: the dart that reaches the target wins, even mid-turn. Best of three darts: nobody wins before the last of those still in
+  // the round has thrown; then the most points wins, and a tie is no winner (the ones who are level throw again, see advanceBullDuelTurn).
+  let winner: string | null = state.mode === "best3" ? null : newPoints >= state.target ? player : null;
+  if (state.mode === "best3" && dartsThisTurn >= DARTS_PER_TURN) {
+    const contenders = state.contenders ?? state.players;
+    if (contenders[contenders.length - 1] === player) {
+      const round = Object.fromEntries(contenders.map((c) => [c, c === player ? newPoints : state.points[c]]));
+      const max = Math.max(...Object.values(round));
+      const top = contenders.filter((c) => round[c] === max);
+      winner = top.length === 1 ? top[0] : null;
+    }
+  }
   const turnOver = winner !== null || dartsThisTurn >= DARTS_PER_TURN;
   const stats: BullDuelPlayerStats = {
     throws: prev.throws + 1,
@@ -148,6 +176,19 @@ export function bustBullDuelTurn(state: BullDuelState): BullDuelState {
 /** Moves to the next player in the rotation. A no-op once there's a winner. */
 export function advanceBullDuelTurn(state: BullDuelState): BullDuelState {
   if (state.winner) return state;
+  if (state.mode === "best3") {
+    const contenders = state.contenders ?? state.players;
+    const at = contenders.indexOf(activePlayerFor(state));
+    // The next of those still throwing, in the order they sit.
+    if (at < contenders.length - 1) {
+      return { ...state, activeIdx: state.players.indexOf(contenders[at + 1]), dartsThisTurn: 0, turnShots: [], turnPoints: 0 };
+    }
+    // Everyone in the round has thrown and nobody is alone in front: the ones who are level throw again, from nothing.
+    const max = Math.max(...contenders.map((c) => state.points[c]));
+    const tied = contenders.filter((c) => state.points[c] === max);
+    const fresh = Object.fromEntries(state.players.map((p) => [p, 0]));
+    return { ...state, contenders: tied, round: (state.round ?? 1) + 1, points: fresh, activeIdx: state.players.indexOf(tied[0]), dartsThisTurn: 0, turnShots: [], turnPoints: 0 };
+  }
   return { ...state, activeIdx: (state.activeIdx + 1) % state.players.length, dartsThisTurn: 0, turnShots: [], turnPoints: 0 };
 }
 
@@ -162,7 +203,7 @@ export function remainingFor(state: BullDuelState, player: string): number {
  * left to count), nothing otherwise. Overshooting wins, so an inner bull finishes two points and any hit finishes one.
  */
 export function finishStateFor(state: BullDuelState, player: string): "matchdart" | "out" | null {
-  if (state.winner) return null;
+  if (state.winner || state.mode === "best3") return null;
   const remaining = remainingFor(state, player);
   if (remaining <= 0) return null;
   if (remaining <= 2) return "matchdart";

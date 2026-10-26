@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { useMemo } from "react";
 import { buildRecords } from "@/lib/records";
+import { ChevronRightIcon } from "@/components/icons";
 import { useRoster } from "@/lib/storage";
 
 const FOCUS_RING = "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
 const MEDAL = ["var(--color-gold)", "var(--color-muted)", "#b87333"];
 
-/** The group's records: for each, the best three. Tap a name to open that player. */
+/** The group's records: for each, the best three. Tap a record set in a match to open the match, with every number about it; the others open the player. */
 export function RecordsTab() {
   const roster = useRoster();
   const lists = useMemo(() => buildRecords(roster), [roster]);
@@ -27,13 +28,19 @@ export function RecordsTab() {
           <ol className="space-y-2">
             {l.holders.map((h, i) => (
               <li key={`${h.name}-${i}`}>
-                <Link href={`/spillere/${encodeURIComponent(h.name)}`} className={`flex items-center gap-3 rounded-lg ${FOCUS_RING}`} style={{ minHeight: "var(--control)" }}>
+                <Link
+                  href={h.matchId ? `/kamp/${encodeURIComponent(h.matchId)}` : `/spillere/${encodeURIComponent(h.name)}`}
+                  aria-label={h.matchId ? `${h.name}, ${l.title}: ${l.format(h.value)}. Åpne kampen` : undefined}
+                  className={`flex items-center gap-3 rounded-lg ${FOCUS_RING}`}
+                  style={{ minHeight: "var(--control)" }}
+                >
                   <span className="font-display shrink-0 w-6 text-center" style={{ color: MEDAL[i], fontSize: "var(--text-title)" }}>{i + 1}</span>
                   <span className="flex-1 min-w-0">
                     <span className="block truncate" style={{ color: "var(--color-cream)", fontWeight: i === 0 ? 700 : 500 }}>{h.name}</span>
                     {h.note && <span className="block truncate tabular" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>{h.note}</span>}
                   </span>
                   <span className="tabular shrink-0" style={{ color: i === 0 ? "var(--color-gold-strong)" : "var(--color-teal-strong)", fontSize: "var(--text-body)", fontWeight: 700 }}>{l.format(h.value)}</span>
+                  {h.matchId && <ChevronRightIcon className="w-4 h-4 shrink-0" />}
                 </Link>
               </li>
             ))}

@@ -2,7 +2,14 @@ import { buildMatchLog } from "./matchLog";
 import { bestWinDarts } from "./bestWin";
 import { shownHitPct, type PlayerRecord } from "./playerRows";
 
-export type RecordHolder = { name: string; value: number; /** Shown under the name, e.g. the date or the opponent. */ note?: string };
+export type RecordHolder = {
+  name: string;
+  value: number;
+  /** Shown under the name, e.g. the date or the opponent. */
+  note?: string;
+  /** The match the record was set in, when the records know which: a tap on the record opens it, with every number about it. */
+  matchId?: string;
+};
 export type RecordList = {
   key: string;
   title: string;
@@ -21,6 +28,9 @@ const day = (iso: string) => {
   const d = new Date(iso);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
+
+/** «2026-10-17 mot Littler»: when, and against whom where that was kept. */
+const when = (m: { date: string; vs?: string[] }) => (m.vs && m.vs.length > 0 ? `${day(m.date)} mot ${m.vs.join(" og ")}` : day(m.date));
 
 function top(rows: RecordHolder[], low: boolean, n = 3): RecordHolder[] {
   return [...rows].sort((a, b) => (low ? a.value - b.value : b.value - a.value)).slice(0, n);
@@ -47,11 +57,24 @@ export function buildRecords(records: PlayerRecord[]): RecordList[] {
   const n = (v: number) => String(Math.round(v));
 
   add("run", "Lengste serie: treff på rad", (v) => `${v} på rad`, people.filter((r) => (r.bestRun ?? 0) > 0).map((r) => ({ name: r.name, value: r.bestRun as number })));
-  add("fast", "Seier på færrest piler", (v) => `${v} piler`, people.map((r) => ({ name: r.name, value: bestWinDarts(r) })).filter((h): h is { name: string; value: number } => h.value !== null), true);
+  add(
+    "fast",
+    "Seier på færrest piler",
+    (v) => `${v} piler`,
+    people
+      .map((r) => {
+        const value = bestWinDarts(r);
+        // The match it was, when the record can point to it; an older figure that no match on record can show has none.
+        const entry = value === null ? undefined : r.matchHistory.find((m) => m.won && m.dartsUsed === value);
+        return { name: r.name, value, ...(entry ? { note: when(entry), ...(entry.matchId ? { matchId: entry.matchId } : {}) } : {}) };
+      })
+      .filter((h): h is RecordHolder => h.value !== null),
+    true,
+  );
 
   const matches = people.flatMap((r) => r.matchHistory.filter((m) => m.dartsUsed >= MIN_DARTS_PCT).map((m) => ({ r, m })));
-  add("hit", "Høyeste treffprosent i en kamp", (v) => `${n(v)} %`, matches.map(({ r, m }) => ({ name: r.name, value: shownHitPct(m), note: day(m.date) })));
-  add("med", "Beste presisjon i en kamp (MED)", (v) => `${n(v)} mm`, matches.filter(({ m }) => m.med !== null && (m.throws ?? 0) >= MIN_THROWS_MED).map(({ r, m }) => ({ name: r.name, value: m.med as number, note: day(m.date) })), true);
+  add("hit", "Høyeste treffprosent i en kamp", (v) => `${n(v)} %`, matches.map(({ r, m }) => ({ name: r.name, value: shownHitPct(m), note: when(m), ...(m.matchId ? { matchId: m.matchId } : {}) })));
+  add("med", "Beste presisjon i en kamp (MED)", (v) => `${n(v)} mm`, matches.filter(({ m }) => m.med !== null && (m.throws ?? 0) >= MIN_THROWS_MED).map(({ r, m }) => ({ name: r.name, value: m.med as number, note: when(m), ...(m.matchId ? { matchId: m.matchId } : {}) })), true);
 
   add("streak", "Lengste seiersrekke", (v) => `${v} på rad`, people.map((r) => ({ name: r.name, value: winStreak(r.matchHistory) })).filter((h) => h.value >= 2));
   add("wins", "Flest seire", n, people.filter((r) => r.matchesWon > 0).map((r) => ({ name: r.name, value: r.matchesWon })));
@@ -70,7 +93,11 @@ export function buildRecords(records: PlayerRecord[]): RecordList[] {
 
   const margins = buildMatchLog(records)
     .filter((m) => m.winner && m.margin !== null && m.margin > 0)
-    .map((m) => ({ name: m.winner as string, value: m.margin as number, note: `${day(m.date)} mot ${m.sides.filter((s) => s.name !== m.winner).map((s) => s.name).join(", ")}` }));
+    .map((m) => {
+      // The id the sides kept for the match (the log's own id for an older one is made up, and has no page).
+      const matchId = m.sides.find((s) => s.entry?.matchId)?.entry?.matchId;
+      return { name: m.winner as string, value: m.margin as number, note: `${day(m.date)} mot ${m.sides.filter((s) => s.name !== m.winner).map((s) => s.name).join(", ")}`, ...(matchId ? { matchId } : {}) };
+    });
   add("margin", "Største seier: streker igjen hos taperen", (v) => `${v} streker`, margins);
   return lists;
 }

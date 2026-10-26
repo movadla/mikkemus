@@ -218,6 +218,11 @@ export function BullDuelGameScreen({
       )}
 
       <div className="max-w-3xl mx-auto w-full flex-1 min-h-0 overflow-y-auto">
+        {duel.mode === "best3" && (
+          <p className="text-center mb-2" style={{ color: "var(--color-gold-strong)", fontSize: "var(--text-body)", fontWeight: 600 }} role="status">
+            {(duel.round ?? 1) > 1 ? `Likt. Omkast mellom ${(duel.contenders ?? []).join(" og ")}` : "Best av 3 piler"}
+          </p>
+        )}
         <div className="rounded-xl shadow-panel p-4 space-y-2" style={{ background: "var(--color-panel)" }}>
           {duel.players.map((p) => {
             const isActive = p === activePlayer;
@@ -225,6 +230,9 @@ export function BullDuelGameScreen({
             const pct = Math.min(100, Math.round((points / duel.target) * 100));
             const finish = finishStateFor(duel, p);
             const left = remainingFor(duel, p);
+            const best3 = duel.mode === "best3";
+            // Best of three darts: out of the round after a tie that others were not part of.
+            const out = best3 && !(duel.contenders ?? duel.players).includes(p);
             return (
               <div
                 key={p}
@@ -242,7 +250,7 @@ export function BullDuelGameScreen({
                   </span>
                   <span className="tabular shrink-0" style={{ color: "var(--color-cream)", fontSize: "var(--text-num)", fontWeight: 700, letterSpacing: "-0.01em", lineHeight: 1 }}>
                     {points}
-                    <span style={{ color: "var(--color-muted)", fontSize: "var(--text-small)", fontWeight: 500 }}> / {duel.target}</span>
+                    {!best3 && <span style={{ color: "var(--color-muted)", fontSize: "var(--text-small)", fontWeight: 500 }}> / {duel.target}</span>}
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-3 mt-2">
@@ -258,7 +266,7 @@ export function BullDuelGameScreen({
                     />
                   </div>
                   <span className="tabular shrink-0" style={{ color: finish ? "var(--color-gold-strong)" : "var(--color-muted)", fontSize: "var(--text-micro)", fontWeight: 600, letterSpacing: "0.1em", minWidth: "4.5rem", textAlign: "right" }}>
-                    {finish === "matchdart" ? "MATCHDART" : finish === "out" ? "OUT" : `${left} IGJEN`}
+                    {best3 ? (out ? "UTE" : isActive ? `${3 - duel.dartsThisTurn} PILER` : "") : finish === "matchdart" ? "MATCHDART" : finish === "out" ? "OUT" : `${left} IGJEN`}
                   </span>
                 </div>
               </div>

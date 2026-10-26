@@ -10,6 +10,7 @@ import {
   isTurnComplete,
   registerBullDart,
   startBullDuel,
+  DEFAULT_BULL_DUEL_TARGET,
 } from "./bullDuel";
 
 // [0, 0.1] lands dead-center of inner bull ("Bull", 2 points); [0, 200] is a
@@ -225,5 +226,90 @@ describe("bull-duell: runs, turns and the finish", () => {
     s = advanceBullDuelTurn(s);
     s = dart(s, "25");
     expect(soleLeader(s)).toBeNull();
+  });
+});
+
+describe("Best av 3 piler", () => {
+  // «Bull» is the bullseye (2), «25» the outer bull (1), «None» a miss.
+  const throwDarts = (state: ReturnType<typeof startBullDuel>, darts: string[]) => darts.reduce((s, d) => registerBullDart(s, d, null), state);
+  const turn = (state: ReturnType<typeof startBullDuel>, darts: string[]) => advanceBullDuelTurn(throwDarts(state, darts));
+
+  it("starts with everyone in the round, a bar of six, and «Først til» left as it was", () => {
+    const s = startBullDuel(["A", "B"], 0, "best3");
+    expect(s.mode).toBe("best3");
+    expect(s.contenders).toEqual(["A", "B"]);
+    expect(s.round).toBe(1);
+    expect(s.target).toBe(6);
+    const first = startBullDuel(["A", "B"], DEFAULT_BULL_DUEL_TARGET);
+    expect(first.mode).toBeUndefined();
+    expect(first.target).toBe(10);
+  });
+
+  it("has no winner until the last of them has thrown three darts, and then the most points wins", () => {
+    let s = startBullDuel(["A", "B"], 0, "best3");
+    s = throwDarts(s, ["Bull", "Bull", "Bull"]); // A: 6, the most there is
+    expect(s.winner).toBeNull();
+    expect(isTurnComplete(s)).toBe(true);
+    s = advanceBullDuelTurn(s);
+    expect(activePlayerFor(s)).toBe("B");
+    s = throwDarts(s, ["25", "25"]);
+    expect(s.winner).toBeNull();
+    s = registerBullDart(s, "None", null);
+    expect(s.winner).toBe("A");
+    expect(s.points).toMatchObject({ A: 6, B: 2 });
+  });
+
+  it("lets the one who throws last win when ahead, as well", () => {
+    let s = startBullDuel(["A", "B"], 0, "best3");
+    s = turn(s, ["25", "None", "None"]);
+    s = throwDarts(s, ["Bull", "None", "None"]);
+    expect(s.winner).toBe("B");
+  });
+
+  it("throws the tie off between the ones who are level, from nothing, and only those", () => {
+    let s = startBullDuel(["A", "B", "C"], 0, "best3");
+    s = turn(s, ["Bull", "None", "None"]); // A 2
+    s = turn(s, ["25", "25", "None"]); // B 2
+    s = throwDarts(s, ["25", "None", "None"]); // C 1
+    expect(s.winner).toBeNull();
+    s = advanceBullDuelTurn(s);
+    expect(s.round).toBe(2);
+    expect(s.contenders).toEqual(["A", "B"]);
+    expect(s.points).toEqual({ A: 0, B: 0, C: 0 });
+    expect(activePlayerFor(s)).toBe("A");
+    s = turn(s, ["None", "None", "None"]);
+    expect(activePlayerFor(s)).toBe("B");
+    s = throwDarts(s, ["25", "None", "None"]);
+    expect(s.winner).toBe("B");
+  });
+
+  it("goes on throwing off while it stays level", () => {
+    let s = startBullDuel(["A", "B"], 0, "best3");
+    s = turn(s, ["25", "None", "None"]);
+    s = advanceBullDuelTurn(throwDarts(s, ["25", "None", "None"]));
+    expect(s.round).toBe(2);
+    s = turn(s, ["None", "None", "None"]);
+    s = advanceBullDuelTurn(throwDarts(s, ["None", "None", "None"]));
+    expect(s.round).toBe(3);
+    expect(s.contenders).toEqual(["A", "B"]);
+    expect(s.winner).toBeNull();
+  });
+
+  it("keeps the statistics across the rounds, though the points of the round start again", () => {
+    let s = startBullDuel(["A", "B"], 0, "best3");
+    s = turn(s, ["Bull", "None", "None"]);
+    s = advanceBullDuelTurn(throwDarts(s, ["Bull", "None", "None"]));
+    s = turn(s, ["Bull", "None", "None"]);
+    expect(s.stats.A.points).toBe(4);
+    expect(s.stats.A.throws).toBe(6);
+    expect(s.points.A).toBe(2);
+  });
+
+  it("has no matchdart in it, and «Først til» still ends on the dart that reaches the target", () => {
+    const s = startBullDuel(["A", "B"], 0, "best3");
+    expect(finishStateFor(s, "A")).toBeNull();
+    let f = startBullDuel(["A", "B"], 2);
+    f = registerBullDart(f, "Bull", null);
+    expect(f.winner).toBe("A");
   });
 });

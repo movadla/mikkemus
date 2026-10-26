@@ -10,7 +10,8 @@ import { loadActiveTournamentId } from "@/lib/tournamentStorage";
 import { useScolia } from "@/lib/useScolia";
 import dynamic from "next/dynamic";
 import { HeroMascot } from "./HeroMascot";
-import { BullseyeIcon, DartIcon, TrophyIcon } from "./icons";
+import { BookIcon, BullseyeIcon, DartIcon, TrophyIcon } from "./icons";
+import { LastPlayedCard } from "./LastPlayedCard";
 import { RulesIntro } from "./RulesIntro";
 import { ScoliaDot, summarizeScolia } from "./ScoliaStatusBadge";
 import { SkeletonRows } from "./ui/Skeleton";
@@ -19,6 +20,7 @@ import { Welcome, hasBeenWelcomed, markWelcomed } from "./Welcome";
 import { BottomNav } from "./ui/BottomNav";
 import { Wordmark } from "./ui/BrandMark";
 import { Button } from "./ui/Button";
+import { Row } from "./ui/Row";
 import { FOCUS_RING } from "./ui/focus";
 
 // The three ways into a game are loaded when one is chosen, not with the front page: the board alone is most of the app
@@ -38,13 +40,13 @@ type Mode = "home" | "single" | "tournament" | "bullduel";
 
 const TOURNAMENTS_OFFERED = true;
 
-/** A way in to a kind of game: its icon above its name. */
-function Tile({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
+/** A way in to a kind of game: its icon above its name, or beside it when it has the whole row to itself. */
+function Tile({ icon, label, onClick, wide = false }: { icon: React.ReactNode; label: string; onClick: () => void; wide?: boolean }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`tactile flex flex-col items-center justify-center gap-2 ${FOCUS_RING}`}
+      className={`tactile flex items-center justify-center ${wide ? "flex-row gap-3" : "flex-col gap-2"} ${FOCUS_RING}`}
       style={{ minHeight: "5.5rem", borderRadius: "var(--radius-m)", background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-cream)", fontSize: "var(--text-body)", fontWeight: 600 }}
     >
       <span style={{ color: "var(--color-teal)" }}>{icon}</span>
@@ -62,6 +64,8 @@ export function AppRoot() {
   const [matchUnderway, setMatchUnderway] = useState<string[] | null>(null);
   // The rules introduction, on request (the address ?m=regler, from Mer). The first-time showing is MikkeMusApp's.
   const [showRules, setShowRules] = useState(false);
+  // The match that was played last, played again with the same people (from the front page of the limited code).
+  const [replayPlayers, setReplayPlayers] = useState<string[] | null>(null);
   const [welcomed, setWelcomed] = useState(true);
   const loaded = useRosterLoaded();
   // Only connected while the home screen itself is showing — MikkeMusApp/TournamentApp own their
@@ -120,7 +124,16 @@ export function AppRoot() {
     );
   }
   if (showRules) return <RulesIntro onDone={() => setShowRules(false)} />;
-  if (mode === "single") return <MikkeMusApp onExitToHome={() => setMode("home")} />;
+  if (mode === "single")
+    return (
+      <MikkeMusApp
+        initialPlayers={replayPlayers ?? undefined}
+        onExitToHome={() => {
+          setReplayPlayers(null);
+          setMode("home");
+        }}
+      />
+    );
   if (mode === "tournament") return <TournamentApp onExitToHome={() => setMode("home")} />;
   if (mode === "bullduel") return <BullDuelApp onExitToHome={() => setMode("home")} />;
 
@@ -164,15 +177,35 @@ export function AppRoot() {
         </section>
 
         {/* The hero is already Enkeltkamp when nothing is under way, so its tile is only there when the hero is something else. */}
-        <div className={`grid gap-2 mb-6 ${(resume ? 1 : 0) + (tournamentsOn ? 1 : 0) + 1 === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
-          {resume && <Tile icon={<DartIcon className="w-6 h-6" />} label="Enkeltkamp" onClick={() => setMode("single")} />}
-          {tournamentsOn && <Tile icon={<TrophyIcon className="w-6 h-6" />} label="Turnering" onClick={() => setMode("tournament")} />}
-          <Tile icon={<BullseyeIcon className="w-6 h-6" />} label="Bull-duell" onClick={() => setMode("bullduel")} />
-        </div>
+        {/* One tile has the whole row, as it should look; two or three share it. */}
+        {(() => {
+          const tiles = (resume ? 1 : 0) + (tournamentsOn ? 1 : 0) + 1;
+          return (
+            <div className={`grid gap-2 mb-6 ${tiles === 1 ? "grid-cols-1" : tiles === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
+              {resume && <Tile icon={<DartIcon className="w-6 h-6" />} label="Enkeltkamp" onClick={() => setMode("single")} />}
+              {tournamentsOn && <Tile icon={<TrophyIcon className="w-6 h-6" />} label="Turnering" onClick={() => setMode("tournament")} />}
+              <Tile wide={tiles === 1} icon={<BullseyeIcon className="w-6 h-6" />} label="Bull-duell" onClick={() => setMode("bullduel")} />
+            </div>
+          );
+        })()}
 
         </div>
 
         <TonightCard />
+        {/* The limited code has no statistics for the front page: the last match played, to play again, and the rules. */}
+        {limited && (
+          <>
+            <LastPlayedCard
+              onReplay={(players) => {
+                setReplayPlayers(players);
+                setMode("single");
+              }}
+            />
+            <div className="mb-6">
+              <Row leading={<BookIcon className="w-5 h-5" />} title="Regler" subtitle="Slik spilles kampene" onClick={() => setShowRules(true)} />
+            </div>
+          </>
+        )}
       </div>
       <BottomNav current="spill" onTurnering={tournamentsOn ? () => setMode("tournament") : undefined} />
     </div>

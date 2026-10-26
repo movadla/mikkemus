@@ -43,3 +43,32 @@ describe("the night's story", () => {
     expect(nightSlides(night([p])).find((x) => x.kind === "streak")!.big).toBe("2");
   });
 });
+
+describe("the cards say more when asked", () => {
+  const withMatch = (date: string, won: boolean, darts: number, hit: number, matchId: string, vs: string[]) => ({ ...m(date, won, darts, hit, 25), matchId, vs });
+  const vadla = { name: "Vadla", wins: 2, losses: 1, matches: [withMatch("2026-10-17T18:00", true, 60, 55, "a", ["Littler"]), withMatch("2026-10-17T18:20", true, 48, 61, "b", ["Monge"]), withMatch("2026-10-17T18:40", false, 72, 40, "c", ["Hans"])] };
+  const s = nightSlides(night([vadla]));
+
+  it("names the match behind the fastest win and the sharpest match, and links to it", () => {
+    const fastest = s.find((x) => x.kind === "fastest")!;
+    expect(fastest.more!.matchId).toBe("b");
+    expect(fastest.more!.lines[0]).toContain("Vadla vant mot Monge kl. 18:20");
+    expect(fastest.more!.lines[0]).toContain("48 piler");
+    expect(s.find((x) => x.kind === "sharpest")!.more!.matchId).toBe("b");
+  });
+
+  it("lists the night's matches for the best of the night, in the order they were played", () => {
+    const lines = s.find((x) => x.kind === "mvp")!.more!.lines;
+    expect(lines).toHaveLength(3);
+    expect(lines[0]).toContain("Littler");
+    expect(lines[2]).toContain("tapte mot Hans");
+  });
+
+  it("lists the matches of the streak, and the matches of the night on the last card", () => {
+    expect(s.find((x) => x.kind === "streak")!.more!.lines).toHaveLength(2);
+    const last = s.find((x) => x.kind === "matches")!.more!.lines;
+    expect(last).toHaveLength(3);
+    expect(last[0]).toContain("kl. 18:00");
+    expect(last[0]).toContain("Vadla vant");
+  });
+});

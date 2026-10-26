@@ -189,7 +189,7 @@ export function BullDuelWinnerScreen({
               {winner}
             </h2>
             <p className="tabular" style={{ color: "var(--color-bg)", opacity: 0.75, fontSize: "var(--text-body)", marginTop: "0.4rem", fontWeight: 600 }}>
-              {duel.points[winner]} / {duel.target} poeng · {winnerStats.throws} {winnerStats.throws === 1 ? "pil" : "piler"}
+              {duel.mode === "best3" ? `${duel.points[winner]} poeng på tre piler${(duel.round ?? 1) > 1 ? ` · omkast ${(duel.round ?? 1) - 1}` : ""}` : `${duel.points[winner]} / ${duel.target} poeng`} · {winnerStats.throws} {winnerStats.throws === 1 ? "pil" : "piler"}
               {winnerPct !== null ? ` · ${winnerPct} % treff` : ""}
             </p>
             {/* xH up here too, as in the main game: the one number that says whether the win was thrown or fell out of the sky. */}

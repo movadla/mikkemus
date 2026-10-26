@@ -12,6 +12,8 @@ import {
   registerBullDart,
   soleLeader,
   startBullDuel,
+  DEFAULT_BULL_DUEL_TARGET,
+  type BullDuelMode,
   type BullDuelState,
 } from "@/lib/bullDuel";
 import { sectorAt } from "@/lib/dartboard";
@@ -382,7 +384,7 @@ export function BullDuelApp({ onExitToHome }: { onExitToHome: () => void }) {
   const [showLineup, setShowLineup] = useState(false);
   const [introDiving, setIntroDiving] = useState(false);
 
-  function beginMatch(players: string[], target: number) {
+  function beginMatch(players: string[], target: number, mode: BullDuelMode = "first") {
     // Called synchronously from a real button tap — the narrow window where the browser allows unlocking audio.
     primeAudio();
     recordedWinnerRef.current = null;
@@ -392,7 +394,7 @@ export function BullDuelApp({ onExitToHome }: { onExitToHome: () => void }) {
     setHitPulse(null);
     setTurnToken(0);
     setDiving(false);
-    setDuelState(startBullDuel(players, target));
+    setDuelState(startBullDuel(players, target, mode));
     if (scolia.state.boardStatus === "Ready") void requestRecalibration();
     else if (scolia.state.boardStatus === null) recalibrateWhenReadyRef.current = true;
     const f = fxFlags(getFxLevel());
@@ -421,8 +423,8 @@ export function BullDuelApp({ onExitToHome }: { onExitToHome: () => void }) {
     setScreen("target");
   }
 
-  function handleTargetChosen(target: number) {
-    beginMatch(pendingPlayers, target);
+  function handleTargetChosen(target: number, mode: BullDuelMode) {
+    beginMatch(pendingPlayers, target, mode);
   }
 
   function handleAbort() {
@@ -435,7 +437,7 @@ export function BullDuelApp({ onExitToHome }: { onExitToHome: () => void }) {
   }
 
   function handlePlayAgain() {
-    if (duel) beginMatch(duel.players, duel.target);
+    if (duel) beginMatch(duel.players, duel.mode === "best3" ? DEFAULT_BULL_DUEL_TARGET : duel.target, duel.mode ?? "first");
   }
 
   function exitHome() {
