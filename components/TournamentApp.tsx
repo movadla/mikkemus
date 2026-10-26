@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { matchParticipants, podium, recordMatchResult, tournamentTitle, type Participant, type Tournament, type TournamentMatch, type TournamentMode } from "@/lib/tournament";
-import { awards, createKnockout, houseAlive, isKnockout, seedByStrength, undoLastResult } from "@/lib/knockout";
+import { matchParticipants, recordMatchResult, type Participant, type Tournament, type TournamentMatch, type TournamentMode } from "@/lib/tournament";
+import { createKnockout, houseAlive, isKnockout, seedByStrength, undoLastResult } from "@/lib/knockout";
 import { playElsewhere } from "@/lib/botSim";
 import { strengthMap } from "@/lib/knockoutSeeding";
 import {
@@ -15,6 +15,7 @@ import {
   upsertTournament,
 } from "@/lib/tournamentStorage";
 import { loadActiveMatch } from "@/lib/activeMatch";
+import { championShowOf } from "@/lib/championShow";
 import { publishShow } from "@/lib/liveMatch";
 import { botSetupForMatch, type CupConfig } from "@/lib/botCup";
 import { RULES, baseOf, type GameVariant } from "@/lib/rules";
@@ -251,18 +252,7 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
   // The big screen shows the champion while this screen is up, and lets go of it when it is left. (The draw sends itself, see DrawScreen.)
   useEffect(() => {
     if (screen !== "champion" || !tournament || tournament.status !== "done") return;
-    const places = podium(tournament);
-    const side = tournament.participants.find((p) => p.name === tournament.winner);
-    void publishShow({
-      kind: "champion",
-      title: tournamentTitle(tournament),
-      cup: tournament.cup ? { kind: tournament.cup.kind, name: tournament.cup.name, trophy: tournament.cup.trophy } : undefined,
-      winner: tournament.winner ?? "",
-      members: side?.members?.map((m) => m.name),
-      trophy: tournament.cup?.trophy,
-      prizes: awards(tournament),
-      podium: places ? [places.first, places.second, places.third].filter((n): n is string => !!n) : undefined,
-    });
+    void publishShow(championShowOf(tournament));
     return () => {
       void publishShow(null);
     };

@@ -27,6 +27,18 @@ test.describe("tilgjengelighet", () => {
     }
   }
 
+  // The tournament setup, with the cups as posters and the players as cards: plain, and with a cup chosen.
+  for (const theme of THEMES) {
+    test(`kontrast og regler: turneringsoppsett med pokaler (${theme})`, async ({ page }) => {
+      await openApp(page, theme);
+      await page.getByRole("button", { name: "Turnering" }).first().click();
+      await page.getByRole("radio", { name: "Mot boter" }).click();
+      await page.waitForTimeout(800);
+      const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze();
+      expect(results.violations.map((v) => `${v.id}: ${v.nodes.slice(0, 4).map((n) => n.target.join(" ")).join(" | ")}`)).toEqual([]);
+    });
+  }
+
   for (const s of SCREENS.filter((x) => x.name !== "storskjerm")) {
     test(`200 % tekst: ${s.name} har ingenting utenfor siden`, async ({ page }) => {
       await openApp(page, "dark");

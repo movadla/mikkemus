@@ -1829,6 +1829,84 @@ html[data-theme="light"] body::before {
   padding: 1rem;
 }
 
+/* -- the trophy shelf: a back wall, a board for the trophies to stand on, and a plaque under each -- */
+.shelf-wall {
+  border-radius: var(--radius-m);
+  overflow: hidden;
+  background: linear-gradient(180deg, var(--color-panel), var(--color-surface));
+  border: 1px solid var(--color-border);
+}
+
+.shelf-board {
+  height: 0.75rem;
+  background: linear-gradient(to bottom, var(--color-cell), var(--color-surface-2));
+  border-top: 1px solid var(--color-hairline);
+  box-shadow: 0 6px 10px -6px color-mix(in srgb, var(--shade) 55%, transparent);
+}
+
+.shelf-plaque {
+  padding: 0 0.4rem;
+  border-radius: 0.25rem;
+  background: var(--color-cell);
+  color: var(--color-text-2);
+  font-size: var(--text-micro);
+  line-height: 1.5;
+}
+
+/* -- the match as a poster: two sides as cards in their own colours (--pc) -- */
+.match-side {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  text-align: center;
+  border-radius: var(--radius-m);
+  background: linear-gradient(170deg, color-mix(in srgb, var(--pc) 22%, var(--color-surface)), var(--color-surface) 80%);
+  border: 1px solid color-mix(in srgb, var(--pc) 40%, var(--color-border));
+}
+
+/* -- the cups as posters, to leaf through on the tournament setup -- */
+.cup-posters {
+  display: flex;
+  gap: 0.75rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  margin-inline: -1rem;
+  padding: 0.25rem 1rem 0.5rem;
+}
+
+.cup-poster {
+  flex: 0 0 min(62%, 14rem);
+  scroll-snap-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  min-height: 11.5rem;
+  padding: 1rem;
+  text-align: left;
+  border-radius: var(--radius-l);
+  background: linear-gradient(165deg, color-mix(in srgb, var(--cup) 26%, var(--color-surface)), var(--color-surface) 75%);
+  border: 2px solid color-mix(in srgb, var(--cup) 30%, var(--color-border));
+  opacity: 0.8;
+  transition: opacity var(--pull), border-color var(--pull), box-shadow var(--pull);
+}
+
+.cup-poster[aria-checked="true"] {
+  opacity: 1;
+  border-color: var(--cup);
+  box-shadow: 0 0 0 1px var(--cup), 0 14px 32px -16px color-mix(in srgb, var(--cup) 70%, transparent);
+}
+
+.cup-poster-emblem {
+  margin-bottom: auto;
+  color: var(--cup);
+}
+
 /* -- Innstillinger: a preview beside the choice: what the animation level does, and the theme as it will look -- */
 .fx-demo {
   display: flex;

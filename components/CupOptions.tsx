@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { BOT_LEVELS, BOT_LEVEL_PICKABLE, type BotLevel } from "@/lib/botLevels";
 import { CUP_TYPES, cupColor, cupType, type CupKind } from "@/lib/botCup";
 import { CupEmblem } from "./ui/CupEmblem";
@@ -9,21 +10,37 @@ import { FOCUS_RING } from "./ui/focus";
 
 export type CupChoice = { kind: CupKind; size: number; level: BotLevel; growth: boolean };
 
-/** Which cup: the names only, two to a row. */
+/**
+ * Which cup, as posters to leaf through: each is a card in the cup's own colour with its emblem large, its name and the trophy it is
+ * played for. The chosen one is lit and kept in view; the rest wait on either side. A swipe or the arrow keys move along.
+ */
 export function CupTypePicker({ value, onChange, maxSize }: { value: CupChoice; onChange: (v: CupChoice) => void; maxSize: number }) {
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    box.current?.querySelector<HTMLElement>("[aria-checked=true]")?.scrollIntoView({ inline: "center", block: "nearest" });
+  }, [value.kind]);
   return (
-    <div className="grid grid-cols-2 gap-2 mb-6" role="group" aria-label="Turnering">
+    <div ref={box} className="cup-posters mb-6" role="radiogroup" aria-label="Turnering">
       {CUP_TYPES.map((t) => {
         const selected = t.kind === value.kind;
         return (
-          <Chip key={t.kind} block selected={selected} onClick={() => onChange({ ...value, kind: t.kind, size: Math.min(t.defaultSize, maxSize) })}>
-            <span className="inline-flex items-center gap-2">
-              <span style={{ color: cupColor(t.kind) }}>
-                <CupEmblem kind={t.kind} />
-              </span>
+          <button
+            key={t.kind}
+            type="button"
+            role="radio"
+            aria-checked={selected}
+            onClick={() => onChange({ ...value, kind: t.kind, size: Math.min(t.defaultSize, maxSize) })}
+            className={`cup-poster tactile ${FOCUS_RING}`}
+            style={{ "--cup": cupColor(t.kind) } as React.CSSProperties}
+          >
+            <span className="cup-poster-emblem">
+              <CupEmblem kind={t.kind} className="w-14 h-14" />
+            </span>
+            <span className="font-display" style={{ color: "var(--color-cream)", fontSize: "var(--text-title)", lineHeight: 1.1 }}>
               {t.name}
             </span>
-          </Chip>
+            <span style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>{t.trophy}</span>
+          </button>
         );
       })}
     </div>

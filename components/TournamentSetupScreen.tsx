@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { type Participant, type TournamentMode } from "@/lib/tournament";
-import { DEFAULT_CUP_LEVEL, MAX_CUP_SIZE, TEAM_CUP_MAX, buildCupParticipants, cupType, makeCup, type CupConfig } from "@/lib/botCup";
+import { DEFAULT_CUP_LEVEL, MAX_CUP_SIZE, TEAM_CUP_MAX, buildCupParticipants, cupColor, cupType, makeCup, type CupConfig } from "@/lib/botCup";
 import { botsSupported, withStandRule, type GameVariant } from "@/lib/rules";
 import { splitPeople, toMember, type PickedTeam, type Person } from "@/lib/people";
 import { individualSetupProblem, teamSetupProblem } from "@/lib/setupProblem";
@@ -136,7 +136,7 @@ export function TournamentSetupScreen({
   }
 
   return (
-    <div className="animate-screen-push screen has-sticky-action" style={{ background: "var(--color-bg)" }}>
+    <div className="animate-screen-push screen has-sticky-action" style={{ background: cupMode ? `linear-gradient(180deg, color-mix(in srgb, ${cupColor(cup.kind)} 16%, var(--color-bg)), var(--color-bg) 22rem)` : "var(--color-bg)", transition: "background var(--weight)" }}>
       <div className="screen-inner">
         <ScreenTop
           title="Ny turnering"

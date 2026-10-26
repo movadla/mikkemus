@@ -40,29 +40,31 @@ function Shelf({ name, cups, onOpen }: { name: string; cups: Tournament[]; onOpe
           {cups.length}
         </span>
       </p>
-      <div style={{ borderRadius: "var(--radius-m)", background: "var(--color-panel)", border: "1px solid var(--color-border)", overflow: "hidden" }}>
+      <div className="shelf-wall">
         {rows.map((row, r) => (
           <div key={r}>
-            <div className="flex items-end gap-1 px-3 pt-3" style={{ minHeight: "4.5rem" }}>
+            <div className="flex items-end gap-2 px-3 pt-4" style={{ minHeight: "7rem" }}>
               {row.map((t) => (
                 <button
                   key={t.id}
                   type="button"
                   onClick={() => startTransition(() => onOpen(t))}
                   aria-label={`${tournamentTitle(t)}, ${dayLabel(t.completedAt ?? t.createdAt)}`}
-                  className={`tactile flex flex-col items-center justify-end ${FOCUS_RING}`}
-                  style={{ width: "3rem", minHeight: "var(--control-lg)", color: cupColor(t.cup?.kind), background: "transparent", boxShadow: "none" }}
+                  className={`tactile flex flex-col items-center justify-end gap-1.5 ${FOCUS_RING}`}
+                  style={{ width: "3.75rem", minHeight: "var(--control-lg)", color: cupColor(t.cup?.kind), background: "transparent", boxShadow: "none" }}
                 >
                   <ViewTransition name={`cup-${t.id}`} share="morph" default="none">
-                    <span className="inline-flex">
-                      <TrophyIcon className="w-9 h-9" />
+                    <span className="inline-flex" style={{ filter: `drop-shadow(0 0 10px color-mix(in srgb, ${cupColor(t.cup?.kind)} 45%, transparent))` }}>
+                      {t.cup ? <CupEmblem kind={t.cup.kind} className="w-11 h-11" /> : <TrophyIcon className="w-11 h-11" />}
                     </span>
                   </ViewTransition>
+                  {/* The plaque under it: when it was won. */}
+                  <span className="shelf-plaque tabular">{(t.completedAt ?? t.createdAt).slice(0, 7)}</span>
                 </button>
               ))}
             </div>
             {/* The shelf board the trophies stand on. */}
-            <div style={{ height: "0.5rem", background: "linear-gradient(to bottom, var(--color-surface-2), var(--color-cell))", borderTop: "1px solid var(--color-hairline)" }} />
+            <div className="shelf-board" />
           </div>
         ))}
       </div>
@@ -90,6 +92,11 @@ export function TournamentHistoryScreen({ onBack }: { onBack: () => void }) {
     <div className="animate-screen-push screen" style={{ background: "var(--color-bg)" }}>
       <div className="screen-inner">
         <ScreenTop title="Pokaler" onBack={onBack} />
+        {list !== null && counts.length > 0 && (
+          <p className="mb-4" style={{ color: "var(--color-muted)", fontSize: "var(--text-body)" }}>
+            {list.length} {list.length === 1 ? "pokal" : "pokaler"} i hyllen. Flest har {counts[0].name}, med {counts[0].cups}.
+          </p>
+        )}
         {list === null && <SkeletonRows count={3} />}
         {list !== null && list.length === 0 && <EmptyState icon={<TrophyIcon className="w-6 h-6" />} title="Ingen pokaler ennå" action={<Button variant="primary" onClick={onBack}>Start en turnering</Button>} />}
         {counts.map((c) => (

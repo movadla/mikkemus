@@ -29,6 +29,7 @@ const COLOUR_LITERALS: Record<string, number> = {
   "components/DartboardHeatmap.tsx": 8,
   "components/FxStage.tsx": 51,
   "components/KitSettings.tsx": 5,
+  "components/ui/BotFace.tsx": 11,
   "components/LineupIntro.tsx": 6,
   "components/MomentumWave.tsx": 5,
   "components/NightStory.tsx": 9,

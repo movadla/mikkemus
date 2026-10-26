@@ -4,7 +4,7 @@ import { avatarAccent } from "@/lib/avatarAccent";
 import type { Kit } from "@/lib/teamKit";
 import { useEffect, useRef } from "react";
 import { TeamKit } from "./TeamKit";
-import { BotIcon } from "./icons";
+import { BotFace } from "./ui/BotFace";
 
 export type Thrower = { name: string; photo?: string | null; isBot: boolean };
 
@@ -41,7 +41,7 @@ function Avatar({ who, size, active = true, ring = false }: { who: Thrower; size
       aria-hidden
     >
       {who.isBot ? (
-        <BotIcon className="w-1/2 h-1/2" />
+        <BotFace name={who.name} className="w-full h-full" />
       ) : who.photo ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={who.photo} alt="" className="w-full h-full object-cover" />
@@ -133,6 +133,7 @@ export function ThrowerBar({
   fire = false,
   animate,
   compact = false,
+  flush = false,
   onPickMate,
   onOpen,
 }: {
@@ -148,6 +149,8 @@ export function ThrowerBar({
   fire?: boolean;
   animate: boolean;
   compact?: boolean;
+  /** Sits at the top of the board as one card with it: no shadow, no corners of its own, a hairline between it and the names below. */
+  flush?: boolean;
   /** A tap on a teammate's picture: the caller asks whether they should throw now. */
   onPickMate?: (name: string) => void;
   /** A tap on the thrower's picture or name: the caller opens the thrower's numbers. */
@@ -164,14 +167,15 @@ export function ThrowerBar({
     <div
       role="status"
       aria-live="polite"
-      className={`thrower-bar shadow-panel flex items-center rounded-xl ${animate ? "animate-thrower-in" : ""}`}
+      className={`thrower-bar flex items-center ${flush ? "" : "shadow-panel rounded-xl"} ${animate ? "animate-thrower-in" : ""}`}
       style={{
         gap: compact ? "0.6rem" : "0.8rem",
         // A team's turn is in the team's colours: the bar washes from the kit's main colour, and
         // the left edge is the kit, not the app's teal.
         // A lone player has a colour too (the one on their picture), so the bar is theirs whoever it is.
         background: kit ? `linear-gradient(90deg, ${tint(kit.primary, 0.32)}, var(--color-surface) 65%)` : `linear-gradient(90deg, color-mix(in srgb, ${avatarAccent(team ? team.name : thrower.name)} 24%, var(--color-surface)), var(--color-surface) 70%)`,
-        border: `1px solid ${kit ? tint(kit.primary, 0.6) : "var(--color-border)"}`,
+        border: flush ? "none" : `1px solid ${kit ? tint(kit.primary, 0.6) : "var(--color-border)"}`,
+        borderBottom: flush ? "1px solid var(--color-hairline)" : undefined,
         borderLeft: `8px solid ${kit ? kit.primary : avatarAccent(team ? team.name : thrower.name)}`,
         padding: compact ? "0.4rem 0.6rem" : "0.6rem 0.8rem",
       }}

@@ -1,8 +1,9 @@
 "use client";
 
 import { Fragment, useEffect, useRef, useState } from "react";
+import { avatarAccent } from "@/lib/avatarAccent";
 import { cupColor } from "@/lib/botCup";
-import { bracketRounds, bronzeMatch, isHouseName, placeholderLabel, seedOf } from "@/lib/knockout";
+import { bracketRounds, bronzeMatch, isHouseName, placeholderLabel, routeOf, seedOf } from "@/lib/knockout";
 import type { Tournament, TournamentMatch } from "@/lib/tournament";
 import { MinusIcon, PlusIcon, TrophyIcon } from "./icons";
 
@@ -50,6 +51,11 @@ export function BracketTree({
   const focus = useRef<HTMLDivElement>(null);
   // Zoom: a tree of five or more rounds (32 and up) starts small enough to be seen whole, and can be pinched or stepped.
   const [scale, setScale] = useState(rounds.length >= 5 ? 0.5 : 1);
+  // Whose road lights up (a tap on a name above the tree), and the colour it is drawn in.
+  const [follow, setFollow] = useState<string | null>(null);
+  const road = follow ? routeOf(tournament, follow) : null;
+  const roadColour = follow ? avatarAccent(follow) : "var(--color-teal)";
+  const followable = !large ? tournament.participants.filter((p) => !p.isBot).slice(0, 16) : [];
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const pinch = useRef<{ dist: number; scale: number } | null>(null);
   const zoomable = !large;
@@ -150,9 +156,10 @@ export function BracketTree({
       textAlign: "left",
       borderRadius: 8,
       background: "var(--color-surface)",
-      border: isNext ? "2px solid var(--color-teal)" : "1px solid var(--color-border)",
+      border: road?.has(match.id) ? `2px solid ${roadColour}` : isNext ? "2px solid var(--color-teal)" : "1px solid var(--color-border)",
       boxShadow: isNext ? "0 0 18px color-mix(in srgb, var(--color-teal) 35%, transparent)" : undefined,
-      opacity: decided && !isJust ? 0.95 : 1,
+      opacity: road && !road.has(match.id) ? 0.3 : decided && !isJust ? 0.95 : 1,
+      transition: "opacity var(--pull)",
     };
         const selectable = !!onSelect && !!match.participantA && !!match.participantB;
     return (
@@ -182,13 +189,17 @@ export function BracketTree({
       const y1 = centerY(ci, 2 * k);
       const y2 = centerY(ci, 2 * k + 1);
       const ym = (y1 + y2) / 2;
-      const on = (x: TournamentMatch) => (x.winner ? "var(--color-teal)" : "var(--color-border)");
-      const hot = (x: TournamentMatch) => (x.id === justDecidedId ? 3 : x.winner ? 2 : 1.5);
+      const onward = rounds[ci + 1]?.matches[k];
+      // With a road lit, its lines are drawn in the entrant's colour and the rest step back.
+      const lit = (x: TournamentMatch) => !!road && road.has(x.id) && !!onward && road.has(onward.id);
+      const on = (x: TournamentMatch) => (lit(x) ? roadColour : road ? "var(--color-border)" : x.winner ? "var(--color-teal)" : "var(--color-border)");
+      const hot = (x: TournamentMatch) => (lit(x) ? 3.5 : x.id === justDecidedId ? 3 : x.winner ? 2 : 1.5);
+      const joined = lit(a) || lit(b);
       lines.push(
         <Fragment key={`${ci}-${k}`}>
           <path d={`M${x0},${y1} H${xm} V${ym}`} stroke={on(a)} strokeWidth={hot(a)} fill="none" />
           <path d={`M${x0},${y2} H${xm} V${ym}`} stroke={on(b)} strokeWidth={hot(b)} fill="none" />
-          <path d={`M${xm},${ym} H${xn}`} stroke={a.winner && b.winner ? "var(--color-teal)" : "var(--color-border)"} strokeWidth={a.winner && b.winner ? 2 : 1.5} fill="none" />
+          <path d={`M${xm},${ym} H${xn}`} stroke={joined ? roadColour : road ? "var(--color-border)" : a.winner && b.winner ? "var(--color-teal)" : "var(--color-border)"} strokeWidth={joined ? 3.5 : a.winner && b.winner ? 2 : 1.5} fill="none" />
         </Fragment>,
       );
     }
@@ -202,6 +213,27 @@ export function BracketTree({
 
   return (
     <div>
+      {followable.length > 1 && (
+        <div className="flex flex-wrap items-center gap-1.5 mb-2" role="group" aria-label="Følg en spiller">
+          <span className="section-label mr-1">FØLG</span>
+          {followable.map((p) => {
+            const on = follow === p.name;
+            return (
+              <button
+                key={p.name}
+                type="button"
+                aria-pressed={on}
+                onClick={() => setFollow(on ? null : p.name)}
+                className={`tactile inline-flex items-center gap-1.5 px-3 ${FOCUS_RING}`}
+                style={{ minHeight: "var(--control)", borderRadius: "var(--radius-s)", fontSize: "var(--text-small)", fontWeight: 600, color: "var(--color-cream)", background: on ? `color-mix(in srgb, ${avatarAccent(p.name)} 22%, var(--color-surface))` : "var(--color-surface)", border: `1px solid ${on ? avatarAccent(p.name) : "var(--color-border)"}` }}
+              >
+                <span aria-hidden className="rounded-full" style={{ width: 8, height: 8, background: avatarAccent(p.name) }} />
+                {p.name}
+              </button>
+            );
+          })}
+        </div>
+      )}
       {zoomable && (
         <div className="flex items-center justify-end gap-2 mb-2">
           <button type="button" onClick={fit} className={`tactile px-3 ${FOCUS_RING}`} style={{ minHeight: "var(--control)", borderRadius: "var(--radius-s)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)", fontSize: "var(--text-small)" }}>

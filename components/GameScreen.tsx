@@ -1007,13 +1007,8 @@ export function GameScreen({
         </div>
       )}
 
-      {/* Portrait: its own row between the controls and the board. Landscape has no room for a
-          row of its own and carries it in the right-hand column instead (see .live-side below). */}
-      {!compactLandscape && thrower && (
-        <div className="max-w-3xl mx-auto w-full mb-2 shrink-0">
-          <ThrowerBar key={turnToken} thrower={thrower} team={throwerTeam} kit={throwerTeam ? kits[throwerTeam.name] : null} stood={throwerStood} run={throwerRun} fire={fxFire} animate={throwerAnimate} onPickMate={choiceInteractive && !rewound ? setSwitchTo : undefined} onOpen={!rewound && !limited ? () => setSheetOpen(true) : undefined} />
-        </div>
-      )}
+      {/* Portrait: the thrower is the top of the board's own card (see the board below), so who throws and the names of the columns
+          read as one. Landscape has no room for that and carries it in the right-hand column instead (see .live-side below). */}
       {!compactLandscape && odds && (
         <div className="max-w-3xl mx-auto w-full mb-2 shrink-0">
           <OddsBar rows={odds.map((o) => ({ ...o, color: kits[o.name]?.primary }))} />
@@ -1196,6 +1191,7 @@ export function GameScreen({
         {players.length >= 5 && (
           <div className="scroll-hint-right absolute top-0 right-0 bottom-0 w-8 z-20 pointer-events-none" aria-hidden />
         )}
+        {!compactLandscape && thrower && <div className="shrink-0"><ThrowerBar key={turnToken} thrower={thrower} team={throwerTeam} kit={throwerTeam ? kits[throwerTeam.name] : null} stood={throwerStood} run={throwerRun} fire={fxFire} animate={throwerAnimate} onPickMate={choiceInteractive && !rewound ? setSwitchTo : undefined} onOpen={!rewound && !limited ? () => setSheetOpen(true) : undefined} flush /></div>}
         <div className="flex-1 min-h-0 w-full overflow-x-auto overflow-y-auto">
           <div
             className="game-grid grid h-full"

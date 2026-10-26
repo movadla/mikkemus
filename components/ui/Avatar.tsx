@@ -1,6 +1,6 @@
 import { ViewTransition } from "react";
 import { avatarAccent } from "@/lib/avatarAccent";
-import { BotIcon } from "../icons";
+import { BotFace } from "./BotFace";
 
 /** The five sizes of a face in the app, in pixels. */
 export const AVATAR_SIZES = { xs: 24, s: 32, m: 44, l: 64, xl: 96 } as const;
@@ -8,7 +8,7 @@ export type AvatarSize = keyof typeof AVATAR_SIZES;
 
 /**
  * One face for everyone: a photo, or the first letter, in the colour that is theirs. The ring is that colour too, except for what they
- * are at the moment: teal when it is their turn, gold when they have won. A bot has a dashed ring, and a small robot instead of a letter.
+ * are at the moment: teal when it is their turn, gold when they have won. A bot has a dashed ring and a face made from its name (BotFace).
  */
 export function Avatar({
   name,
@@ -42,7 +42,7 @@ export function Avatar({
       }}
     >
       {bot ? (
-        <BotIcon className="w-1/2 h-1/2" />
+        <BotFace name={name} className="w-full h-full" />
       ) : photo ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={photo} alt="" className="w-full h-full object-cover" />

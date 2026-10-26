@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { avatarAccent } from "@/lib/avatarAccent";
 import type { Kit } from "@/lib/teamKit";
 import { TeamKit } from "./TeamKit";
-import { BotIcon } from "./icons";
+import { BotFace } from "./ui/BotFace";
 import { formatOdds } from "@/lib/odds/price";
 
 export type LineupSide = {
@@ -101,7 +101,7 @@ export function LineupIntro({ sides, onDone }: { sides: LineupSide[]; onDone: ()
         style={{ width: size * 0.8, height: size * 0.8, border: `3px solid ${avatarAccent(s.name)}`, background: "var(--color-cell)", color: avatarAccent(s.name), fontSize: size * 0.34 }}
         aria-hidden
       >
-        {s.isBot ? <BotIcon className="w-1/2 h-1/2" /> : s.photo ? (
+        {s.isBot ? <BotFace name={s.name} className="w-full h-full" /> : s.photo ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={s.photo} alt="" className="w-full h-full object-cover" />
         ) : (

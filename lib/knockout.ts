@@ -332,3 +332,25 @@ export function firstRoundPairs(names: string[]): { a: string | null; b: string 
   for (let i = 0; i < slots.length; i += 2) pairs.push({ a: slots[i], b: slots[i + 1] });
   return pairs;
 }
+
+/**
+ * The matches on one entrant's route through the bracket: the ones they are in, and, while they are still alive, the matches their wins
+ * lead to (followed through the feeds, the match a winner goes to). So it is the road so far and the road ahead, and it ends where they
+ * lost. Used to light one entrant's way in the tree.
+ */
+export function routeOf(t: Tournament, name: string): Set<string> {
+  const ids = new Set<string>();
+  const mine = t.matches.filter((m) => m.participantA === name || m.participantB === name);
+  mine.forEach((m) => ids.add(m.id));
+  // Their last bracket match: if they won it, or it is still to be played, it leads on.
+  const last = [...mine].reverse().find((m) => !m.isBronzeMatch);
+  let at: TournamentMatch | undefined = last && (!last.winner || last.winner === name) ? last : undefined;
+  while (at) {
+    const here: TournamentMatch = at;
+    const onward = t.matches.find((m) => !m.isBronzeMatch && (m.feedA === here.id || m.feedB === here.id));
+    if (!onward) break;
+    ids.add(onward.id);
+    at = onward;
+  }
+  return ids;
+}

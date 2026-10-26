@@ -1,13 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRoster } from "@/lib/storage";
 import { BOT_LEVEL_PICKABLE, botDisplayName, type BotLevel } from "@/lib/botLevels";
 import { nextBotName, sameName, type Person } from "@/lib/people";
 import { filterNames, readUsage, sortByRecent } from "@/lib/recentPlayers";
+import { groupNights, nightOf } from "@/lib/nights";
+import { fetchLatestTournament } from "@/lib/tournamentStorage";
 import { BotIcon, CloseIcon, GuestIcon } from "./icons";
 import { LevelBadge } from "./LevelBadge";
 import { Avatar } from "./ui/Avatar";
+import { LevelBars } from "./ui/LevelBars";
 import { SearchField, TextField } from "./ui/TextField";
 
 const FOCUS_RING =
@@ -51,11 +54,29 @@ export function PlayerPicker({
   const [query, setQuery] = useState("");
   const [error, setError] = useState("");
   const roster = useRoster();
+  // The people of the last tournament, for "Som sist" (only asked for where the shortcuts are offered).
+  const [lastTime, setLastTime] = useState<string[]>([]);
+  useEffect(() => {
+    if (!bulk) return;
+    let live = true;
+    void fetchLatestTournament().then((t) => {
+      if (live && t) setLastTime(t.mode === "individual" ? t.participants.filter((p) => !p.isBot).map((p) => p.name) : []);
+    });
+    return () => {
+      live = false;
+    };
+  }, [bulk]);
 
   const known = useMemo(() => {
     const names = roster.filter((r) => r.kind !== "team" && !hidden.some((h) => sameName(h, r.name))).map((r) => r.name);
     return sortByRecent(names, readUsage());
   }, [roster, hidden]);
+  // Everyone who has thrown tonight (a night runs to five in the morning, see lib/nights).
+  const tonight = useMemo(() => {
+    const night = groupNights(roster)[0];
+    return night && night.date === nightOf(new Date().toISOString()) ? night.players.map((p) => p.name).filter((n) => known.some((k) => sameName(k, n))) : [];
+  }, [roster, known]);
+  const lastKnown = lastTime.filter((n) => known.some((k) => sameName(k, n)));
   const extra = people.filter((p) => !known.some((n) => sameName(n, p.name)));
   const shown = [...filterNames(known, query).map((name) => people.find((p) => sameName(p.name, name)) ?? { name, isBot: false }), ...extra];
 
@@ -198,8 +219,10 @@ export function PlayerPicker({
       )}
 
       {bulk && known.length > 0 && (
-        <div className="flex justify-end gap-2 mb-2">
+        <div className="flex flex-wrap justify-end gap-2 mb-2">
           {([
+            ...(lastKnown.length > 1 ? [["Som sist", () => onChange(lastKnown.map((name) => ({ name: known.find((k) => sameName(k, name)) ?? name, isBot: false })))] as const] : []),
+            ...(tonight.length > 1 ? [["Hele kvelden", () => onChange(tonight.map((name) => ({ name: known.find((k) => sameName(k, name)) ?? name, isBot: false })))] as const] : []),
             ["Alle", () => onChange([...people, ...filterNames(known, query).filter((n) => orderOf(n) === -1).map((name) => ({ name, isBot: false }))])],
             ["Ingen", () => onChange([])],
           ] as const).map(([label, run]) => (
@@ -211,7 +234,7 @@ export function PlayerPicker({
       )}
 
       {shown.length > 0 && (
-        <div className="grid grid-cols-2 gap-2" role="group" aria-label="Spillere">
+        <div className="grid grid-cols-3 gap-2" role="group" aria-label="Spillere">
           {shown.map((person) => {
             const order = orderOf(person.name);
             const selected = order !== -1;
@@ -224,28 +247,29 @@ export function PlayerPicker({
                 type="button"
                 aria-pressed={selected}
                 onClick={() => toggle(person)}
-                className={`tactile flex items-center gap-2 pl-2 pr-2 rounded-lg text-left ${FOCUS_RING}`}
+                className={`tactile relative flex flex-col items-center justify-center gap-1.5 px-2 py-3 rounded-xl text-center ${FOCUS_RING}`}
                 style={{
-                  minHeight: "var(--control)",
+                  minHeight: "6.5rem",
                   background: selected ? "var(--teal-soft)" : "var(--color-surface)",
                   border: selected ? "1px solid var(--color-teal)" : `1px ${dashed ? "dashed" : "solid"} var(--color-border)`,
                 }}
               >
                 {person.isGuest ? (
-                  <span aria-hidden className="rounded-full shrink-0 flex items-center justify-center" style={{ width: 32, height: 32, background: "var(--color-cell)", border: "1.5px dashed var(--color-border)" }}>
-                    <GuestIcon className="w-3.5 h-3.5" />
+                  <span aria-hidden className="rounded-full shrink-0 flex items-center justify-center" style={{ width: 44, height: 44, background: "var(--color-cell)", border: "1.5px dashed var(--color-border)" }}>
+                    <GuestIcon className="w-4 h-4" />
                   </span>
                 ) : (
-                  <Avatar name={person.name} photo={photo} size="s" bot={person.isBot} />
+                  <Avatar name={person.name} photo={photo} size="m" bot={person.isBot} />
                 )}
-                <span className="flex-1 min-w-0 truncate" style={{ color: botBlocked ? "var(--color-red)" : selected ? "var(--color-cream)" : "var(--color-muted)", fontSize: "var(--text-body)", fontWeight: selected ? 600 : 400 }}>
+                <span className="w-full min-w-0 truncate" style={{ color: botBlocked ? "var(--color-red)" : selected ? "var(--color-cream)" : "var(--color-muted)", fontSize: "var(--text-body)", fontWeight: selected ? 600 : 400 }}>
                   {person.name}
-                  {person.isGuest && <span style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)", fontWeight: 400 }}> · gjest</span>}
                 </span>
+                {person.isBot && person.botLevel && <LevelBars level={person.botLevel} name={person.name} />}
+                {person.isGuest && <span style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>gjest</span>}
                 {selected && (
                   <span
-                    className="tabular rounded-full shrink-0 flex items-center justify-center"
-                    style={{ width: "1.375rem", height: "1.375rem", background: "var(--color-teal)", color: "var(--color-bg)", fontSize: "var(--text-micro)", fontWeight: 700 }}
+                    className="tabular rounded-full shrink-0 flex items-center justify-center absolute"
+                    style={{ top: "0.375rem", right: "0.375rem", width: "1.375rem", height: "1.375rem", background: "var(--color-teal)", color: "var(--color-bg)", fontSize: "var(--text-micro)", fontWeight: 700 }}
                     aria-label={`nummer ${order + 1}`}
                   >
                     {order + 1}

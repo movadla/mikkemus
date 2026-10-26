@@ -2,15 +2,16 @@
 
 import { useMemo, useState } from "react";
 import { bracketRoundLabel, tournamentTitle, type Tournament, type TournamentMatch } from "@/lib/tournament";
-import { nextToThrow } from "@/lib/botSim";
-import { isHouseName, outIn, placeholderLabel, seedOf, undoableMatch, upcomingFor } from "@/lib/knockout";
+import { isSimulable, nextToThrow } from "@/lib/botSim";
+import { cupColor } from "@/lib/botCup";
+import { outIn, placeholderLabel, seedOf, undoableMatch, upcomingFor } from "@/lib/knockout";
 import { winChanceFor } from "@/lib/nextUp";
 import { useRoster } from "@/lib/storage";
 import { BracketTree } from "./BracketTree";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { ScreenTop } from "./ScreenTop";
 import { StepStrip } from "./StepStrip";
-import { Avatar } from "./ui/Avatar";
+import { MatchPoster, posterSides } from "./MatchPoster";
 import { CupBanner } from "./CupBanner";
 
 const FOCUS_RING =
@@ -66,36 +67,22 @@ function ResultCard({ tournament, match }: { tournament: Tournament; match: Tour
   );
 }
 
-/** The match to play next: who, which round, and what the odds say. */
-function NextUpCard({ tournament, match, onPlay }: { tournament: Tournament; match: TournamentMatch; onPlay: () => void }) {
+/** The matches after the next one that someone of the house is in, in the order they come (the bots' own matches play themselves). */
+export function queueAfter(t: Tournament, next: TournamentMatch | null): TournamentMatch[] {
+  return t.matches.filter((m) => !m.winner && !!m.participantA && !!m.participantB && m.id !== next?.id && !isSimulable(t, m));
+}
+
+/** The match to play next as a poster: who, which round, what the odds say, and the matches that follow. */
+function NextUpCard({ tournament, match, queue, onPlay }: { tournament: Tournament; match: TournamentMatch; queue: TournamentMatch[]; onPlay: () => void }) {
   const records = useRoster();
   const chance = useMemo(() => winChanceFor(tournament, match, records), [tournament, match, records]);
-  const [a, b] = [match.participantA!, match.participantB!];
-  const side = (name: string, p: number | null) => (
-    <div className="flex-1 min-w-0 flex flex-col items-center text-center gap-1">
-      <Avatar name={name} photo={records.find((r) => r.name === name)?.photo} size="l" state={isHouseName(tournament, name) ? "active" : "idle"} bot={!!tournament.participants.find((p) => p.name === name)?.isBot} />
-      <p className="tabular" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>
-        {seedOf(tournament, name) ? `#${seedOf(tournament, name)}` : ""}
-      </p>
-      <p className="font-display truncate" style={{ color: isHouseName(tournament, name) ? "var(--color-teal-strong)" : "var(--color-cream)", fontSize: "var(--text-title)" }}>
-        {name}
-      </p>
-      {p !== null && (
-        <p className="tabular" style={{ color: "var(--color-gold)", fontSize: "var(--text-body)", fontWeight: 600 }}>
-          {Math.round(p * 100)} %
-        </p>
-      )}
-    </div>
-  );
+  const a = match.participantA!;
+  const [sideA, sideB] = posterSides(tournament, match, records, chance);
   return (
     <div className="card mb-4" style={{ ...card, border: "1px solid var(--color-teal)" }}>
       <p className="section-label mb-3 text-center">NESTE · {roundName(match).toUpperCase()}</p>
-      <div className="flex items-center gap-2 mb-3">
-        {side(a, chance)}
-        <span className="font-display" style={{ color: "var(--color-muted)" }}>
-          mot
-        </span>
-        {side(b, chance === null ? null : 1 - chance)}
+      <div className="mb-3">
+        <MatchPoster a={sideA} b={sideB} tint={cupColor(tournament.cup?.kind)} />
       </div>
       {chance !== null && (
         <div className="flex rounded-full overflow-hidden mb-4" style={{ height: "0.35rem", background: "var(--color-cell)" }} role="img" aria-label={`Vinnersjanse: ${a} ${Math.round(chance * 100)} prosent`}>
@@ -111,6 +98,27 @@ function NextUpCard({ tournament, match, onPlay }: { tournament: Tournament; mat
       >
         Start kampen
       </button>
+      {queue.length > 0 && (
+        <div className="mt-4">
+          <p className="section-label mb-2">DERETTER</p>
+          <ol className="space-y-1">
+            {queue.slice(0, 4).map((m, i) => (
+              <li key={m.id} className="flex items-center gap-2" style={{ fontSize: "var(--text-body)", color: "var(--color-cream)" }}>
+                <span className="tabular shrink-0 text-center" style={{ width: "1.25rem", color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
+                  {i + 1}
+                </span>
+                <span className="flex-1 min-w-0 truncate">
+                  {m.participantA} mot {m.participantB}
+                </span>
+                <span className="shrink-0" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
+                  {roundName(m)}
+                </span>
+              </li>
+            ))}
+          </ol>
+          {queue.length > 4 && <p style={{ color: "var(--color-muted)", fontSize: "var(--text-small)", marginTop: "0.25rem" }}>og {queue.length - 4} til</p>}
+        </div>
+      )}
     </div>
   );
 }
@@ -228,7 +236,7 @@ export function KnockoutOverview({
               </div>
             </div>
           )}
-          {next && <NextUpCard key={next.id} tournament={tournament} match={next} onPlay={() => onPlayNext(next)} />}
+          {next && <NextUpCard key={next.id} tournament={tournament} match={next} queue={queueAfter(tournament, next)} onPlay={() => onPlayNext(next)} />}
         </div>
         <div className="card mb-4" style={card}>
           <BracketTree tournament={tournament} nextId={next?.id ?? null} justDecidedId={justDecidedId} onSelect={setSelected} />

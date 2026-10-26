@@ -3,9 +3,15 @@
 import { useEffect, useState } from "react";
 import { BracketTree } from "@/components/BracketTree";
 import { CupBanner } from "@/components/CupBanner";
+import { MatchPoster, posterSides } from "@/components/MatchPoster";
+import { TvChampion } from "@/components/TvShow";
 import { TvFrame } from "@/components/TvFrame";
 import { roundName } from "@/components/KnockoutOverview";
-import { nextToThrow } from "@/lib/botSim";
+import { isSimulable, nextToThrow } from "@/lib/botSim";
+import { cupColor } from "@/lib/botCup";
+import { championShowOf } from "@/lib/championShow";
+import { winChanceFor } from "@/lib/nextUp";
+import { useRoster } from "@/lib/storage";
 import { isKnockout } from "@/lib/knockout";
 import { fetchLatestTournament } from "@/lib/tournamentStorage";
 import { tournamentTitle, type Tournament } from "@/lib/tournament";
@@ -44,7 +50,14 @@ export default function StorskjermTurneringPage() {
     };
   }, []);
 
+  const records = useRoster();
   const next = tournament && isKnockout(tournament) ? nextToThrow(tournament) : null;
+  const queue = tournament && next ? tournament.matches.filter((m) => !m.winner && !!m.participantA && !!m.participantB && m.id !== next.id && !isSimulable(tournament, m)) : [];
+  const chance = tournament && next ? winChanceFor(tournament, next, records) : null;
+
+  // A finished cup is its champion, on the same scene as the phone sends.
+  if (tournament && isKnockout(tournament) && tournament.status === "done" && tournament.winner) return <TvChampion show={championShowOf(tournament)} />;
+
   return (
     <TvFrame label="Turnering" className="px-6 pt-14 pb-10">
       {tournament === undefined && <p className="text-center pt-24" style={{ color: "var(--color-muted)", fontSize: "var(--text-title)" }}>Henter turneringen …</p>}
@@ -54,14 +67,23 @@ export default function StorskjermTurneringPage() {
         <>
           <header className="text-center mb-6">
             {tournament.cup ? <div className="mx-auto" style={{ maxWidth: "40rem" }}><CupBanner cup={tournament.cup} name={tournamentTitle(tournament)} large /></div> : <p className="section-label" style={{ fontSize: "var(--text-body)" }}>{tournamentTitle(tournament).toUpperCase()}</p>}
-            {tournament.status === "done" ? (
-              <h1 className="font-display" style={{ color: "var(--color-gold)", fontSize: "clamp(2.5rem, 7vw, 5rem)", lineHeight: 1.05 }}>
-                {tournament.winner} er mester
-              </h1>
-            ) : next ? (
-              <h1 className="font-display" style={{ fontSize: "clamp(2rem, 5vw, 3.6rem)", lineHeight: 1.1 }}>
-                <span style={{ color: "var(--color-teal)" }}>{roundName(next)}</span>: {next.participantA} mot {next.participantB}
-              </h1>
+            {next ? (
+              <>
+                <h1 className="sr-only">
+                  {roundName(next)}: {next.participantA} mot {next.participantB}
+                </h1>
+                <p className="section-label mb-3" style={{ color: cupColor(tournament.cup?.kind), fontSize: "var(--text-body)" }}>
+                  NESTE · {roundName(next).toUpperCase()}
+                </p>
+                <div className="mx-auto" style={{ maxWidth: "64rem" }}>
+                  <MatchPoster large tint={cupColor(tournament.cup?.kind)} a={posterSides(tournament, next, records, chance)[0]} b={posterSides(tournament, next, records, chance)[1]} />
+                </div>
+                {queue.length > 0 && (
+                  <p className="mt-4" style={{ color: "var(--color-muted)", fontSize: "var(--text-title)" }}>
+                    Deretter: {queue.slice(0, 3).map((m) => `${m.participantA} mot ${m.participantB}`).join(" · ")}
+                  </p>
+                )}
+              </>
             ) : (
               <h1 className="font-display" style={{ fontSize: "var(--text-num)" }}>Venter på neste kamp</h1>
             )}

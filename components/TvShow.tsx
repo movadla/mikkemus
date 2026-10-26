@@ -94,7 +94,7 @@ function TvDraw({ show }: { show: Draw }) {
 }
 
 /** The champion as a scene: the trophy under the cup's own light, the name large in gold, and the prizes and the podium beside it. */
-function TvChampion({ show }: { show: Champion }) {
+export function TvChampion({ show }: { show: Champion }) {
   const level = useFxLevel();
   const fx = fxFlags(level);
   const colour = cupColor(show.cup?.kind);

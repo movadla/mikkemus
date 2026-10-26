@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { awards, bracketRounds, createKnockout, firstRoundPairs, houseAlive, nextPlayable, openDraw, outIn, placeholderLabel, recordKnockoutResult, roadOf, seedByStrength, undoLastResult, undoableMatch } from "./knockout";
+import { awards, bracketRounds, createKnockout, firstRoundPairs, houseAlive, nextPlayable, openDraw, outIn, placeholderLabel, recordKnockoutResult, roadOf, routeOf, seedByStrength, undoLastResult, undoableMatch } from "./knockout";
 import { podium, recordMatchResult, type Participant, type Tournament } from "./tournament";
 
 const people = (n: number, bots = 0): Participant[] => Array.from({ length: n }, (_, i) => ({ name: `P${i + 1}`, isBot: i >= n - bots }));
@@ -186,5 +186,20 @@ describe("seeding and the draw", () => {
       { a: "B", b: null },
       { a: "C", b: "F" },
     ]);
+  });
+});
+
+describe("the route of one entrant", () => {
+  it("is their first match and the matches their wins would lead to, before anything is played", () => {
+    const t = make(8);
+    expect([...routeOf(t, "P1")].sort()).toEqual(["bracket-1-0", "bracket-2-0", "bracket-4-0"].sort());
+  });
+
+  it("ends where they lost, and goes on while they win", () => {
+    let t = make(8);
+    t = playNext(t); // P1 beats P8
+    expect(routeOf(t, "P1").has("bracket-2-0")).toBe(true);
+    const out = routeOf(t, "P8");
+    expect([...out]).toEqual(["bracket-4-0"]);
   });
 });
