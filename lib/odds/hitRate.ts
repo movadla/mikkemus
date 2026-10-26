@@ -8,10 +8,11 @@ import { MED_TO_SIGMA } from "./throwModel";
  * (which is the only thing that measures distance). A cross rate is much coarser than a distance: a
  * dart's outcome is 0 to 3 crosses, and how much that says about the spread is about a twelfth of what
  * a measured distance says (the variance of a mean distance against the variance of a mean cross rate,
- * per dart, divided by how fast the rate changes with skill). So these darts count for HIT_WEIGHT of a
- * measured dart, and measured darts outweigh them wherever both exist.
+ * per dart, divided by how fast the rate changes with skill). By that they would count for about 0.08 of a measured
+ * dart; they count as much (HIT_WEIGHT) all the same, so that someone who mostly plays without Scolia is not read
+ * from the few measured matches alone.
  */
-export const HIT_WEIGHT = 0.08;
+export const HIT_WEIGHT = 1;
 
 const MEDS = [14, 18, 23, 29, 36, 45, 56, 70];
 type Point = { med: number; rate: number };

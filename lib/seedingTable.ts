@@ -2,12 +2,12 @@ import { emptyProgress } from "./game";
 import { finishCdf, stateOf } from "./odds/forward";
 import { evidenceFor } from "./odds/match";
 import { modelFor, type RuleSet } from "./odds/model";
-import { SEED_ORDER, seededPrior } from "./odds/seeding";
+import { SEED_ORDER } from "./odds/seeding";
 import { learnPrior, skillNodes, SCENARIOS, type Evidence } from "./odds/skill";
 import { MED_TO_SIGMA } from "./odds/throwModel";
 import { raceWinProbs } from "./odds/winProb";
 import { shownHitPct, type MatchHistoryEntry, type PlayerRecord } from "./playerRows";
-import { START_RATING } from "./rating";
+import { expectedScore, PROVISIONAL_MATCHES, START_RATING } from "./rating";
 
 /** How a player has been doing over their last ten matches, next to how they usually do. */
 export type FormInfo = {
@@ -32,9 +32,9 @@ export type FormInfo = {
 
 export type SeedRow = {
   name: string;
-  /** Chance of beating a typical player of the group over one match, from skill alone (0 to 1). */
+  /** Chance of beating a typical player of the group over one match (0 to 1): the darts and the results together. */
   strength: number;
-  /** The mean distance the model believes the player throws at, in mm: the seeding and the darts together. */
+  /** The mean distance the model believes the player throws at, in mm, from their darts alone. */
   med: number;
   /** Where the group put them to begin with (1 for the best), for the people on the list. */
   seedRank: number | null;
@@ -116,7 +116,8 @@ export function skillTable(records: PlayerRecord[], rules: RuleSet): { prior: Re
   // The group's own starting point, from those with enough measured darts (the same as the odds use).
   const prior = learnPrior(people.map((r) => evidenceFor(r.name, records)).filter((e): e is Evidence => !!e));
   const rows = people.map((r) => {
-    const nodes = skillNodes(evidenceFor(r.name, records, rules), SCENARIOS, seededPrior(r.name, prior) ?? prior);
+    // Nobody starts from what the group has said about them: with no darts a player is a typical one of the group.
+    const nodes = skillNodes(evidenceFor(r.name, records, rules), SCENARIOS, prior);
     const sigmas = nodes.map((n) => n.sigma);
     const seedIndex = SEED_ORDER.indexOf(r.name.trim().toLowerCase() as (typeof SEED_ORDER)[number]);
     return { record: r, sigmas, med: sigmas[Math.floor(sigmas.length / 2)] / MED_TO_SIGMA, seedRank: seedIndex >= 0 ? seedIndex + 1 : null };
@@ -124,17 +125,41 @@ export function skillTable(records: PlayerRecord[], rules: RuleSet): { prior: Re
   return { prior, rows };
 }
 
+/** Matches, alone and in teams together, after which the number of matches no longer holds a strength back. */
+export const MATCHES_TO_TRUST = 10;
+
+/** Every match a person has played: their own, and those of the teams they are in. */
+export function totalMatches(person: PlayerRecord, records: PlayerRecord[]): number {
+  const name = person.name.trim().toLowerCase();
+  const inTeams = records.filter((t) => t.kind === "team" && (t.members ?? []).some((m) => m.trim().toLowerCase() === name));
+  return person.matchesPlayed + inTeams.reduce((s, t) => s + t.matchesPlayed, 0);
+}
+
 /**
- * The table of who is best. What the group said about the regulars (lib/odds/seeding.ts) is the starting point
- * of each person's skill, and what they have thrown since (measured distances, and how often the darts counted
- * for the matches Scolia did not measure) moves it, more and more the more there is. The strength is then how
- * likely they would be to beat a typical player of the group.
+ * The table of who is best, from the matches alone. The darts (measured distances, and how often the darts counted
+ * for the matches Scolia did not measure) say how likely someone would be to beat a typical player of the group;
+ * the results say it too, through the rating, and count for more the more matches are rated. Both are pulled
+ * towards a typical player until there are ten matches behind them (MATCHES_TO_TRUST). The group's own
+ * seeding (lib/odds/seeding.ts) is not in it, only shown next to it. Anyone with no matches is placed last.
  */
 export function buildSeedTable(records: PlayerRecord[], rules: RuleSet): SeedRow[] {
   const { prior, rows } = skillTable(records, rules);
-  const withStrength = rows.map((x) => ({ r: x.record, med: x.med, seedRank: x.seedRank, strength: winChanceAgainst(x.med, prior.med, rules) }));
+  const rated = rows.filter((x) => (x.record.ratedMatches ?? 0) > 0);
+  const meanRating = rated.length > 0 ? rated.reduce((s, x) => s + (x.record.rating ?? START_RATING), 0) / rated.length : START_RATING;
+  const withStrength = rows.map((x) => {
+    const fromDarts = winChanceAgainst(x.med, prior.med, rules);
+    const n = x.record.ratedMatches ?? 0;
+    const fromResults = expectedScore(x.record.rating ?? START_RATING, meanRating);
+    const w = n / (n + PROVISIONAL_MATCHES);
+    const raw = (1 - w) * fromDarts + w * fromResults;
+    // Few matches say little: one very good round must not put someone on top. The pull towards a typical player
+    // fades over the first MATCHES_TO_TRUST matches, alone and in teams together, and is gone after that. It fades
+    // slowly at first (the square), so four matches still count for little.
+    const trust = Math.min(1, totalMatches(x.record, records) / MATCHES_TO_TRUST) ** 2;
+    return { r: x.record, med: x.med, seedRank: x.seedRank, strength: 0.5 + trust * (raw - 0.5) };
+  });
   // Those who have not played a match yet go last, whatever the group said about them, until they have.
-  const hasPlayed = (x: (typeof withStrength)[number]) => (x.r.matchesPlayed > 0 ? 1 : 0);
+  const hasPlayed = (x: (typeof withStrength)[number]) => (totalMatches(x.r, records) > 0 ? 1 : 0);
   withStrength.sort((a, b) => hasPlayed(b) - hasPlayed(a) || b.strength - a.strength || a.r.name.localeCompare(b.r.name, "no"));
   // Among the people on the seeding list: where each stands now, against where the group put them.
   const seededNow = withStrength.filter((x) => x.seedRank !== null);

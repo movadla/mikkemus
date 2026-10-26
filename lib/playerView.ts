@@ -40,7 +40,8 @@ function weightedDistance(entries: MatchHistoryEntry[], key: "med" | "mhd" | "mv
   return w === 0 ? null : e.reduce((s, m) => s + (m[key] as number) * (m.throws ?? m.dartsUsed), 0) / w;
 }
 
-export type RowStat = { step: Step; pct: number | null };
+/** Hit percentage of a row, and the crosses and misses behind it: a figure over a handful of darts says little. */
+export type RowStat = { step: Step; pct: number | null; hits: number; misses: number };
 
 export type View = {
   matches: number;
@@ -92,7 +93,7 @@ export function rowDartsOver(entries: MatchHistoryEntry[], pick: (m: MatchHistor
 }
 
 const rowsOf = (steps: Record<Step, HitStat> | undefined): RowStat[] | null =>
-  steps ? STEPS.map((step) => ({ step, pct: steps[step].hits + steps[step].misses > 0 ? (steps[step].hits / (steps[step].hits + steps[step].misses)) * 100 : null })) : null;
+  steps ? STEPS.map((step) => ({ step, pct: steps[step].hits + steps[step].misses > 0 ? (steps[step].hits / (steps[step].hits + steps[step].misses)) * 100 : null, hits: steps[step].hits, misses: steps[step].misses })) : null;
 
 /** Hit percentage per row over the matches that kept their crosses and misses per row, or null when none of them did. */
 export function rowsOver(entries: MatchHistoryEntry[]): RowStat[] | null {

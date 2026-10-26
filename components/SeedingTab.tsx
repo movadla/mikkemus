@@ -106,7 +106,7 @@ function SeedingCard({ rows }: { rows: SeedRow[] }) {
         ))}
       </div>
       <p className="mt-3" style={{ color: "var(--color-muted)", fontSize: "0.75rem" }}>
-        Rekkefølgen er det du har sagt om spillerne som utgangspunkt, flyttet av det de faktisk har kastet: jo mer data, jo mindre teller utgangspunktet.
+        Rekkefølgen bygger bare på kampene: det de har kastet og hvordan det har gått. Spillere uten kamper ligger nederst til de har spilt.
       </p>
     </Card>
   );

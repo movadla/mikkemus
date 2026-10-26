@@ -37,6 +37,17 @@ function Dots({ results }: { results: boolean[] }) {
   );
 }
 
+const RING_ROWS: Step[] = ["D", "T"];
+
+/** D and T count a hit whenever one lands, also a slenger thrown at a number, but a miss only while the row is the one being worked. */
+function RingNote() {
+  return (
+    <p className="mt-1" style={{ color: "var(--color-muted)", fontSize: "0.7rem" }}>
+      * D og T teller også treff slengt på siden, men bom bare når raden er aktiv. Prosenten er for høy og kan ikke sammenlignes med tallradene.
+    </p>
+  );
+}
+
 function Rows({ view }: { view: View }) {
   if (!view.rows) return null;
   return (
@@ -46,10 +57,12 @@ function Rows({ view }: { view: View }) {
         {view.rows.map((r) => (
           <div key={r.step} className="rounded-xl py-2 text-center tabular" style={{ background: "var(--color-surface-2)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06), inset 0 1px 0 rgba(255,255,255,0.07), 0 1px 2px rgba(0,0,0,0.4)" }}>
             <p style={{ color: "var(--color-muted)", fontSize: "0.7rem" }}>{STEP_LABELS[r.step]}</p>
-            <p style={{ color: "var(--color-cream)", fontSize: "0.8rem", fontWeight: 600 }}>{pct(r.pct)}</p>
+            <p style={{ color: "var(--color-cream)", fontSize: "0.8rem", fontWeight: 600 }}>{pct(r.pct)}{RING_ROWS.includes(r.step) && r.pct !== null ? "*" : ""}</p>
+            <p style={{ color: "var(--color-muted)", fontSize: "0.65rem" }}>{r.hits + r.misses === 0 ? "ingen kast" : `${r.hits} av ${r.hits + r.misses}`}</p>
           </div>
         ))}
       </div>
+      <RingNote />
     </>
   );
 }

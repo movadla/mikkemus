@@ -276,18 +276,18 @@ describe("without Scolia: from how often the darts counted", () => {
     expect(evidenceFor("Per", [per])).toBeNull();
     const e = evidenceFor("Per", [per], RULES)!;
     expect(e.n).toBeGreaterThan(0);
-    expect(e.n).toBeLessThan(20); // 120 darts count as a handful of measured ones
+    expect(e.n).toBeGreaterThan(100); // each dart counts as much as a measured one (a little less for the older match)
     expect(e.meanR).toBeLessThan(25); // 65 % is sharper than average
   });
 
-  it("measured darts outweigh the rest", async () => {
+  it("darts read from the cross rate weigh as much as measured ones", async () => {
     const { evidenceFor } = await import("./match");
     const only = rec("Per", { matchHistory: [scoliaMatch("2026-10-01", 40, 60)] });
     const both = rec("Per", { matchHistory: [scoliaMatch("2026-10-01", 40, 60), hitMatch("2026-10-02", 70, 60)] });
     const a = evidenceFor("Per", [only], RULES)!;
     const b = evidenceFor("Per", [both], RULES)!;
     expect(b.meanR).toBeLessThan(a.meanR); // the sharp hit rate does pull
-    expect(a.meanR - b.meanR).toBeLessThan(3); // but 60 hit-rate darts are worth only a few measured ones
+    expect(b.n).toBeGreaterThan(1.8 * a.n); // and 60 hit-rate darts count as much as 60 measured ones
   });
 
   it("reads a team member's own cross rate from the team record", async () => {
@@ -295,7 +295,7 @@ describe("without Scolia: from how often the darts counted", () => {
     const steps = emptyRecord("x").steps;
     const team = rec("Per & Ola", { kind: "team", members: ["Per", "Ola"], memberStats: { Per: { matches: 2, turns: 30, darts: 90, hits: 54, misses: 36, steps, bestRun: 3, throws: 0, sumR: 0 } } });
     const e = evidenceFor("Per", [team], RULES)!;
-    expect(e.n).toBeCloseTo(90 * 0.08, 6);
+    expect(e.n).toBeCloseTo(90, 6);
     expect(e.meanR).toBeLessThan(30); // 0,6 crosses a dart
     expect(evidenceFor("Ola", [team], RULES)).toBeNull();
   });
@@ -331,13 +331,12 @@ describe("the seeding of the regulars", () => {
     expect(measured).toBeGreaterThan(0.75);
   });
 
-  it("lasts longer on the weaker evidence of the cross rate", async () => {
-    // Four matches without Scolia at 60 % (240 darts, worth about 19 measured ones) move the picture, but not all the way.
+  it("moves the picture on the cross rate too", async () => {
+    // Four matches without Scolia at 60 % (240 darts) count as much as measured ones: the seeding is not what prices them.
     const h = (d: string) => ({ date: d, won: true, dartsUsed: 60, hitPct: 60, med: null, mhd: null, mvd: null });
     const some = await winChance("Sondre", "Vegard", [rec("Sondre", { matchHistory: [h("1"), h("2"), h("3"), h("4")] })]);
     const seeded = await winChance("Sondre", "Vegard");
     expect(some).toBeGreaterThan(seeded + 0.03);
-    expect(some).toBeLessThan(0.5); // still the weaker on paper: the seeding has not been thrown out
   });
 });
 

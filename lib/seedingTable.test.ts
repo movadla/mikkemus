@@ -34,29 +34,41 @@ describe("form over the last matches", () => {
 describe("the seeding table", () => {
   const regulars = ["Vadla", "Monge", "Moen", "Lars", "Hans", "Vegard", "Sondre"].map((n) => rec(n));
 
-  it("starts as the group said when there is nothing else to go on", () => {
+  it("starts level when there is nothing to go on, whatever the group has said", () => {
     const t = buildSeedTable(regulars, RULES);
-    const names = t.map((r) => r.name);
-    expect(names[0]).toBe("Vadla");
-    expect(names.slice(1, 4).sort()).toEqual(["Lars", "Moen", "Monge"]); // the three the group put level
-    expect(names.slice(4)).toEqual(["Hans", "Vegard", "Sondre"]);
-    expect(t.map((r) => r.strength)).toEqual([...t.map((r) => r.strength)].sort((a, b) => b - a));
-    // The three who are level have the same strength.
-    expect(t[1].strength).toBeCloseTo(t[3].strength, 9);
-    expect(t[0].strength).toBeGreaterThan(t[1].strength);
-    expect(t.find((r) => r.name === "Vadla")!.move).toBe(0);
-    expect(t.find((r) => r.name === "Sondre")!.move).toBe(0);
+    expect(new Set(t.map((r) => r.strength.toFixed(9))).size).toBe(1);
+    expect(t[0].strength).toBeCloseTo(0.5, 6);
+    // The group's seeding is still shown next to the place.
+    expect(t.find((r) => r.name === "Vadla")!.seedRank).toBe(1);
+    expect(t.find((r) => r.name === "Sondre")!.seedRank).toBe(7);
   });
 
   it("moves with what they have thrown: a regular who keeps hitting well climbs, one who does not drops", () => {
     // Sondre is seeded last, but he has hit very well over many matches; Vadla, seeded first, has hit poorly.
-    const hot = Array.from({ length: 8 }, (_, i) => match(i, true, 80, 100));
-    const cold = Array.from({ length: 8 }, (_, i) => match(i, false, 20, 100));
+    const hot = Array.from({ length: 12 }, (_, i) => match(i, true, 80, 100));
+    const cold = Array.from({ length: 12 }, (_, i) => match(i, false, 20, 100));
     const table = buildSeedTable(regulars.map((r) => (r.name === "Sondre" ? rec("Sondre", hot) : r.name === "Vadla" ? rec("Vadla", cold) : r)), RULES);
     const by = Object.fromEntries(table.map((r) => [r.name, r]));
     expect(by.Sondre.rank).toBeLessThan(by.Vadla.rank);
     expect(by.Sondre.move!).toBeGreaterThan(0);
     expect(by.Vadla.move!).toBeLessThan(0);
+  });
+
+  it("does not let one very good round put someone on top: few matches pull towards a typical player", () => {
+    const steady = Array.from({ length: 12 }, (_, i) => match(i, i % 3 !== 0, 55, 100));
+    const oneBig = [match(0, true, 95, 100)];
+    const table = buildSeedTable(regulars.map((r) => (r.name === "Hans" ? rec("Hans", steady) : r.name === "Moen" ? rec("Moen", oneBig) : r)), RULES);
+    const by = Object.fromEntries(table.map((r) => [r.name, r]));
+    expect(by.Hans.rank).toBeLessThan(by.Moen.rank);
+    expect(by.Moen.strength).toBeLessThan(0.6);
+  });
+
+  it("counts team matches among the matches behind a strength", () => {
+    const history = Array.from({ length: 5 }, (_, i) => match(i, true, 85, 100));
+    const alone = buildSeedTable(regulars.map((r) => (r.name === "Moen" ? rec("Moen", history) : r)), RULES).find((r) => r.name === "Moen")!;
+    const team = rec("Moen & Lars", Array.from({ length: 5 }, (_, i) => match(i, true, 85, 100)), { kind: "team", members: ["Moen", "Lars"] });
+    const withTeam = buildSeedTable([...regulars.map((r) => (r.name === "Moen" ? rec("Moen", history) : r)), team], RULES).find((r) => r.name === "Moen")!;
+    expect(withTeam.strength).toBeGreaterThan(alone.strength);
   });
 
   it("ranks someone outside the seeding by their own darts, with no seed place", () => {
@@ -69,11 +81,10 @@ describe("the seeding table", () => {
 
   it("puts those without matches last until they have played", () => {
     const played = [match(0, false, 30, 100), match(1, false, 30, 100)];
-    // Vadla is seeded first but has no matches; Sondre is seeded last but has played.
+    // Sondre has played two lost matches, the others none: they still stand above no one who has played.
     const table = buildSeedTable(regulars.map((r) => (r.name === "Sondre" ? rec("Sondre", played) : r)), RULES);
     const names = table.map((r) => r.name);
     expect(names[0]).toBe("Sondre");
-    expect(names.slice(1)[0]).toBe("Vadla");
     expect(table.map((r) => r.rank)).toEqual([1, 2, 3, 4, 5, 6, 7]);
   });
 
@@ -99,8 +110,8 @@ describe("sides for a tournament", () => {
     const [t] = entrantInputs([...people, team], RULES, "team");
     expect(t.members).toEqual(["Vadla", "Ukjent"]);
     expect(t.sigmas.length).toBe(2);
-    // Vadla is seeded sharper than someone nobody knows anything about.
-    expect(t.sigmas[0][3]).toBeLessThan(t.sigmas[1][3]);
+    // With nothing on record, a regular is as good as someone nobody knows anything about.
+    expect(t.sigmas[0][3]).toBeCloseTo(t.sigmas[1][3], 9);
   });
 
   it("treats a member with no record as an unknown player of the group", () => {
