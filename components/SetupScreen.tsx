@@ -10,6 +10,7 @@ import { markPlayersUsed } from "@/lib/recentPlayers";
 import { savedPeople, splitPeople, teamPeople, toMember, toNamedTeam, type PickedTeam, type Person } from "@/lib/people";
 import { individualSetupProblem, setupSummary, teamSetupProblem } from "@/lib/setupProblem";
 import { PeopleIcon, PersonIcon } from "./icons";
+import { FxPicker } from "./FxPicker";
 import { PlayerPicker } from "./PlayerPicker";
 import { RulesPicker } from "./RulesPicker";
 import { ScreenTop } from "./ScreenTop";
@@ -215,6 +216,8 @@ export function SetupScreen({
         {/* Which game. Shared by both modes, with the stand rule offered only where a team has
             several members to alternate between. */}
         {variantSelectable && <RulesPicker variant={variant} onChange={setVariant} teamPlay={mode === "team"} />}
+        {/* Enkel is chosen here, before the match: the same device setting as in Innstillinger. */}
+        <FxPicker />
 
         {mode === "individual" && (
           <>

@@ -17,6 +17,19 @@ import { StepStrip } from "./StepStrip";
 import { StickyAction } from "./StickyAction";
 import { TeamPicker } from "./TeamPicker";
 
+/** A numbered heading: the screen reads as three questions, one after the other. */
+function Step({ n, children, aside }: { n: number; children: React.ReactNode; aside?: string }) {
+  return (
+    <div className="flex items-center gap-3 mb-3 mt-2">
+      <span aria-hidden className="tabular rounded-full shrink-0 flex items-center justify-center" style={{ width: "1.75rem", height: "1.75rem", background: "var(--teal-soft)", color: "var(--color-teal)", border: "1px solid var(--color-teal)", fontWeight: 700, fontSize: "0.85rem" }}>
+        {n}
+      </span>
+      <h2 className="font-display flex-1" style={{ color: "var(--color-cream)", fontSize: "1.25rem", lineHeight: 1.1 }}>{children}</h2>
+      {aside && <span className="tabular" style={{ color: "var(--color-muted)", fontSize: "0.9rem" }}>{aside}</span>}
+    </div>
+  );
+}
+
 const MIN_INDIVIDUAL = 2;
 const MIN_TEAMS = 2;
 const FOCUS_RING =
@@ -141,7 +154,7 @@ export function TournamentSetupScreen({
         />
         <StepStrip step={0} />
 
-        <p className="section-label mb-2">HVEM ER MED{ownCount > 0 ? ` · ${ownCount}` : ""}</p>
+        <Step n={1} aside={ownCount > 0 ? `${ownCount} valgt` : undefined}>Hvem skal være med?</Step>
         <ModeToggle
           label="Hvem spiller"
           value={mode}
@@ -157,7 +170,7 @@ export function TournamentSetupScreen({
           <PlayerPicker people={people} onChange={setPeople} botsAllowed={botsAllowed && !cupMode} bulk />
         )}
 
-        <p className="section-label mb-2 mt-2">TURNERING</p>
+        <Step n={2}>Hvilken turnering?</Step>
         <ModeToggle
           label="Type turnering"
           value={cupMode ? "cup" : "plain"}
@@ -170,7 +183,7 @@ export function TournamentSetupScreen({
         {cupMode && (
           <>
             <CupTypePicker value={{ ...cup, size: cupSize }} onChange={setCup} maxSize={maxSize} />
-            <p className="section-label mb-2">ANTALL DELTAKERE</p>
+            <Step n={3}>Hvor mange deltakere?</Step>
             <CupSizePicker value={{ ...cup, size: cupSize }} onChange={setCup} own={ownCount} maxSize={maxSize} />
           </>
         )}

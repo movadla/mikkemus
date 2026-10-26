@@ -58,11 +58,18 @@ export function CupSizePicker({ value, onChange, own, maxSize }: { value: CupCho
   const sizes = cupType(value.kind).sizes.filter((n) => n <= maxSize);
   return (
     <div className="mb-6">
-      <div className="flex flex-wrap gap-2 mb-2">
+      <div className="grid grid-cols-3 gap-2 mb-2">
         {sizes.map((n) => (
-          <Chip key={n} selected={n === value.size} onClick={() => onChange({ ...value, size: n })}>
+          <button
+            key={n}
+            type="button"
+            aria-pressed={n === value.size}
+            onClick={() => onChange({ ...value, size: n })}
+            className={`tactile rounded-lg font-display tabular ${FOCUS_RING}`}
+            style={{ minHeight: "3.25rem", fontSize: "1.5rem", background: n === value.size ? "var(--teal-soft)" : "var(--color-surface)", color: n === value.size ? "var(--color-teal)" : "var(--color-cream)", border: n === value.size ? "1px solid var(--color-teal)" : "1px solid var(--color-border)" }}
+          >
             {n}
-          </Chip>
+          </button>
         ))}
       </div>
       <p style={{ color: own >= value.size ? "var(--color-red)" : "var(--color-muted)", fontSize: "0.8rem" }}>
