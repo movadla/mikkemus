@@ -367,7 +367,7 @@ function TournamentOdds({ roster }: { roster: PlayerRecord[] }) {
                 {n} {noun}, {matches} kamper.{" "}
                 {n % 2 === 0 ? "Alle spiller akkurat tre." : "Med et oddetall kan ikke alle få tre: én, trukket tilfeldig, spiller bare to."}
               </p>
-              <div className="space-y-2" aria-busy={busy} style={{ opacity: busy ? 0.5 : 1, transition: "opacity 150ms" }}>
+              <div className="space-y-2" aria-busy={busy} style={{ opacity: busy ? 0.5 : 1, transition: "opacity var(--duration-fast) var(--ease-standard)" }}>
                 {(result?.rows ?? []).map((r, i) => (
                   <div key={r.name} className="rounded-xl px-3 py-2" style={{ background: i === 0 ? "var(--color-cell-done)" : "var(--color-cell)" }}>
                     <div className="flex items-center gap-3">

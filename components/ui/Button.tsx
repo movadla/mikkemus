@@ -2,8 +2,7 @@
 
 import Link from "next/link";
 import type { CSSProperties, ReactNode } from "react";
-import { haptics } from "@/lib/haptics";
-import { uiSound } from "@/lib/uiSound";
+import { uiFeedback } from "@/lib/uiSound";
 import { FOCUS_RING } from "./focus";
 
 type Variant = "primary" | "secondary" | "ghost" | "danger";
@@ -78,8 +77,7 @@ export function Button({
     <button
       type={type}
       onClick={() => {
-        haptics.tick();
-        uiSound("click");
+        uiFeedback("click");
         onClick?.();
       }}
       disabled={disabled} aria-label={label} className={base} style={look}>

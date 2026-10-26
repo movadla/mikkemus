@@ -1,6 +1,18 @@
 @import "tailwindcss";
 
-:root {
+:root,
+[data-theme-scope="dark"] {
+  /* Eight player colours: a person keeps one through the whole app (ring, stripe, chart line). Gold and red are not among them, they are
+     reserved. Each holds as text on the ground and on a cell, in this theme. */
+  --player-1: #5aa9f0;
+  --player-2: #a78bfa;
+  --player-3: #f27bb5;
+  --player-4: #a3d95b;
+  --player-5: #f5985a;
+  --player-6: #3fd0c0;
+  --player-7: #8fa0f5;
+  --player-8: #d6c3a0;
+
   /* Layered surfaces — each step a deliberate jump, not eyeballed drift,
      so panels and buttons visibly float above what's behind them. */
   --color-bg: #0c110e;
@@ -105,6 +117,12 @@
   --duration-fast: 220ms;
   --duration-base: 260ms;
   --duration-slow: 480ms;
+  /* Three motions, and a screen picks one rather than making its own. A spring: a choice or a button, something that answers a
+     touch. A pull: a sheet, a page or a reveal, something that comes in from the side or from below. A weight: a number or a bar,
+     something that settles on its value. */
+  --spring: var(--duration-fast) var(--ease-spring);
+  --pull: var(--duration-base) var(--ease-standard);
+  --weight: var(--duration-slow) var(--ease-standard);
 }
 
 @theme inline {
@@ -177,6 +195,26 @@ button {
 
 .tabular {
   font-variant-numeric: tabular-nums;
+}
+
+/* Figures: lining and of equal width everywhere the display face is used, so a number that changes does not move. A big figure is
+   .num (see ui/Num), what goes with it is .num-unit: small, in the body face, quiet. */
+.font-display,
+.num {
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.num {
+  font-family: var(--font-display);
+  line-height: 1;
+}
+
+.num-unit {
+  margin-left: 0.25em;
+  font-family: var(--font-sans);
+  font-size: 0.4em;
+  font-weight: 500;
+  color: var(--color-muted);
 }
 
 /* The heading above a page's content, and the small spaced label above a section. Both
@@ -688,7 +726,7 @@ button {
     display: flex;
     flex-direction: column;
     gap: 0.35rem;
-    animation: chrome-panel-in 180ms var(--ease-standard) both;
+    animation: chrome-panel-in var(--duration-fast) var(--ease-standard) both;
   }
 
   /* Rows must be free to compress here: a floor is what forced the scrolling. Ten of them
@@ -1706,8 +1744,17 @@ button {
    Warm paper for the ground, dark green for the ink, and the three accents deepened so they hold on a light surface. Chosen in
    Innstillinger; the dark theme stays the default and is the one the matches are made for. The names of the tokens stay: "cream" is
    the main text colour, whichever it is. */
-html[data-theme="light"] {
+html[data-theme="light"],
+[data-theme-scope="light"] {
   color-scheme: light;
+  --player-1: #1d5fa8;
+  --player-2: #6a43c4;
+  --player-3: #b02a6b;
+  --player-4: #4a6d0f;
+  --player-5: #964608;
+  --player-6: #0b6b61;
+  --player-7: #3e4fb5;
+  --player-8: #6e5a33;
   --color-bg: #f3f0e6;
   --color-panel: #faf8f1;
   --color-surface: #ffffff;
@@ -1782,6 +1829,153 @@ html[data-theme="light"] body::before {
   padding: 1rem;
 }
 
+/* -- Innstillinger: a preview beside the choice: what the animation level does, and the theme as it will look -- */
+.fx-demo {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem;
+  border-radius: var(--radius-m);
+  background: var(--color-panel);
+  border: 1px solid var(--color-border);
+}
+
+.fx-demo-stage {
+  position: relative;
+  flex-shrink: 0;
+  width: 5.5rem;
+  height: 4.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fx-demo-cell {
+  position: relative;
+  width: 4rem;
+  height: 3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-s);
+  background: var(--color-cell);
+  color: var(--color-cream);
+  font-family: var(--font-display);
+  font-size: var(--text-title);
+}
+
+.fx-demo-pop {
+  animation: select-pop var(--duration-base) var(--ease-spring) both;
+}
+
+.fx-demo-shine {
+  background: var(--gold-soft);
+  box-shadow: inset 0 0 0 1px var(--gold-ring);
+  animation: select-pop var(--duration-base) var(--ease-spring) both;
+}
+
+.fx-spark {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0.35rem;
+  height: 0.35rem;
+  margin: -0.175rem 0 0 -0.175rem;
+  border-radius: 999px;
+  background: var(--color-gold);
+  opacity: 0;
+  animation: fx-spark 520ms var(--ease-standard) var(--d, 0ms) both;
+}
+
+@keyframes fx-spark {
+  0% {
+    opacity: 1;
+    transform: rotate(var(--a)) translateX(0);
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(var(--a)) translateX(2.6rem);
+  }
+}
+
+.theme-preview {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.theme-tile {
+  margin: 0;
+  width: 9.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.5rem;
+  border-radius: var(--radius-m);
+  border: 1px solid var(--color-hairline);
+  font-size: var(--text-small);
+}
+
+.theme-tile-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: var(--radius-s);
+}
+
+.theme-tile-chip {
+  align-self: flex-start;
+  padding: 0.15rem 0.6rem;
+  border-radius: var(--radius-s);
+  font-weight: 600;
+}
+
+.theme-preview-note {
+  flex: 1 1 10rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fx-spark {
+    display: none;
+  }
+}
+
+/* -- the player card: the face and name in the player's own colour (--pc), the figure that says how they stand, and what the place adds -- */
+.player-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-l);
+  background: var(--color-surface);
+  border: 1px solid color-mix(in srgb, var(--pc) 45%, var(--color-border));
+  box-shadow: var(--elevation-2);
+}
+
+.player-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 8rem;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--pc) 30%, transparent), transparent 75%);
+  pointer-events: none;
+}
+
+.player-card::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 0.25rem;
+  background: var(--pc);
+}
+
+.player-card-head {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
 /* -- the cups: each has a colour of its own, used for its emblem, its stripe and its trophy -- */
 :root {
   --cup-vm: #d9ae4f;
@@ -1831,6 +2025,96 @@ html[data-theme="light"] {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.5rem 1.5rem;
     align-items: start;
+  }
+}
+
+/* -- the three motions, shown on the stilark (app/design) -- */
+.motion-demo {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.4rem 1rem;
+  border-radius: var(--radius-s);
+  background: var(--teal-soft);
+  color: var(--color-teal);
+  font-weight: 600;
+  box-shadow: inset 0 0 0 1px var(--teal-ring);
+}
+
+.motion-spring {
+  animation: motion-spring var(--spring) both;
+}
+
+.motion-pull {
+  animation: motion-pull var(--pull) both;
+}
+
+.motion-weight {
+  animation: motion-weight var(--weight) both;
+}
+
+@keyframes motion-spring {
+  from {
+    transform: scale(0.7);
+    opacity: 0;
+  }
+}
+
+@keyframes motion-pull {
+  from {
+    transform: translateX(-1.5rem);
+    opacity: 0;
+  }
+}
+
+@keyframes motion-weight {
+  from {
+    transform: translateY(-1rem);
+    opacity: 0;
+  }
+}
+
+/* -- liste og detalj: the list on the left and the chosen one on the right, from 900 pixels. Below that, one or the other by address -- */
+.split-detail {
+  min-width: 0;
+}
+
+.split[data-detail="true"] .split-list,
+.split[data-detail="false"] .split-detail {
+  display: none;
+}
+
+@media (min-width: 900px) {
+  .split {
+    display: grid;
+    grid-template-columns: calc(var(--nav-rail, 0px) + 22rem) minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .split[data-detail] .split-list,
+  .split[data-detail] .split-detail {
+    display: block;
+  }
+
+  .split-list {
+    position: sticky;
+    top: 0;
+    height: 100dvh;
+    overflow-y: auto;
+    border-right: 1px solid var(--color-border);
+  }
+
+  .split-detail .screen {
+    padding-left: 1.5rem;
+  }
+
+  .split-detail .screen-inner {
+    max-width: 40rem;
+    margin-inline: 0;
+  }
+
+  /* On this width the list is beside the player: the arrow back to it has nowhere to go. */
+  .split-detail .screen-top > a[aria-label="Tilbake"] {
+    display: none;
   }
 }
 
@@ -1895,15 +2179,15 @@ html[data-theme="light"] {
 }
 
 .draw-from-left {
-  animation: draw-from-left 260ms var(--ease-standard) both;
+  animation: draw-from-left var(--pull) both;
 }
 
 .draw-from-right {
-  animation: draw-from-right 260ms var(--ease-standard) 90ms both;
+  animation: draw-from-right var(--pull) 90ms both;
 }
 
 .draw-pop {
-  animation: draw-pop 320ms var(--ease-spring) 40ms both;
+  animation: draw-pop var(--spring) 40ms both;
 }
 
 .draw-flash {
@@ -1964,7 +2248,7 @@ html[data-theme="light"] {
 
 [role="radio"][aria-checked="true"],
 button[aria-pressed="true"] {
-  animation: select-pop 240ms var(--ease-spring) both;
+  animation: select-pop var(--spring) both;
 }
 
 html[data-fx="simple"] .stagger > *,

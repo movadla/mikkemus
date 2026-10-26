@@ -51,8 +51,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
       </head>
       <body className="min-h-full flex flex-col">
-        <PinGate>{children}</PinGate>
-        <AppNav />
+        {/* The bar is inside the door: it is not drawn over the keypad, and it leaves out what the limited code cannot open. */}
+        <PinGate>
+          {children}
+          <AppNav />
+        </PinGate>
         <ErrorToastStack />
         <TextureSetting />
       </body>

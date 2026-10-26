@@ -45,6 +45,18 @@ const COLOUR_LITERALS: Record<string, number> = {
   "components/WinnerScreen.tsx": 4,
 };
 
+/** Transitions written with their own milliseconds in a component, where the three motions (--spring, --pull, --weight) or the durations
+ *  (--duration-*) of the tokens should be. What is left is a mark being drawn, the PIN pad, and a few show moments (the line-up, the
+ *  night story, the rating table, the big screen). The number per file can go down and never up. */
+const MOTION_LITERALS: Record<string, number> = {
+  "app/storskjerm/page.tsx": 1,
+  "components/LineupIntro.tsx": 1,
+  "components/Mark.tsx": 3,
+  "components/NightStory.tsx": 1,
+  "components/PinGate.tsx": 1,
+  "components/RatingCard.tsx": 1,
+};
+
 const LITERAL = /#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b|rgba?\(/g;
 
 const SCREENS = () => [...sources("components", /\.tsx$/), ...sources("app", /\.tsx$/)];
@@ -58,6 +70,23 @@ describe("design rules", () => {
       if (count > allowed) over.push(`${file}: ${count} (allowed ${allowed})`);
     }
     expect(over).toEqual([]);
+  });
+
+  it("keeps motion in the three tokens: no file gains a transition with its own milliseconds", () => {
+    const over: string[] = [];
+    for (const file of SCREENS()) {
+      const count = read(file)
+        .split(/\r?\n/)
+        .filter((line) => /transition[A-Za-z]*: .*\d+m?s/.test(line) && !/var\(--(duration|pull|spring|weight)/.test(line)).length;
+      const allowed = MOTION_LITERALS[file] ?? 0;
+      if (count > allowed) over.push(`${file}: ${count} (allowed ${allowed})`);
+    }
+    expect(over).toEqual([]);
+  });
+
+  it("gives every player colour a value in both themes", () => {
+    const css = read("app/globals.css");
+    for (let i = 1; i <= 8; i++) expect((css.match(new RegExp(`--player-${i}:`, "g")) ?? []).length, `--player-${i}`).toBe(2);
   });
 
   it("sets no text smaller than 12 px", () => {

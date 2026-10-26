@@ -162,7 +162,7 @@ export function BullDuelGameScreen({
     >
       <div
         className="absolute inset-0 pointer-events-none z-30"
-        style={{ boxShadow: HEAT_GLOW[Math.min(3, heat)], transition: "box-shadow 320ms var(--ease-standard, ease-out)" }}
+        style={{ boxShadow: HEAT_GLOW[Math.min(3, heat)], transition: "box-shadow var(--pull)" }}
         aria-hidden
       />
 
@@ -253,7 +253,7 @@ export function BullDuelGameScreen({
                         width: `${pct}%`,
                         background: finish ? "linear-gradient(90deg, #b8862e, var(--color-gold-strong))" : "linear-gradient(180deg, var(--color-teal-strong), var(--color-teal-deep))",
                         boxShadow: finish ? "0 0 12px color-mix(in srgb, var(--color-gold-strong) 50%, transparent)" : undefined,
-                        transition: "width 400ms var(--ease-standard, ease-out)",
+                        transition: "width var(--weight)",
                       }}
                     />
                   </div>

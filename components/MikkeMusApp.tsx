@@ -1942,7 +1942,10 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     writeProgress(nextProgress);
     writePendingHits(nextPending);
     updatePendingAmbiguous([...pendingAmbiguousRef.current.filter((p) => p.key !== parked.key), ...replay.pending]);
-    if (records.length > 0 && !replayingRef.current) haptics.hit();
+    if (records.length > 0 && !replayingRef.current) {
+      haptics.hit();
+      uiSound("record");
+    }
     return { hits: hits.length > 0 ? hits : null, progress: nextProgress, pendingHits: nextPending };
   }
 

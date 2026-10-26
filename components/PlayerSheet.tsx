@@ -61,7 +61,7 @@ export function PlayerSheet({ name, team, onClose }: { name: string; team: strin
       <button type="button" aria-label="Lukk" onClick={onClose} className="absolute inset-0 w-full h-full" style={{ background: "var(--scrim-soft)" }} />
       <div
         className="absolute left-0 right-0 bottom-0 rounded-t-2xl px-4 pb-6 pt-2 max-w-3xl mx-auto"
-        style={{ background: "var(--color-surface)", borderTop: "1px solid var(--color-border)", transform: `translateY(${dy}px)`, transition: dragging ? "none" : "transform 250ms ease", touchAction: "none" }}
+        style={{ background: "var(--color-surface)", borderTop: "1px solid var(--color-border)", transform: `translateY(${dy}px)`, transition: dragging ? "none" : "transform var(--pull)", touchAction: "none" }}
         onPointerDown={(e) => {
           start.current = e.clientY;
           setDragging(true);

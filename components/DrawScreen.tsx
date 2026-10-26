@@ -12,6 +12,7 @@ import { Button } from "./ui/Button";
 import { CupEmblem } from "./ui/CupEmblem";
 import { TrophyIcon } from "./icons";
 import { drawSound } from "@/lib/uiSound";
+import { publishShow } from "@/lib/liveMatch";
 
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
@@ -50,6 +51,11 @@ export function DrawScreen({
   // The draw that has been skipped to its end (by its number), so a new draw plays out again.
   const [skipped, setSkipped] = useState(-1);
   const pairs = useMemo(() => firstRoundPairs(order.map((p) => p.name)), [order]);
+
+  // The big screen plays the same draw: each new draw (and each swap) is sent, with a number that restarts it there.
+  useEffect(() => {
+    void publishShow({ kind: "draw", key: round, title: summary ?? cup?.name ?? "Turnering", cup: cup ? { kind: cup.kind, name: cup.name, trophy: cup.trophy } : undefined, pairs });
+  }, [round, order, pairs, summary, cup, seeded]);
 
   // Each draw shows its pairs one at a time. The pause is short: the point is that it is a draw, not that anyone waits.
   useEffect(() => {
@@ -117,7 +123,7 @@ export function DrawScreen({
           color: "var(--color-cream)",
           opacity: shown ? 1 : 0,
           transform: shown ? "none" : "translateY(6px)",
-          transition: "opacity 260ms ease, transform 260ms ease",
+          transition: "opacity var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard)",
         }}
       >
         <span className="tabular shrink-0" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)", marginRight: "0.4rem" }}>
@@ -126,7 +132,7 @@ export function DrawScreen({
         <span className="min-w-0 truncate">{name}</span>
       </button>
     ) : (
-      <span className="flex-1 px-3 flex items-center" style={{ minHeight: "var(--control)", color: "var(--color-muted)", fontStyle: "italic", fontSize: "var(--text-small)", opacity: shown ? 1 : 0, transition: "opacity 260ms ease" }}>
+      <span className="flex-1 px-3 flex items-center" style={{ minHeight: "var(--control)", color: "var(--color-muted)", fontStyle: "italic", fontSize: "var(--text-small)", opacity: shown ? 1 : 0, transition: "opacity var(--duration-base) var(--ease-standard)" }}>
         Walkover
       </span>
     );
@@ -189,7 +195,7 @@ export function DrawScreen({
               )}
             </div>
             <div className="mt-3 rounded-full overflow-hidden" style={{ height: "0.3rem", background: "var(--color-cell)" }} aria-hidden>
-              <div style={{ width: `${(revealed / pairs.length) * 100}%`, height: "100%", background: colour, transition: "width 300ms var(--ease-standard)" }} />
+              <div style={{ width: `${(revealed / pairs.length) * 100}%`, height: "100%", background: colour, transition: "width var(--pull)" }} />
             </div>
             <div className="mt-2 flex justify-end">
               <Button variant="ghost" onClick={() => setSkipped(round)}>

@@ -351,7 +351,7 @@ export function PlayerStatsAccordion({ players, all }: { players: PlayerRecord[]
                   {t ? `Singel ${s.matches} · Lag ${t.matches}` : `${p.members?.length ? `${p.members.join(", ")} · ` : ""}${s.matches} ${s.matches === 1 ? "kamp" : "kamper"}`}
                 </span>
               </span>
-              <span aria-hidden style={{ color: "var(--color-muted)", fontSize: "var(--text-title)", transform: isOpen ? "rotate(90deg)" : "none", transition: "transform 150ms" }}>›</span>
+              <span aria-hidden style={{ color: "var(--color-muted)", fontSize: "var(--text-title)", transform: isOpen ? "rotate(90deg)" : "none", transition: "transform var(--duration-fast) var(--ease-standard)" }}>›</span>
             </button>
             {isOpen && <Panel player={p} all={all} source={source} onSource={setSource} />}
           </div>

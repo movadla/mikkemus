@@ -16,7 +16,7 @@ import { PlayerKitEditor, TeamKitEditor, WalkOnPicker } from "@/components/KitSe
 import { TeamKit } from "@/components/TeamKit";
 import { teamKitsOf } from "@/lib/storage";
 import { EditIcon, TrashIcon } from "@/components/icons";
-import { MorphAvatar } from "@/components/ui/Avatar";
+import { PlayerCard } from "@/components/ui/PlayerCard";
 import { CountUp } from "@/components/ui/CountUp";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -215,10 +215,16 @@ export default function PlayerDetailPage() {
           </Sheet>
         )}
 
-        <div className="shadow-panel p-5 mb-6 text-center" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-l)" }}>
-          <div className="flex justify-center mb-3">
-            <MorphAvatar name={player.name} photo={player.photo} size="l" />
-          </div>
+        <div className="mb-6">
+          <PlayerCard
+            name={player.name}
+            photo={player.photo}
+            morph
+            caption={isTeam ? "Lag" : `${player.matchesPlayed} ${player.matchesPlayed === 1 ? "kamp" : "kamper"}`}
+            figure={!limited && seed ? <CountUp value={Math.round(seed.rating)} /> : undefined}
+            figureLabel={!limited && seed ? "RATING" : undefined}
+          >
+          <div className="text-center">
           <div className="flex justify-center">
             <TeamKit kit={teamKitsOf(player).home} size={44} title="Drakt" />
           </div>
@@ -237,14 +243,9 @@ export default function PlayerDetailPage() {
 
           {!limited && (
             <>
-              <div className={`grid gap-2 mt-4 ${(seed ? 3 : 2) + (cups > 0 ? 1 : 0) === 4 ? "grid-cols-2" : seed ? "grid-cols-3" : "grid-cols-2"}`}>
+              <div className={`grid gap-2 mt-4 ${(cups > 0 ? 1 : 0) + (seed ? 1 : 0) === 2 ? "grid-cols-3" : "grid-cols-2"}`}>
                 {cups > 0 && <Fact label="POKALER">{cups}</Fact>}
                 {seed && <Fact label="SEEDING">{seed.rank}.</Fact>}
-                {seed && (
-                  <Fact label="RATING">
-                    <CountUp value={Math.round(seed.rating)} />
-                  </Fact>
-                )}
                 <Fact label="KAMPER">
                   {player.matchesWon}–{player.matchesPlayed - player.matchesWon}
                 </Fact>
@@ -259,6 +260,8 @@ export default function PlayerDetailPage() {
               </div>
             </>
           )}
+          </div>
+          </PlayerCard>
         </div>
 
         {/* The teams this player is in. */}

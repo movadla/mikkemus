@@ -81,7 +81,7 @@ export function TimeMachine({ players, turnLog, snapshots, winner }: { players: 
                 <span
                   key={p}
                   className="flex items-center justify-center rounded"
-                  style={{ height: 30, background: n >= target ? "var(--color-cell-done)" : "var(--color-cell)", boxShadow: changed && t > 0 ? "0 0 0 2px var(--color-teal)" : "none", transition: "box-shadow 300ms, background 300ms" }}
+                  style={{ height: 30, background: n >= target ? "var(--color-cell-done)" : "var(--color-cell)", boxShadow: changed && t > 0 ? "0 0 0 2px var(--color-teal)" : "none", transition: "box-shadow var(--pull), background var(--pull)" }}
                 >
                   <span style={{ width: 22, height: 22, display: "block" }}>
                     <Mark count={n} target={target} accent="var(--color-muted)" compact />

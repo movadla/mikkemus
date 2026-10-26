@@ -964,7 +964,7 @@ export function GameScreen({
         className="absolute inset-0 pointer-events-none z-30"
         style={{
           boxShadow: HEAT_GLOW[Math.min(3, heat)],
-          transition: "box-shadow 320ms var(--ease-standard, ease-out)",
+          transition: "box-shadow var(--pull)",
         }}
         aria-hidden
       />
@@ -1308,7 +1308,7 @@ export function GameScreen({
                     fontWeight: isNumberStep(s) ? 600 : 700,
                     letterSpacing: isNumberStep(s) ? "0" : "0.08em",
                     background: "var(--color-panel)",
-                    transition: "color 320ms var(--ease-standard, ease-out)",
+                    transition: "color var(--pull)",
                     animation: closedStep?.step === s ? slamAnimation : undefined,
                   }}
                 >
@@ -1515,7 +1515,7 @@ export function GameScreen({
                   height: "100%",
                   width: `${Math.round(recordChase.fraction * 100)}%`,
                   background: recordChase.slack >= 0 && recordChase.fraction > 0.34 ? "var(--color-gold)" : "var(--color-red)",
-                  transition: "width 400ms ease, background 400ms ease",
+                  transition: "width var(--weight), background var(--weight)",
                 }}
               />
             </div>

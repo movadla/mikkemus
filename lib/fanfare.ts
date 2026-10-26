@@ -1043,7 +1043,7 @@ export function playWalkOnTune(kind: WalkOnTune): void {
  * thud for a step taken back. Quiet by design: they sit under the sounds of the game and are only played when asked for
  * (see lib/uiSound.ts).
  */
-export function playUiSound(kind: "click" | "confirm" | "undo") {
+export function playUiSound(kind: "click" | "pick" | "confirm" | "undo" | "record") {
   const ctx = getContext();
   if (!ctx) return;
   try {
@@ -1064,10 +1064,15 @@ export function playUiSound(kind: "click" | "confirm" | "undo") {
       osc.start(start);
       osc.stop(start + length + 0.02);
     };
+    // One small instrument, five sounds, all on the notes of C major pentatonic: a button, a choice, a confirmed turn, a thud for
+    // undo, and a run up for a record.
     if (kind === "click") tone(880, t0, 0.04, 0.08, "triangle");
+    else if (kind === "pick") tone(659, t0, 0.05, 0.09, "triangle");
     else if (kind === "confirm") {
       tone(523, t0, 0.09, 0.14, "triangle");
       tone(784, t0 + 0.07, 0.14, 0.14, "triangle");
+    } else if (kind === "record") {
+      [523, 659, 784, 1047].forEach((f, i) => tone(f, t0 + i * 0.06, 0.16, 0.14, "triangle"));
     } else tone(180, t0, 0.12, 0.2, "sine");
   } catch {
     // A sound that fails to play must never get in the way of the tap that asked for it.

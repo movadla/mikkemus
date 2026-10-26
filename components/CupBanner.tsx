@@ -5,7 +5,7 @@ import { CupEmblem } from "./ui/CupEmblem";
  * The title card of a cup, the same on the draw, the overview and the big screen: the cup's emblem in its own colour, its name,
  * and the trophy it is played for, on a stripe of that colour. A tournament that is not a cup has none.
  */
-export function CupBanner({ cup, name, large = false }: { cup: CupConfig; name?: string; large?: boolean }) {
+export function CupBanner({ cup, name, large = false }: { cup: Pick<CupConfig, "kind" | "name" | "trophy">; name?: string; large?: boolean }) {
   const colour = cupColor(cup.kind);
   return (
     <div

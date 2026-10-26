@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from "react";
 import { playDrawTick, playUiSound } from "./fanfare";
 import { getFxLevel } from "./fxLevel";
+import { haptics } from "./haptics";
 
 /**
  * Whether the interface itself makes sounds on this device (a click on a button, a pair of notes on a confirmed turn, a thud on
@@ -41,11 +42,24 @@ export function useUiSound(): boolean {
 }
 
 /** Plays the sound if the device wants it and the level allows it. */
-export function uiSound(kind: "click" | "confirm" | "undo"): void {
+export type UiSoundKind = "click" | "pick" | "confirm" | "undo" | "record";
+
+export function uiSound(kind: UiSoundKind): void {
   const level = getFxLevel();
   if (level !== "party" && level !== "full") return;
   if (!getUiSound()) return;
   playUiSound(kind);
+}
+
+/**
+ * The sound and the touch of one action together, so a screen asks for "a choice was made" and gets both, the same way everywhere.
+ * Each is held back on its own terms: the sound to Party and up and the setting, the touch from the quiet mode and from anyone who
+ * has asked for less movement.
+ */
+export function uiFeedback(kind: UiSoundKind): void {
+  const touch = { click: haptics.tick, pick: haptics.pick, confirm: haptics.confirm, undo: haptics.undo, record: haptics.record }[kind];
+  touch();
+  uiSound(kind);
 }
 
 /** The draw's sounds: a note for each pair and a chord at the end, on the same terms as the rest (Party and up, and the setting). */

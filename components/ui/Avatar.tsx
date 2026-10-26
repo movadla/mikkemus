@@ -2,14 +2,13 @@ import { ViewTransition } from "react";
 import { avatarAccent } from "@/lib/avatarAccent";
 import { BotIcon } from "../icons";
 
-/** The four sizes of a face in the app, in pixels. */
-export const AVATAR_SIZES = { xs: 24, s: 32, m: 44, l: 64 } as const;
+/** The five sizes of a face in the app, in pixels. */
+export const AVATAR_SIZES = { xs: 24, s: 32, m: 44, l: 64, xl: 96 } as const;
 export type AvatarSize = keyof typeof AVATAR_SIZES;
 
 /**
- * One face for everyone: a photo, or the first letter in the colour that is theirs. The ring says what they are at the moment:
- * teal when it is their turn, gold when they have won, dashed for a bot (which also gets its own colour from its name, and a
- * small robot instead of a letter), and quiet otherwise.
+ * One face for everyone: a photo, or the first letter, in the colour that is theirs. The ring is that colour too, except for what they
+ * are at the moment: teal when it is their turn, gold when they have won. A bot has a dashed ring, and a small robot instead of a letter.
  */
 export function Avatar({
   name,
@@ -26,7 +25,7 @@ export function Avatar({
 }) {
   const px = AVATAR_SIZES[size];
   const accent = avatarAccent(name);
-  const ring = state === "winner" ? "var(--color-gold)" : state === "active" ? "var(--color-teal)" : bot ? accent : "var(--color-border)";
+  const ring = state === "winner" ? "var(--color-gold)" : state === "active" ? "var(--color-teal)" : accent;
   return (
     <span
       aria-hidden

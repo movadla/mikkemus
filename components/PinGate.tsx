@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { AccessProvider, blockedForLimited } from "@/lib/access";
 import { Wordmark } from "./ui/BrandMark";
-import { LOCK_SECONDS, MAX_TRIES, PIN_LENGTH, checkPin, lockSeconds, rememberDevice, rememberedLevel, type AccessLevel } from "@/lib/pin";
+import { LOCK_SECONDS, MAX_TRIES, PIN_LENGTH, SIGN_OUT_EVENT, checkPin, lockSeconds, rememberDevice, rememberedLevel, type AccessLevel } from "@/lib/pin";
 
 const FOCUS_RING = "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
 
@@ -23,6 +23,13 @@ export function PinGate({ children }: { children: ReactNode }) {
   useEffect(() => {
     const t = setTimeout(() => setState(rememberedLevel() ?? "locked"), 0);
     return () => clearTimeout(t);
+  }, []);
+
+  // Logging out (Innstillinger) closes the door at once, on any page.
+  useEffect(() => {
+    const out = () => setState("locked");
+    window.addEventListener(SIGN_OUT_EVENT, out);
+    return () => window.removeEventListener(SIGN_OUT_EVENT, out);
   }, []);
 
   if (state === "checking") return <div style={{ minHeight: "100vh", background: "var(--color-bg)" }} />;

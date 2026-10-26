@@ -18,6 +18,7 @@ export function Row({
   href,
   selected,
   tone = "default",
+  accent,
 }: {
   leading?: ReactNode;
   title: ReactNode;
@@ -29,6 +30,8 @@ export function Row({
   selected?: boolean;
   /** Gold is for what has been earned: a winner, a record. */
   tone?: "default" | "gold";
+  /** A colour for the stripe along the start of the row: a player's own (see avatarAccent). */
+  accent?: string;
 }) {
   const opens = !!onClick || !!href;
   const style = {
@@ -38,6 +41,7 @@ export function Row({
     border: `1px solid ${tone === "gold" ? "var(--gold-ring)" : selected ? "var(--color-teal)" : "var(--color-border)"}`,
     color: "var(--color-cream)",
     padding: "0.5rem 0.75rem",
+    ...(accent ? { borderLeft: `4px solid ${accent}` } : {}),
   } as const;
   const body = (
     <>
@@ -53,7 +57,7 @@ export function Row({
         )}
       </span>
       {value !== undefined && (
-        <span className="shrink-0 tabular" style={{ fontSize: "var(--text-body)", fontWeight: 600, color: tone === "gold" ? "var(--color-gold)" : "var(--color-teal)" }}>
+        <span className="shrink-0 tabular" style={{ fontSize: "var(--text-body)", fontWeight: 600, color: tone === "gold" ? "var(--color-gold-strong)" : "var(--color-teal)" }}>
           {value}
         </span>
       )}
@@ -61,16 +65,17 @@ export function Row({
     </>
   );
   const cls = `${opens ? "tactile" : ""} flex items-center gap-3 w-full ${FOCUS_RING}`;
+  // data-nav marks what the arrow keys move between (see useArrowNav).
   if (href) {
     return (
-      <Link href={href} className={cls} style={style}>
+      <Link href={href} className={cls} style={style} data-nav>
         {body}
       </Link>
     );
   }
   if (onClick) {
     return (
-      <button type="button" onClick={onClick} className={cls} style={style}>
+      <button type="button" onClick={onClick} className={cls} style={style} data-nav>
         {body}
       </button>
     );

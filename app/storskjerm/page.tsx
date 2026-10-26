@@ -15,6 +15,7 @@ import { avatarAccent } from "@/lib/avatarAccent";
 import { DartboardGlyph } from "@/components/DartboardGlyph";
 import { Mark } from "@/components/Mark";
 import { TvFrame } from "@/components/TvFrame";
+import { TvShow } from "@/components/TvShow";
 import { Avatar } from "@/components/ui/Avatar";
 import { useRoster } from "@/lib/storage";
 
@@ -121,6 +122,9 @@ export default function StorskjermPage() {
     }
     if (nowLeader) leader.current = nowLeader;
   }, [live, target]);
+
+  // A draw or a champion sent from the tournament takes the screen before anything else.
+  if (live?.show) return <TvShow show={live.show} />;
 
   if (!live || live.screen === "setup" || live.players.length === 0) {
     return (

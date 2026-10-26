@@ -4,6 +4,7 @@ import { supabase } from "./supabaseClient";
 import type { PlayerProgress } from "./game";
 import type { BotLevel } from "./botLevels";
 import type { GameVariant } from "./rules";
+import type { CupConfig } from "./botCup";
 
 /**
  * A deliberately small broadcast of "what a spectator watching this match right now would want
@@ -11,6 +12,36 @@ import type { GameVariant } from "./rules";
  * carries pendingHits/history/turnLog, which only matter for resuming THIS device's own session
  * after a reload, not for a second "storskjerm" device rendering a live view).
  */
+/** The cup a show is for: enough to draw its title card (see CupBanner). */
+export type LiveCup = Pick<CupConfig, "kind" | "name" | "trophy">;
+
+/**
+ * What the big screen is to show instead of a match: the draw of a tournament, pair by pair, or its champion. Sent from the phone
+ * that runs the tournament, the same way the match is, so the TV has no tournament of its own to fetch.
+ */
+export type LiveShow =
+  | {
+      kind: "draw";
+      /** Changes every time the draw is made again (Seedet, Tilfeldig, Trekk på nytt), so the screen plays it from the start. */
+      key: number;
+      title: string;
+      cup?: LiveCup;
+      pairs: { a: string | null; b: string | null }[];
+    }
+  | {
+      kind: "champion";
+      title: string;
+      cup?: LiveCup;
+      winner: string;
+      /** The people in a winning team. */
+      members?: string[];
+      /** What the cup was played for. */
+      trophy?: string;
+      prizes: { title: string; name: string; detail: string }[];
+      /** First, second and third. */
+      podium?: string[];
+    };
+
 export type LiveMatchState = {
   screen: "setup" | "game" | "winner";
   players: string[];
@@ -35,6 +66,8 @@ export type LiveMatchState = {
   rewound?: boolean;
   /** The people in each team, by side name: who is in the match, for /bet, where they may only back their own side. */
   teams?: Record<string, string[]>;
+  /** Set when the screen is to show a draw or a champion, not a match. */
+  show?: LiveShow;
 };
 
 type LiveMatchRow = { id: string; state: LiveMatchState | null; updated_at: string };
@@ -50,6 +83,12 @@ export async function publishLiveMatch(state: LiveMatchState | null) {
   if (!supabase) return;
   const { error } = await supabase.from("live_match").upsert({ id: "current", state, updated_at: new Date().toISOString() });
   if (error) console.error("Kunne ikke oppdatere live_match:", error.message);
+}
+
+/** Sends a show to the big screen (or takes it away with null): a state with no match in it and the show on top. */
+export function publishShow(show: LiveShow | null) {
+  if (!show) return publishLiveMatch(null);
+  return publishLiveMatch({ screen: "setup", players: [], progress: {}, activePlayer: null, turnToken: 0, winner: null, botLevels: {}, guestPlayers: {}, show });
 }
 
 const POLL_MS = 1000;

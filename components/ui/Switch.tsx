@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { uiFeedback } from "@/lib/uiSound";
 import { FOCUS_RING } from "./focus";
 
 /** A setting that is on or off: its name on the left, the switch on the right, the whole row one tap target. */
@@ -10,7 +11,10 @@ export function SwitchRow({ label, hint, checked, onChange }: { label: string; h
       type="button"
       role="switch"
       aria-checked={checked}
-      onClick={() => onChange(!checked)}
+      onClick={() => {
+        uiFeedback("pick");
+        onChange(!checked);
+      }}
       className={`tactile w-full flex items-center justify-between gap-4 px-4 text-left ${FOCUS_RING}`}
       style={{ minHeight: "var(--control-lg)", borderRadius: "var(--radius-m)", background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
     >

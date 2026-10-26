@@ -28,3 +28,28 @@ describe("the codes", () => {
     expect(lockSeconds(0)).toBe(LOCK_SECONDS);
   });
 });
+
+describe("logging out", () => {
+  it("forgets the stored level and tells the door to close", async () => {
+    const store = new Map<string, string>();
+    const events: string[] = [];
+    const g = globalThis as unknown as Record<string, unknown>;
+    const before = { localStorage: g.localStorage, window: g.window, Event: g.Event };
+    g.localStorage = { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v), removeItem: (k: string) => void store.delete(k) };
+    g.window = { dispatchEvent: (e: { type: string }) => events.push(e.type) };
+    g.Event = class { constructor(public type: string) {} };
+    try {
+      const { forgetDevice, rememberDevice, rememberedLevel, SIGN_OUT_EVENT } = await import("./pin");
+      rememberDevice("full");
+      expect(rememberedLevel()).toBe("full");
+      forgetDevice();
+      expect(rememberedLevel()).toBeNull();
+      expect(events).toEqual([SIGN_OUT_EVENT]);
+      // And the other code can be remembered after it.
+      rememberDevice("limited");
+      expect(rememberedLevel()).toBe("limited");
+    } finally {
+      Object.assign(g, before);
+    }
+  });
+});

@@ -170,7 +170,7 @@ export function RulesIntro({ onDone }: { onDone: () => void }) {
         <div className="flex justify-center mt-4" role="group" aria-label="Velg side">
           {RULES_SLIDES.map((s, i) => (
             <button key={s.id} type="button" onClick={() => go(i)} aria-label={`Side ${i + 1}`} aria-current={i === index} className={`flex items-center justify-center ${FOCUS_RING}`} style={{ width: "2.75rem", height: "2.75rem" }}>
-              <span className="rounded-full block" style={{ width: i === index ? 22 : 8, height: 8, background: i === index ? "var(--color-teal)" : "var(--color-border)", transition: "width 200ms" }} />
+              <span className="rounded-full block" style={{ width: i === index ? 22 : 8, height: 8, background: i === index ? "var(--color-teal)" : "var(--color-border)", transition: "width var(--duration-fast) var(--ease-standard)" }} />
             </button>
           ))}
         </div>

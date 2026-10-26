@@ -14,6 +14,7 @@ export const SCREENS: { name: string; path: string }[] = [
   { name: "mer", path: "/mer" },
   { name: "innstillinger", path: "/innstillinger" },
   { name: "storskjerm", path: "/storskjerm" },
+  { name: "stilark", path: "/design" },
 ];
 
 type Options = {

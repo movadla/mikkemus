@@ -81,11 +81,11 @@ export function RulesPicker({
           <span
             aria-hidden
             className="shrink-0 rounded-full relative"
-            style={{ width: "2.4rem", height: "1.4rem", background: stand ? "var(--color-teal)" : "var(--color-cell)", transition: "background 150ms" }}
+            style={{ width: "2.4rem", height: "1.4rem", background: stand ? "var(--color-teal)" : "var(--color-cell)", transition: "background var(--duration-fast) var(--ease-standard)" }}
           >
             <span
               className="absolute rounded-full"
-              style={{ top: "0.2rem", left: stand ? "1.2rem" : "0.2rem", width: "1rem", height: "1rem", background: "var(--color-cream)", transition: "left 150ms" }}
+              style={{ top: "0.2rem", left: stand ? "1.2rem" : "0.2rem", width: "1rem", height: "1rem", background: "var(--color-cream)", transition: "left var(--duration-fast) var(--ease-standard)" }}
             />
           </span>
         </button>

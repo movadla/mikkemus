@@ -17,6 +17,10 @@ function vibrate(pattern: number | number[]) {
 export const haptics = {
   /** A button pressed: the lightest touch. */
   tick: () => vibrate(8),
+  /** A choice made: a switch, a tab, an option. */
+  pick: () => vibrate(6),
+  /** A record beaten. */
+  record: () => vibrate([15, 30, 15, 30, 40]),
   /** A row closed. */
   close: () => vibrate([20, 40, 30]),
   hit: () => vibrate(10),

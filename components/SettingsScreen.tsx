@@ -4,13 +4,16 @@ import { useState } from "react";
 import { FX_LABELS, FX_LEVELS, setFxLevel, useFxLevel } from "@/lib/fxLevel";
 import { useShowOdds, setShowOdds } from "@/lib/oddsSetting";
 import { setTexture, useTexture } from "@/lib/texture";
-import { setTheme, useTheme } from "@/lib/theme";
+import { setTheme, useThemeChoice } from "@/lib/theme";
 import { setUiSound, useUiSound } from "@/lib/uiSound";
 import { useAccess } from "@/lib/access";
+import { forgetDevice } from "@/lib/pin";
 import { QrCode } from "./QrCode";
+import { FxPreview, ThemePreview } from "./SettingsPreview";
 import { ScreenTop } from "./ScreenTop";
 import { SpotifyControl } from "./SpotifyControl";
-import { ChevronRightIcon, MoonIcon, SunIcon, TvIcon } from "./icons";
+import { ChevronRightIcon, MoonIcon, SettingsIcon, SunIcon, TvIcon } from "./icons";
+import { Button } from "./ui/Button";
 import { Section } from "./ui/Section";
 import { Segmented } from "./ui/Segmented";
 import { Sheet } from "./ui/Sheet";
@@ -43,7 +46,7 @@ export function SettingsScreen({ onBack }: { onBack?: () => void }) {
   const showOdds = useShowOdds();
   const texture = useTexture();
   const uiSoundOn = useUiSound();
-  const theme = useTheme();
+  const theme = useThemeChoice();
   const fx = useFxLevel();
   const [qr, setQr] = useState<"live" | "turnering" | null>(null);
   const origin = typeof window === "undefined" ? "" : window.location.origin;
@@ -59,17 +62,18 @@ export function SettingsScreen({ onBack }: { onBack?: () => void }) {
                 Animasjon og lyd
               </p>
               <Segmented value={fx} onChange={setFxLevel} label="Animasjon og lyd" options={FX_LEVELS.map((l) => ({ value: l, label: FX_LABELS[l] }))} />
-              {fx === "simple" && (
-                <p className="mt-2" style={{ color: "var(--color-red)", fontSize: "var(--text-micro)" }}>
-                  Teller ikke i statistikken
-                </p>
-              )}
+              <div className="mt-2">
+                <FxPreview level={fx} />
+              </div>
             </div>
             <div>
               <p className="mb-2" style={{ color: "var(--color-cream)", fontSize: "var(--text-body)", fontWeight: 600 }}>
                 Tema
               </p>
-              <Segmented value={theme} onChange={setTheme} label="Tema" options={[{ value: "dark", label: "Mørk", icon: <MoonIcon className="w-4 h-4" /> }, { value: "light", label: "Dag", icon: <SunIcon className="w-4 h-4" /> }]} />
+              <Segmented value={theme} onChange={setTheme} label="Tema" options={[{ value: "auto", label: "Auto", icon: <SettingsIcon className="w-4 h-4" /> }, { value: "dark", label: "Mørk", icon: <MoonIcon className="w-4 h-4" /> }, { value: "light", label: "Dag", icon: <SunIcon className="w-4 h-4" /> }]} />
+              <div className="mt-2">
+                <ThemePreview choice={theme} />
+              </div>
             </div>
             <SwitchRow label="Odds" checked={showOdds} onChange={setShowOdds} />
             <SwitchRow label="Tekstur" checked={texture} onChange={setTexture} />
@@ -87,6 +91,15 @@ export function SettingsScreen({ onBack }: { onBack?: () => void }) {
             </div>
           </Section>
         )}
+
+        <Section label="Tilgang">
+          <p className="mb-3" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
+            Du er inne med {limited ? "den begrensede koden" : "hele koden"}. Logg ut og skriv den andre koden for å se appen slik andre ser den.
+          </p>
+          <Button block onClick={forgetDevice}>
+            Logg ut
+          </Button>
+        </Section>
 
         {qr && (
           <Sheet title={qr === "live" ? "Storskjerm: kamp" : "Storskjerm: turnering"} onClose={() => setQr(null)}>

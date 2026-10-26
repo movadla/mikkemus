@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, type ReactNode } from "react";
+import { digitIndex, nextIndex } from "@/lib/arrowNav";
+import { uiFeedback } from "@/lib/uiSound";
 import { FOCUS_RING } from "./focus";
 
 /**
@@ -24,9 +26,21 @@ export function Segmented<T extends string>({
   useEffect(() => {
     box.current?.querySelector<HTMLElement>("[aria-checked=true]")?.scrollIntoView({ inline: "nearest", block: "nearest" });
   }, [value]);
+  // Left and Right move the choice, and 1 to 9 take the option in that place: the keyboard of a radio group.
+  function onKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    const at = options.findIndex((o) => o.value === value);
+    const to = e.key === "ArrowLeft" || e.key === "ArrowRight" ? nextIndex(e.key, at, options.length) : digitIndex(e.key, options.length);
+    if (to === null || to === at) return;
+    e.preventDefault();
+    uiFeedback("pick");
+    onChange(options[to].value);
+    box.current?.querySelectorAll<HTMLElement>("[role=radio]")[to]?.focus();
+  }
   return (
     <div
       ref={box}
+      onKeyDown={onKeyDown}
       role="radiogroup"
       aria-label={label}
       className="flex gap-1 p-1 overflow-x-auto"
@@ -40,7 +54,10 @@ export function Segmented<T extends string>({
             type="button"
             role="radio"
             aria-checked={selected}
-            onClick={() => onChange(o.value)}
+            onClick={() => {
+              if (!selected) uiFeedback("pick");
+              onChange(o.value);
+            }}
             className={`flex-1 inline-flex items-center justify-center gap-2 whitespace-nowrap px-3 font-semibold ${FOCUS_RING}`}
             style={{
               minHeight: "var(--control)",

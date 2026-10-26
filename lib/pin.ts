@@ -74,6 +74,20 @@ export function rememberDevice(level: AccessLevel): void {
   }
 }
 
+/** Sent when this device is let out, so the door (PinGate) closes at once, on whichever page it is. */
+export const SIGN_OUT_EVENT = "mikke-mus-sign-out";
+
+/** Lets this device out: the stored level is forgotten and the keypad is asked again, so the other code can be typed, as someone
+ *  with the limited code would see the app. Nothing else on the device is touched (players, a match in progress, settings). */
+export function forgetDevice(): void {
+  try {
+    localStorage.removeItem(REMEMBER_KEY);
+  } catch {
+    // Nothing was stored, so there is nothing to forget.
+  }
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(SIGN_OUT_EVENT));
+}
+
 /** Wrong guesses in a row before the keypad locks, and for how long (it grows with every lock). */
 export const MAX_TRIES = 5;
 export const LOCK_SECONDS = 30;
