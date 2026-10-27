@@ -1,6 +1,9 @@
 "use client";
 
 import { outIn } from "@/lib/knockout";
+import { useRoster } from "@/lib/storage";
+import { Avatar } from "./ui/Avatar";
+import { StageStrip } from "./StageStrip";
 import { tournamentTitle, type Tournament } from "@/lib/tournament";
 import { roundName } from "./KnockoutOverview";
 
@@ -23,25 +26,30 @@ export function EliminatedScreen({
   onWatchRest: () => void;
   onLeave: () => void;
 }) {
+  const photos = new Map(useRoster().map((r) => [r.name, r.photo]));
   return (
     <div className="animate-screen-enter screen flex items-center justify-center">
       <div className="screen-inner">
         <p className="section-label text-center mb-2">{tournamentTitle(tournament).toUpperCase()}</p>
-        <h1 className="font-display text-center mb-6" style={{ color: "var(--color-cream)", fontSize: "var(--text-num)" }}>
+        <h1 className="font-display text-center mb-4" style={{ color: "var(--color-cream)", fontSize: "var(--text-num)" }}>
           {names.length === 1 ? "Ute" : "Alle er ute"}
         </h1>
+        <StageStrip tournament={tournament} />
         <div className="space-y-3 mb-6">
           {names.map((name) => {
             const lost = outIn(tournament, name);
             const beatBy = lost ? (lost.winner === lost.participantA ? lost.participantA : lost.participantB) : null;
             return (
-              <div key={name} className="card" style={{ background: "var(--color-panel)", border: "1px solid var(--color-border)" }}>
-                <p className="font-display" style={{ color: "var(--color-cream)", fontSize: "var(--text-title)" }}>
-                  {name}
-                </p>
-                <p style={{ color: "var(--color-muted)", fontSize: "var(--text-body)" }}>
-                  {lost ? `Ute i ${roundName(lost).toLowerCase()} mot ${beatBy}` : "Ute"}
-                </p>
+              <div key={name} className="card flex items-center gap-4" style={{ background: "var(--color-panel)", border: "1px solid var(--color-border)" }}>
+                <Avatar name={name} photo={photos.get(name)} size="l" bot={tournament.participants.find((p) => p.name === name)?.isBot} />
+                <div className="min-w-0">
+                  <p className="font-display truncate" style={{ color: "var(--color-cream)", fontSize: "var(--text-title)" }}>
+                    {name}
+                  </p>
+                  <p style={{ color: "var(--color-muted)", fontSize: "var(--text-body)" }}>
+                    {lost ? `Ute i ${roundName(lost).toLowerCase()} mot ${beatBy}` : "Ute"}
+                  </p>
+                </div>
               </div>
             );
           })}

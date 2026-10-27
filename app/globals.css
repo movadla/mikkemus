@@ -88,15 +88,15 @@
   /* A type scale, because there wasn't one: an audit found 26 distinct font sizes, four
      different sizes for the same page heading, and two for the same section label. Same
      role, same size — that is most of what makes a set of screens read as one app. */
-  --text-page-title: 1.625rem;
-  --text-section-label: 0.75rem;
-  --text-meta: 0.75rem;
+  --text-page-title: 1.75rem;
+  --text-section-label: 0.8125rem;
+  --text-meta: 0.8125rem;
 
-  /* The five sizes of text, and nothing in between. Micro is the floor (12 px): nothing is set smaller. Num is for the
+  /* The five sizes of text, and nothing in between. Micro is the floor (13 px): nothing is set smaller. Num is for the
      figures people read first (scores, ratings); the celebration screens may go bigger, as display. */
-  --text-micro: 0.75rem;
-  --text-small: 0.8125rem;
-  --text-body: 0.9375rem;
+  --text-micro: 0.8125rem;
+  --text-small: 0.875rem;
+  --text-body: 1rem;
   --text-title: 1.25rem;
   --text-num: 1.75rem;
 
@@ -490,8 +490,8 @@ button {
    an occlusion shadow at the bottom. Flat fills read as a spreadsheet no matter how good
    the surrounding panel is. */
 .cell-tile {
-  border-radius: 12px;
-  background: var(--color-cell);
+  border-radius: var(--radius-m);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-cell) 90%, var(--light)), var(--color-cell));
   /* Four layers, and each is doing a job: a bright top edge for the lit rim, a hairline dark
      bottom edge so the tile ends on a crisp line rather than fading out, the inner floor
      shadow for depth, and a small drop so it sits ON the board instead of in it. The top rim
@@ -502,7 +502,7 @@ button {
   box-shadow:
     inset 0 0 0 1px rgba(255, 255, 255, 0.06),
     inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 1px 2px rgba(0, 0, 0, 0.35);
+    0 2px 4px rgba(var(--shadow-rgb), 0.5);
   transition:
     background var(--duration-base) var(--ease-standard),
     box-shadow var(--duration-base) var(--ease-standard);
@@ -1615,8 +1615,8 @@ button {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  mix-blend-mode: color-dodge;
-  opacity: 0.7;
+  mix-blend-mode: overlay;
+  opacity: 0.45;
   background:
     radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.45), transparent 42%),
     linear-gradient(115deg, transparent 20%, rgba(255, 60, 170, 0.35) 35%, rgba(60, 255, 235, 0.35) 50%, rgba(255, 240, 60, 0.35) 65%, transparent 80%);
@@ -1920,6 +1920,7 @@ html[data-theme="light"] body::before {
 /* -- Innstillinger: a preview beside the choice: what the animation level does, and the theme as it will look -- */
 .fx-demo {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 1rem;
   padding: 0.75rem;
@@ -2686,4 +2687,221 @@ html[data-pack="midnatt"]:not([data-theme="light"]) {
 /* A player's page takes the colour that is theirs: a wash from the top that fades into the page. */
 .profile-mood {
   background: linear-gradient(180deg, color-mix(in srgb, var(--pc) 36%, var(--color-bg)), transparent 28rem);
+}
+
+/* The place you are in on the bottom bar is a filled icon, the others are lines. */
+.bottom-nav [aria-current="page"] svg {
+  fill: currentColor;
+  fill-opacity: 0.22;
+}
+
+.fx-demo > .flex-1 {
+  flex-basis: 9rem;
+}
+
+/* -- the strip of stages, in glass: a dot for each step of the tournament, in the colour of the cup -- */
+.stage-strip {
+  display: flex;
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0.625rem 0.75rem 0.5rem;
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(16px) saturate(1.3);
+  backdrop-filter: blur(16px) saturate(1.3);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-l);
+  box-shadow: var(--elevation-2);
+}
+.stage-strip li {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  color: var(--color-muted);
+  font-size: var(--text-micro);
+}
+.stage-strip li + li::before {
+  content: "";
+  position: absolute;
+  top: 0.5rem;
+  right: 50%;
+  width: 100%;
+  height: 2px;
+  background: var(--color-hairline);
+}
+.stage-strip li[data-state="done"]::before,
+.stage-strip li[data-state="now"]::before {
+  background: var(--stage);
+}
+.stage-strip i {
+  position: relative;
+  display: block;
+  width: 1rem;
+  height: 1rem;
+  margin: 0 auto 0.25rem;
+  border-radius: 50%;
+  background: var(--color-cell);
+  box-shadow: inset 0 0 0 2px var(--color-hairline);
+}
+.stage-strip li[data-state="done"] i {
+  background: var(--stage);
+  box-shadow: none;
+}
+.stage-strip li[data-state="now"] {
+  color: var(--color-cream);
+  font-weight: 700;
+}
+.stage-strip li[data-state="now"] i {
+  background: var(--color-bg);
+  box-shadow: 0 0 0 2px var(--stage), 0 0 0 5px color-mix(in srgb, var(--stage) 25%, transparent);
+}
+.stage-strip li span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.stage-strip-large {
+  padding: 1rem 1.5rem 0.75rem;
+  font-size: var(--text-body);
+}
+.stage-strip-large li {
+  font-size: var(--text-body);
+}
+.stage-strip-large i {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+.stage-strip-large li + li::before {
+  top: 0.75rem;
+}
+
+/* A tournament screen takes the light of its cup: a lamp over the top in the cup's own colour. */
+.cup-lamp {
+  background: radial-gradient(120% 40rem at 50% -6rem, color-mix(in srgb, var(--cup) 24%, transparent), transparent 70%);
+}
+
+/* The seeding as a medal: a round badge with the number in it. */
+.seed-medal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1;
+  color: var(--color-cream);
+  background: radial-gradient(circle at 35% 28%, var(--color-surface-2), var(--color-cell) 78%);
+  box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 3.5px var(--color-muted), var(--shadow-avatar);
+}
+
+/* The ball that is drawn: a gold ball with the number of the pair in it. */
+.draw-ball {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--color-bg);
+  background: var(--gradient-gold);
+  box-shadow: var(--shadow-avatar);
+}
+
+/* A match of the pilot's course: a box with the colour of its lane along the top, portraits for the places that are filled and round shadows for those that are not. */
+.lane-box {
+  list-style: none;
+  padding: 0.75rem;
+  background: var(--color-surface);
+  border: 1px solid color-mix(in srgb, var(--lane) 40%, var(--color-border));
+  border-top: 3px solid var(--lane);
+  border-radius: var(--radius-m);
+  box-shadow: var(--elevation-1);
+}
+.lane-box[data-next] {
+  border-color: var(--color-teal);
+  border-top-color: var(--color-teal);
+  box-shadow: var(--elevation-1), 0 0 0 1px var(--color-teal);
+}
+.lane-ghost {
+  flex: none;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  border: 1.5px dashed var(--color-hairline);
+}
+
+/* The road to the title as a line with a dot for every match; the last, the final, is gold. */
+.road-tl {
+  position: relative;
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.road-tl::before {
+  content: "";
+  position: absolute;
+  left: 0.3125rem;
+  top: 0.5rem;
+  bottom: 0.5rem;
+  width: 2px;
+  background: var(--color-hairline);
+}
+.road-tl li {
+  position: relative;
+}
+.road-dot {
+  position: absolute;
+  left: -1.5rem;
+  top: 0.5rem;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  background: var(--color-teal);
+  box-shadow: 0 0 0 3px var(--teal-soft);
+}
+.road-tl li[data-final] .road-dot {
+  background: var(--color-gold);
+  box-shadow: 0 0 0 3px var(--gold-soft);
+}
+.road-tl li[data-final] span {
+  color: var(--color-gold-strong) !important;
+  font-weight: 600;
+}
+
+/* The last results along the bottom of the big screen. */
+.result-ticker {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 2.5rem;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  padding: 0.75rem 2rem;
+  overflow: hidden;
+  white-space: nowrap;
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  border-top: 1px solid var(--glass-border);
+  color: var(--color-text-2);
+  font-size: var(--text-title);
+}
+.result-ticker-label {
+  flex: none;
+  color: var(--color-teal);
+  font-size: var(--text-small);
+  font-weight: 700;
+  letter-spacing: 0.16em;
+}
+.result-ticker-item b {
+  color: var(--color-cream);
 }

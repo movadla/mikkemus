@@ -7,6 +7,8 @@ import { fxFlags, useFxLevel } from "@/lib/fxLevel";
 import { firstKit } from "@/lib/teamKit";
 import { cupColor } from "@/lib/botCup";
 import { podium, tournamentTitle, type Tournament } from "@/lib/tournament";
+import { useRoster } from "@/lib/storage";
+import { Avatar } from "./ui/Avatar";
 import { CupEmblem } from "./ui/CupEmblem";
 import { BracketTree } from "./BracketTree";
 import { ShirtRain } from "./ShirtRain";
@@ -41,6 +43,7 @@ export function ChampionScreen({
   const fx = fxFlags(level);
   const [showBracket, setShowBracket] = useState(false);
   const winner = tournament.winner ?? "";
+  const winnerPhoto = useRoster().find((r) => r.name === winner)?.photo;
   const winnerSide = tournament.participants.find((p) => p.name === winner);
   const road = roadOf(tournament, winner).filter((r) => !r.match.isBye);
   const prizes = awards(tournament);
@@ -70,6 +73,11 @@ export function ChampionScreen({
             <Trophy cannons={fx.confetti && !shirts} />
           </div>
         </ViewTransition>
+        {!tournament.participants.find((p) => p.name === winner)?.members && (
+          <div className="flex justify-center mb-3">
+            <Avatar name={winner} photo={winnerPhoto} px={112} state="winner" bot={tournament.participants.find((p) => p.name === winner)?.isBot} />
+          </div>
+        )}
         <h1 className="font-display text-center" style={{ color: "var(--color-gold)", fontSize: "clamp(2.2rem, 11vw, 3.4rem)", lineHeight: 1.05 }}>
           {winner}
         </h1>
@@ -92,12 +100,13 @@ export function ChampionScreen({
         {road.length > 0 && (
           <section className="card mt-6" style={card} aria-label="Veien til pokalen">
             <p className="section-label mb-3">VEIEN</p>
-            <ol className="space-y-2">
-              {road.map((r) => {
+            <ol className="road-tl">
+              {road.map((r, ri) => {
                 const mine = r.match.stats?.[winner];
                 const theirs = r.opponent ? r.match.stats?.[r.opponent] : undefined;
                 return (
-                  <li key={r.match.id} className="flex items-baseline justify-between gap-3">
+                  <li key={r.match.id} data-final={ri === road.length - 1 ? "" : undefined} className="flex items-baseline justify-between gap-3">
+                    <i aria-hidden className="road-dot" />
                     <span style={{ color: "var(--color-muted)", fontSize: "var(--text-small)", minWidth: "6.5rem" }}>{r.label}</span>
                     <span className="flex-1 truncate" style={{ color: "var(--color-cream)" }}>
                       {r.won ? "slo " : "tapte for "}

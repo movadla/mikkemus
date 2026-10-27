@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { avatarAccent } from "@/lib/avatarAccent";
 import type { Kit } from "@/lib/teamKit";
-import { TeamKit } from "./TeamKit";
-import { BotFace } from "./ui/BotFace";
+import { KitStage } from "./TeamKit";
+import { Avatar } from "./ui/Avatar";
 import { formatOdds } from "@/lib/odds/price";
 
 export type LineupSide = {
@@ -74,56 +74,47 @@ export function LineupIntro({ sides, onDone }: { sides: LineupSide[]; onDone: ()
   }, []);
 
   const two = sides.length === 2;
+  const sideAccent = (x: LineupSide) => (x.kit ? x.kit.primary : avatarAccent(x.name));
+  // A person in the one frame of the app, large; a team as its shirt on a stage, with the people under its name.
   const picture = (s: LineupSide, size: number) =>
-    s.kit ? (
-      <TeamKit kit={s.kit} size={size} />
-    ) : (
-      <span
-        className="rounded-full overflow-hidden flex items-center justify-center font-display"
-        style={{ width: size * 0.8, height: size * 0.8, border: `3px solid ${avatarAccent(s.name)}`, background: "var(--color-cell)", color: avatarAccent(s.name), fontSize: size * 0.34 }}
-        aria-hidden
-      >
-        {s.isBot ? <BotFace name={s.name} className="w-full h-full" /> : s.photo ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={s.photo} alt="" className="w-full h-full object-cover" />
-        ) : (
-          s.name.charAt(0).toUpperCase()
-        )}
-      </span>
-    );
+    s.kit ? <KitStage kit={s.kit} size={size} /> : <Avatar name={s.name} photo={s.photo} px={size} bot={s.isBot} />;
 
-  const card = (s: LineupSide, i: number) => (
-    <div
-      key={s.name}
-      className="relative rounded-2xl overflow-hidden flex flex-col items-center text-center px-2 pt-3 pb-3"
-      style={{
-        aspectRatio: "0.72",
-        background: "linear-gradient(160deg, #3a5e46 0%, #1f3a2a 55%, #17281d 100%)",
-        border: "2px solid var(--color-gold)",
-        boxShadow: "0 18px 36px var(--scrim-soft), inset 0 0 0 1px color-mix(in srgb, var(--light) 12%, transparent)",
-        animation: `foil-in 800ms ${i * 160}ms cubic-bezier(0.2,0.8,0.2,1) both`,
-        isolation: "isolate",
-      }}
-    >
-      {s.chance !== undefined && (
-        <span className="absolute font-display" style={{ left: 10, top: 8, color: "var(--color-gold-strong)", fontSize: "var(--text-num)", lineHeight: 1 }}>
-          {Math.round(s.chance * 100)}
-          <small style={{ display: "block", fontFamily: "var(--font-sans)", fontSize: "var(--text-micro)", letterSpacing: "0.14em", color: "var(--color-muted)" }}>SJANSE</small>
-        </span>
-      )}
-      <div className="mt-6">{picture(s, 84)}</div>
-      <p className="font-display mt-2 w-full truncate" style={{ fontSize: "var(--text-title)", color: "var(--color-cream)", letterSpacing: "0.03em" }}>
-        {s.name}
-      </p>
-      {s.members && s.members.length > 0 && (
-        <p className="w-full truncate" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>
-          {s.members.join(" og ")}
+  const card = (s: LineupSide, i: number) => {
+    // The card is washed in the colour that is theirs (a team's own shirt colour), so two cards side by side are two people and not one design twice.
+    const accent = s.kit ? s.kit.primary : avatarAccent(s.name);
+    return (
+      <div
+        key={s.name}
+        className="edge relative rounded-2xl overflow-hidden flex flex-col items-center text-center px-2 pt-3 pb-3"
+        style={{
+          aspectRatio: "0.72",
+          "--edge-fill-image": `linear-gradient(165deg, color-mix(in srgb, ${accent} 34%, var(--color-panel)) 0%, var(--color-panel) 72%)`,
+          "--edge-accent": accent,
+          boxShadow: "var(--elevation-3)",
+          animation: `foil-in 800ms ${i * 160}ms cubic-bezier(0.2,0.8,0.2,1) both`,
+          isolation: "isolate",
+        } as React.CSSProperties}
+      >
+        {s.chance !== undefined && (
+          <span className="absolute font-display" style={{ left: 10, top: 8, color: "var(--color-gold-strong)", fontSize: "var(--text-num)", lineHeight: 1 }}>
+            {Math.round(s.chance * 100)}
+            <small style={{ display: "block", fontFamily: "var(--font-sans)", fontSize: "var(--text-micro)", letterSpacing: "0.14em", color: "var(--color-muted)" }}>SJANSE</small>
+          </span>
+        )}
+        <div className={s.chance !== undefined ? "mt-8" : "mt-4"}>{picture(s, s.kit ? 104 : 112)}</div>
+        <p className="font-display mt-3 w-full truncate" style={{ fontSize: "var(--text-num)", lineHeight: 1.05, color: "var(--color-cream)", letterSpacing: "0.02em", textShadow: "var(--shadow-text)" }}>
+          {s.name}
         </p>
-      )}
-      {s.record && <p className="mt-auto" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>{s.record}</p>}
-      <span aria-hidden className="foil-sheen" />
-    </div>
-  );
+        {s.members && s.members.length > 0 && (
+          <p className="w-full truncate" style={{ color: "var(--color-text-2)", fontSize: "var(--text-micro)" }}>
+            {s.members.join(" og ")}
+          </p>
+        )}
+        {s.record && <p className="mt-auto" style={{ color: "var(--color-text-2)", fontSize: "var(--text-micro)" }}>{s.record}</p>}
+        <span aria-hidden className="foil-sheen" />
+      </div>
+    );
+  };
 
   return (
     <div
@@ -134,7 +125,11 @@ export function LineupIntro({ sides, onDone }: { sides: LineupSide[]; onDone: ()
       style={{ background: "var(--color-bg)" }}
     >
       {two && (
-        <div aria-hidden className="absolute inset-0" style={{ background: "linear-gradient(100deg, rgba(75,139,232,0.28) 0 49.5%, transparent 49.5% 50.5%, rgba(224,74,58,0.28) 50.5%)" }} />
+        <div
+          aria-hidden
+          className="absolute inset-0"
+          style={{ background: `linear-gradient(100deg, color-mix(in srgb, ${sideAccent(sides[0])} 22%, transparent) 0 49.5%, transparent 49.5% 50.5%, color-mix(in srgb, ${sideAccent(sides[1])} 22%, transparent) 50.5%)` }}
+        />
       )}
       {two ? (
         <div className="relative w-full px-4 flex flex-col items-center gap-5" style={{ maxWidth: "30rem", marginTop: "-6%" }}>
@@ -176,7 +171,7 @@ export function LineupIntro({ sides, onDone }: { sides: LineupSide[]; onDone: ()
         <div className="relative w-full px-6 grid gap-3" style={{ maxWidth: "28rem" }}>
           {sides.map((s, i) => (
             <div key={s.name} className="flex items-center gap-3 rounded-xl px-4 py-2" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", animation: `lineup-in-left 500ms ${i * 90}ms cubic-bezier(0.2,0.9,0.3,1.1) both` }}>
-              {picture(s, 52)}
+              {picture(s, s.kit ? 52 : 52)}
               <span className="font-display flex-1 truncate" style={{ fontSize: "var(--text-title)" }}>{s.name}</span>
               {s.record && <span style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>{s.record}</span>}
               {s.odds !== undefined && <span className="font-display" style={{ color: "var(--color-gold)" }}>{formatOdds(s.odds)}</span>}

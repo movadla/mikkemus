@@ -42,25 +42,41 @@ function winStreaks(history: MatchHistoryEntry[]): { best: number; current: numb
 /** The colours of the places: gold is earned, silver and bronze are the two below it. */
 const PLACE_COLOR = ["var(--color-gold)", "var(--color-silver)", "var(--color-bronze)"];
 
-/** One of the three on the podium: the medal, the picture, the name and the win rate. The winner stands highest. */
+/** One of the three on the podium: the medal, the picture, the name and the win rate, standing on its step. The winner is the tallest, and the only one lit. */
 function PodiumPlace({ p, place }: { p: PlayerRecord; place: 0 | 1 | 2 }) {
+  const step = ["3.75rem", "2.5rem", "1.75rem"][place];
   return (
-    <Link
-      href={`/spillere/${encodeURIComponent(p.name)}`}
-      className="tactile flex flex-col items-center gap-1 text-center px-2 py-3 min-w-0"
-      style={{ borderRadius: "var(--radius-m)", background: place === 0 ? "var(--gold-soft)" : "var(--color-surface)", border: `1px solid ${place === 0 ? "var(--gold-ring)" : "var(--color-border)"}`, marginTop: place === 0 ? 0 : "1.5rem" }}
-    >
-      <span style={{ color: PLACE_COLOR[place] }}>
-        <MedalIcon className="w-6 h-6" />
-      </span>
-      <MorphAvatar name={p.name} photo={p.photo} size={place === 0 ? "l" : "m"} state={place === 0 ? "winner" : "idle"} />
-      <span className="font-display truncate w-full" style={{ color: "var(--color-cream)", fontSize: "var(--text-body)" }}>
-        {p.name}
-      </span>
-      <span className="tabular" style={{ color: PLACE_COLOR[place], fontSize: "var(--text-title)", fontWeight: 700 }}>
-        <CountUp value={winPct(p)} format={(n) => `${n} %`} />
-      </span>
-    </Link>
+    <div className="flex flex-col min-w-0" style={{ justifyContent: "flex-end" }}>
+      <Link
+        href={`/spillere/${encodeURIComponent(p.name)}`}
+        className="tactile edge flex flex-col items-center gap-1 text-center px-2 pt-3 pb-3 min-w-0"
+        style={{
+          borderRadius: "var(--radius-m) var(--radius-m) 0 0",
+          "--edge-accent": PLACE_COLOR[place],
+          "--edge-fill-image": place === 0 ? "linear-gradient(180deg, color-mix(in srgb, var(--color-gold) 22%, var(--color-surface)), var(--color-surface))" : undefined,
+          boxShadow: place === 0 ? "var(--glow-gold), var(--elevation-2)" : "var(--elevation-1)",
+        } as React.CSSProperties}
+      >
+        <span style={{ color: PLACE_COLOR[place] }}>
+          <MedalIcon className={place === 0 ? "w-8 h-8" : "w-6 h-6"} />
+        </span>
+        <MorphAvatar name={p.name} photo={p.photo} size={place === 0 ? "xl" : "m"} state={place === 0 ? "winner" : "idle"} />
+        <span className="font-display truncate w-full" style={{ color: "var(--color-cream)", fontSize: place === 0 ? "var(--text-title)" : "var(--text-body)" }}>
+          {p.name}
+        </span>
+        <span className="num" style={{ color: PLACE_COLOR[place], fontSize: place === 0 ? "var(--text-num)" : "var(--text-title)", fontWeight: 700 }}>
+          <CountUp value={winPct(p)} format={(n) => `${n} %`} />
+        </span>
+      </Link>
+      {/* The step it stands on: higher for the better place, in the colour of the place. */}
+      <div
+        aria-hidden
+        className="flex items-start justify-center font-display"
+        style={{ height: step, borderRadius: "0 0 var(--radius-s) var(--radius-s)", background: `linear-gradient(180deg, color-mix(in srgb, ${PLACE_COLOR[place]} 38%, var(--color-surface)), var(--color-surface))`, border: "1px solid var(--color-border)", borderTop: "none", color: PLACE_COLOR[place], fontSize: "var(--text-title)", paddingTop: "0.25rem" }}
+      >
+        {place + 1}
+      </div>
+    </div>
   );
 }
 
@@ -82,7 +98,7 @@ export function HallOfFameTab() {
   const podium = top.length === 3 ? [1, 0, 2] : top.map((_, i) => i);
   return (
     <>
-      <div className="grid gap-2 mb-4" style={{ gridTemplateColumns: `repeat(${top.length}, minmax(0, 1fr))` }}>
+      <div className="grid gap-2 mb-4 items-end" style={{ gridTemplateColumns: `repeat(${top.length}, minmax(0, 1fr))` }}>
         {podium.map((i) => (
           <PodiumPlace key={top[i].name} p={top[i]} place={i as 0 | 1 | 2} />
         ))}

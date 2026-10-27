@@ -11,6 +11,8 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import { CupBanner } from "./CupBanner";
 import { MatchPoster, PosterGrid, type PosterSide } from "./MatchPoster";
 import { ScreenTop } from "./ScreenTop";
+import { Avatar } from "./ui/Avatar";
+import { StageStrip } from "./StageStrip";
 import { Button } from "./ui/Button";
 
 const FOCUS_RING = "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
@@ -117,16 +119,20 @@ function NextCard({ tournament, match, queue, photos, onPlay }: { tournament: To
 
 /** One match in the course: its players (or what fills the places still empty), and the places once it is over. */
 export function MatchBox({ tournament, match, next }: { tournament: Tournament; match: TournamentMatch; next: boolean }) {
+  const photos = new Map(useRoster().map((r) => [r.name, r.photo]));
   const players = pilotPlayers(match);
   const slots = match.pilot?.slots;
   const rows = match.placements ?? players;
   const four = (slots?.length ?? 4) === 4;
+  const expected = slots?.length ?? 4;
+  // The lane has its own colour: winners in the everyday accent, losers in bronze, the lucky losers in gold, the rest in the cup's.
+  const lane = match.pilot?.stage === "winners" ? "var(--color-teal)" : match.pilot?.stage === "losers" ? "var(--color-bronze)" : match.pilot?.stage === "lucky" ? "var(--color-gold)" : cupColor(tournament.cup?.kind);
   return (
-    <li className="card" style={{ ...card, border: next ? "2px solid var(--color-teal)" : card.border, padding: "0.75rem" }}>
-      <p className="flex items-baseline justify-between gap-2 mb-1" style={{ color: "var(--color-cream)", fontWeight: 600, fontSize: "var(--text-body)" }}>
+    <li className="lane-box" data-next={next || undefined} style={{ "--lane": lane } as React.CSSProperties}>
+      <p className="flex items-baseline justify-between gap-2 mb-2" style={{ color: "var(--color-cream)", fontWeight: 600, fontSize: "var(--text-body)" }}>
         <span>{match.pilot?.label}</span>
         {next && (
-          <span className="rounded px-1.5" style={{ background: "var(--color-teal)", color: "var(--color-bg)", fontSize: "var(--text-micro)", letterSpacing: "0.1em", fontWeight: 700 }}>
+          <span className="rounded-full px-2" style={{ background: "var(--color-teal)", color: "var(--color-bg)", fontSize: "var(--text-micro)", letterSpacing: "0.1em", fontWeight: 700 }}>
             NESTE
           </span>
         )}
@@ -134,25 +140,31 @@ export function MatchBox({ tournament, match, next }: { tournament: Tournament; 
           <span style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)", letterSpacing: "0.08em" }}>AUTO</span>
         )}
       </p>
-      {players.length === (slots?.length ?? 4) ? (
-        <ol className="space-y-0.5">
-          {rows.map((name, i) => (
-            <li key={name} className="flex items-baseline gap-2" style={{ fontSize: "var(--text-small)", color: match.winner ? (i === 0 ? "var(--color-gold-strong)" : i < 2 && four ? "var(--color-cream)" : "var(--color-muted)") : "var(--color-cream)" }}>
-              {match.placements && <span className="tabular" style={{ minWidth: "1rem" }}>{i + 1}.</span>}
-              <span className="truncate">{name}</span>
-              {seedOf(tournament, name) && <span className="tabular" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>#{seedOf(tournament, name)}</span>}
+      <ol className="space-y-1.5">
+        {Array.from({ length: expected }, (_, i) => {
+          const name = players.length === expected ? rows[i] : undefined;
+          if (!name) {
+            // A place nobody holds yet: a round shadow and what fills it.
+            return (
+              <li key={i} className="flex items-center gap-2" style={{ color: "var(--color-muted)", fontStyle: "italic", fontSize: "var(--text-small)" }}>
+                <span aria-hidden className="lane-ghost" />
+                {pilotSlotLabel(tournament, match, i)}
+              </li>
+            );
+          }
+          const through = !!match.winner && (i === 0 || (four && i < 2));
+          return (
+            <li key={name} className="flex items-center gap-2" style={{ fontSize: "var(--text-small)", color: match.winner ? (i === 0 ? "var(--color-gold-strong)" : through ? "var(--color-cream)" : "var(--color-muted)") : "var(--color-cream)", opacity: match.winner && !through ? 0.7 : 1 }}>
+              <Avatar name={name} photo={photos.get(name)} size="xs" bot={tournament.participants.find((x) => x.name === name)?.isBot} />
+              <span className="truncate flex-1">
+                {match.placements ? `${i + 1}. ` : ""}
+                {name}
+                {seedOf(tournament, name) && <span style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}> ({seedOf(tournament, name)})</span>}
+              </span>
             </li>
-          ))}
-        </ol>
-      ) : (
-        <ul className="space-y-0.5">
-          {(slots ?? []).map((_, i) => (
-            <li key={i} style={{ fontSize: "var(--text-small)", color: "var(--color-muted)", fontStyle: "italic" }}>
-              {pilotSlotLabel(tournament, match, i)}
-            </li>
-          ))}
-        </ul>
-      )}
+          );
+        })}
+      </ol>
     </li>
   );
 }
@@ -193,7 +205,7 @@ export function PilotOverview({
   const undoable = undoablePilotMatch(tournament);
   const stage = currentStage(tournament);
   return (
-    <div className="animate-screen-push screen">
+    <div className="animate-screen-push screen cup-lamp" style={{ "--cup": cupColor(tournament.cup?.kind) } as React.CSSProperties}>
       {confirm === "cancel" && (
         <ConfirmDialog
           message="Slette turneringen?"
@@ -214,6 +226,7 @@ export function PilotOverview({
       )}
       <div className="screen-inner" style={{ maxWidth: "min(100%, 64rem)" }}>
         <ScreenTop title={tournamentTitle(tournament)} onBack={onExitToHome} right={onHistory ? <Button onClick={onHistory}>Pokaler</Button> : undefined} />
+        <StageStrip tournament={tournament} />
         {tournament.cup && <CupBanner cup={tournament.cup} />}
         <div className="mx-auto" style={{ maxWidth: "28rem" }}>
           {just && <ResultCard match={just} />}

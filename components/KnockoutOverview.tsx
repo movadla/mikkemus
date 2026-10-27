@@ -10,8 +10,8 @@ import { useRoster } from "@/lib/storage";
 import { BracketTree } from "./BracketTree";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { ScreenTop } from "./ScreenTop";
-import { StepStrip } from "./StepStrip";
-import { MatchPoster, posterSides } from "./MatchPoster";
+import { StageStrip } from "./StageStrip";
+import { MatchPoster, posterSides, ratingsOf } from "./MatchPoster";
 import { CupBanner } from "./CupBanner";
 
 const FOCUS_RING =
@@ -77,7 +77,8 @@ function NextUpCard({ tournament, match, queue, onPlay }: { tournament: Tourname
   const records = useRoster();
   const chance = useMemo(() => winChanceFor(tournament, match, records), [tournament, match, records]);
   const a = match.participantA!;
-  const [sideA, sideB] = posterSides(tournament, match, records, chance);
+  const ratings = useMemo(() => ratingsOf(records), [records]);
+  const [sideA, sideB] = posterSides(tournament, match, records, chance, ratings);
   return (
     <div className="card mb-4" style={{ ...card, border: "1px solid var(--color-teal)" }}>
       <p className="section-label mb-3 text-center">NESTE · {roundName(match).toUpperCase()}</p>
@@ -139,8 +140,8 @@ function MatchSheet({ tournament, match, onClose }: { tournament: Tournament; ma
             return (
               <div key={n} className="flex items-baseline justify-between gap-3" style={{ color: match.winner === n ? "var(--color-gold)" : "var(--color-cream)" }}>
                 <span className="font-display truncate" style={{ fontSize: "var(--text-title)" }}>
-                  {seedOf(tournament, n) ? `#${seedOf(tournament, n)} ` : ""}
                   {n}
+                  {seedOf(tournament, n) ? ` (${seedOf(tournament, n)})` : ""}
                 </span>
                 <span className="tabular shrink-0" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
                   {s ? `${s.darts} piler${pct !== null ? ` · ${pct} %` : ""}` : out && !match.winner ? `ute i ${roundName(out).toLowerCase()}` : ""}
@@ -193,7 +194,7 @@ export function KnockoutOverview({
   const elsewhere = elsewhereIds.map((id) => tournament.matches.find((m) => m.id === id)).filter((m): m is TournamentMatch => !!m && !!m.winner);
   const undoable = undoableMatch(tournament);
   return (
-    <div className="animate-screen-push screen">
+    <div className="animate-screen-push screen cup-lamp" style={{ "--cup": cupColor(tournament.cup?.kind) } as React.CSSProperties}>
       {confirm === "cancel" && (
         <ConfirmDialog
           message="Slette turneringen?"
@@ -215,7 +216,7 @@ export function KnockoutOverview({
       {selected && <MatchSheet tournament={tournament} match={selected} onClose={() => setSelected(null)} />}
       <div className="screen-inner" style={{ maxWidth: "min(100%, 64rem)" }}>
         <ScreenTop title={tournamentTitle(tournament)} onBack={onExitToHome} right={onHistory ? <button type="button" onClick={onHistory} className={`tactile rounded-lg text-sm px-3 ${FOCUS_RING}`} style={{ minHeight: "var(--control)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}>Pokaler</button> : undefined} />
-        <StepStrip step={2} />
+        <StageStrip tournament={tournament} />
         {tournament.cup && <CupBanner cup={tournament.cup} />}
         <div className="mx-auto" style={{ maxWidth: "28rem" }}>
           {just && <ResultCard tournament={tournament} match={just} />}

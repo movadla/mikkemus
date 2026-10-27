@@ -7,6 +7,7 @@ import { ScreenTop } from "./ScreenTop";
 import { StepStrip } from "./StepStrip";
 import { CupBanner } from "./CupBanner";
 import { cupColor, type CupConfig } from "@/lib/botCup";
+import { MiniBracket } from "./MiniBracket";
 import { StickyAction } from "./StickyAction";
 import { Button } from "./ui/Button";
 import { CupEmblem } from "./ui/CupEmblem";
@@ -108,7 +109,8 @@ export function DrawScreen({
   const drawing = revealed < pairs.length;
   const now = revealed > 0 ? pairs[revealed - 1] : null;
   const colour = cupColor(cup?.kind);
-  const seedNo = (name: string) => (mode === "seeded" ? `#${order.findIndex((p) => p.name === name) + 1}` : "");
+  // The seeding follows the name in brackets, only in a seeded draw: «Lars (1)».
+  const seedNo = (name: string): number | null => (mode === "seeded" ? order.findIndex((p) => p.name === name) + 1 : null);
   const slot = (name: string | null, shown: boolean) =>
     name ? (
       <button
@@ -126,10 +128,10 @@ export function DrawScreen({
           transition: "opacity var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard)",
         }}
       >
-        <span className="tabular shrink-0" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)", marginRight: "0.4rem" }}>
-          {seedNo(name)}
+        <span className="min-w-0 truncate">
+          {name}
+          {seedNo(name) !== null && <span style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}> ({seedNo(name)})</span>}
         </span>
-        <span className="min-w-0 truncate">{name}</span>
       </button>
     ) : (
       <span className="flex-1 px-3 flex items-center" style={{ minHeight: "var(--control)", color: "var(--color-muted)", fontStyle: "italic", fontSize: "var(--text-small)", opacity: shown ? 1 : 0, transition: "opacity var(--duration-base) var(--ease-standard)" }}>
@@ -138,7 +140,7 @@ export function DrawScreen({
     );
 
   return (
-    <div className="animate-screen-push screen has-sticky-action">
+    <div className="animate-screen-push screen has-sticky-action cup-lamp" style={{ "--cup": colour } as React.CSSProperties}>
       <div className="screen-inner">
         <ScreenTop title="Trekning" onBack={onBack} backLabel="← Tilbake" />
         <StepStrip step={1} />
@@ -178,6 +180,9 @@ export function DrawScreen({
             <div className="flex items-center justify-center gap-3" style={{ minHeight: "4.5rem" }}>
               {now ? (
                 <div key={revealed} className="draw-stage-pair flex items-center justify-center gap-3 w-full">
+                  <span aria-hidden className="draw-ball draw-pop">
+                    {revealed}
+                  </span>
                   <span className="draw-from-left font-display flex-1 min-w-0 truncate text-right" style={{ color: "var(--color-cream)", fontSize: "var(--text-title)" }}>
                     {now.a ?? "Walkover"}
                   </span>
@@ -215,6 +220,11 @@ export function DrawScreen({
             </div>
           ))}
         </div>
+        {!drawing && (
+          <div className="mb-4">
+            <MiniBracket pairs={pairs} accent={colour} seedOf={seedNo} />
+          </div>
+        )}
         {mode === "open" && (
           <div className="flex justify-center mb-4">
             <button type="button" onClick={again} className={`tactile px-4 rounded-lg text-sm ${FOCUS_RING}`} style={{ minHeight: "var(--control)", color: "var(--color-cream)", background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>

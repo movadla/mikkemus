@@ -5,7 +5,9 @@ import { avatarAccent } from "@/lib/avatarAccent";
 import { cupColor } from "@/lib/botCup";
 import { bracketRounds, bronzeMatch, isHouseName, placeholderLabel, routeOf, seedOf } from "@/lib/knockout";
 import type { Tournament, TournamentMatch } from "@/lib/tournament";
+import { useRoster } from "@/lib/storage";
 import { MinusIcon, PlusIcon, TrophyIcon } from "./icons";
+import { Avatar } from "./ui/Avatar";
 
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
@@ -47,6 +49,9 @@ export function BracketTree({
   };
   const accent = cupColor(tournament.cup?.kind);
   const just = justDecidedId ? tournament.matches.find((x) => x.id === justDecidedId) : undefined;
+  const photos = new Map(useRoster().map((r) => [r.name, r.photo]));
+  // The row of names to follow is out of the way until it is asked for.
+  const [followOpen, setFollowOpen] = useState(false);
   const scroller = useRef<HTMLDivElement>(null);
   const focus = useRef<HTMLDivElement>(null);
   // Zoom: a tree of five or more rounds (32 and up) starts small enough to be seen whole, and can be pinched or stepped.
@@ -101,9 +106,10 @@ export function BracketTree({
       >
         {name ? (
           <>
-            {seed !== null && <span style={{ color: "var(--color-muted)", fontSize: m.small, minWidth: "1.3rem" }}>#{seed}</span>}
+            {large && <Avatar name={name} photo={photos.get(name)} px={Math.round(m.h * 0.38)} />}
             <span className="truncate flex-1" style={{ color: house && !lost ? "var(--color-teal-strong)" : undefined }}>
               {name}
+              {seed !== null && <span style={{ color: "var(--color-muted)", fontSize: m.small, fontWeight: 400 }}> ({seed})</span>}
             </span>
             {darts !== undefined && (
               <span className="tabular" style={{ color: "var(--color-muted)", fontSize: m.small }}>
@@ -154,10 +160,10 @@ export function BracketTree({
       display: "flex",
       flexDirection: "column",
       textAlign: "left",
-      borderRadius: 8,
+      borderRadius: "var(--radius-s)",
       background: "var(--color-surface)",
       border: road?.has(match.id) ? `2px solid ${roadColour}` : isNext ? "2px solid var(--color-teal)" : "1px solid var(--color-border)",
-      boxShadow: isNext ? "0 0 18px color-mix(in srgb, var(--color-teal) 35%, transparent)" : undefined,
+      boxShadow: isNext ? "var(--elevation-1), 0 0 18px color-mix(in srgb, var(--color-teal) 35%, transparent)" : "var(--elevation-1)",
       opacity: road && !road.has(match.id) ? 0.3 : decided && !isJust ? 0.95 : 1,
       transition: "opacity var(--pull)",
     };
@@ -177,6 +183,8 @@ export function BracketTree({
     );
   };
 
+  // A line that has been won (or lit) glows in its own colour; one that has not is plain.
+  const glow = (colour: string): React.CSSProperties | undefined => (colour && colour !== "var(--color-border)" ? { filter: `drop-shadow(0 0 3px ${colour})` } : undefined);
   const lines: React.ReactNode[] = [];
   rounds.forEach((r, ci) => {
     if (ci === rounds.length - 1) return;
@@ -197,9 +205,9 @@ export function BracketTree({
       const joined = lit(a) || lit(b);
       lines.push(
         <Fragment key={`${ci}-${k}`}>
-          <path d={`M${x0},${y1} H${xm} V${ym}`} stroke={on(a)} strokeWidth={hot(a)} fill="none" />
-          <path d={`M${x0},${y2} H${xm} V${ym}`} stroke={on(b)} strokeWidth={hot(b)} fill="none" />
-          <path d={`M${xm},${ym} H${xn}`} stroke={joined ? roadColour : road ? "var(--color-border)" : a.winner && b.winner ? "var(--color-teal)" : "var(--color-border)"} strokeWidth={joined ? 3.5 : a.winner && b.winner ? 2 : 1.5} fill="none" />
+          <path d={`M${x0},${y1} H${xm} V${ym}`} stroke={on(a)} strokeWidth={hot(a)} fill="none" style={glow(on(a))} />
+          <path d={`M${x0},${y2} H${xm} V${ym}`} stroke={on(b)} strokeWidth={hot(b)} fill="none" style={glow(on(b))} />
+          <path d={`M${xm},${ym} H${xn}`} style={glow(joined ? roadColour : a.winner && b.winner ? "var(--color-teal)" : "")} stroke={joined ? roadColour : road ? "var(--color-border)" : a.winner && b.winner ? "var(--color-teal)" : "var(--color-border)"} strokeWidth={joined ? 3.5 : a.winner && b.winner ? 2 : 1.5} fill="none" />
         </Fragment>,
       );
     }
@@ -208,12 +216,12 @@ export function BracketTree({
   const final = rounds[lastCol]?.matches[0];
   const finalY = centerY(lastCol, 0);
   if (final) {
-    lines.push(<path key="cup" d={`M${colX(lastCol) + m.w},${finalY} H${colX(lastCol + 1)}`} stroke={final.winner ? accent : "var(--color-border)"} strokeWidth={final.winner ? 2.5 : 1.5} fill="none" />);
+    lines.push(<path key="cup" d={`M${colX(lastCol) + m.w},${finalY} H${colX(lastCol + 1)}`} stroke={final.winner ? accent : "var(--color-border)"} strokeWidth={final.winner ? 2.5 : 1.5} fill="none" style={glow(final.winner ? accent : "")} />);
   }
 
   return (
     <div>
-      {followable.length > 1 && (
+      {followable.length > 1 && followOpen && (
         <div className="flex flex-wrap items-center gap-1.5 mb-2" role="group" aria-label="Følg en spiller">
           <span className="section-label mr-1">FØLG</span>
           {followable.map((p) => {
@@ -236,6 +244,11 @@ export function BracketTree({
       )}
       {zoomable && (
         <div className="flex items-center justify-end gap-2 mb-2">
+          {followable.length > 1 && (
+            <button type="button" aria-expanded={followOpen} onClick={() => { setFollowOpen((v) => !v); if (followOpen) setFollow(null); }} className={`tactile px-3 ${FOCUS_RING}`} style={{ minHeight: "var(--control)", borderRadius: "var(--radius-pill)", background: followOpen ? "var(--teal-soft)" : "var(--color-surface)", color: followOpen ? "var(--color-teal)" : "var(--color-cream)", border: "1px solid var(--color-border)", fontSize: "var(--text-small)" }}>
+              Følg
+            </button>
+          )}
           <button type="button" onClick={fit} className={`tactile px-3 ${FOCUS_RING}`} style={{ minHeight: "var(--control)", borderRadius: "var(--radius-s)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)", fontSize: "var(--text-small)" }}>
             Tilpass
           </button>
@@ -286,7 +299,7 @@ export function BracketTree({
         {rounds.map((r, ci) => r.matches.map((match, i) => tie(match, colX(ci), centerY(ci, i) - m.h / 2)))}
         <div
           className="absolute flex flex-col items-center justify-center gap-1 text-center"
-          style={{ left: colX(rounds.length), top: finalY - m.h * 0.75, width: m.w, height: m.h * 1.5, borderRadius: 10, border: `1px ${tournament.winner ? "solid" : "dashed"} ${accent}`, color: accent, background: tournament.winner ? "color-mix(in srgb, var(--color-gold) 10%, transparent)" : "transparent" }}
+          style={{ left: colX(rounds.length), top: finalY - m.h * 0.75, width: m.w, height: m.h * 1.5, borderRadius: 10, border: `1px ${tournament.winner ? "solid" : "dashed"} ${accent}`, color: accent, background: tournament.winner ? "color-mix(in srgb, var(--color-gold) 10%, transparent)" : "transparent", boxShadow: tournament.winner || final?.id === nextId ? "var(--glow-gold)" : undefined }}
         >
           <TrophyIcon className={large ? "w-9 h-9" : "w-6 h-6"} />
           <span className="font-display w-full px-2" style={{ lineHeight: 1.1, fontSize: large ? "var(--text-title)" : "var(--text-body)", color: tournament.winner ? "var(--color-cream)" : "var(--color-gold)" }}>

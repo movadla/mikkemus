@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { BracketTree } from "@/components/BracketTree";
 import { CupBanner } from "@/components/CupBanner";
-import { MatchPoster, posterSides } from "@/components/MatchPoster";
+import { ResultTicker } from "@/components/ResultTicker";
+import { StageStrip } from "@/components/StageStrip";
+import { MatchPoster, posterSides, ratingsOf } from "@/components/MatchPoster";
 import { TvChampion } from "@/components/TvShow";
 import { TvFrame } from "@/components/TvFrame";
 import { roundName } from "@/components/KnockoutOverview";
@@ -54,6 +56,7 @@ export default function StorskjermTurneringPage() {
   }, []);
 
   const records = useRoster();
+  const ratings = useMemo(() => ratingsOf(records), [records]);
   const next = tournament && isKnockout(tournament) ? nextToThrow(tournament) : null;
   const queue = tournament && next ? tournament.matches.filter((m) => !m.winner && !!m.participantA && !!m.participantB && m.id !== next.id && !isSimulable(tournament, m)) : [];
   const chance = tournament && next ? winChanceFor(tournament, next, records) : null;
@@ -68,9 +71,12 @@ export default function StorskjermTurneringPage() {
     const line = pilotQueue(tournament, upNext);
     const sides = upNext ? sidesOf(tournament, upNext, photos) : [];
     return (
-      <TvFrame label="Turnering" className="px-6 pt-14 pb-10">
+      <TvFrame label="Turnering" className="px-6 pt-14 pb-28">
         <header className="text-center mb-6">
           {tournament.cup ? <div className="mx-auto" style={{ maxWidth: "40rem" }}><CupBanner cup={tournament.cup} name={tournamentTitle(tournament)} large /></div> : <p className="section-label" style={{ fontSize: "var(--text-body)" }}>{tournamentTitle(tournament).toUpperCase()}</p>}
+          <div className="mx-auto mt-4" style={{ maxWidth: "48rem" }}>
+            <StageStrip tournament={tournament} large />
+          </div>
           {upNext ? (
             <>
               <h1 className="sr-only">
@@ -106,12 +112,13 @@ export default function StorskjermTurneringPage() {
             </section>
           ))}
         </div>
+        <ResultTicker tournament={tournament} />
       </TvFrame>
     );
   }
 
   return (
-    <TvFrame label="Turnering" className="px-6 pt-14 pb-10">
+    <TvFrame label="Turnering" className="px-6 pt-14 pb-28">
       {tournament === undefined && <p className="text-center pt-24" style={{ color: "var(--color-muted)", fontSize: "var(--text-title)" }}>Henter turneringen …</p>}
       {tournament === null && <p className="text-center pt-24" style={{ color: "var(--color-muted)", fontSize: "var(--text-title)" }}>Ingen turnering er i gang.</p>}
       {tournament && !isKnockout(tournament) && !isPilot(tournament) && <p className="text-center pt-24" style={{ color: "var(--color-muted)", fontSize: "var(--text-title)" }}>Den siste turneringen har gruppespill og vises ikke her.</p>}
@@ -119,6 +126,9 @@ export default function StorskjermTurneringPage() {
         <>
           <header className="text-center mb-6">
             {tournament.cup ? <div className="mx-auto" style={{ maxWidth: "40rem" }}><CupBanner cup={tournament.cup} name={tournamentTitle(tournament)} large /></div> : <p className="section-label" style={{ fontSize: "var(--text-body)" }}>{tournamentTitle(tournament).toUpperCase()}</p>}
+            <div className="mx-auto mt-4" style={{ maxWidth: "48rem" }}>
+              <StageStrip tournament={tournament} large />
+            </div>
             {next ? (
               <>
                 <h1 className="sr-only">
@@ -128,7 +138,7 @@ export default function StorskjermTurneringPage() {
                   NESTE · {roundName(next).toUpperCase()}
                 </p>
                 <div className="mx-auto" style={{ maxWidth: "64rem" }}>
-                  <MatchPoster large tint={cupColor(tournament.cup?.kind)} a={posterSides(tournament, next, records, chance)[0]} b={posterSides(tournament, next, records, chance)[1]} />
+                  <MatchPoster large tint={cupColor(tournament.cup?.kind)} a={posterSides(tournament, next, records, chance, ratings)[0]} b={posterSides(tournament, next, records, chance, ratings)[1]} />
                 </div>
                 {queue.length > 0 && (
                   <p className="mt-4" style={{ color: "var(--color-muted)", fontSize: "var(--text-title)" }}>
@@ -143,6 +153,7 @@ export default function StorskjermTurneringPage() {
           <div className="rounded-2xl p-4 mx-auto" style={{ background: "var(--color-panel)", border: "1px solid var(--color-border)", maxWidth: "100rem" }}>
             <BracketTree tournament={tournament} nextId={next?.id ?? null} justDecidedId={justDecided} large />
           </div>
+          <ResultTicker tournament={tournament} />
         </>
       )}
     </TvFrame>

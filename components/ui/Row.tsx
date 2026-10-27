@@ -72,7 +72,7 @@ export function Row({
       {opens && <ChevronRightIcon className="w-4 h-4 shrink-0" />}
     </>
   );
-  const cls = `${opens ? "tactile" : ""} flex items-center gap-3 w-full ${FOCUS_RING}`;
+  const cls = `${opens ? "tactile" : ""} flex items-center gap-3 w-full min-w-0 ${FOCUS_RING}`;
   // data-nav marks what the arrow keys move between (see useArrowNav).
   if (href) {
     return (
