@@ -2919,3 +2919,103 @@ html[data-pack="midnatt"]:not([data-theme="light"]) {
 .result-ticker-item b {
   color: var(--color-cream);
 }
+
+/* -- Highstriker: the lives, and what happens when one goes -- */
+.heart {
+  display: inline-flex;
+  color: var(--color-red);
+}
+.heart--lost {
+  color: var(--color-muted);
+  opacity: 0.45;
+}
+
+/* The life that was just lost: it swells, cracks sideways and falls away to an outline. */
+.heart--fresh {
+  animation: heart-break 900ms var(--ease-standard) both;
+}
+@keyframes heart-break {
+  0% {
+    transform: scale(1);
+    color: var(--color-red);
+  }
+  25% {
+    transform: scale(1.7) rotate(-8deg);
+    color: var(--color-red);
+  }
+  45% {
+    transform: scale(1.7) rotate(8deg);
+  }
+  100% {
+    transform: translateY(0.4rem) scale(0.9);
+    color: var(--color-muted);
+    opacity: 0.45;
+  }
+}
+
+/* A card that took a hit flashes red once. In Party and up the whole card shakes as well. */
+.hs-flash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: var(--color-red);
+  opacity: 0;
+  animation: hs-flash 700ms ease-out both;
+}
+@keyframes hs-flash {
+  0% {
+    opacity: 0.55;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+html[data-fx="party"] .hs-hit,
+html[data-fx="full"] .hs-hit {
+  animation: hs-shake 520ms ease-in-out both;
+}
+@keyframes hs-shake {
+  0%, 100% { transform: translateX(0); }
+  15% { transform: translateX(-0.5rem) rotate(-0.6deg); }
+  35% { transform: translateX(0.5rem) rotate(0.6deg); }
+  55% { transform: translateX(-0.35rem); }
+  75% { transform: translateX(0.25rem); }
+}
+
+/* Someone who is out: grey, and they slide back a little. */
+.hs-out {
+  filter: grayscale(1);
+  opacity: 0.55;
+  transition: opacity var(--duration-base) var(--ease-standard), filter var(--duration-base) var(--ease-standard);
+}
+
+/* The number to beat is new every round, and it lands. */
+.hs-target-number {
+  animation: hs-target 420ms var(--ease-standard) both;
+}
+@keyframes hs-target {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heart--fresh,
+  .hs-flash,
+  .hs-hit,
+  .hs-target-number {
+    animation: none !important;
+  }
+  .heart--fresh {
+    color: var(--color-muted);
+    opacity: 0.45;
+  }
+}

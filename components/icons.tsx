@@ -512,3 +512,12 @@ export function KeypadIcon({ className }: IconProps) {
     </Svg>
   );
 }
+
+/** A life: a heart, filled while it is there and an outline when it is lost. */
+export function HeartIcon({ className, filled = true }: IconProps & { filled?: boolean }) {
+  return (
+    <Svg className={className}>
+      <path d="M12 20.5s-8-4.9-8-10.6A4.4 4.4 0 0 1 12 7.3a4.4 4.4 0 0 1 8 2.6c0 5.7-8 10.6-8 10.6z" fill={filled ? "currentColor" : "none"} />
+    </Svg>
+  );
+}

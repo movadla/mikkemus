@@ -4,14 +4,12 @@ import { useState } from "react";
 import {
   DARTS_PER_ROUND,
   averageOf,
-  canGrow,
   dartsOf,
   judge,
   lastRoundOf,
   newGame,
   playRound,
   playerUp,
-  pressDigit,
   remainingOf,
   undoRound,
   winnerOf,
@@ -22,9 +20,9 @@ import { haptics } from "@/lib/haptics";
 import { splitPeople, type Person } from "@/lib/people";
 import { individualSetupProblem, setupSummary } from "@/lib/setupProblem";
 import { useRoster } from "@/lib/storage";
-import { uiFeedback } from "@/lib/uiSound";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { PlayerPicker } from "./PlayerPicker";
+import { ScoreKeypad } from "./ScoreKeypad";
 import { ScreenTop } from "./ScreenTop";
 import { commitPeople } from "./SetupScreen";
 import { StickyAction } from "./StickyAction";
@@ -95,7 +93,6 @@ function CountdownGameScreen({
   onHome: () => void;
   onNew: () => void;
 }) {
-  const [typed, setTyped] = useState("");
   const [finishing, setFinishing] = useState<number | null>(null);
   const [notice, setNotice] = useState("");
   const [confirmExit, setConfirmExit] = useState(false);
@@ -106,7 +103,6 @@ function CountdownGameScreen({
   /** The round is written in: over the line it counts for nothing, a finish asks how many darts it took, anything else goes on. */
   function submit(scored: number) {
     const verdict = judge(left, scored, game.doubleOut);
-    setTyped("");
     if (verdict === "finish") {
       setFinishing(scored);
       return;
@@ -116,34 +112,14 @@ function CountdownGameScreen({
     setGame(playRound(game, scored));
   }
 
-  function press(digit: number) {
-    uiFeedback("pick");
-    const next = pressDigit(typed, digit);
-    if (next === typed) return;
-    if (canGrow(next)) setTyped(next);
-    else submit(Number(next));
-  }
-
-  /** With something written, the key takes the last digit back; with nothing written, it takes the last round back. */
-  function back() {
-    uiFeedback("pick");
-    if (typed !== "") {
-      setTyped(typed.slice(0, -1));
-      return;
-    }
-    undo();
-  }
-
   function undo() {
     haptics.undo();
     setNotice("");
-    setTyped("");
     setGame(undoRound(game));
   }
 
   const key = `tactile flex items-center justify-center font-display ${FOCUS_RING}`;
   const keyStyle = { minHeight: "var(--control-lg)", borderRadius: "var(--radius-m)", background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-cream)", fontSize: "var(--text-num)", boxShadow: "var(--elevation-1)" } as const;
-  const nothingToTakeBack = game.turns.length === 0 && typed === "";
 
   if (winner) {
     const darts = dartsOf(game, winner);
@@ -267,44 +243,14 @@ function CountdownGameScreen({
           })}
         </ul>
 
-        <div role="status" aria-live="polite" className="text-center mb-2" style={{ minHeight: "1.5rem", color: notice ? "var(--color-red)" : "var(--color-muted)", fontSize: "var(--text-small)" }}>
-          {notice || `${up} kaster · skriv hva runden ble`}
-        </div>
-        <div
-          className="flex items-center justify-center mb-3"
-          style={{ minHeight: "4.5rem", borderRadius: "var(--radius-m)", background: "var(--color-panel)", border: "1px solid var(--color-border)", boxShadow: "var(--elevation-0)" }}
-          aria-label={typed === "" ? "Ingen tall skrevet" : `Skrevet: ${typed}`}
-        >
-          <span className="num" style={{ fontSize: "3rem", color: typed === "" ? "var(--color-muted)" : "var(--color-cream)" }}>
-            {typed === "" ? "–" : typed}
-          </span>
-        </div>
-
-        <div className="grid grid-cols-3 gap-2 mb-2" role="group" aria-label="Tastatur">
-          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => (
-            <button key={d} type="button" onClick={() => press(d)} className={key} style={keyStyle}>
-              {d}
-            </button>
-          ))}
-          <button type="button" onClick={back} disabled={nothingToTakeBack} className={key} style={{ ...keyStyle, fontSize: "var(--text-body)", fontFamily: "var(--font-sans)", fontWeight: 600, opacity: nothingToTakeBack ? 0.4 : 1 }}>
-            {typed !== "" ? "Slett" : "Angre"}
-          </button>
-          <button type="button" onClick={() => press(0)} className={key} style={keyStyle}>
-            0
-          </button>
-          <button
-            type="button"
-            onClick={() => submit(Number(typed))}
-            disabled={typed === ""}
-            className={`glossy font-semibold ${FOCUS_RING}`}
-            style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", minHeight: "var(--control-lg)", borderRadius: "var(--radius-pill)", opacity: typed === "" ? 0.4 : 1, fontSize: "var(--text-title)" } as React.CSSProperties}
-          >
-            Bekreft
-          </button>
-        </div>
-        <p className="text-center" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
-          Fra 19 og opp går runden inn av seg selv.
-        </p>
+        <ScoreKeypad
+          onSubmit={submit}
+          onUndo={undo}
+          canUndo={game.turns.length > 0}
+          line={() => (
+            <span style={{ color: notice ? "var(--color-red)" : "var(--color-muted)" }}>{notice || `${up} kaster · skriv hva runden ble`}</span>
+          )}
+        />
       </div>
     </div>
   );
