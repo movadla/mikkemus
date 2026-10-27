@@ -2,6 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { callOut } from "@/lib/announcer";
+import type { BotLevel } from "@/lib/botLevels";
+import { botCountdownRound, type BotRound } from "@/lib/botDarts";
+import { botDelayMs } from "@/lib/botSpeed";
+import { undoThroughBots } from "@/lib/botTurns";
 import { checkoutsOf } from "@/lib/checkout";
 import { generateConfettiRain } from "@/lib/confetti";
 import { playFanfare } from "@/lib/fanfare";
@@ -21,7 +25,6 @@ import {
   remainingOf,
   roundsOf,
   tonsOf,
-  undoRound,
   winnerOf,
   type CountdownGame,
   type CountdownStart,
@@ -31,6 +34,7 @@ import { splitPeople, type Person } from "@/lib/people";
 import { individualSetupProblem, setupSummary } from "@/lib/setupProblem";
 import { useRoster } from "@/lib/storage";
 import { CheckoutChips, checkoutLabel } from "./CheckoutChips";
+import { useBotTurn } from "./useBotTurn";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { PlayerPicker } from "./PlayerPicker";
 import { RollingNumber } from "./RollingNumber";
@@ -58,10 +62,11 @@ export function CountdownApp({ onExitToHome }: { onExitToHome: () => void }) {
   const [start, setStart] = useState<CountdownStart>(501);
   const [doubleOut, setDoubleOut] = useState(true);
   const [game, setGame] = useState<CountdownGame | null>(null);
+  const [botLevels, setBotLevels] = useState<Record<string, BotLevel>>({});
   const photos = new Map(useRoster().map((r) => [r.name, r.photo]));
 
   if (!game) {
-    const problem = individualSetupProblem(people.map((p) => p.name), false);
+    const problem = (people.length > 0 && people.every((p) => p.isBot) ? "Velg minst én spiller" : individualSetupProblem(people.map((p) => p.name), false)) || null;
     return (
       <div className="animate-screen-push screen has-sticky-action">
         <div className="screen-inner">
@@ -70,14 +75,16 @@ export function CountdownApp({ onExitToHome }: { onExitToHome: () => void }) {
           <div className="mb-4">
             <Segmented value={String(start) as "301" | "501"} onChange={(v) => setStart(Number(v) as CountdownStart)} label="Start fra" options={[{ value: "501", label: "501" }, { value: "301", label: "301" }]} />
           </div>
-          <PlayerPicker people={people} onChange={setPeople} botsAllowed={false} guests />
+          <PlayerPicker people={people} onChange={setPeople} guests />
           <div className="mt-4">
             <SwitchRow label="Dobbel ut" hint="Står det 1 igjen, er runden over streken" checked={doubleOut} onChange={setDoubleOut} />
           </div>
           <StickyAction
             onClick={() => {
               commitPeople(people);
-              setGame(newGame(start, doubleOut, splitPeople(people).players));
+              const split = splitPeople(people);
+              setBotLevels(split.botLevels);
+              setGame(newGame(start, doubleOut, split.players));
             }}
             ready={!problem}
             summary={setupSummary([`${people.length} ${people.length === 1 ? "spiller" : "spillere"}`, String(start)])}
@@ -90,24 +97,28 @@ export function CountdownApp({ onExitToHome }: { onExitToHome: () => void }) {
     );
   }
 
-  return <CountdownGameScreen game={game} setGame={setGame} photos={photos} onHome={onExitToHome} onNew={() => setGame(null)} />;
+  return <CountdownGameScreen game={game} setGame={setGame} botLevels={botLevels} photos={photos} onHome={onExitToHome} onNew={() => setGame(null)} />;
 }
 
 function CountdownGameScreen({
   game,
   setGame,
+  botLevels,
   photos,
   onHome,
   onNew,
 }: {
   game: CountdownGame;
   setGame: (g: CountdownGame) => void;
+  botLevels: Record<string, BotLevel>;
   photos: Map<string, string | null | undefined>;
   onHome: () => void;
   onNew: () => void;
 }) {
   const [finishing, setFinishing] = useState<number | null>(null);
   const [notice, setNotice] = useState("");
+  /** The darts of the bot that threw last, for the line under the board: told as it is, not as a warning. */
+  const [botNote, setBotNote] = useState("");
   const [confirmExit, setConfirmExit] = useState(false);
   /** The round that just went in, while what it did plays: set when one goes in, cleared when one is taken back. */
   const [fresh, setFresh] = useState<{ n: number; player: string; scored: number; bust: boolean } | null>(null);
@@ -118,6 +129,8 @@ function CountdownGameScreen({
   const left = remainingOf(game, up);
   const way = checkoutsOf(left, game.doubleOut, 1)[0] ?? null;
   const leader = leaderOf(game);
+  const isBot = (p: string) => botLevels[p] !== undefined;
+  const botUp = !winner && isBot(up);
   const rain = useMemo(() => (winner && fx.confetti ? generateConfettiRain(fx.bigConfetti ? 60 : 36) : []), [winner, fx.confetti, fx.bigConfetti]);
 
   useEffect(() => {
@@ -141,6 +154,7 @@ function CountdownGameScreen({
       return;
     }
     haptics.confirm();
+    setBotNote("");
     setNotice(verdict === "bust" ? `${up}: over streken, runden teller ikke` : "");
     setFresh({ n: game.turns.length + 1, player: up, scored, bust: verdict === "bust" });
     if (verdict === "counts" && tierOf(scored) === "max" && fx.heat) {
@@ -150,12 +164,31 @@ function CountdownGameScreen({
     setGame(playRound(game, scored));
   }
 
+  /** A bot's round: its darts are shown, the number is said as for anyone else, and it goes in with the darts it took. */
+  function playBot(r: BotRound) {
+    const darts = r.labels.join(" · ");
+    callOut(r.bust ? "Over" : String(r.scored));
+    haptics.confirm();
+    setNotice("");
+    setBotNote(r.bust ? `${up}: ${darts}, over streken` : r.finished ? `${up}: ${darts}, tar ut!` : `${up}: ${darts} = ${r.scored}`);
+    setFresh({ n: game.turns.length + 1, player: up, scored: r.scored, bust: r.bust });
+    if (!r.bust && tierOf(r.scored) === "max" && fx.heat) {
+      setSlam(game.turns.length + 1);
+      if (fx.ringSlam) playFanfare();
+    }
+    setGame(playRound(game, r.scored, r.darts));
+  }
+
+  // A bot throws its round after a pause that follows the bot speed in Innstillinger.
+  useBotTurn(botUp && finishing === null, game.turns.length, () => botDelayMs() * 2 + 300, () => playBot(botCountdownRound(left, game.doubleOut, botLevels[up])));
+
   function undo() {
     haptics.undo();
     setNotice("");
+    setBotNote("");
     setFresh(null);
     setSlam(null);
-    setGame(undoRound(game));
+    setGame(undoThroughBots(game, isBot));
   }
 
   const key = `tactile flex items-center justify-center font-display ${FOCUS_RING}`;
@@ -325,7 +358,7 @@ function CountdownGameScreen({
                     <span key={mine.n} className="glint" />
                   </span>
                 )}
-                <Avatar name={p} photo={photos.get(p)} size="m" state={active ? "active" : "idle"} />
+                <Avatar name={p} photo={photos.get(p)} size="m" state={active ? "active" : "idle"} bot={isBot(p)} />
                 <div className="flex-1 min-w-0">
                   <p className="font-display truncate" style={{ fontSize: "var(--text-title)", lineHeight: 1.1 }}>
                     {p}
@@ -357,11 +390,14 @@ function CountdownGameScreen({
           })}
         </ul>
 
+        <div inert={botUp} style={{ opacity: botUp ? 0.45 : 1, transition: "opacity var(--pull)" }}>
         <ScoreKeypad
           onSubmit={submit}
           onUndo={undo}
           canUndo={game.turns.length > 0}
           line={(typed) => {
+            if (botUp) return <span style={{ color: "var(--color-muted)" }}>{up} kaster …</span>;
+            if (typed === "" && botNote && !notice) return <span style={{ color: "var(--color-text-2)" }}>{botNote}</span>;
             if (typed === "") return <span style={{ color: notice ? "var(--color-red)" : "var(--color-muted)" }}>{notice || `${up} kaster · skriv hva runden ble`}</span>;
             const n = Number(typed);
             const verdict = judge(left, n, game.doubleOut);
@@ -374,6 +410,7 @@ function CountdownGameScreen({
             );
           }}
         />
+        </div>
         <div className="mt-3">
           <VoiceSwitch />
         </div>

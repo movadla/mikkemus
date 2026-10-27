@@ -38,6 +38,10 @@ import { StickyAction } from "./StickyAction";
 import { Avatar } from "./ui/Avatar";
 import { Button } from "./ui/Button";
 import { SwitchRow } from "./ui/Switch";
+import { useBotTurn } from "./useBotTurn";
+import type { BotLevel } from "@/lib/botLevels";
+import { botLavaDart } from "@/lib/botDarts";
+import { botDelayMs } from "@/lib/botSpeed";
 
 /** What the last dart did, in words: said under the board, and read out by the screen reader. */
 function describe(d: LavaDart): string {
@@ -55,10 +59,11 @@ export function LavaApp({ onExitToHome }: { onExitToHome: () => void }) {
   const [advanced, setAdvanced] = useState(false);
   const [lives, setLives] = useState(DEFAULT_LIVES);
   const [game, setGame] = useState<LavaGame | null>(null);
+  const [botLevels, setBotLevels] = useState<Record<string, BotLevel>>({});
   const photos = new Map(useRoster().map((r) => [r.name, r.photo]));
 
   if (!game) {
-    const problem = individualSetupProblem(people.map((p) => p.name), false, 2);
+    const problem = (people.length > 0 && people.every((p) => p.isBot) ? "Velg minst én spiller" : individualSetupProblem(people.map((p) => p.name), false, 2)) || null;
     return (
       <div className="animate-screen-push screen has-sticky-action">
         <div className="screen-inner">
@@ -66,7 +71,7 @@ export function LavaApp({ onExitToHome }: { onExitToHome: () => void }) {
           <p className="mb-4" style={{ color: "var(--color-text-2)", fontSize: "var(--text-body)" }}>
             Treffer du et felt, blir det lava for alle: dobbel, trippel og begge enkeltfeltene. Treffer noen lava, mister de et liv.
           </p>
-          <PlayerPicker people={people} onChange={setPeople} botsAllowed={false} guests />
+          <PlayerPicker people={people} onChange={setPeople} guests />
           <div className="mt-4 space-y-2">
             <SwitchRow
               label="Avanserte innstillinger"
@@ -93,7 +98,9 @@ export function LavaApp({ onExitToHome }: { onExitToHome: () => void }) {
           <StickyAction
             onClick={() => {
               commitPeople(people);
-              setGame(newGame(lives, splitPeople(people).players));
+              const split = splitPeople(people);
+              setBotLevels(split.botLevels);
+              setGame(newGame(lives, split.players));
             }}
             ready={!problem}
             summary={setupSummary([`${people.length} spillere`, `${lives} liv`])}
@@ -106,18 +113,20 @@ export function LavaApp({ onExitToHome }: { onExitToHome: () => void }) {
     );
   }
 
-  return <LavaGameScreen game={game} setGame={setGame} photos={photos} onHome={onExitToHome} onNew={() => setGame(null)} />;
+  return <LavaGameScreen game={game} setGame={setGame} botLevels={botLevels} photos={photos} onHome={onExitToHome} onNew={() => setGame(null)} />;
 }
 
 function LavaGameScreen({
   game,
   setGame,
+  botLevels,
   photos,
   onHome,
   onNew,
 }: {
   game: LavaGame;
   setGame: (g: LavaGame) => void;
+  botLevels: Record<string, BotLevel>;
   photos: Map<string, string | null | undefined>;
   onHome: () => void;
   onNew: () => void;
@@ -129,6 +138,8 @@ function LavaGameScreen({
   const state = useMemo(() => stateOf(game), [game]);
   const { winner, up } = state;
   const big = fx.heat;
+  const isBot = (p: string) => botLevels[p] !== undefined;
+  const botUp = !winner && isBot(up);
   const rain = useMemo(() => (winner && fx.confetti ? generateConfettiRain(fx.bigConfetti ? 60 : 36) : []), [winner, fx.confetti, fx.bigConfetti]);
 
   useEffect(() => {
@@ -152,10 +163,16 @@ function LavaGameScreen({
     setGame(next);
   }
 
+  // A bot throws a dart at a time, with a pause that follows the bot speed in Innstillinger.
+  useBotTurn(botUp, game.darts.length, () => botDelayMs() + 250, () => pick(botLavaDart(new Set(state.burned.keys()), botLevels[up]).section));
+
   function undo() {
     haptics.undo();
     setFresh(null);
-    setGame(undoDart(game));
+    // Taking a dart back also takes back the bots' darts after it, or the bot would throw it again at once.
+    let g = game;
+    while (g.darts.length > 0 && isBot(stateOf(g).log.at(-1)!.player)) g = undoDart(g);
+    setGame(undoDart(g));
   }
 
   if (winner) {
@@ -247,7 +264,7 @@ function LavaGameScreen({
                 }}
               >
                 {hit && <span key={fresh?.n} aria-hidden className="hs-flash" />}
-                <Avatar name={p} photo={photos.get(p)} size="m" state={active ? "active" : "idle"} />
+                <Avatar name={p} photo={photos.get(p)} size="m" state={active ? "active" : "idle"} bot={isBot(p)} />
                 <div className="flex-1 min-w-0">
                   <p className="font-display truncate" style={{ fontSize: "var(--text-body)", lineHeight: 1.1 }}>
                     {p}
@@ -263,7 +280,7 @@ function LavaGameScreen({
           })}
         </ul>
 
-        <LavaBoard burned={state.burned} effect={fresh?.dart ?? null} effectKey={fresh?.n ?? 0} darts={roundDarts} onPick={pick} big={big} />
+        <LavaBoard burned={state.burned} effect={fresh?.dart ?? null} effectKey={fresh?.n ?? 0} darts={roundDarts} onPick={pick} disabled={botUp} big={big} />
 
         <div role="status" aria-live="polite" className="text-center mt-3 mb-2" style={{ minHeight: "1.5rem", fontSize: "var(--text-body)", fontWeight: 600, color: fresh?.dart.outcome === "lava" ? "var(--color-red)" : "var(--color-cream)" }}>
           {message}
@@ -272,10 +289,10 @@ function LavaGameScreen({
           {up} · pil {Math.min(state.thrown + 1, DARTS_PER_ROUND)} av {DARTS_PER_ROUND} · {safeLeft(state)} felt er trygge
         </p>
         <div className="grid grid-cols-2 gap-2">
-          <Button block size="lg" onClick={() => pick(MISS)}>
+          <Button block size="lg" onClick={() => pick(MISS)} disabled={botUp}>
             Bom
           </Button>
-          <Button block size="lg" onClick={undo} disabled={!last}>
+          <Button block size="lg" onClick={undo} disabled={!last || botUp}>
             Angre
           </Button>
         </div>

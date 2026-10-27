@@ -2,6 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { callOut } from "@/lib/announcer";
+import type { BotLevel } from "@/lib/botLevels";
+import { botHighstrikerRound } from "@/lib/botDarts";
+import { botDelayMs } from "@/lib/botSpeed";
+import { undoThroughBots } from "@/lib/botTurns";
 import { generateConfettiRain } from "@/lib/confetti";
 import { playFanfare } from "@/lib/fanfare";
 import { fxFlags, useFxLevel } from "@/lib/fxLevel";
@@ -29,6 +33,7 @@ import { individualSetupProblem, setupSummary } from "@/lib/setupProblem";
 import { useRoster } from "@/lib/storage";
 import { uiSound } from "@/lib/uiSound";
 import { Bell } from "./Bell";
+import { useBotTurn } from "./useBotTurn";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { Hearts } from "./Hearts";
 import { MinusIcon, PlusIcon } from "./icons";
@@ -70,10 +75,11 @@ export function HighstrikerApp({ onExitToHome }: { onExitToHome: () => void }) {
   const [advanced, setAdvanced] = useState(false);
   const [lives, setLives] = useState(DEFAULT_LIVES);
   const [game, setGame] = useState<HighstrikerGame | null>(null);
+  const [botLevels, setBotLevels] = useState<Record<string, BotLevel>>({});
   const photos = new Map(useRoster().map((r) => [r.name, r.photo]));
 
   if (!game) {
-    const problem = individualSetupProblem(people.map((p) => p.name), false, 2);
+    const problem = (people.length > 0 && people.every((p) => p.isBot) ? "Velg minst én spiller" : individualSetupProblem(people.map((p) => p.name), false, 2)) || null;
     return (
       <div className="animate-screen-push screen has-sticky-action">
         <div className="screen-inner">
@@ -81,7 +87,7 @@ export function HighstrikerApp({ onExitToHome }: { onExitToHome: () => void }) {
           <p className="mb-4" style={{ color: "var(--color-text-2)", fontSize: "var(--text-body)" }}>
             Hver runde må være mer enn runden før. Gjør du ikke det, mister du et liv.
           </p>
-          <PlayerPicker people={people} onChange={setPeople} botsAllowed={false} guests />
+          <PlayerPicker people={people} onChange={setPeople} guests />
           <div className="mt-4 space-y-2">
             <SwitchRow
               label="Avanserte innstillinger"
@@ -108,7 +114,9 @@ export function HighstrikerApp({ onExitToHome }: { onExitToHome: () => void }) {
           <StickyAction
             onClick={() => {
               commitPeople(people);
-              setGame(newGame(lives, splitPeople(people).players));
+              const split = splitPeople(people);
+              setBotLevels(split.botLevels);
+              setGame(newGame(lives, split.players));
             }}
             ready={!problem}
             summary={setupSummary([`${people.length} spillere`, `${lives} liv`])}
@@ -121,18 +129,20 @@ export function HighstrikerApp({ onExitToHome }: { onExitToHome: () => void }) {
     );
   }
 
-  return <HighstrikerGameScreen game={game} setGame={setGame} photos={photos} onHome={onExitToHome} onNew={() => setGame(null)} />;
+  return <HighstrikerGameScreen game={game} setGame={setGame} botLevels={botLevels} photos={photos} onHome={onExitToHome} onNew={() => setGame(null)} />;
 }
 
 function HighstrikerGameScreen({
   game,
   setGame,
+  botLevels,
   photos,
   onHome,
   onNew,
 }: {
   game: HighstrikerGame;
   setGame: (g: HighstrikerGame) => void;
+  botLevels: Record<string, BotLevel>;
   photos: Map<string, string | null | undefined>;
   onHome: () => void;
   onNew: () => void;
@@ -140,6 +150,8 @@ function HighstrikerGameScreen({
   const [confirmExit, setConfirmExit] = useState(false);
   /** What is written on the keypad, so the tower can rise with it. */
   const [typed, setTyped] = useState("");
+  /** The darts of the bot that threw last, for the line under the tower. */
+  const [botNote, setBotNote] = useState("");
   const fx = fxFlags(useFxLevel());
   const winner = winnerOf(game);
   const up = playerUp(game);
@@ -151,6 +163,8 @@ function HighstrikerGameScreen({
   const written = typed === "" ? 0 : Number(typed);
   const passes = least !== null && typed !== "" && written >= least;
   const lastLife = !winner && game.turns.length > 0 && upLives === 1;
+  const isBot = (p: string) => botLevels[p] !== undefined;
+  const botUp = !winner && isBot(up);
 
   // A player on the last life is told so, once, when the turn comes to them.
   useEffect(() => {
@@ -163,7 +177,8 @@ function HighstrikerGameScreen({
     if (winner && fx.confetti) playFanfare();
   }, [winner, fx.confetti]);
 
-  function submit(scored: number) {
+  function submit(scored: number, darts?: string) {
+    setBotNote(darts ? `${up}: ${darts} = ${scored}` : "");
     const next = playRound(game, scored);
     const turn = next.turns[next.turns.length - 1];
     const nextUp = playerUp(next);
@@ -177,6 +192,17 @@ function HighstrikerGameScreen({
       uiSound("confirm");
     }
     setGame(next);
+  }
+
+  // A bot throws its round after a pause that follows the bot speed in Innstillinger.
+  useBotTurn(botUp, game.turns.length, () => botDelayMs() * 2 + 300, () => {
+    const r = botHighstrikerRound(least, botLevels[up]);
+    submit(r.scored, r.labels.join(" · "));
+  });
+
+  function undo() {
+    setBotNote("");
+    setGame(undoThroughBots(game, isBot));
   }
 
   if (winner) {
@@ -284,7 +310,7 @@ function HighstrikerGameScreen({
                     UTE
                   </span>
                 )}
-                <Avatar name={p} photo={photos.get(p)} size="m" state={active ? "active" : "idle"} />
+                <Avatar name={p} photo={photos.get(p)} size="m" state={active ? "active" : "idle"} bot={isBot(p)} />
                 <div className="flex-1 min-w-0">
                   <p className="font-display truncate" style={{ fontSize: "var(--text-title)", lineHeight: 1.1 }}>
                     {p}
@@ -349,12 +375,15 @@ function HighstrikerGameScreen({
           </div>
         </div>
 
+        <div inert={botUp} style={{ opacity: botUp ? 0.45 : 1, transition: "opacity var(--pull)" }}>
         <ScoreKeypad
           onTyped={setTyped}
           onSubmit={submit}
-          onUndo={() => setGame(undoRound(game))}
+          onUndo={undo}
           canUndo={game.turns.length > 0}
           line={(typed) => {
+            if (botUp) return <span style={{ color: "var(--color-muted)" }}>{up} kaster …</span>;
+            if (typed === "" && botNote) return <span style={{ color: "var(--color-muted)" }}>{botNote}</span>;
             if (typed === "" || least === null) return <span style={{ color: "var(--color-muted)" }}>{up} kaster · skriv hva runden ble</span>;
             const n = Number(typed);
             return n >= least ? (
@@ -366,6 +395,7 @@ function HighstrikerGameScreen({
             );
           }}
         />
+        </div>
         <div className="mt-3">
           <VoiceSwitch />
         </div>
