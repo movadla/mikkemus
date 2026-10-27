@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { awards, bracketRounds, createKnockout, firstRoundPairs, houseAlive, nextPlayable, openDraw, outIn, placeholderLabel, recordKnockoutResult, roadOf, routeOf, seedByStrength, undoLastResult, undoableMatch } from "./knockout";
+import { awards, bracketRounds, createKnockout, firstRoundPairs, houseAlive, nextPlayable, openDraw, outIn, placeholderLabel, placeholderShort, recordKnockoutResult, roadOf, routeOf, seedByStrength, undoLastResult, undoableMatch } from "./knockout";
 import { podium, recordMatchResult, type Participant, type Tournament } from "./tournament";
 
 const people = (n: number, bots = 0): Participant[] => Array.from({ length: n }, (_, i) => ({ name: `P${i + 1}`, isBot: i >= n - bots }));
@@ -201,5 +201,15 @@ describe("the route of one entrant", () => {
     expect(routeOf(t, "P1").has("bracket-2-0")).toBe(true);
     const out = routeOf(t, "P8");
     expect([...out]).toEqual(["bracket-4-0"]);
+  });
+});
+
+describe("placeholderShort", () => {
+  it("kortner ned plassene i treet", () => {
+    expect(placeholderShort("Vinner Semifinale 2")).toBe("V S2");
+    expect(placeholderShort("Taper Semifinale 1")).toBe("T S1");
+    expect(placeholderShort("Vinner Kvartfinale 3")).toBe("V K3");
+    expect(placeholderShort("Vinner Runde av 16 3")).toBe("V R16 3");
+    expect(placeholderShort("Frist plass")).toBe("Frist plass");
   });
 });

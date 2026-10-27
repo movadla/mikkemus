@@ -316,3 +316,34 @@ export function pilotStages(t: Tournament): { stage: PilotInfo["stage"]; title: 
 export function currentStage(t: Tournament): PilotInfo["stage"] | null {
   return nextPilotMatch(t)?.pilot?.stage ?? null;
 }
+
+/** Where the places of a match of four lead, for the colour marks: the first two and the last two, with the lane they go to. */
+export type Route = { places: string; to: string; tone: "teal" | "bronze" | "gold" | "muted" };
+
+export function routesOf(stage: PilotInfo["stage"] | undefined): [Route, Route] | null {
+  switch (stage) {
+    case "heat":
+      return [
+        { places: "1–2", to: "Vinnerbane", tone: "teal" },
+        { places: "3–4", to: "Taperbane", tone: "bronze" },
+      ];
+    case "winners":
+      return [
+        { places: "1–2", to: "Kvartfinale", tone: "teal" },
+        { places: "3–4", to: "Lucky loser", tone: "gold" },
+      ];
+    case "losers":
+      return [
+        { places: "1–2", to: "Lucky loser", tone: "gold" },
+        { places: "3–4", to: "Ute", tone: "muted" },
+      ];
+    default:
+      return null;
+  }
+}
+
+/** «1. i Heat A» as the short mark an empty place carries: «A1». Anything else is left as it is. */
+export function slotShort(label: string): string {
+  const m = /^(\d+)\. i Heat ([A-Z]+)$/.exec(label);
+  return m ? `${m[2]}${m[1]}` : label;
+}

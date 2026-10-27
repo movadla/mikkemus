@@ -36,7 +36,24 @@ export function posterSides(t: Tournament, match: TournamentMatch, records: Pick
   return [sideOf(match.participantA!, chance), sideOf(match.participantB!, chance === null ? null : 1 - chance)];
 }
 
-export function Side({ side, large }: { side: PosterSide; large: boolean }) {
+export function Side({ side, large, clean = false }: { side: PosterSide; large: boolean; clean?: boolean }) {
+  if (clean) {
+    // The quiet card: the face, the name and the seeding as a small tag in the corner. The chance of winning is the stripe under the poster.
+    return (
+      <div className="match-side relative" style={{ "--pc": avatarAccent(side.name), padding: "1.5rem 0.5rem 1rem" } as CSSProperties}>
+        {side.seed ? (
+          <span className="seed-tag" title={`Seedet ${side.seed}`}>
+            <span className="sr-only">Seedet </span>
+            {side.seed}
+          </span>
+        ) : null}
+        <Avatar name={side.name} photo={side.photo} size="l" bot={side.bot} />
+        <p className="font-display w-full truncate mt-1" style={{ color: "var(--color-cream)", fontSize: "var(--text-title)", lineHeight: 1.1 }}>
+          {side.name}
+        </p>
+      </div>
+    );
+  }
   return (
     <div className="match-side" style={{ "--pc": avatarAccent(side.name), padding: large ? "1.75rem 1rem" : "1rem 0.5rem" } as CSSProperties}>
       <Avatar name={side.name} photo={side.photo} size={large ? "xl" : "l"} bot={side.bot} />
@@ -72,16 +89,23 @@ export function PosterGrid({ sides, large = false }: { sides: PosterSide[]; larg
 
 /**
  * The match to play, as a poster: the two sides as cards in their own colours with face, seeding, name, a bot's level and the chance
- * of winning, and «mot» between them in the colour of the cup. The same on the phone and, large, on the big screen.
+ * of winning, and «mot» between them in the colour of the cup. On the phone the card is quiet: face, name and a seeding tag, with a VS medal
+ * between them; the chance of winning is a stripe under it. The same on the phone and, large, on the big screen.
  */
 export function MatchPoster({ a, b, tint = "var(--color-teal)", large = false }: { a: PosterSide; b: PosterSide; tint?: string; large?: boolean }) {
   return (
     <div className="flex items-stretch gap-2" role="group" aria-label={`${a.name} mot ${b.name}`}>
-      <Side side={a} large={large} />
-      <span className="font-display self-center" style={{ color: tint, fontSize: large ? "var(--text-num)" : "var(--text-body)" }}>
-        mot
-      </span>
-      <Side side={b} large={large} />
+      <Side side={a} large={large} clean={!large} />
+      {large ? (
+        <span className="font-display self-center" style={{ color: tint, fontSize: "var(--text-num)" }}>
+          mot
+        </span>
+      ) : (
+        <span className="vs-medal self-center" style={{ "--tint": tint } as CSSProperties} aria-hidden>
+          VS
+        </span>
+      )}
+      <Side side={b} large={large} clean={!large} />
     </div>
   );
 }

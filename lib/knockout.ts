@@ -354,3 +354,11 @@ export function routeOf(t: Tournament, name: string): Set<string> {
   }
   return ids;
 }
+
+/** «Vinner Semifinale 2» as the short mark in a bracket box: «V S2». «Taper Kvartfinale 1» is «T K1», «Vinner Runde av 16 3» is «V R16 3». */
+export function placeholderShort(label: string): string {
+  const m = /^(Vinner|Taper) (Semifinale|Kvartfinale|Runde av (\d+)) (\d+)$/.exec(label);
+  if (!m) return label;
+  const round = m[2] === "Semifinale" ? "S" : m[2] === "Kvartfinale" ? "K" : `R${m[3]} `;
+  return `${m[1][0]} ${round}${m[4]}`;
+}

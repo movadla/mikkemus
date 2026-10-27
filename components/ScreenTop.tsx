@@ -18,6 +18,7 @@ export function ScreenTop({
   backHref,
   backLabel = "Tilbake",
   right,
+  sub,
   scolia,
 }: {
   title: ReactNode;
@@ -27,6 +28,8 @@ export function ScreenTop({
   backLabel?: string;
   /** What sits on the right. */
   right?: ReactNode;
+  /** A line under the title, small: what the screen belongs to (the cup the tournament is played for). */
+  sub?: ReactNode;
   /** The board's status, shown as a dot in the right slot when nothing else is there. */
   scolia?: { label: string; color: string } | null;
 }) {
@@ -46,9 +49,18 @@ export function ScreenTop({
             <ArrowLeftIcon className="w-5 h-5" />
           </button>
         ) : null}
-        <h1 className="page-title flex-1 min-w-0 line-clamp-2" style={{ lineHeight: 1.15 }}>
-          {title}
-        </h1>
+        {sub ? (
+          <div className="flex-1 min-w-0">
+            <h1 className="page-title line-clamp-2" style={{ lineHeight: 1.15 }}>
+              {title}
+            </h1>
+            {sub}
+          </div>
+        ) : (
+          <h1 className="page-title flex-1 min-w-0 line-clamp-2" style={{ lineHeight: 1.15 }}>
+            {title}
+          </h1>
+        )}
         {rightSlot && <div className="flex items-center justify-end shrink-0">{rightSlot}</div>}
       </div>
       {/* A failed save shows up here, in the flow, rather than floating over the title. */}

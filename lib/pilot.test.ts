@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { HEAT_SEEDS, PILOT_SIZE, createPilot, currentStage, isReady, nextPilotMatch, pilotPlayers, pilotQueue, pilotSlotLabel, pilotStages, playPilotBots, readyMatches, recordPilotResult, undoPilotResult } from "./pilot";
+import { HEAT_SEEDS, PILOT_SIZE, createPilot, currentStage, isReady, nextPilotMatch, pilotPlayers, pilotQueue, pilotSlotLabel, pilotStages, playPilotBots, readyMatches, recordPilotResult, routesOf, slotShort, undoPilotResult } from "./pilot";
 import type { Participant, Tournament } from "./tournament";
 
 /** Sixteen entrants, P1 the strongest; the seeds in `botSeeds` are bots. */
@@ -241,5 +241,20 @@ describe("a cup with bots", () => {
     expect(byId(back, "h4").winner).toBeUndefined();
     expect(byId(back, "h1").winner).toBeUndefined();
     expect(byId(back, "h3").winner).toBeTruthy();
+  });
+});
+
+describe("merker for veien videre", () => {
+  it("gir to veier for heat og baner, og ingen for de andre", () => {
+    expect(routesOf("heat")!.map((r) => r.to)).toEqual(["Vinnerbane", "Taperbane"]);
+    expect(routesOf("winners")!.map((r) => r.tone)).toEqual(["teal", "gold"]);
+    expect(routesOf("losers")![1].to).toBe("Ute");
+    expect(routesOf("semi")).toBeNull();
+    expect(routesOf(undefined)).toBeNull();
+  });
+  it("kortet ned plassene til A1", () => {
+    expect(slotShort("1. i Heat A")).toBe("A1");
+    expect(slotShort("2. i Heat D")).toBe("D2");
+    expect(slotShort("Lucky 1")).toBe("Lucky 1");
   });
 });

@@ -289,6 +289,14 @@ export function ArrowLeftIcon({ className }: IconProps) {
   );
 }
 
+export function FitIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+    </Svg>
+  );
+}
+
 export function CheckIcon({ className }: IconProps) {
   return (
     <Svg className={className}>

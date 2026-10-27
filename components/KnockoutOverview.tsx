@@ -12,7 +12,7 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import { ScreenTop } from "./ScreenTop";
 import { StageStrip } from "./StageStrip";
 import { MatchPoster, posterSides, ratingsOf } from "./MatchPoster";
-import { CupBanner } from "./CupBanner";
+import { CupLine } from "./CupLine";
 
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
@@ -85,10 +85,16 @@ function NextUpCard({ tournament, match, queue, onPlay }: { tournament: Tourname
       <div className="mb-3">
         <MatchPoster a={sideA} b={sideB} tint={cupColor(tournament.cup?.kind)} />
       </div>
-      {chance !== null && (
-        <div className="flex rounded-full overflow-hidden mb-4" style={{ height: "0.35rem", background: "var(--color-cell)" }} role="img" aria-label={`Vinnersjanse: ${a} ${Math.round(chance * 100)} prosent`}>
-          <div style={{ width: `${chance * 100}%`, background: "var(--color-teal)" }} />
-          <div style={{ flex: 1, background: "var(--color-gold)" }} />
+      {chance !== null && Math.round(chance * 100) !== 50 && (
+        <div className="mb-4" role="img" aria-label={`Vinnersjanse: ${a} ${Math.round(chance * 100)} prosent`}>
+          <div className="flex justify-between tabular mb-1" style={{ fontSize: "var(--text-small)", fontWeight: 700 }}>
+            <span style={{ color: "var(--color-teal-strong)" }}>{Math.round(chance * 100)}</span>
+            <span style={{ color: "var(--color-gold-strong)" }}>{100 - Math.round(chance * 100)}</span>
+          </div>
+          <div className="flex rounded-full overflow-hidden" style={{ height: "0.5rem", background: "var(--color-cell)" }}>
+            <div style={{ width: `${chance * 100}%`, background: "var(--color-teal)" }} />
+            <div style={{ flex: 1, background: "var(--color-gold)" }} />
+          </div>
         </div>
       )}
       <button
@@ -215,9 +221,8 @@ export function KnockoutOverview({
       )}
       {selected && <MatchSheet tournament={tournament} match={selected} onClose={() => setSelected(null)} />}
       <div className="screen-inner" style={{ maxWidth: "min(100%, 64rem)" }}>
-        <ScreenTop title={tournamentTitle(tournament)} onBack={onExitToHome} right={onHistory ? <button type="button" onClick={onHistory} className={`tactile rounded-lg text-sm px-3 ${FOCUS_RING}`} style={{ minHeight: "var(--control)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}>Pokaler</button> : undefined} />
+        <ScreenTop title={tournamentTitle(tournament)} sub={tournament.cup ? <CupLine cup={tournament.cup} /> : undefined} onBack={onExitToHome} right={onHistory ? <button type="button" onClick={onHistory} className={`tactile rounded-lg text-sm px-3 ${FOCUS_RING}`} style={{ minHeight: "var(--control)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}>Pokaler</button> : undefined} />
         <StageStrip tournament={tournament} />
-        {tournament.cup && <CupBanner cup={tournament.cup} />}
         <div className="mx-auto" style={{ maxWidth: "28rem" }}>
           {just && <ResultCard tournament={tournament} match={just} />}
           {elsewhere.length > 0 && (

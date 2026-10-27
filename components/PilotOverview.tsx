@@ -4,11 +4,11 @@ import { useState } from "react";
 import { cupColor } from "@/lib/botCup";
 import { seedOf } from "@/lib/knockout";
 import { hasForcedRings } from "@/lib/rules";
-import { currentStage, nextPilotMatch, pilotPlayers, pilotQueue, pilotSlotLabel, pilotStages, undoablePilotMatch } from "@/lib/pilot";
+import { currentStage, nextPilotMatch, pilotPlayers, pilotQueue, pilotSlotLabel, pilotStages, routesOf, slotShort, undoablePilotMatch } from "@/lib/pilot";
 import { useRoster } from "@/lib/storage";
 import { tournamentTitle, type Tournament, type TournamentMatch } from "@/lib/tournament";
 import { ConfirmDialog } from "./ConfirmDialog";
-import { CupBanner } from "./CupBanner";
+import { CupLine } from "./CupLine";
 import { MatchPoster, PosterGrid, type PosterSide } from "./MatchPoster";
 import { ScreenTop } from "./ScreenTop";
 import { Avatar } from "./ui/Avatar";
@@ -73,14 +73,19 @@ function ResultCard({ match }: { match: TournamentMatch }) {
 function NextCard({ tournament, match, queue, photos, onPlay }: { tournament: Tournament; match: TournamentMatch; queue: TournamentMatch[]; photos: Map<string, string | null | undefined>; onPlay: () => void }) {
   const sides = sidesOf(tournament, match, photos);
   const forced = hasForcedRings(match.variant);
+  const routes = routesOf(match.pilot?.stage);
   return (
     <div className="card mb-4" style={{ ...card, border: "1px solid var(--color-teal)" }}>
       <p className="section-label mb-3 text-center">NESTE · {match.pilot?.label.toUpperCase()}</p>
       <div className="mb-3">{sides.length === 2 ? <MatchPoster a={sides[0]} b={sides[1]} tint={cupColor(tournament.cup?.kind)} /> : <PosterGrid sides={sides} />}</div>
-      {sides.length === 4 && (
-        <p className="mb-3 text-center" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
-          Den første som er ferdig vinner, resten rangeres etter streker igjen. {routingOf(match)}.
-        </p>
+      {sides.length === 4 && routes && (
+        <ul className="mb-3 flex flex-wrap items-center justify-center gap-2" aria-label="Veien videre">
+          {routes.map((rt) => (
+            <li key={rt.places} className="route-chip" data-tone={rt.tone}>
+              {rt.places} <span>{rt.to}</span>
+            </li>
+          ))}
+        </ul>
       )}
       {forced && (
         <p className="mb-3 text-center" style={{ color: "var(--color-gold-strong)", fontSize: "var(--text-small)", fontWeight: 600 }}>
@@ -125,6 +130,9 @@ export function MatchBox({ tournament, match, next }: { tournament: Tournament; 
   const rows = match.placements ?? players;
   const four = (slots?.length ?? 4) === 4;
   const expected = slots?.length ?? 4;
+  const routes = four ? routesOf(match.pilot?.stage) : null;
+  // The lanes are a grid of places (two by two), the heats a list in the order they throw.
+  const grid = four && (match.pilot?.stage === "winners" || match.pilot?.stage === "losers");
   // The lane has its own colour: winners in the everyday accent, losers in bronze, the lucky losers in gold, the rest in the cup's.
   const lane = match.pilot?.stage === "winners" ? "var(--color-teal)" : match.pilot?.stage === "losers" ? "var(--color-bronze)" : match.pilot?.stage === "lucky" ? "var(--color-gold)" : cupColor(tournament.cup?.kind);
   return (
@@ -140,26 +148,35 @@ export function MatchBox({ tournament, match, next }: { tournament: Tournament; 
           <span style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)", letterSpacing: "0.08em" }}>AUTO</span>
         )}
       </p>
-      <ol className="space-y-1.5">
+      <ol className={grid ? "grid grid-cols-2 gap-x-2 gap-y-1.5" : "space-y-1.5"}>
         {Array.from({ length: expected }, (_, i) => {
           const name = players.length === expected ? rows[i] : undefined;
+          const tone = routes ? routes[i < 2 ? 0 : 1].tone : undefined;
           if (!name) {
-            // A place nobody holds yet: a round shadow and what fills it.
-            return (
-              <li key={i} className="flex items-center gap-2" style={{ color: "var(--color-muted)", fontStyle: "italic", fontSize: "var(--text-small)" }}>
+            // A place nobody holds yet: a round shadow and what fills it. In the lane grid it is the short mark («A1»).
+            const label = pilotSlotLabel(tournament, match, i);
+            return grid ? (
+              <li key={i} className="flex items-center gap-1.5 min-w-0 route-row" data-tone={tone} style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
+                <span aria-hidden className="lane-ghost lane-ghost-label">
+                  {slotShort(label)}
+                </span>
+                <span className="sr-only">{label}</span>
+              </li>
+            ) : (
+              <li key={i} className="flex items-center gap-2 route-row" data-tone={tone} style={{ color: "var(--color-muted)", fontStyle: "italic", fontSize: "var(--text-small)" }}>
                 <span aria-hidden className="lane-ghost" />
-                {pilotSlotLabel(tournament, match, i)}
+                {label}
               </li>
             );
           }
           const through = !!match.winner && (i === 0 || (four && i < 2));
           return (
-            <li key={name} className="flex items-center gap-2" style={{ fontSize: "var(--text-small)", color: match.winner ? (i === 0 ? "var(--color-gold-strong)" : through ? "var(--color-cream)" : "var(--color-muted)") : "var(--color-cream)", opacity: match.winner && !through ? 0.7 : 1 }}>
+            <li key={name} className="flex items-center gap-2 min-w-0 route-row" data-tone={tone} style={{ fontSize: "var(--text-small)", color: match.winner ? (i === 0 ? "var(--color-gold-strong)" : through ? "var(--color-cream)" : "var(--color-muted)") : "var(--color-cream)", opacity: match.winner && !through ? 0.7 : 1 }}>
               <Avatar name={name} photo={photos.get(name)} size="xs" bot={tournament.participants.find((x) => x.name === name)?.isBot} />
               <span className="truncate flex-1">
                 {match.placements ? `${i + 1}. ` : ""}
                 {name}
-                {seedOf(tournament, name) && <span style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}> ({seedOf(tournament, name)})</span>}
+                {!grid && seedOf(tournament, name) && <span style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}> ({seedOf(tournament, name)})</span>}
               </span>
             </li>
           );
@@ -225,9 +242,8 @@ export function PilotOverview({
         />
       )}
       <div className="screen-inner" style={{ maxWidth: "min(100%, 64rem)" }}>
-        <ScreenTop title={tournamentTitle(tournament)} onBack={onExitToHome} right={onHistory ? <Button onClick={onHistory}>Pokaler</Button> : undefined} />
+        <ScreenTop title={tournamentTitle(tournament)} sub={tournament.cup ? <CupLine cup={tournament.cup} /> : undefined} onBack={onExitToHome} right={onHistory ? <Button onClick={onHistory}>Pokaler</Button> : undefined} />
         <StageStrip tournament={tournament} />
-        {tournament.cup && <CupBanner cup={tournament.cup} />}
         <div className="mx-auto" style={{ maxWidth: "28rem" }}>
           {just && <ResultCard match={just} />}
           {elsewhere.length > 0 && (
