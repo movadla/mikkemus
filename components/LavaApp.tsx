@@ -237,7 +237,7 @@ function LavaGameScreen({
               <li
                 key={p}
                 aria-current={active ? "true" : undefined}
-                className={`hs-card relative flex items-center gap-2 overflow-hidden min-w-0 ${out ? "hs-out" : ""} ${hit ? "hs-hit" : ""}`}
+                className={`hs-card relative flex items-center gap-2 overflow-hidden min-w-0 ${out ? "hs-out" : ""} ${hit ? "hs-hit" : ""} ${active && !out ? "lava-turn" : ""}`}
                 style={{
                   padding: "0.5rem 0.625rem",
                   borderRadius: "var(--radius-m)",

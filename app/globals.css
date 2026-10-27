@@ -3024,7 +3024,7 @@ html[data-fx="full"] .hs-hit {
 .lava-stage {
   position: relative;
   overflow: hidden;
-  padding: 0.75rem;
+  padding: 0;
   border-radius: var(--radius-l);
   background: radial-gradient(ellipse at 50% 45%, #2a1208 0%, #150a06 60%, #0b0605 100%);
   border: 1px solid rgba(255, 120, 40, 0.28);
@@ -3032,7 +3032,7 @@ html[data-fx="full"] .hs-hit {
 }
 .lava-board {
   position: relative;
-  width: min(100%, 27rem);
+  width: min(100%, 30rem);
   aspect-ratio: 1;
   margin-inline: auto;
 }
@@ -3044,43 +3044,11 @@ html[data-fx="full"] .hs-hit {
 }
 .lava-pool {
   position: absolute;
-  inset: 6%;
+  inset: 11.6%;
   border-radius: 50%;
   overflow: hidden;
   background: radial-gradient(circle at 50% 50%, #fff0a0 0%, #ffb02e 22%, #ff6a14 45%, #c8310a 72%, #6e1505 100%);
   box-shadow: inset 0 0 36px rgba(60, 8, 0, 0.85);
-}
-/* Two layers of slow blobs, turning against each other: the lava moves, and it is never the same twice. */
-.lava-pool::before,
-.lava-pool::after {
-  content: "";
-  position: absolute;
-  inset: -35%;
-  border-radius: 50%;
-  pointer-events: none;
-}
-.lava-pool::before {
-  background:
-    radial-gradient(circle at 30% 35%, rgba(255, 235, 120, 0.9) 0, transparent 14%),
-    radial-gradient(circle at 68% 28%, rgba(255, 190, 60, 0.8) 0, transparent 12%),
-    radial-gradient(circle at 55% 70%, rgba(255, 220, 100, 0.85) 0, transparent 16%),
-    radial-gradient(circle at 22% 72%, rgba(120, 18, 4, 0.7) 0, transparent 14%),
-    radial-gradient(circle at 80% 62%, rgba(110, 16, 4, 0.7) 0, transparent 13%);
-  animation: lava-turn 26s linear infinite;
-}
-.lava-pool::after {
-  mix-blend-mode: screen;
-  opacity: 0.7;
-  background:
-    radial-gradient(circle at 42% 22%, rgba(255, 170, 40, 0.8) 0, transparent 13%),
-    radial-gradient(circle at 76% 48%, rgba(255, 230, 110, 0.7) 0, transparent 12%),
-    radial-gradient(circle at 36% 62%, rgba(255, 140, 30, 0.8) 0, transparent 15%);
-  animation: lava-turn 19s linear infinite reverse;
-}
-@keyframes lava-turn {
-  to {
-    transform: rotate(360deg);
-  }
 }
 html[data-fx="party"] .lava-glow,
 html[data-fx="full"] .lava-glow {
@@ -3096,11 +3064,6 @@ html[data-fx="full"] .lava-glow {
     transform: scale(1.04);
   }
 }
-html[data-fx="simple"] .lava-pool::before,
-html[data-fx="simple"] .lava-pool::after {
-  animation: none;
-}
-
 .lava-svg {
   position: absolute;
   inset: 0;
@@ -3281,8 +3244,7 @@ html[data-fx="full"] .lava-stage--hit {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .lava-pool::before,
-  .lava-pool::after,
+  .lava-tex,
   .lava-glow,
   .lava-drift span,
   .lava-ember,
@@ -3299,3 +3261,274 @@ html[data-fx="full"] .lava-stage--hit {
     display: none;
   }
 }
+
+/* -- Lava, the finish: real lava texture, glowing edges, cracks in the rock, bubbles, and a bigger moment for a burn and for a hit -- */
+.lava-glow {
+  inset: 2%;
+}
+.lava-board {
+  transform: scale(1.07);
+}
+.lava-tex {
+  position: absolute;
+  inset: -30%;
+  mix-blend-mode: screen;
+  will-change: transform;
+}
+.lava-tex svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.lava-tex--a {
+  opacity: 0.95;
+  mix-blend-mode: normal;
+}
+.lava-tex--b {
+  opacity: 0.55;
+}
+html[data-fx="party"] .lava-tex--a,
+html[data-fx="full"] .lava-tex--a {
+  animation: lava-turn 70s linear infinite;
+}
+html[data-fx="party"] .lava-tex--b,
+html[data-fx="full"] .lava-tex--b {
+  animation: lava-turn 46s linear infinite reverse;
+}
+@keyframes lava-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.lava-pool {
+  background: radial-gradient(circle at 50% 50%, #ffe27a 0%, #ff8a1f 30%, #c8310a 62%, #5a1004 100%);
+}
+/* A dark skin over the edge of the pool, so it looks deep. */
+.lava-pool::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle, transparent 55%, rgba(30, 4, 0, 0.55) 85%, rgba(15, 2, 0, 0.9) 100%);
+}
+.lava-bubbles {
+  position: absolute;
+  inset: 11.6%;
+  border-radius: 50%;
+  overflow: hidden;
+  pointer-events: none;
+}
+.lava-bubbles span {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: var(--s);
+  height: var(--s);
+  border-radius: 50%;
+  border: 2px solid rgba(255, 235, 150, 0.9);
+  background: radial-gradient(circle at 35% 30%, rgba(255, 250, 200, 0.9), rgba(255, 170, 40, 0.2) 70%);
+  opacity: 0;
+  animation: lava-bubble var(--t) ease-in-out var(--d) infinite;
+}
+@keyframes lava-bubble {
+  0%, 62% {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+  78% {
+    opacity: 0.95;
+    transform: scale(1);
+  }
+  86% {
+    opacity: 0.9;
+    transform: scale(1.25);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.7);
+  }
+}
+.lava-rim {
+  stroke: #120b08;
+  stroke-width: 34;
+}
+.lava-rim-edge {
+  fill: none;
+  stroke: #ff7a1f;
+  stroke-width: 3;
+  opacity: 0.7;
+  filter: drop-shadow(0 0 7px #ff6a14);
+}
+.lava-crack {
+  fill: none;
+  stroke: #ff9a2e;
+  stroke-width: 3.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 5px #ff6a14);
+  opacity: 0.85;
+}
+.lava-crack--thin {
+  stroke-width: 1.8;
+  opacity: 0.7;
+}
+html[data-fx="party"] .lava-crack,
+html[data-fx="full"] .lava-crack {
+  animation: lava-flicker 3.4s ease-in-out infinite;
+  animation-delay: var(--d, 0s);
+}
+@keyframes lava-flicker {
+  0%, 100% {
+    opacity: 0.55;
+  }
+  35% {
+    opacity: 1;
+  }
+  60% {
+    opacity: 0.7;
+  }
+  80% {
+    opacity: 0.95;
+  }
+}
+/* The glowing frame left where a slab has gone. */
+.lava-edge {
+  fill: none;
+  stroke: #ffc15a;
+  stroke-width: 4;
+  stroke-linejoin: round;
+  opacity: 0;
+  animation: lava-edge-in 900ms ease-out 260ms forwards;
+  filter: drop-shadow(0 0 7px #ff7a1f);
+  pointer-events: none;
+}
+@keyframes lava-edge-in {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0.85;
+  }
+}
+html[data-fx="party"] .lava-edge,
+html[data-fx="full"] .lava-edge {
+  animation: lava-edge-in 900ms ease-out 260ms forwards, lava-flicker 2.6s ease-in-out 1200ms infinite;
+}
+/* The slab that goes: a white-hot flash in the shape of the section, then the glow settles. */
+.lava-burst {
+  fill: #fff3b0;
+  opacity: 0;
+  mix-blend-mode: screen;
+  pointer-events: none;
+  animation: lava-burst 700ms ease-out both;
+}
+@keyframes lava-burst {
+  0% {
+    opacity: 0.95;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.lava-ember {
+  fill: #ffd25a;
+  filter: drop-shadow(0 0 4px #ff8a1f);
+  animation-duration: 1100ms;
+}
+.lava-ember--big {
+  fill: #fff0a0;
+}
+.lava-drop {
+  fill: #ff6a3c;
+  filter: drop-shadow(0 0 5px #ff3a10);
+  opacity: 0;
+  animation: lava-drop 1000ms cubic-bezier(0.2, 0.7, 0.4, 1) both;
+}
+@keyframes lava-drop {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+  55% {
+    opacity: 1;
+    transform: translate(var(--dx), var(--dy)) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(var(--dx) * 1.15), calc(var(--dy) + 90px)) scale(0.4);
+  }
+}
+.lava-slam {
+  fill: #fff3d0;
+  stroke: #c8200a;
+  stroke-width: 9;
+  paint-order: stroke;
+  font-family: var(--font-display), serif;
+  font-size: 92px;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+  transform-box: fill-box;
+  transform-origin: center;
+  opacity: 0;
+  animation: lava-slam 1100ms var(--ease-standard) both;
+}
+@keyframes lava-slam {
+  0% {
+    opacity: 0;
+    transform: scale(2.6) rotate(-6deg);
+  }
+  18% {
+    opacity: 1;
+    transform: scale(1) rotate(-3deg);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1.04) rotate(-3deg);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.2) rotate(-3deg);
+  }
+}
+.lava-bull-ring {
+  fill: none;
+  stroke: #ffd9a0;
+  stroke-width: 4;
+  pointer-events: none;
+}
+.lava-bull-dot {
+  fill: #c8310a;
+  pointer-events: none;
+}
+/* The player whose round it is: the card breathes red. */
+html[data-fx="party"] .lava-turn,
+html[data-fx="full"] .lava-turn {
+  animation: lava-turn-glow 2.4s ease-in-out infinite;
+}
+@keyframes lava-turn-glow {
+  0%, 100% {
+    box-shadow: var(--elevation-1), 0 0 0 0 rgba(240, 90, 60, 0);
+  }
+  50% {
+    box-shadow: var(--elevation-1), 0 0 16px 2px rgba(240, 90, 60, 0.45);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lava-bubbles,
+  .lava-crack,
+  .lava-edge,
+  .lava-burst,
+  .lava-drop,
+  .lava-slam,
+  .lava-turn {
+    animation: none !important;
+  }
+  .lava-edge {
+    opacity: 0.85;
+  }
+  .lava-bubbles {
+    display: none;
+  }
+}
+
