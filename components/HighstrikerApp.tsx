@@ -9,6 +9,8 @@ import { undoThroughBots } from "@/lib/botTurns";
 import { generateConfettiRain } from "@/lib/confetti";
 import { playFanfare } from "@/lib/fanfare";
 import { fxFlags, useFxLevel } from "@/lib/fxLevel";
+import { highstrikerResult } from "@/lib/gameResults";
+import { useRecordResult } from "@/lib/gameResultsStorage";
 import { haptics } from "@/lib/haptics";
 import { towerScale, towerShare } from "@/lib/roundTier";
 import {
@@ -165,6 +167,7 @@ function HighstrikerGameScreen({
   const lastLife = !winner && game.turns.length > 0 && upLives === 1;
   const isBot = (p: string) => botLevels[p] !== undefined;
   const botUp = !winner && isBot(up);
+  useRecordResult(winner, game.turns.length === 0, (id, at) => highstrikerResult(game, Object.keys(botLevels), id, at));
 
   // A player on the last life is told so, once, when the turn comes to them.
   useEffect(() => {

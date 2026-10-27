@@ -10,6 +10,8 @@ import { checkoutsOf } from "@/lib/checkout";
 import { generateConfettiRain } from "@/lib/confetti";
 import { playFanfare } from "@/lib/fanfare";
 import { fxFlags, useFxLevel } from "@/lib/fxLevel";
+import { countdownResult } from "@/lib/gameResults";
+import { useRecordResult } from "@/lib/gameResultsStorage";
 import { TIER_LABEL, tierOf } from "@/lib/roundTier";
 import {
   DARTS_PER_ROUND,
@@ -131,6 +133,7 @@ function CountdownGameScreen({
   const leader = leaderOf(game);
   const isBot = (p: string) => botLevels[p] !== undefined;
   const botUp = !winner && isBot(up);
+  useRecordResult(winner, game.turns.length === 0, (id, at) => countdownResult(game, Object.keys(botLevels), id, at));
   const rain = useMemo(() => (winner && fx.confetti ? generateConfettiRain(fx.bigConfetti ? 60 : 36) : []), [winner, fx.confetti, fx.bigConfetti]);
 
   useEffect(() => {

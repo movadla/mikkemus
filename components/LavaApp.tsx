@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { generateConfettiRain } from "@/lib/confetti";
 import { playFanfare } from "@/lib/fanfare";
 import { fxFlags, useFxLevel } from "@/lib/fxLevel";
+import { lavaResult } from "@/lib/gameResults";
+import { useRecordResult } from "@/lib/gameResultsStorage";
 import { haptics } from "@/lib/haptics";
 import {
   DARTS_PER_ROUND,
@@ -140,6 +142,7 @@ function LavaGameScreen({
   const big = fx.heat;
   const isBot = (p: string) => botLevels[p] !== undefined;
   const botUp = !winner && isBot(up);
+  useRecordResult(winner, game.darts.length === 0, (id, at) => lavaResult(game, Object.keys(botLevels), id, at));
   const rain = useMemo(() => (winner && fx.confetti ? generateConfettiRain(fx.bigConfetti ? 60 : 36) : []), [winner, fx.confetti, fx.bigConfetti]);
 
   useEffect(() => {
