@@ -1,5 +1,6 @@
 "use client";
 
+import { botDelayMs } from "@/lib/botSpeed";
 import { useEffect, useRef, useState } from "react";
 import {
   aggregateTurns,
@@ -143,7 +144,6 @@ const LIVE_PUBLISH_DEBOUNCE_MS = 700;
 
 /** Pause between a bot's simulated darts — purely cosmetic pacing, so the shot
  *  boxes/marks visibly animate in one at a time instead of all landing at once. */
-const BOT_THROW_DELAY_MS = 900;
 
 /** How long a finished bot turn stays on screen. Its third dart ends the turn in the same tick
  *  it lands, so without a hold that dart is never drawn at all — see scheduleBotDisplayClear.
@@ -1564,11 +1564,11 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       }, 0);
 
       if (!cancelled && scoliaDartsRef.current < DARTS_PER_TURN) {
-        setTimeout(throwNext, BOT_THROW_DELAY_MS);
+        setTimeout(throwNext, botDelayMs());
       }
     }
 
-    const timer = setTimeout(throwNext, BOT_THROW_DELAY_MS);
+    const timer = setTimeout(throwNext, botDelayMs());
     return () => {
       cancelled = true;
       clearTimeout(timer);

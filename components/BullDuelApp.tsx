@@ -1,5 +1,6 @@
 "use client";
 
+import { botDelayMs } from "@/lib/botSpeed";
 import { useEffect, useRef, useState } from "react";
 import type { BotLevel, TeamMember } from "@/lib/botLevels";
 import {
@@ -39,7 +40,6 @@ type Screen = "setup" | "target" | "game" | "winner";
 // Pause between a bot's simulated darts, same pacing as the main game's bots
 // (see MikkeMusApp.tsx) — purely cosmetic, so the point total visibly ticks
 // up one dart at a time instead of jumping straight to the result.
-const BOT_THROW_DELAY_MS = 900;
 /** How long a bot waits for a human's darts to come out of the board before it goes anyway (same as the main game). */
 const TAKEOUT_WAIT_MAX_MS = 12_000;
 /** The match in progress, kept so a reload does not lose it. */
@@ -266,12 +266,12 @@ export function BullDuelApp({ onExitToHome }: { onExitToHome: () => void }) {
       const after = duelRef.current;
       if (cancelled || !after) return;
       if (!isTurnComplete(after)) {
-        setTimeout(throwNext, BOT_THROW_DELAY_MS);
+        setTimeout(throwNext, botDelayMs());
       } else if (!after.winner) {
-        setTimeout(advanceTurn, BOT_THROW_DELAY_MS);
+        setTimeout(advanceTurn, botDelayMs());
       }
     }
-    const timer = setTimeout(throwNext, BOT_THROW_DELAY_MS);
+    const timer = setTimeout(throwNext, botDelayMs());
     return () => {
       cancelled = true;
       clearTimeout(timer);

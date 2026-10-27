@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { BOT_SPEEDS, BOT_SPEED_LABELS, setBotSpeed, useBotSpeed } from "@/lib/botSpeed";
 import { FX_LABELS, FX_LEVELS, setFxLevel, useFxLevel } from "@/lib/fxLevel";
 import { useShowOdds, setShowOdds } from "@/lib/oddsSetting";
 import { setTexture, useTexture } from "@/lib/texture";
@@ -49,12 +50,25 @@ export function SettingsScreen({ onBack }: { onBack?: () => void }) {
   const theme = useThemeChoice();
   const pack = usePack();
   const fx = useFxLevel();
+  const botSpeed = useBotSpeed();
   const [qr, setQr] = useState<"live" | "turnering" | null>(null);
   const origin = typeof window === "undefined" ? "" : window.location.origin;
   return (
     <div className="animate-screen-push screen">
       <div className="screen-inner">
         <ScreenTop title="Innstillinger" onBack={onBack} backHref={onBack ? undefined : "/mer"} />
+
+        <Section label="Boter">
+          <div>
+            <p className="mb-2" style={{ color: "var(--color-cream)", fontSize: "var(--text-body)", fontWeight: 600 }}>
+              Hastighet
+            </p>
+            <Segmented value={botSpeed} onChange={setBotSpeed} label="Hastighet på boter" options={BOT_SPEEDS.map((v) => ({ value: v, label: BOT_SPEED_LABELS[v] }))} />
+            <p className="mt-2" style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>
+              Pausen mellom pilene til en bot. Rolig gir tid til å følge med, Lyn går nesten uten pause.
+            </p>
+          </div>
+        </Section>
 
         <Section label="Visning">
           <div className="space-y-3">
