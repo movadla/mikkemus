@@ -326,6 +326,24 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   const replayingRef = useRef(false);
   /** A turn found mid-way in the restored snapshot, waiting for the player to be mounted. */
   const pendingReplayRef = useRef<{ start: TurnStart; actions: TurnAction[] } | null>(null);
+  /**
+   * The turn that was confirmed last, kept whole: where it started, every action in it and what the confirming changed around it (the
+   * count of turns, whose turn it is, the team's thrower). Angre after Bekreft opens that turn again exactly as it was, with its darts,
+   * its shot boxes and its triple/double question, instead of patching the board one cross at a time as it did before — which is what
+   * left darts counted twice and a question that could not be asked again.
+   */
+  const lastConfirmedRef = useRef<{
+    player: string;
+    turnIndex: number;
+    idx: number;
+    start: TurnStart;
+    actions: LiveAction[];
+    answeredChoice: boolean;
+    turnLogBefore: TurnResult[];
+    memberIdx: number | undefined;
+    stood: boolean | undefined;
+    lastTeam: { turnIndex: number; memberIdx: number; stood: boolean } | undefined;
+  } | null>(null);
   /** Dev only: behave as if a board were online and going to report takeouts. */
   const devTakeoutRef = useRef(false);
   const preBankedRef = useRef<Record<string, { D: number; T: number }>>({});
@@ -2084,6 +2102,30 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     }
   }
 
+  /**
+   * Opens the turn that was confirmed last, as it was: the counts and the order of play go back to before it, its darts are taken off
+   * the log and the history, and its actions are played again through the ordinary paths once its thrower is the one up. If a
+   * triple/double question had been answered, the answer is the thing taken back (the turn comes back with the question open); if not,
+   * the last action of the turn goes, as it does within a turn.
+   */
+  function reopenConfirmedTurn(c: NonNullable<typeof lastConfirmedRef.current>) {
+    lastConfirmedRef.current = null;
+    const replay = c.answeredChoice ? c.actions : c.actions.slice(0, -1);
+    setHistory((prev) => prev.filter((h) => !(h.player === c.player && h.turnIndex === c.turnIndex)));
+    setTurnLog((prev) => ({ ...prev, [c.player]: c.turnLogBefore }));
+    setTurnCounters((prev) => ({ ...prev, [c.player]: c.turnIndex }));
+    if (teamRosters[c.player]) {
+      if (c.memberIdx !== undefined) setTeamMemberIdx((prev) => ({ ...prev, [c.player]: c.memberIdx! }));
+      setStoodByTeam((prev) => ({ ...prev, [c.player]: !!c.stood }));
+      if (c.lastTeam) lastTeamTurnRef.current[c.player] = c.lastTeam;
+      else delete lastTeamTurnRef.current[c.player];
+    }
+    runRef.current[c.player] = currentRun(c.turnLogBefore, c.player, c.player);
+    pendingReplayRef.current = { start: c.start, actions: replay };
+    setTurnToken((t) => t + 1);
+    setCurrentIdx(c.idx);
+  }
+
   function undo() {
     uiSound("undo");
     haptics.undo();
@@ -2101,6 +2143,21 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         replayActions(undoesChoice ? actions : actions.slice(0, -1));
         return;
       }
+    }
+    // The turn was confirmed and nothing has happened since: Angre opens it again as it was.
+    const confirmed = lastConfirmedRef.current;
+    const lastHit = history[history.length - 1];
+    if (
+      confirmed &&
+      rewound === null &&
+      winner === null &&
+      pendingHitsRef.current.length === 0 &&
+      currentIdx === (confirmed.idx + 1) % players.length &&
+      (turnCounters[confirmed.player] ?? 0) === confirmed.turnIndex + 1 &&
+      (!lastHit || (lastHit.player === confirmed.player && lastHit.turnIndex === confirmed.turnIndex))
+    ) {
+      reopenConfirmedTurn(confirmed);
+      return;
     }
     // Any held "just placed" highlight can go stale the instant progress is rewound
     // (most obviously on a second, cascading undo) — simplest correct move is to
@@ -2416,6 +2473,22 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     // How the turn ended, in the order the darts landed — read before the actions are cleared below.
     const tailNow = trailingRun(turnActionsRef.current);
     const liveDarts = turnDarts();
+    // The turn is kept whole for Angre (see lastConfirmedRef): a person's turn, in order, that has something in it to open again.
+    lastConfirmedRef.current =
+      !rewound && turnStartRef.current && turnStartRef.current.player === activePlayer && !botLevels[activePlayer] && turnActionsRef.current.length > 0
+        ? {
+            player: activePlayer,
+            turnIndex: turnCounters[activePlayer] ?? 0,
+            idx: currentIdx,
+            start: turnStartRef.current,
+            actions: turnActionsRef.current,
+            answeredChoice: choiceAnsweredAtRef.current === turnActionsRef.current.length,
+            turnLogBefore: turnLog[activePlayer] ?? [],
+            memberIdx: teamMemberIdx[activePlayer],
+            stood: stoodByTeam[activePlayer],
+            lastTeam: lastTeamTurnRef.current[activePlayer],
+          }
+        : null;
     dartsOnStepRef.current = {};
     forcedKeepRef.current = new Set();
     writeTurnActions([]);

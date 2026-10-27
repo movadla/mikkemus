@@ -502,3 +502,13 @@ export function MissIcon({ className }: IconProps) {
     </Svg>
   );
 }
+
+/** A keypad: the numbers written in, as in 301 and 501. */
+export function KeypadIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <rect x="3.5" y="3.5" width="17" height="17" rx="3.5" />
+      <path d="M9.5 3.5v17M14.5 3.5v17M3.5 9.5h17M3.5 14.5h17" opacity="0.5" />
+    </Svg>
+  );
+}

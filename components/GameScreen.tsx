@@ -444,10 +444,14 @@ function ChoiceBox({
       className={`choice-box rounded-xl ${compact ? "" : "mb-2"}`}
       style={{
         background: "var(--gold-soft)",
-        border: "1px solid var(--color-gold)",
+        border: "2px solid var(--color-gold)",
+        boxShadow: "var(--elevation-2)",
         padding: compact ? "0.4rem" : "0.6rem",
       }}
     >
+      <p className="text-center" style={{ color: "var(--color-gold)", fontSize: "var(--text-micro)", fontWeight: 700, letterSpacing: "0.18em" }}>
+        TA ET VALG
+      </p>
       <p className="text-center mb-1.5" style={{ color: "var(--color-gold-strong)", fontSize: compact ? "var(--text-micro)" : "var(--text-body)", fontWeight: 700 }}>
         {choice.redirected ? `${label} ble satt på ${STEP_LABELS[choice.number]} – hold den der?` : `${label} – hva skal den telle som?`}
         {queued > 0 && <span style={{ fontWeight: 400 }}> ({queued} til venter)</span>}

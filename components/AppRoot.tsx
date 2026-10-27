@@ -10,7 +10,7 @@ import { loadActiveTournamentId } from "@/lib/tournamentStorage";
 import { useScolia } from "@/lib/useScolia";
 import dynamic from "next/dynamic";
 import { HeroMascot } from "./HeroMascot";
-import { BullseyeIcon, DartIcon, TrophyIcon } from "./icons";
+import { BullseyeIcon, DartIcon, KeypadIcon, TrophyIcon } from "./icons";
 import { RulesIntro } from "./RulesIntro";
 import { ScoliaDot, summarizeScolia } from "./ScoliaStatusBadge";
 import { SkeletonRows } from "./ui/Skeleton";
@@ -33,8 +33,9 @@ const loading = () => (
 const MikkeMusApp = dynamic(() => import("./MikkeMusApp").then((m) => m.MikkeMusApp), { loading });
 const TournamentApp = dynamic(() => import("./TournamentApp").then((m) => m.TournamentApp), { loading });
 const BullDuelApp = dynamic(() => import("./BullDuelApp").then((m) => m.BullDuelApp), { loading });
+const CountdownApp = dynamic(() => import("./CountdownApp").then((m) => m.CountdownApp), { loading });
 
-type Mode = "home" | "single" | "tournament" | "bullduel";
+type Mode = "home" | "single" | "tournament" | "bullduel" | "countdown";
 
 const TOURNAMENTS_OFFERED = true;
 
@@ -123,6 +124,7 @@ export function AppRoot() {
   if (mode === "single") return <MikkeMusApp onExitToHome={() => setMode("home")} />;
   if (mode === "tournament") return <TournamentApp onExitToHome={() => setMode("home")} />;
   if (mode === "bullduel") return <BullDuelApp onExitToHome={() => setMode("home")} />;
+  if (mode === "countdown" && !limited) return <CountdownApp onExitToHome={() => setMode("home")} />;
 
   const tournamentsOn = !limited && (TOURNAMENTS_OFFERED || hasActiveTournament);
   const resume = matchUnderway ? { title: matchUnderway.join(" mot "), label: "Kamp pågår", go: () => setMode("single") } : tournamentsOn && hasActiveTournament ? { title: "Turnering", label: "Pågår", go: () => setMode("tournament") } : null;
@@ -166,12 +168,14 @@ export function AppRoot() {
         {/* The hero is already Enkeltkamp when nothing is under way, so its tile is only there when the hero is something else. */}
         {/* One tile has the whole row, as it should look; two or three share it. */}
         {(() => {
-          const tiles = (resume ? 1 : 0) + (tournamentsOn ? 1 : 0) + 1;
+          // 301/501 is for the full code only.
+          const tiles = (resume ? 1 : 0) + (tournamentsOn ? 1 : 0) + 1 + (limited ? 0 : 1);
           return (
             <div className={`grid gap-2 mb-6 ${tiles === 1 ? "grid-cols-1" : tiles === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
               {resume && <Tile icon={<DartIcon className="w-6 h-6" />} label="Enkeltkamp" onClick={() => setMode("single")} />}
               {tournamentsOn && <Tile icon={<TrophyIcon className="w-6 h-6" />} label="Turnering" onClick={() => setMode("tournament")} />}
               <Tile wide={tiles === 1} icon={<BullseyeIcon className="w-6 h-6" />} label="Bull-duell" onClick={() => setMode("bullduel")} />
+              {!limited && <Tile icon={<KeypadIcon className="w-6 h-6" />} label="301 / 501" onClick={() => setMode("countdown")} />}
             </div>
           );
         })()}

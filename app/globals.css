@@ -559,10 +559,24 @@ button {
 /* One of the two places an undecided triple/double can go — tap to put it there. Gold, like
    the shot box asking the question, so the three read as one prompt. */
 .cell-tile--choice {
+  background: color-mix(in srgb, var(--color-gold) 22%, var(--color-cell-open-top));
   box-shadow:
-    0 0 0 2px var(--color-gold),
-    0 0 22px rgba(217, 174, 79, 0.45),
+    0 0 0 3px var(--color-gold),
+    0 0 22px rgba(217, 174, 79, 0.55),
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  animation: choice-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes choice-pulse {
+  50% {
+    filter: brightness(1.25);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cell-tile--choice {
+    animation: none;
+  }
 }
 
 /* Hairline rules between rows and columns. Structure was carried entirely by padding
