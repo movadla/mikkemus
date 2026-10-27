@@ -14,7 +14,7 @@ export function Chip({ selected, onClick, children, label, block = false }: { se
       className={`tactile px-4 ${block ? "w-full text-left truncate" : ""} ${FOCUS_RING}`}
       style={{
         minHeight: "var(--control)",
-        borderRadius: "var(--radius-s)",
+        borderRadius: block ? "var(--radius-m)" : "var(--radius-pill)",
         background: selected ? "var(--teal-soft)" : "var(--color-surface)",
         color: selected ? "var(--color-teal)" : "var(--color-cream)",
         border: selected ? "1px solid var(--color-teal)" : "1px solid var(--color-border)",

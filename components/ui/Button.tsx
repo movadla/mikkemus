@@ -48,7 +48,7 @@ export function Button({
     minHeight: size === "lg" ? "var(--control-lg)" : "var(--control)",
     minWidth: "var(--control)",
     padding: children ? "0 1rem" : 0,
-    borderRadius: "var(--radius-m)",
+    borderRadius: "var(--radius-pill)",
     fontSize: size === "lg" ? "var(--text-title)" : "var(--text-body)",
     opacity: disabled ? 0.4 : 1,
     ...(primary

@@ -5,7 +5,9 @@ import { useRoster, type MatchHistoryEntry, type PlayerRecord } from "@/lib/stor
 import { dayLabel } from "@/lib/formatDate";
 import { groupNights } from "@/lib/nights";
 import { MedalIcon, TrophyIcon } from "./icons";
-import { MorphAvatar } from "./ui/Avatar";
+import { avatarAccent } from "@/lib/avatarAccent";
+import { Avatar, MorphAvatar } from "./ui/Avatar";
+import { FormCurve } from "./ui/FormCurve";
 import { CountUp } from "./ui/CountUp";
 import { Button } from "./ui/Button";
 import { EmptyState } from "./ui/EmptyState";
@@ -93,7 +95,15 @@ export function HallOfFameTab() {
             return (
               <Row
                 key={p.name}
-                leading={<span className="font-display w-6 text-center" style={{ color: "var(--color-muted)", fontSize: "var(--text-title)" }}>{i + 4}</span>}
+                accent={avatarAccent(p.name)}
+                leading={
+                  <span className="inline-flex items-center gap-2">
+                    <span className="font-display w-6 text-center" style={{ color: "var(--color-muted)", fontSize: "var(--text-title)" }}>{i + 4}</span>
+                    <Avatar name={p.name} photo={p.photo} size="m" />
+                  </span>
+                }
+                trailing={<FormCurve history={p.matchHistory} />}
+                bigValue
                 title={p.name}
                 subtitle={`${p.matchesWon}-${p.matchesPlayed - p.matchesWon} · ${p.matchesPlayed} kamper${streaks.current >= 2 ? ` · ${streaks.current} på rad` : ""}${streaks.best >= 2 ? ` · rekord ${streaks.best}` : ""}`}
                 value={`${winPct(p)} %`}

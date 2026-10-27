@@ -17,6 +17,7 @@ import { ScreenTop } from "./ScreenTop";
 import { StickyAction } from "./StickyAction";
 import { TeamPicker } from "./TeamPicker";
 import { Segmented } from "./ui/Segmented";
+import { SwitchRow } from "./ui/Switch";
 
 /** The two ways to play (or any other pair or trio of options), as one segmented control. */
 export function ModeToggle<T extends string>({
@@ -136,32 +137,24 @@ export function SetupScreen({
     );
   }
 
-  const noStatsToggle = (
-    <label className="inline-flex items-center gap-3 cursor-pointer" style={{ minHeight: "var(--control)", color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
-      <input type="checkbox" checked={statsOff} onChange={(e) => setStatsOff(e.target.checked)} style={{ width: 22, height: 22, accentColor: "var(--color-gold)" }} />
-      Spill uten at statistikken teller
-    </label>
-  );
+  const noStatsToggle = <SwitchRow label="Spill uten at statistikken teller" checked={statsOff} onChange={setStatsOff} />;
 
   const advancedSettings = (
-    <div className="w-full flex flex-col items-center" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
-      <label className="inline-flex items-center gap-3 cursor-pointer" style={{ minHeight: "var(--control)" }}>
-        <input
-          type="checkbox"
-          checked={advanced}
-          onChange={(e) => {
-            setAdvanced(e.target.checked);
-            // What is hidden is not left on: closing it puts the game back as everyone plays it.
-            if (!e.target.checked) {
-              setExactEntry(false);
-              setVariant("standard");
-              setStatsOff(false);
-            }
-          }}
-          style={{ width: 22, height: 22, accentColor: "var(--color-gold)" }}
-        />
-        Avanserte innstillinger
-      </label>
+    <div className="w-full flex flex-col gap-2" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
+      <SwitchRow
+        label="Avanserte innstillinger"
+        hint="Kryss per rad, animasjon, pil for pil og statistikk"
+        checked={advanced}
+        onChange={(on) => {
+          setAdvanced(on);
+          // What is hidden is not left on: closing it puts the game back as everyone plays it.
+          if (!on) {
+            setExactEntry(false);
+            setVariant("standard");
+            setStatsOff(false);
+          }
+        }}
+      />
       {advanced && variantSelectable && (
         // Kryss per rad, and in team play the stand rule: the game is three crosses unless this says otherwise.
         <div className="w-full pt-2 text-left">
@@ -176,31 +169,16 @@ export function SetupScreen({
       )}
       {advanced && (
         // Played without a trace in the statistics.
-        <div className="w-full flex justify-center">{noStatsToggle}</div>
+        <div className="w-full">{noStatsToggle}</div>
       )}
       {advanced && (
-        <label className="flex items-start gap-3 cursor-pointer pl-9 pb-2">
-          <input type="checkbox" checked={exactEntry} onChange={(e) => setExactEntry(e.target.checked)} style={{ width: 22, height: 22, accentColor: "var(--color-gold)", flexShrink: 0 }} />
-          <span>
-            Legg inn hver pil for hånd
-            <span className="block" style={{ fontSize: "var(--text-micro)" }}>Velg hva hver pil traff</span>
-          </span>
-        </label>
+        <SwitchRow label="Legg inn hver pil for hånd" hint="Velg hva hver pil traff" checked={exactEntry} onChange={setExactEntry} />
       )}
-    </div>
-  );
-
-  // Bull-duell reuses this screen and has no advanced settings (no row length, no keyed-in darts), so there the no-statistics choice stays
-  // where it was; in the main game it is one of the advanced settings.
-  const belowStart = (
-    <div className="w-full flex flex-col items-center">
-      {!variantSelectable && noStatsToggle}
-      {variantSelectable && advancedSettings}
     </div>
   );
 
   return (
-    <div className="animate-screen-push screen has-sticky-action" style={{ background: "var(--color-bg)" }}>
+    <div className="animate-screen-push screen has-sticky-action">
       <div className="screen-inner">
         <ScreenTop title={title} onBack={onHome} scolia={scolia} />
 
@@ -217,12 +195,13 @@ export function SetupScreen({
         {mode === "individual" && (
           <>
             <PlayerPicker people={people} onChange={setPeople} botsAllowed={botsAllowed} guests />
+            {variantSelectable && <div className="mt-4">{advancedSettings}</div>}
             <StickyAction
               onClick={startIndividualGame}
               ready={!individualProblem}
               summary={setupSummary([`${people.length} ${people.length === 1 ? "spiller" : "spillere"}`, crosses])}
               reason={individualProblem}
-              below={belowStart}
+              below={!variantSelectable ? noStatsToggle : undefined}
             >
               Start kampen
             </StickyAction>
@@ -232,12 +211,13 @@ export function SetupScreen({
         {mode === "team" && (
           <>
             <TeamPicker teams={teams} onChange={setTeams} botsAllowed={botsAllowed} />
+            {variantSelectable && <div className="mt-4">{advancedSettings}</div>}
             <StickyAction
               onClick={startTeamGame}
               ready={!teamProblem}
               summary={setupSummary([`${teams.length} lag`, crosses])}
               reason={teamProblem}
-              below={belowStart}
+              below={!variantSelectable ? noStatsToggle : undefined}
             >
               Start kampen
             </StickyAction>

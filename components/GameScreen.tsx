@@ -336,8 +336,9 @@ function ShotIndicator({
    *  being asked, "queued" for those waiting behind it. */
   highlight?: (index: number) => "active" | "queued" | null;
 }) {
+  const next = shots.findIndex((s) => s === null);
   return (
-    <div className="flex items-center justify-center gap-1.5 mt-1.5" aria-hidden={shots.every((s) => s === null)}>
+    <div className="flex items-center justify-center gap-2.5 mt-1.5" aria-hidden={shots.every((s) => s === null)}>
       {shots.map((shot, i) => {
         const editable = !!shot && !!onEdit;
         const asked = shot ? highlight?.(i) ?? null : null;
@@ -351,16 +352,16 @@ function ShotIndicator({
               // Was 1.9rem, which read as three faint specks under the buttons — the landscape
               // rail showed how much the same boxes gain from size. The empty state gets a
               // dashed edge as well, so "nothing thrown yet" is a state rather than an absence.
-              width: "2.4rem",
-              height: "2.4rem",
-              borderRadius: "0.5rem",
+              width: "2.6rem",
+              height: "2.6rem",
+              borderRadius: "50%",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               fontSize: "var(--text-small)",
               fontWeight: 700,
-              background: shot ? (shot.hit ? "var(--color-green)" : "var(--color-red)") : "transparent",
-              border: shot ? "none" : "1px dashed var(--color-border)",
+              background: shot ? (shot.hit ? "var(--color-green)" : "var(--color-red)") : "var(--color-cell)",
+              border: "none",
               color: "var(--color-cream)",
               padding: 0,
               cursor: editable ? "pointer" : "default",
@@ -369,7 +370,11 @@ function ShotIndicator({
                   ? "0 0 0 2px var(--color-gold), 0 0 16px color-mix(in srgb, var(--color-gold) 60%, transparent)"
                   : asked === "queued"
                     ? "0 0 0 2px color-mix(in srgb, var(--color-gold) 45%, transparent)"
-                    : undefined,
+                    : shot
+                      ? "var(--elevation-1)"
+                      : i === next
+                        ? "var(--elevation-0), 0 0 0 2px var(--teal-ring)"
+                        : "var(--elevation-0)",
             }}
           >
             {shot?.label ?? ""}
@@ -1205,7 +1210,7 @@ export function GameScreen({
         {players.length >= 5 && (
           <div className="scroll-hint-right absolute top-0 right-0 bottom-0 w-8 z-20 pointer-events-none" aria-hidden />
         )}
-        {!compactLandscape && thrower && <div className="shrink-0"><ThrowerBar key={turnToken} thrower={thrower} team={throwerTeam} kit={throwerTeam ? kits[throwerTeam.name] : null} stood={throwerStood} run={throwerRun} fire={fxFire} animate={throwerAnimate} onPickMate={choiceInteractive && !rewound ? setSwitchTo : undefined} onOpen={!rewound && !limited ? () => setSheetOpen(true) : undefined} flush /></div>}
+        {!compactLandscape && thrower && <div className="shrink-0"><ThrowerBar key={turnToken} thrower={thrower} team={throwerTeam} kit={throwerTeam ? kits[throwerTeam.name] : null} stood={throwerStood} run={throwerRun} round={activePlayer ? Math.floor((dartsThrown[activePlayer] ?? 0) / 3) + 1 : undefined} fire={fxFire} animate={throwerAnimate} onPickMate={choiceInteractive && !rewound ? setSwitchTo : undefined} onOpen={!rewound && !limited ? () => setSheetOpen(true) : undefined} flush /></div>}
         <div className="flex-1 min-h-0 w-full overflow-x-auto overflow-y-auto">
           <div
             className="game-grid grid h-full"

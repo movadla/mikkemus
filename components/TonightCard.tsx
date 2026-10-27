@@ -9,7 +9,7 @@ import { groupNights } from "@/lib/nights";
 import { plainName } from "@/lib/botLevels";
 import { buildSeedTable } from "@/lib/seedingTable";
 import { useRoster } from "@/lib/storage";
-import { MedalIcon, TrophyIcon } from "./icons";
+import { MedalIcon } from "./icons";
 import { Avatar } from "./ui/Avatar";
 import { CountUp } from "./ui/CountUp";
 import { Row } from "./ui/Row";
@@ -52,6 +52,7 @@ export function TonightCard() {
                   }
                   title={p.name}
                   value={`${p.wins}–${p.losses}`}
+                  bigValue
                   tone={i === 0 && p.wins > 0 ? "gold" : "default"}
                 />
               );
@@ -71,7 +72,7 @@ export function TonightCard() {
       )}
       {first && (
         <Section label="Nummer 1">
-          <Row href={`/spillere/${encodeURIComponent(first.name)}`} leading={<TrophyIcon className="w-5 h-5" />} title={first.name} value={<CountUp value={Math.round(first.rating)} />} subtitle="Rating" />
+          <Row href={`/spillere/${encodeURIComponent(first.name)}`} tone="gold" leading={<Avatar name={first.name} photo={roster.find((r) => r.name === first.name)?.photo} size="m" state="winner" />} title={first.name} value={<CountUp value={Math.round(first.rating)} />} bigValue subtitle="Rating, høyest akkurat nå" />
         </Section>
       )}
     </div>

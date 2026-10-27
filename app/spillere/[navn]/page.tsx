@@ -11,6 +11,7 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { PhotoButton } from "@/components/PhotoButton";
 import { TEAM_NAME_MAX } from "@/lib/teamNames";
 import { ScreenTop } from "@/components/ScreenTop";
+import { avatarAccent } from "@/lib/avatarAccent";
 import { SoundClipButton } from "@/components/SoundClipButton";
 import { PlayerKitEditor, TeamKitEditor, WalkOnPicker } from "@/components/KitSettings";
 import { TeamKit } from "@/components/TeamKit";
@@ -97,7 +98,7 @@ export default function PlayerDetailPage() {
 
   if (!player) {
     return (
-      <div className="animate-screen-push screen" style={{ background: "var(--color-bg)" }}>
+      <div className="animate-screen-push screen">
         <div className="screen-inner">
           <ScreenTop title="Spiller" backHref="/spillere" />
           {loaded ? <EmptyState title={`Fant ikke «${name}»`} /> : <SkeletonRows count={2} />}
@@ -111,7 +112,7 @@ export default function PlayerDetailPage() {
   const teams = isTeam ? [] : roster.filter((r) => r.kind === "team" && (r.members ?? []).some((m) => m.toLowerCase() === player.name.toLowerCase()));
 
   return (
-    <div className="animate-screen-push screen" style={{ background: "var(--color-bg)" }}>
+    <div className="animate-screen-push screen profile-mood" style={{ "--pc": avatarAccent(player.name) } as React.CSSProperties}>
       <div className="screen-inner">
         <ScreenTop
           title={player.name}

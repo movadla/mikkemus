@@ -243,7 +243,7 @@ export function TournamentOverviewScreen({
   const bracketRoundSizes = Array.from(new Set(bracketMatches.map((m) => m.bracketRoundSize!))).sort((a, b) => b - a);
 
   return (
-    <div className="animate-screen-enter screen" style={{ background: "var(--color-bg)" }}>
+    <div className="animate-screen-enter screen">
       {showCancelConfirm && (
         <ConfirmDialog
           message="Avbryte turneringen? Fremgangen slettes permanent og kan ikke gjenopprettes."

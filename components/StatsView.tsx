@@ -23,7 +23,7 @@ const OPTIONS: { value: StatsTab; label: string }[] = [
 export function StatsView({ initialTab = "spillere" }: { initialTab?: StatsTab }) {
   const [tab, setTab] = useState<StatsTab>(initialTab);
   return (
-    <div className="animate-screen-enter screen" style={{ background: "var(--color-bg)" }}>
+    <div className="animate-screen-enter screen">
       <div className="screen-inner wide">
         <ScreenTop title="Statistikk" />
         <div className="mb-5">

@@ -109,6 +109,7 @@ export function ThrowerBar({
   kit,
   stood,
   run = 0,
+  round,
   fire = false,
   animate,
   compact = false,
@@ -124,6 +125,8 @@ export function ThrowerBar({
   stood: boolean;
   /** Darts in a row that counted — shown from two up, so a lone hit is not announced. */
   run?: number;
+  /** The thrower's own round, counted from one: shown large on the right. */
+  round?: number;
   /** Flames round the picture while the run builds (Party and up). */
   fire?: boolean;
   animate: boolean;
@@ -137,7 +140,7 @@ export function ThrowerBar({
 }) {
   // The rest of the team in the order they come up next, so the first of them is the next thrower.
   const mates = team ? team.members.map((_, i) => team.members[(team.activeIdx + 1 + i) % team.members.length]).slice(0, team.members.length - 1) : [];
-  const photoSize = compact ? 44 : 72;
+  const photoSize = compact ? 44 : 80;
   const teamPhotoSize = compact ? 18 : 26;
   const kitBadge = compact ? 26 : 40;
   const Wrap: React.ElementType = onOpen ? "button" : "div";
@@ -152,7 +155,7 @@ export function ThrowerBar({
         // A team's turn is in the team's colours: the bar washes from the kit's main colour, and
         // the left edge is the kit, not the app's teal.
         // A lone player has a colour too (the one on their picture), so the bar is theirs whoever it is.
-        background: kit ? `linear-gradient(90deg, ${tint(kit.primary, 0.22)}, var(--color-surface) 65%)` : `linear-gradient(90deg, color-mix(in oklab, ${avatarAccent(team ? team.name : thrower.name)} 15%, var(--color-surface)), var(--color-surface) 72%)`,
+        background: kit ? `linear-gradient(100deg, ${tint(kit.primary, 0.3)}, var(--color-surface) 70%)` : `linear-gradient(100deg, color-mix(in oklab, ${avatarAccent(team ? team.name : thrower.name)} 28%, var(--color-surface)), var(--color-surface) 78%)`,
         border: flush ? "none" : `1px solid ${kit ? tint(kit.primary, 0.6) : "var(--color-border)"}`,
         borderBottom: flush ? "1px solid var(--color-hairline)" : undefined,
         borderLeft: `8px solid ${kit ? kit.primary : avatarAccent(team ? team.name : thrower.name)}`,
@@ -206,6 +209,16 @@ export function ThrowerBar({
         )}
       </div>
       </Wrap>
+      {round !== undefined && !compact && (
+        <div className="shrink-0 text-right" aria-label={`Runde ${round}`}>
+          <span className="block" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)", letterSpacing: "0.14em", fontWeight: 600 }}>
+            RUNDE
+          </span>
+          <span className="num block" style={{ color: "var(--color-cream)", fontSize: "2.25rem", textShadow: "var(--shadow-text)" }}>
+            {round}
+          </span>
+        </div>
+      )}
       {mates.length > 0 && (
         <div className="flex items-end gap-2 shrink-0" aria-label={`Neste på laget: ${mates.map((m) => m.name).join(", ")}`}>
           {mates.map((m, i) => {

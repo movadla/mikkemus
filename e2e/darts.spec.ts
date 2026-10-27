@@ -13,8 +13,8 @@ test.describe("legg inn piler for hånd", () => {
       await page.getByPlaceholder("Spillernavn").fill(name);
       await page.getByRole("button", { name: "Legg til" }).click();
     }
-    await page.getByLabel("Avanserte innstillinger").check();
-    await page.getByLabel(/Legg inn hver pil for hånd/).check();
+    await page.getByRole("switch", { name: /Avanserte innstillinger/ }).click();
+    await page.getByRole("switch", { name: /Legg inn hver pil for hånd/ }).click();
     await page.getByRole("button", { name: /Start/ }).first().click();
     await startPast(page);
 

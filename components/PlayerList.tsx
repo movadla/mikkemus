@@ -57,7 +57,7 @@ export function PlayerList() {
   );
 
   return (
-    <div className="animate-screen-enter screen" style={{ background: "var(--color-bg)" }}>
+    <div className="animate-screen-enter screen">
       <div className="screen-inner">
         <ScreenTop title="Spillere" />
         {roster.length === 0 ? (

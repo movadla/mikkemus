@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 export default function ErrorPage({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
   const router = useRouter();
   return (
-    <div className="screen" style={{ background: "var(--color-bg)" }}>
+    <div className="screen">
       <div className="screen-inner text-center" style={{ paddingTop: "4rem" }}>
         <h1 className="font-display" style={{ color: "var(--color-cream)", fontSize: "var(--text-num)" }}>
           Noe gikk galt

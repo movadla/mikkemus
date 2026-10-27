@@ -4,7 +4,7 @@ import { useState } from "react";
 import { FX_LABELS, FX_LEVELS, setFxLevel, useFxLevel } from "@/lib/fxLevel";
 import { useShowOdds, setShowOdds } from "@/lib/oddsSetting";
 import { setTexture, useTexture } from "@/lib/texture";
-import { setTheme, useThemeChoice } from "@/lib/theme";
+import { PACKS, PACK_LABELS, setPack, setTheme, usePack, useThemeChoice } from "@/lib/theme";
 import { setUiSound, useUiSound } from "@/lib/uiSound";
 import { useAccess } from "@/lib/access";
 import { forgetDevice } from "@/lib/pin";
@@ -47,11 +47,12 @@ export function SettingsScreen({ onBack }: { onBack?: () => void }) {
   const texture = useTexture();
   const uiSoundOn = useUiSound();
   const theme = useThemeChoice();
+  const pack = usePack();
   const fx = useFxLevel();
   const [qr, setQr] = useState<"live" | "turnering" | null>(null);
   const origin = typeof window === "undefined" ? "" : window.location.origin;
   return (
-    <div className="animate-screen-push screen" style={{ background: "var(--color-bg)" }}>
+    <div className="animate-screen-push screen">
       <div className="screen-inner">
         <ScreenTop title="Innstillinger" onBack={onBack} backHref={onBack ? undefined : "/mer"} />
 
@@ -74,6 +75,33 @@ export function SettingsScreen({ onBack }: { onBack?: () => void }) {
               <div className="mt-2">
                 <ThemePreview choice={theme} />
               </div>
+              {/* The colours of Mørk: three packs, each shown as its own ground with its own accent. Dag is not affected. */}
+              <p className="mt-3 mb-2" style={{ color: "var(--color-cream)", fontSize: "var(--text-body)", fontWeight: 600 }}>
+                Farger i Mørk
+              </p>
+              <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Farger i Mørk">
+                {PACKS.map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    role="radio"
+                    aria-checked={pack === p}
+                    onClick={() => setPack(p)}
+                    className={`tactile flex flex-col items-center gap-2 py-3 ${FOCUS_RING}`}
+                    style={{ borderRadius: "var(--radius-m)", background: pack === p ? "var(--teal-soft)" : "var(--color-surface)", border: pack === p ? "2px solid var(--color-teal)" : "1px solid var(--color-border)" }}
+                  >
+                    <span className="pack-swatch" data-pack={p} aria-hidden>
+                      <i />
+                    </span>
+                    <span style={{ color: "var(--color-cream)", fontSize: "var(--text-small)", fontWeight: pack === p ? 700 : 500 }}>{PACK_LABELS[p]}</span>
+                  </button>
+                ))}
+              </div>
+              {theme === "light" && (
+                <p className="mt-2" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
+                  Fargene gjelder Mørk. Dag er alltid Dag.
+                </p>
+              )}
             </div>
             <SwitchRow label="Odds" checked={showOdds} onChange={setShowOdds} />
             <SwitchRow label="Tekstur" checked={texture} onChange={setTexture} />

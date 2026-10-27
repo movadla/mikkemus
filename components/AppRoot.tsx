@@ -24,7 +24,7 @@ import { FOCUS_RING } from "./ui/focus";
 // The three ways into a game are loaded when one is chosen, not with the front page: the board alone is most of the app
 // (three thousand lines), and the front page is the first thing every visit draws.
 const loading = () => (
-  <div className="screen" style={{ background: "var(--color-bg)" }}>
+  <div className="screen">
     <div className="screen-inner">
       <SkeletonRows count={4} />
     </div>
@@ -128,7 +128,7 @@ export function AppRoot() {
   const resume = matchUnderway ? { title: matchUnderway.join(" mot "), label: "Kamp pågår", go: () => setMode("single") } : tournamentsOn && hasActiveTournament ? { title: "Turnering", label: "Pågår", go: () => setMode("tournament") } : null;
 
   return (
-    <div className="animate-screen-enter screen" style={{ background: "var(--color-bg)" }}>
+    <div className="animate-screen-enter screen">
       {/* The board's status as a dot in the corner — the words are one tap away. */}
       <div className="fixed top-2 right-2 z-40">
         <ScoliaDot summary={summarizeScolia(scolia.state)} />

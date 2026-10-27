@@ -24,7 +24,7 @@ export function EliminatedScreen({
   onLeave: () => void;
 }) {
   return (
-    <div className="animate-screen-enter screen flex items-center justify-center" style={{ background: "var(--color-bg)" }}>
+    <div className="animate-screen-enter screen flex items-center justify-center">
       <div className="screen-inner">
         <p className="section-label text-center mb-2">{tournamentTitle(tournament).toUpperCase()}</p>
         <h1 className="font-display text-center mb-6" style={{ color: "var(--color-cream)", fontSize: "var(--text-num)" }}>

@@ -11,11 +11,20 @@ import { useSyncExternalStore } from "react";
 export type ThemeChoice = "auto" | "dark" | "light";
 export type Theme = "dark" | "light";
 
+/**
+ * The pack, for Mørk: Studio (the green ground and teal accent the app was made with), Pub (warm brown and copper) or Midnatt
+ * (blue-black and ice). Only the colours differ. Dag is not affected, and Auto still picks between Mørk and Dag.
+ */
+export type Pack = "studio" | "pub" | "midnatt";
+export const PACKS: Pack[] = ["studio", "pub", "midnatt"];
+export const PACK_LABELS: Record<Pack, string> = { studio: "Studio", pub: "Pub", midnatt: "Midnatt" };
+const PACK_KEY = "mikke-mus-pack";
+
 const STORAGE_KEY = "mikke-mus-theme";
 const listeners = new Set<() => void>();
 
 /** Run in the page head before anything is drawn. Keep the colours in step with THEME_COLOR below. */
-export const THEME_BOOT = `try{var t=localStorage.getItem("${STORAGE_KEY}");var l=t==="light"||(t!=="dark"&&window.matchMedia("(prefers-color-scheme: light)").matches);if(l){document.documentElement.dataset.theme="light";var m=document.querySelectorAll("meta[name=theme-color]");for(var i=0;i<m.length;i++)m[i].content="#f3f0e6"}}catch(e){}`;
+export const THEME_BOOT = `try{var p=localStorage.getItem("${PACK_KEY}");if(p==="pub"||p==="midnatt")document.documentElement.dataset.pack=p;var t=localStorage.getItem("${STORAGE_KEY}");var l=t==="light"||(t!=="dark"&&window.matchMedia("(prefers-color-scheme: light)").matches);if(l){document.documentElement.dataset.theme="light";var m=document.querySelectorAll("meta[name=theme-color]");for(var i=0;i<m.length;i++)m[i].content="#f3f0e6"}}catch(e){}`;
 
 export function getThemeChoice(): ThemeChoice {
   if (typeof window === "undefined") return "auto";
@@ -39,9 +48,10 @@ export function resolveTheme(choice: ThemeChoice = getThemeChoice()): Theme {
 
 /** The colour of the browser's own bar (the status bar of the installed app) follows the ground of the theme. */
 const THEME_COLOR: Record<Theme, string> = { dark: "#0c110e", light: "#f3f0e6" };
+const PACK_COLOR: Record<Pack, string> = { studio: "#0c110e", pub: "#15100c", midnatt: "#0a0e17" };
 
 function paint(theme: Theme): void {
-  document.querySelectorAll<HTMLMetaElement>("meta[name=\"theme-color\"]").forEach((m) => (m.content = THEME_COLOR[theme]));
+  document.querySelectorAll<HTMLMetaElement>("meta[name=\"theme-color\"]").forEach((m) => (m.content = theme === "dark" ? PACK_COLOR[getPack()] : THEME_COLOR[theme]));
   if (theme === "light") document.documentElement.dataset.theme = "light";
   else delete document.documentElement.dataset.theme;
 }
@@ -95,4 +105,31 @@ export function useThemeChoice(): ThemeChoice {
 /** The theme that is drawn, for what needs to know (a preview, a chart's colours). */
 export function useTheme(): Theme {
   return useSyncExternalStore(subscribe, () => resolveTheme(), () => "dark");
+}
+
+export function getPack(): Pack {
+  if (typeof window === "undefined") return "studio";
+  try {
+    const v = localStorage.getItem(PACK_KEY);
+    return v === "pub" || v === "midnatt" ? v : "studio";
+  } catch {
+    return "studio";
+  }
+}
+
+export function setPack(pack: Pack): void {
+  try {
+    localStorage.setItem(PACK_KEY, pack);
+  } catch {
+    // The choice just won't outlive this session.
+  }
+  if (pack === "studio") delete document.documentElement.dataset.pack;
+  else document.documentElement.dataset.pack = pack;
+  paint(resolveTheme());
+  listeners.forEach((l) => l());
+}
+
+/** The pack, for the setting. */
+export function usePack(): Pack {
+  return useSyncExternalStore(subscribe, getPack, () => "studio");
 }

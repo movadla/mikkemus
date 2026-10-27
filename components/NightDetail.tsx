@@ -25,7 +25,7 @@ export function NightDetail({ night, otherDates }: { night: NightSummary | null;
   const slides = useMemo(() => (night ? nightSlides(night) : []), [night]);
   const winner = night?.players[0];
   return (
-    <div className="animate-screen-push screen" style={{ background: "var(--color-bg)" }}>
+    <div className="animate-screen-push screen">
       <div className="screen-inner">
         <ScreenTop title={night ? formatNightDate(night.date) : "Kveld"} backHref="/hall-of-fame" />
         {night && (

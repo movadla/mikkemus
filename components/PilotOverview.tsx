@@ -193,7 +193,7 @@ export function PilotOverview({
   const undoable = undoablePilotMatch(tournament);
   const stage = currentStage(tournament);
   return (
-    <div className="animate-screen-push screen" style={{ background: "var(--color-bg)" }}>
+    <div className="animate-screen-push screen">
       {confirm === "cancel" && (
         <ConfirmDialog
           message="Slette turneringen?"

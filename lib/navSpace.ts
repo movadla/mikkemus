@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 
 /** The room the bottom bar takes, as a page variable: screens add it to their bottom padding so the last row is never under the bar. */
-export const NAV_SPACE = "4.5rem";
+export const NAV_SPACE = "6rem";
 
 /** On a wide screen the menu stands at the side instead, and takes this much of the width. */
 export const NAV_RAIL = "6rem";

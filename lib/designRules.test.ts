@@ -105,6 +105,13 @@ describe("design rules", () => {
     expect(over).toEqual([]);
   });
 
+  it("keeps corners in the three radius tokens: no more literals than there are now", () => {
+    // Pills (999) and circles (50%) are shapes, not sizes. Everything else comes from --radius-s, -m and -l, so that an outer corner is the inner one plus the padding.
+    let literals = 0;
+    for (const file of SCREENS()) literals += (read(file).match(/borderRadius: ?"?[0-9.]+(px|rem|%)?"?/g) ?? []).filter((m) => !/999|50%/.test(m)).length;
+    expect(literals).toBeLessThanOrEqual(12);
+  });
+
   it("gives every player colour a value in both themes", () => {
     const css = read("app/globals.css");
     for (let i = 1; i <= 8; i++) expect((css.match(new RegExp(`--player-${i}:`, "g")) ?? []).length, `--player-${i}`).toBe(2);

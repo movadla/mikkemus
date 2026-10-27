@@ -89,7 +89,7 @@ export function TournamentHistoryScreen({ onBack }: { onBack: () => void }) {
 
   if (open) return <ChampionScreen tournament={open} onClose={() => startTransition(() => setOpen(null))} />;
   return (
-    <div className="animate-screen-push screen" style={{ background: "var(--color-bg)" }}>
+    <div className="animate-screen-push screen">
       <div className="screen-inner">
         <ScreenTop title="Pokaler" onBack={onBack} />
         {list !== null && counts.length > 0 && (

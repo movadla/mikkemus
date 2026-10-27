@@ -52,7 +52,7 @@ export default function BetPage() {
   const bal = useMemo(() => (books ? balances(books.ledger, night) : {}), [books, night]);
 
   return (
-    <div className="animate-screen-push screen" style={{ background: "var(--color-bg)" }}>
+    <div className="animate-screen-push screen">
       <div className="screen-inner">
         <ScreenTop title="Spill på morro" backHref="/mer" />
         <p className="mb-4" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>

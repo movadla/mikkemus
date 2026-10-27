@@ -16,7 +16,7 @@ export default function MorePage() {
   const fx = useFxLevel();
   const theme = useThemeChoice();
   return (
-    <div className="animate-screen-enter screen" style={{ background: "var(--color-bg)" }}>
+    <div className="animate-screen-enter screen">
       <div className="screen-inner wide">
         <ScreenTop title="Mer" />
         <div className="grid gap-2 md:grid-cols-2">

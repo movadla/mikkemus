@@ -193,7 +193,7 @@ export function KnockoutOverview({
   const elsewhere = elsewhereIds.map((id) => tournament.matches.find((m) => m.id === id)).filter((m): m is TournamentMatch => !!m && !!m.winner);
   const undoable = undoableMatch(tournament);
   return (
-    <div className="animate-screen-push screen" style={{ background: "var(--color-bg)" }}>
+    <div className="animate-screen-push screen">
       {confirm === "cancel" && (
         <ConfirmDialog
           message="Slette turneringen?"

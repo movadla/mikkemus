@@ -40,11 +40,11 @@ export function BottomNav({ current, onTurnering }: { current?: NavKey | null; o
   const items = ITEMS.filter((i) => !(limited && i.full));
   const cell = `tactile flex flex-col items-center justify-center gap-1 flex-1 min-w-0 md:flex-none md:py-3 ${FOCUS_RING}`;
   return (
-    <nav aria-label="Hovedmeny" className="bottom-nav fixed left-0 right-0 bottom-0 z-40 md:right-auto md:top-0 md:w-24 md:border-t-0" style={{ background: "var(--glass)", backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)", borderTop: "1px solid var(--color-hairline)", paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
-      <div className="mx-auto flex max-w-md px-2 md:max-w-none md:flex-col md:h-full md:justify-center md:gap-2 md:px-1">
+    <nav aria-label="Hovedmeny" className="bottom-nav fixed left-0 right-0 bottom-0 z-40 md:right-auto md:top-0 md:w-24 md:border-t-0">
+      <div className="bottom-nav-pill mx-auto flex max-w-md md:max-w-none md:flex-col md:h-full md:justify-center md:gap-2 md:px-1">
         {items.map((i) => {
           const on = i.key === active;
-          const style = { minHeight: "var(--control-lg)", color: on ? "var(--color-teal)" : "var(--color-muted)", fontSize: "var(--text-micro)", fontWeight: on ? 700 : 500, boxShadow: "none", background: "transparent" } as const;
+          const style = { minHeight: "var(--control-lg)", color: on ? "var(--color-teal)" : "var(--color-muted)", fontSize: "var(--text-micro)", fontWeight: on ? 700 : 500, boxShadow: "none", background: on ? "var(--teal-soft)" : "transparent", borderRadius: "var(--radius-pill)" } as const;
           const body = (
             <>
               {i.icon}

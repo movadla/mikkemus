@@ -108,7 +108,7 @@ export function BullOffScreen({
   }
 
   return (
-    <div className="animate-screen-push screen" style={{ background: "var(--color-bg)" }}>
+    <div className="animate-screen-push screen">
       <div className="screen-inner">
         <ScreenTop title="Bull-off" />
         <p className="mb-1" style={{ color: "var(--color-cream)", fontSize: "var(--text-body)", fontWeight: 600 }}>

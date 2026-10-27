@@ -61,7 +61,7 @@ export default function DesignPage() {
   const [chip, setChip] = useState(true);
   const [run, setRun] = useState(0);
   return (
-    <div className="animate-screen-enter screen" style={{ background: "var(--color-bg)" }}>
+    <div className="animate-screen-enter screen">
       <div className="screen-inner wide">
         <ScreenTop title="Stilark" />
 

@@ -48,7 +48,7 @@ export default function MatchPage() {
 
   if (archive === undefined || archive === null) {
     return (
-      <div className="animate-screen-push screen" style={{ background: "var(--color-bg)" }}>
+      <div className="animate-screen-push screen">
         <div className="screen-inner">
           <ScreenTop title="Kamp" backHref="/statistikk" />
           {archive === undefined ? <SkeletonRows count={3} /> : <EmptyState title="Fant ikke kampen" />}

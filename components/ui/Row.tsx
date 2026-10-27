@@ -14,6 +14,8 @@ export function Row({
   title,
   subtitle,
   value,
+  trailing,
+  bigValue = false,
   onClick,
   href,
   selected,
@@ -25,6 +27,10 @@ export function Row({
   subtitle?: ReactNode;
   /** What sits at the end: a figure, a result, a date. */
   value?: ReactNode;
+  /** Something between the text and the value: a small curve, a badge. */
+  trailing?: ReactNode;
+  /** The value is the point of the row: in the display face and large. */
+  bigValue?: boolean;
   onClick?: () => void;
   href?: string;
   selected?: boolean;
@@ -57,8 +63,9 @@ export function Row({
           </span>
         )}
       </span>
+      {trailing && <span className="shrink-0 flex items-center">{trailing}</span>}
       {value !== undefined && (
-        <span className="shrink-0 tabular" style={{ fontSize: "var(--text-body)", fontWeight: 600, color: tone === "gold" ? "var(--color-gold-strong)" : "var(--color-teal)" }}>
+        <span className={`shrink-0 tabular ${bigValue ? "num" : ""}`} style={{ fontSize: bigValue ? "var(--text-num)" : "var(--text-body)", fontWeight: bigValue ? 700 : 600, color: tone === "gold" ? "var(--color-gold-strong)" : "var(--color-teal)" }}>
           {value}
         </span>
       )}

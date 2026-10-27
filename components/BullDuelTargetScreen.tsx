@@ -37,7 +37,7 @@ export function BullDuelTargetScreen({ onNext, onBack }: { onNext: (target: numb
   );
 
   return (
-    <div className="animate-screen-push screen has-sticky-action" style={{ background: "var(--color-bg)" }}>
+    <div className="animate-screen-push screen has-sticky-action">
       <div className="screen-inner">
         <ScreenTop title="Bull-duell" onBack={onBack} backLabel="← Tilbake" />
 
