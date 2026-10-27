@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { callOut } from "@/lib/announcer";
 import { generateConfettiRain } from "@/lib/confetti";
 import { playFanfare } from "@/lib/fanfare";
 import { fxFlags, useFxLevel } from "@/lib/fxLevel";
 import { haptics } from "@/lib/haptics";
+import { towerScale, towerShare } from "@/lib/roundTier";
 import {
   DEFAULT_LIVES,
   MAX_LIVES,
@@ -26,6 +28,7 @@ import { splitPeople, type Person } from "@/lib/people";
 import { individualSetupProblem, setupSummary } from "@/lib/setupProblem";
 import { useRoster } from "@/lib/storage";
 import { uiSound } from "@/lib/uiSound";
+import { Bell } from "./Bell";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { Hearts } from "./Hearts";
 import { MinusIcon, PlusIcon } from "./icons";
@@ -34,11 +37,29 @@ import { ScoreKeypad } from "./ScoreKeypad";
 import { ScreenTop } from "./ScreenTop";
 import { commitPeople } from "./SetupScreen";
 import { StickyAction } from "./StickyAction";
+import { VoiceSwitch } from "./VoiceSwitch";
 import { Avatar } from "./ui/Avatar";
 import { Button } from "./ui/Button";
 import { SwitchRow } from "./ui/Switch";
 
 const oneDecimal = (n: number) => n.toFixed(1).replace(".", ",");
+
+/** The rounds that have gone up, as steps that grow: one that did not beat the one before is hatched red, and the best one is gold. */
+function Stairs({ game, height = "4rem", count = 6 }: { game: HighstrikerGame; height?: string; count?: number }) {
+  const turns = game.turns.slice(-count);
+  if (turns.length === 0) return null;
+  const top = Math.max(60, ...turns.map((t) => t.scored)) * 1.05;
+  const best = Math.max(...turns.map((t) => t.scored));
+  return (
+    <div className="hs-stairs" style={{ height }} role="img" aria-label={`Rundene: ${turns.map((t) => t.scored).join(", ")}`}>
+      {turns.map((t, i) => (
+        <span key={`${game.turns.length - turns.length + i}`} className={`hs-step ${t.lostLife ? "hs-step--bad" : t.scored === best ? "hs-step--best" : ""}`} style={{ height: `${Math.max(14, (t.scored / top) * 100)}%`, animationDelay: `${i * 40}ms` }} aria-hidden>
+          {t.scored}
+        </span>
+      ))}
+    </div>
+  );
+}
 
 /**
  * Highstriker: three lives each, and every round has to be more than the round before. Written in the same way as 301 and 501, and it
@@ -117,12 +138,24 @@ function HighstrikerGameScreen({
   onNew: () => void;
 }) {
   const [confirmExit, setConfirmExit] = useState(false);
+  /** What is written on the keypad, so the tower can rise with it. */
+  const [typed, setTyped] = useState("");
   const fx = fxFlags(useFxLevel());
   const winner = winnerOf(game);
   const up = playerUp(game);
   const target = targetOf(game);
   const least = leastToKeep(game);
   const last = game.turns[game.turns.length - 1];
+  const upLives = livesLeft(game, up);
+  const scale = towerScale(least);
+  const written = typed === "" ? 0 : Number(typed);
+  const passes = least !== null && typed !== "" && written >= least;
+  const lastLife = !winner && game.turns.length > 0 && upLives === 1;
+
+  // A player on the last life is told so, once, when the turn comes to them.
+  useEffect(() => {
+    if (lastLife) callOut("Siste liv");
+  }, [lastLife, up, game.turns.length]);
   const rain = useMemo(() => (winner && fx.confetti ? generateConfettiRain(fx.bigConfetti ? 60 : 36) : []), [winner, fx.confetti, fx.bigConfetti]);
 
   // The win is announced with the fanfare, where the level allows it.
@@ -133,6 +166,9 @@ function HighstrikerGameScreen({
   function submit(scored: number) {
     const next = playRound(game, scored);
     const turn = next.turns[next.turns.length - 1];
+    const nextUp = playerUp(next);
+    const need = leastToKeep(next);
+    if (!winnerOf(next) && need !== null) callOut(`${scored}${turn.lostLife ? ", for lite" : ""}. ${nextUp}, du må ha ${need}`);
     if (turn.lostLife) {
       haptics.undo();
       uiSound("undo");
@@ -152,7 +188,8 @@ function HighstrikerGameScreen({
           ))}
         </div>
         <div className="screen-inner relative z-10">
-          <div className="flex flex-col items-center text-center mb-6 mt-6">
+          <div className="flex flex-col items-center text-center mb-4 mt-6">
+            <Bell ring size={30} />
             <Avatar name={winner} photo={photos.get(winner)} px={112} state="winner" />
             <p className="section-label mt-4">HIGHSTRIKER · SISTE I LIVE</p>
             <h1 className="font-display" style={{ color: "var(--color-gold)", fontSize: "clamp(2.2rem, 11vw, 3.2rem)", lineHeight: 1.05 }}>
@@ -161,6 +198,12 @@ function HighstrikerGameScreen({
             <p className="mt-1">
               <Hearts total={game.lives} left={livesLeft(game, winner)} fresh={false} />
             </p>
+            <p className="mt-2 inline-block rounded-full px-3 py-1 font-bold" style={{ background: "var(--gold-soft)", color: "var(--color-gold-strong)", fontSize: "var(--text-small)", letterSpacing: "0.1em" }}>
+              BESTE RUNDE {bestOf(game, winner) ?? "–"}
+            </p>
+          </div>
+          <div className="mb-5">
+            <Stairs game={{ ...game, turns: game.turns.filter((t) => t.player === winner) }} height="5rem" count={8} />
           </div>
           <ul className="space-y-2 mb-6" aria-label="Resultat">
             {game.players.map((p) => (
@@ -197,6 +240,7 @@ function HighstrikerGameScreen({
 
   return (
     <div className="animate-screen-enter screen">
+      {lastLife && fx.heat && <div className="hs-vignette" aria-hidden />}
       {confirmExit && (
         <ConfirmDialog
           message="Avslutte kampen?"
@@ -208,18 +252,24 @@ function HighstrikerGameScreen({
       )}
       <div className="screen-inner">
         <ScreenTop title="Highstriker" onBack={() => setConfirmExit(true)} backLabel="Avslutt kampen" />
+        <p key={`${up}-${game.turns.length}`} className="turn-banner" aria-hidden>
+          {up} kaster
+        </p>
         <ul className="space-y-2 mb-4" aria-label="Stilling">
-          {game.players.map((p) => {
+          {[...game.players].sort((a, b) => Number(isOut(game, a)) - Number(isOut(game, b))).map((p) => {
             const active = p === up;
             const out = isOut(game, p);
             const left = livesLeft(game, p);
             const hit = last?.player === p && last.lostLife;
             const mine = [...game.turns].reverse().find((t) => t.player === p);
+            const outAt = out ? game.turns.findIndex((t, i) => t.player === p && livesLeft({ ...game, turns: game.turns.slice(0, i + 1) }, p) <= 0) : -1;
+            const outTurn = outAt >= 0 ? game.turns[outAt] : null;
+            const isLast = active && left === 1;
             return (
               <li
                 key={p}
                 aria-current={active ? "true" : undefined}
-                className={`hs-card relative flex items-center gap-3 overflow-hidden ${out ? "hs-out" : ""} ${hit ? "hs-hit" : ""}`}
+                className={`hs-card relative flex items-center gap-3 overflow-hidden ${out ? "hs-out" : ""} ${hit ? "hs-hit" : ""} ${active && !out ? "turn-lift" : ""} ${isLast ? "hs-last" : ""}`}
                 style={{
                   padding: "0.625rem 0.875rem",
                   borderRadius: "var(--radius-m)",
@@ -229,16 +279,27 @@ function HighstrikerGameScreen({
                 }}
               >
                 {hit && <span key={game.turns.length} aria-hidden className="hs-flash" />}
+                {out && outTurn && (
+                  <span key={outAt} className="hs-stamp" aria-hidden>
+                    UTE
+                  </span>
+                )}
                 <Avatar name={p} photo={photos.get(p)} size="m" state={active ? "active" : "idle"} />
                 <div className="flex-1 min-w-0">
                   <p className="font-display truncate" style={{ fontSize: "var(--text-title)", lineHeight: 1.1 }}>
                     {p}
                   </p>
-                  <Hearts total={game.lives} left={left} fresh={hit} />
+                  <Hearts total={game.lives} left={left} fresh={hit} beat={isLast} />
+                  {isLast && <p className="last-label">SISTE LIV</p>}
+                  {out && outTurn && (
+                    <p style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>
+                      Ute i runde {Math.floor(outAt / game.players.length) + 1} med {outTurn.scored}
+                    </p>
+                  )}
                 </div>
                 <div className="text-right" style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>
                   {out ? (
-                    <span style={{ color: "var(--color-red)", fontWeight: 700, letterSpacing: "0.1em" }}>UTE</span>
+                    <span className="sr-only">UTE</span>
                   ) : (
                     <>
                       <span className="num block" style={{ fontSize: "2rem", color: "var(--color-cream)" }}>
@@ -253,28 +314,43 @@ function HighstrikerGameScreen({
           })}
         </ul>
 
-        <div className="text-center mb-3 hs-target" style={{ borderRadius: "var(--radius-m)", padding: "0.75rem", background: "var(--teal-soft)", border: "1px solid var(--teal-ring)" }}>
-          {least === null ? (
-            <>
-              <p className="section-label">FØRSTE RUNDE</p>
-              <p className="font-display" style={{ fontSize: "var(--text-title)", color: "var(--color-cream)" }}>
-                {up} setter ribben, ingenting å slå
-              </p>
-            </>
-          ) : (
-            <>
-              <p className="section-label">{up.toUpperCase()} MÅ HA MINST</p>
-              <p key={game.turns.length} className="num hs-target-number" style={{ fontSize: "3.5rem", color: "var(--color-cream)" }}>
-                {least}
-              </p>
-              <p style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>
-                for å beholde livet · {last?.player} fikk {target}
-              </p>
-            </>
-          )}
+        <div className="hs-target flex items-stretch gap-4 mb-3" style={{ borderRadius: "var(--radius-m)", padding: "0.75rem 0.875rem", background: "var(--teal-soft)", border: "1px solid var(--teal-ring)" }}>
+          <div className="hs-tower" aria-hidden>
+            <div className="hs-bell-spot">
+              <Bell key={passes ? "ring" : "idle"} ring={passes} size={26} />
+            </div>
+            <div className="hs-tower-clip">
+              <div className={`hs-tower-fill ${least !== null && !passes && typed !== "" ? "hs-tower-fill--short" : ""}`} style={{ height: `${towerShare(written, scale) * 100}%` }} />
+              {least !== null && <div className="hs-tower-mark" style={{ bottom: `${towerShare(least, scale) * 100}%` }} />}
+            </div>
+          </div>
+          <div className="flex-1 min-w-0 flex flex-col justify-center">
+            {least === null ? (
+              <>
+                <p className="section-label">FØRSTE RUNDE</p>
+                <p className="font-display" style={{ fontSize: "var(--text-title)", color: "var(--color-cream)" }}>
+                  {up} setter ribben, ingenting å slå
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="section-label">{up.toUpperCase()} MÅ HA MINST</p>
+                <p key={game.turns.length} className="num hs-target-number" style={{ fontSize: "3.5rem", color: "var(--color-cream)", lineHeight: 1 }}>
+                  {least}
+                </p>
+                <p style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>
+                  for å beholde livet · {last?.player} fikk {target}
+                </p>
+              </>
+            )}
+            <div className="mt-2">
+              <Stairs game={game} />
+            </div>
+          </div>
         </div>
 
         <ScoreKeypad
+          onTyped={setTyped}
           onSubmit={submit}
           onUndo={() => setGame(undoRound(game))}
           canUndo={game.turns.length > 0}
@@ -290,6 +366,9 @@ function HighstrikerGameScreen({
             );
           }}
         />
+        <div className="mt-3">
+          <VoiceSwitch />
+        </div>
       </div>
     </div>
   );

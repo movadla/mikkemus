@@ -99,3 +99,21 @@ export function pressDigit(typed: string, digit: number): string {
   const next = typed + String(digit);
   return Number(next) > MAX_ROUND ? typed : next;
 }
+
+/** What each round of a player made, in order; a round over the line counts as nothing. */
+export function roundsOf(g: CountdownGame, player: string): number[] {
+  return g.turns.filter((t) => t.player === player).map((t) => (t.bust ? 0 : t.scored));
+}
+
+/** The best round a player has made. */
+export const bestRoundOf = (g: CountdownGame, player: string): number => Math.max(0, ...roundsOf(g, player));
+
+/** How many rounds of 100 or more a player has made. */
+export const tonsOf = (g: CountdownGame, player: string): number => roundsOf(g, player).filter((n) => n >= 100).length;
+
+/** The one with the least left, when it is one and the game has begun; null on a tie or before the first round. */
+export function leaderOf(g: CountdownGame): string | null {
+  if (g.turns.length === 0) return null;
+  const left = g.players.map((p) => ({ p, n: remainingOf(g, p) })).sort((a, b) => a.n - b.n);
+  return left.length > 1 && left[0].n === left[1].n ? null : left[0].p;
+}

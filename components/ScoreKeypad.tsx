@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { canGrow, pressDigit } from "@/lib/countdown";
 import { haptics } from "@/lib/haptics";
 import { uiFeedback } from "@/lib/uiSound";
@@ -17,14 +17,20 @@ export function ScoreKeypad({
   onUndo,
   canUndo,
   line,
+  onTyped,
 }: {
   onSubmit: (score: number) => void;
   onUndo: () => void;
   canUndo: boolean;
   /** The line above the number: who is up, and what the round has to be. Told what is written so far. */
   line: (typed: string) => ReactNode;
+  /** Told what is written as it changes, for a screen that shows it somewhere else too (the tower in Highstriker). */
+  onTyped?: (typed: string) => void;
 }) {
   const [typed, setTyped] = useState("");
+  useEffect(() => {
+    onTyped?.(typed);
+  }, [typed, onTyped]);
 
   function press(digit: number) {
     uiFeedback("pick");

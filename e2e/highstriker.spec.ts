@@ -3,11 +3,11 @@ import { expect, test, type Page } from "@playwright/test";
 import { PIN, THEMES, openApp } from "./helpers";
 
 /** Highstriker: every round has to beat the one before, and a life goes when it does not. */
-async function begin(page: Page, theme: "dark" | "light", lives?: number) {
+async function begin(page: Page, theme: "dark" | "light", lives?: number, players = ["Lars", "Vadla"]) {
   await openApp(page, theme);
   await page.getByRole("button", { name: "Andre spill" }).click();
   await page.getByRole("button", { name: "Highstriker" }).click();
-  for (const name of ["Lars", "Vadla"]) {
+  for (const name of players) {
     await page.getByRole("button", { name: "Ny spiller" }).click();
     await page.getByPlaceholder("Spillernavn").fill(name);
     await page.getByRole("button", { name: "Legg til" }).click();
@@ -67,5 +67,22 @@ test.describe("highstriker", () => {
     await expect(page.getByRole("heading", { name: "Lars" })).toBeVisible();
     await expect(page.getByText("SISTE I LIVE")).toBeVisible();
     await page.screenshot({ path: "test-results/highstriker-winner.png" });
+  });
+
+  test("siste liv sies, utslåtte får stempel og tårnet stiger med det som skrives", async ({ page }) => {
+    await begin(page, "dark", 2, ["Lars", "Vadla", "Moen"]);
+    await keys(page, "50");
+    await keys(page, "40");
+    await keys(page, "60");
+    await keys(page, "70");
+    // Vadla lost a life with 40: she is on the last one when it comes back to her.
+    await expect(card(page, "Vadla")).toContainText("SISTE LIV");
+    await expect(page.getByText("VADLA MÅ HA MINST")).toBeVisible();
+    await keys(page, "3");
+    await expect(page.getByRole("status")).toContainText("3 er for lite");
+    await page.getByRole("button", { name: "Slett" }).click();
+    await keys(page, "30");
+    await expect(card(page, "Vadla")).toContainText("Ute i runde 2 med 30");
+    await expect(page.getByRole("img", { name: /^Rundene: 50, 40, 60, 70, 30/ })).toBeVisible();
   });
 });

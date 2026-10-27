@@ -47,10 +47,13 @@ test.describe("301 og 501", () => {
     await begin(page, "dark");
     // Lars from 301: 180, then 60 is Vadla's, then 121 left for Lars is out in three darts or fewer.
     await keys(page, "180");
-    await expect(left(page, "Vadla")).not.toContainText("Ut:");
     await keys(page, "60");
-    await expect(left(page, "Lars")).toContainText("Ut: T20");
-    await expect(left(page, "Vadla")).not.toContainText("Ut:");
+    await expect(left(page, "Lars").getByRole("img", { name: /^Ut: T20/ })).toBeVisible();
+    await expect(left(page, "Vadla").getByRole("img", { name: /^Ut:/ })).toHaveCount(0);
+    // What is written shows what it would leave.
+    await keys(page, "5");
+    await expect(page.getByRole("status")).toContainText("116 igjen etter 5");
+    await page.getByRole("button", { name: "Slett" }).click();
     const voice = page.getByRole("switch", { name: /Stemme/ });
     await expect(voice).toBeVisible();
     await voice.click();
@@ -70,7 +73,7 @@ test.describe("301 og 501", () => {
     await keys(page, "121");
     await page.getByRole("dialog", { name: "Hvor mange piler tok siste runde?" }).getByRole("button", { name: "2 piler" }).click();
     await expect(page.getByRole("heading", { name: "Lars" })).toBeVisible();
-    await expect(page.getByText(/på 8 piler/)).toBeVisible();
+    await expect(page.getByText(/8 piler totalt/)).toBeVisible();
     await page.screenshot({ path: "test-results/countdown-winner.png" });
   });
 

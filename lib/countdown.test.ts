@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { averageOf, canGrow, judge, newGame, playRound, pressDigit, remainingOf, undoRound, winnerOf } from "./countdown";
+import { averageOf, bestRoundOf, canGrow, judge, leaderOf, newGame, playRound, pressDigit, remainingOf, roundsOf, tonsOf, undoRound, winnerOf } from "./countdown";
 
 describe("301 and 501", () => {
   it("takes each round off what the player has left, one player after the other", () => {
@@ -54,5 +54,23 @@ describe("301 and 501", () => {
     expect(pressDigit("18", 0)).toBe("180");
     expect(pressDigit("", 7)).toBe("7");
     expect(pressDigit("0", 5)).toBe("0");
+  });
+});
+
+describe("what the cards show", () => {
+  it("knows the rounds, the best of them, the tons and who leads", () => {
+    let g = newGame(501, true, ["A", "B"]);
+    expect(leaderOf(g)).toBeNull();
+    g = playRound(g, 100); // A
+    g = playRound(g, 60); // B
+    g = playRound(g, 140); // A
+    expect(roundsOf(g, "A")).toEqual([100, 140]);
+    expect(bestRoundOf(g, "A")).toBe(140);
+    expect(tonsOf(g, "A")).toBe(2);
+    expect(tonsOf(g, "B")).toBe(0);
+    expect(leaderOf(g)).toBe("A");
+    // A tie is nobody's lead.
+    const tie = playRound(playRound(newGame(501, true, ["A", "B"]), 60), 60);
+    expect(leaderOf(tie)).toBeNull();
   });
 });
