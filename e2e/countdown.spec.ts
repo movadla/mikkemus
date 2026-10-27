@@ -42,6 +42,20 @@ test.describe("301 og 501", () => {
     });
   }
 
+  test("foreslår veien ut når tallet er til å ta, og har en bryter for stemmen", async ({ page }) => {
+    await begin(page, "dark");
+    // Lars from 301: 180, then 60 is Vadla's, then 121 left for Lars is out in three darts or fewer.
+    await keys(page, "180");
+    await expect(left(page, "Vadla")).not.toContainText("Ut:");
+    await keys(page, "60");
+    await expect(left(page, "Lars")).toContainText("Ut: T20");
+    await expect(left(page, "Vadla")).not.toContainText("Ut:");
+    const voice = page.getByRole("switch", { name: /Stemme/ });
+    await expect(voice).toBeVisible();
+    await voice.click();
+    await expect(voice).toHaveAttribute("aria-checked", "false");
+  });
+
   test("en runde over streken teller ikke, og siste runde spør hvor mange piler", async ({ page }) => {
     await begin(page, "dark");
     await keys(page, "180");

@@ -66,50 +66,55 @@ describe("the pilot tournament is whole from the start", () => {
 });
 
 describe("where the places go", () => {
-  it("sends the first two of each heat to a winners lane and the last two to a losers lane, mixing A with D and B with C", () => {
+  it("sends the first two of each heat to a winners lane and the last two to a losers lane, the two of a heat to different lanes", () => {
     let t = make();
     for (const h of ["h1", "h2", "h3", "h4"]) t = play(t, h);
     // Seeds in order within each heat: A: 1 8 9 16, B: 2 7 10 15, C: 3 6 11 14, D: 4 5 12 13.
-    expect(pilotPlayers(byId(t, "w1"))).toEqual(["P1", "P4", "P5", "P8"]);
-    expect(pilotPlayers(byId(t, "w2"))).toEqual(["P2", "P3", "P6", "P7"]);
-    expect(pilotPlayers(byId(t, "l1"))).toEqual(["P9", "P12", "P13", "P16"]);
-    expect(pilotPlayers(byId(t, "l2"))).toEqual(["P10", "P11", "P14", "P15"]);
+    expect(pilotPlayers(byId(t, "w1"))).toEqual(["P1", "P3", "P5", "P7"]);
+    expect(pilotPlayers(byId(t, "w2"))).toEqual(["P2", "P4", "P6", "P8"]);
+    expect(pilotPlayers(byId(t, "l1"))).toEqual(["P9", "P11", "P13", "P15"]);
+    expect(pilotPlayers(byId(t, "l2"))).toEqual(["P10", "P12", "P14", "P16"]);
+    // Nobody shares a lane with someone from their own heat who finished next to them: A's first and second are in different lanes.
+    expect(pilotPlayers(byId(t, "w1"))).toContain("P1");
+    expect(pilotPlayers(byId(t, "w2"))).toContain("P8");
   });
 
-  it("waits with a lane until both heats that feed it are done", () => {
+  it("waits with a lane until all four heats are done", () => {
     let t = make();
-    t = play(t, "h1");
+    for (const h of ["h1", "h2", "h3"]) t = play(t, h);
     expect(isReady(byId(t, "w1"))).toBe(false);
+    expect(isReady(byId(t, "w2"))).toBe(false);
     t = play(t, "h4");
     expect(isReady(byId(t, "w1"))).toBe(true);
-    expect(isReady(byId(t, "w2"))).toBe(false);
+    expect(isReady(byId(t, "w2"))).toBe(true);
   });
 
   it("sends the first two of a winners lane straight on and the last two to lucky loser, one against one with the first two of the losers lane of the same number", () => {
     let t = make();
     for (const id of EARLY) t = play(t, id);
-    // w1: P1 P4 P5 P8 -> P1 P4 through. The third (P5) meets the second of l1 (P12), the fourth (P8) meets the first of l1 (P9).
-    expect(pilotPlayers(byId(t, "k1"))).toEqual(["P5", "P12"]);
-    expect(pilotPlayers(byId(t, "k2"))).toEqual(["P8", "P9"]);
-    // And the same in the other lane: w2 gave P6 and P7 (third and fourth), l2 gave P10 (first) and P11 (second).
-    expect(pilotPlayers(byId(t, "k3"))).toEqual(["P6", "P11"]);
-    expect(pilotPlayers(byId(t, "k4"))).toEqual(["P7", "P10"]);
-    // The last two of l1 (P13, P16) are out: they are in no later match.
+    // w1: P1 P3 P5 P7 -> P1 P3 through. The third (P5) meets the second of l1 (P11), the fourth (P7) meets the first of l1 (P9): third
+    // in the winners lane is easier to get than fourth.
+    expect(pilotPlayers(byId(t, "k1"))).toEqual(["P5", "P11"]);
+    expect(pilotPlayers(byId(t, "k2"))).toEqual(["P7", "P9"]);
+    // And the same in the other lane: w2 gave P6 and P8 (third and fourth), l2 gave P10 (first) and P12 (second).
+    expect(pilotPlayers(byId(t, "k3"))).toEqual(["P6", "P12"]);
+    expect(pilotPlayers(byId(t, "k4"))).toEqual(["P8", "P10"]);
+    // The last two of l1 (P13, P15) are out: they are in no later match.
     const later = t.matches.filter((m) => !EARLY.includes(m.id)).flatMap((m) => pilotPlayers(m));
     expect(later).not.toContain("P13");
-    expect(later).not.toContain("P16");
+    expect(later).not.toContain("P15");
   });
 
   it("puts someone straight through against someone from lucky loser, one against one, from the other lane", () => {
     let t = make();
     for (const id of [...EARLY, "k1", "k2", "k3", "k4"]) t = play(t, id);
     const q = (id: string) => pilotPlayers(byId(t, id));
-    // w1 gave P1, P4 and w2 gave P2, P3. The winners of lucky loser were P5 (k1), P8 (k2), P6 (k3) and P7 (k4), the better seed each time.
+    // w1 gave P1, P3 and w2 gave P2, P4. The winners of lucky loser were P5 (k1), P7 (k2), P6 (k3) and P8 (k4), the better seed each time.
     // Someone straight through meets a winner from the other lane: w1 against lucky loser 3 and 4, w2 against 1 and 2.
     expect(q("q1")).toEqual(["P1", "P6"]);
-    expect(q("q2")).toEqual(["P4", "P7"]);
+    expect(q("q2")).toEqual(["P3", "P8"]);
     expect(q("q3")).toEqual(["P2", "P5"]);
-    expect(q("q4")).toEqual(["P3", "P8"]);
+    expect(q("q4")).toEqual(["P4", "P7"]);
   });
 });
 
@@ -140,9 +145,9 @@ describe("playing it through", () => {
   it("can have a result that is not the strongest seed", () => {
     let t = make();
     t = play(t, "h1", ["P16", "P9", "P8", "P1"]);
-    t = play(t, "h4");
-    expect(pilotPlayers(byId(t, "w1"))).toEqual(["P4", "P5", "P9", "P16"]);
-    expect(pilotPlayers(byId(t, "l1"))).toEqual(["P1", "P8", "P12", "P13"]);
+    for (const h of ["h2", "h3", "h4"]) t = play(t, h);
+    expect(pilotPlayers(byId(t, "w1"))).toEqual(["P3", "P5", "P7", "P16"]);
+    expect(pilotPlayers(byId(t, "l1"))).toEqual(["P8", "P11", "P13", "P15"]);
   });
 });
 
@@ -196,25 +201,24 @@ describe("a cup with bots", () => {
     expect(byId(tournament, "h1").placements).toHaveLength(4);
   });
 
-  it("does not play a lane of bots before the house has played its own lane, nor the losers lane before its stage", () => {
-    // Heats A and D (seeds 1, 8, 9, 16 and 4, 5, 12, 13) are all bots, so winners lane 1 is a lane of bots too.
+  it("does not play a lane that has someone of the house in it, and decides the heats of bots first", () => {
+    // Heats A and D (seeds 1, 8, 9, 16 and 4, 5, 12, 13) are all bots. The lanes mix the heats, so every lane has someone from B or C.
     const botHeats = [...HEAT_A, 4, 5, 12, 13];
     let t = make(botHeats, true);
     expect(playPilotBots(t).decided).toEqual([]);
     t = play(t, "h2");
     expect(playPilotBots(t).decided).toEqual([]);
     t = play(t, "h3");
-    let decided: string[];
-    ({ tournament: t, decided } = playPilotBots(t));
-    // The house is through with its heats: the heats of bots are decided. The lanes they lead to are ready, and wait for the house's.
-    expect(decided).toEqual(["h1", "h4"]);
+    const afterHeats = playPilotBots(t);
+    t = afterHeats.tournament;
+    // The house is through with its heats: the heats of bots are decided. The lanes are ready, and wait for the house.
+    expect(afterHeats.decided).toEqual(["h1", "h4"]);
     expect(isReady(byId(t, "w1"))).toBe(true);
-    expect(byId(t, "w1").winner).toBeUndefined();
-    expect(nextPilotMatch(t)?.id).toBe("w2");
-    t = play(t, "w2");
-    ({ tournament: t, decided } = playPilotBots(t));
-    // After the house's winners lane, the bots' winners lane is decided; the losers lane of bots still waits for the house's.
-    expect(decided).toEqual(["w1"]);
+    expect(isReady(byId(t, "w2"))).toBe(true);
+    expect(playPilotBots(t).decided).toEqual([]);
+    expect(nextPilotMatch(t)?.id).toBe("w1");
+    t = play(t, "w1");
+    expect(playPilotBots(t).decided).toEqual([]);
     expect(byId(t, "l1").winner).toBeUndefined();
   });
 

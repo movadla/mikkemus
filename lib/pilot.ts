@@ -7,7 +7,7 @@ import type { Participant, PilotInfo, Tournament, TournamentMatch, TournamentMod
  * Ly Pilotturnering: sixteen play, four at a time on the board, and the order they finish in decides who goes where.
  *
  *  - Heat A to D, seeded in a snake (1, 8, 9, 16 in A; 2, 7, 10, 15 in B; and so on). The first two of each heat go to the winners'
- *    lanes, the last two to the losers' lanes.
+ *    lanes, the last two to the losers' lanes, the two of a pair to different lanes.
  *  - Two winners' lanes and two losers' lanes, of four each. The first two of a winners' lane are through to the quarter-finals;
  *    the last two go to lucky loser. The first two of a losers' lane go to lucky loser; the last two are out.
  *  - Four lucky loser matches, one against one: the two who were last in a winners' lane each meet one of the two who were first in
@@ -45,11 +45,12 @@ const SPECS: Spec[] = [
   { id: "h2", stage: "heat", label: "Heat B" },
   { id: "h3", stage: "heat", label: "Heat C" },
   { id: "h4", stage: "heat", label: "Heat D" },
-  // The lanes mix the heats so the strong are not all in one: A with D, B with C.
-  { id: "w1", stage: "winners", label: "Vinnerbane 1", slots: [{ from: "h1", place: 0 }, { from: "h1", place: 1 }, { from: "h4", place: 0 }, { from: "h4", place: 1 }] },
-  { id: "w2", stage: "winners", label: "Vinnerbane 2", slots: [{ from: "h2", place: 0 }, { from: "h2", place: 1 }, { from: "h3", place: 0 }, { from: "h3", place: 1 }] },
-  { id: "l1", stage: "losers", label: "Taperbane 1", slots: [{ from: "h1", place: 2 }, { from: "h1", place: 3 }, { from: "h4", place: 2 }, { from: "h4", place: 3 }] },
-  { id: "l2", stage: "losers", label: "Taperbane 2", slots: [{ from: "h2", place: 2 }, { from: "h2", place: 3 }, { from: "h3", place: 2 }, { from: "h3", place: 3 }] },
+  // The lanes mix the heats: the first and the second of a heat go to different winners' lanes, and the third and the fourth to different
+  // losers' lanes, so two who shared a heat do not share a lane again. Still the winners' side and the losers' side apart.
+  { id: "w1", stage: "winners", label: "Vinnerbane 1", slots: [{ from: "h1", place: 0 }, { from: "h2", place: 1 }, { from: "h3", place: 0 }, { from: "h4", place: 1 }] },
+  { id: "w2", stage: "winners", label: "Vinnerbane 2", slots: [{ from: "h1", place: 1 }, { from: "h2", place: 0 }, { from: "h3", place: 1 }, { from: "h4", place: 0 }] },
+  { id: "l1", stage: "losers", label: "Taperbane 1", slots: [{ from: "h1", place: 2 }, { from: "h2", place: 3 }, { from: "h3", place: 2 }, { from: "h4", place: 3 }] },
+  { id: "l2", stage: "losers", label: "Taperbane 2", slots: [{ from: "h1", place: 3 }, { from: "h2", place: 2 }, { from: "h3", place: 3 }, { from: "h4", place: 2 }] },
   // Lucky loser, one against one: the last two of a winners' lane against the first two of the losers' lane of the same number. The third
   // of the winners' lane (the better of the two) meets the second of the losers' lane (the weaker), and the fourth meets the first.
   { id: "k1", stage: "lucky", label: "Lucky loser 1", slots: [{ from: "w1", place: 2 }, { from: "l1", place: 1 }] },

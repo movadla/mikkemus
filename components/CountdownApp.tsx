@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { callOut, isCallerEnabled, setCallerEnabled } from "@/lib/announcer";
+import { checkoutLine } from "@/lib/checkout";
 import {
   DARTS_PER_ROUND,
   averageOf,
@@ -99,10 +101,14 @@ function CountdownGameScreen({
   const winner = winnerOf(game);
   const up = playerUp(game);
   const left = remainingOf(game, up);
+  const way = checkoutLine(left, game.doubleOut);
+  const [voice, setVoice] = useState(isCallerEnabled);
 
   /** The round is written in: over the line it counts for nothing, a finish asks how many darts it took, anything else goes on. */
   function submit(scored: number) {
     const verdict = judge(left, scored, game.doubleOut);
+    // The number is said at once, so the round can be heard to have gone in right; over the line it is said as such.
+    callOut(verdict === "bust" ? "Over" : String(scored));
     if (verdict === "finish") {
       setFinishing(scored);
       return;
@@ -230,6 +236,11 @@ function CountdownGameScreen({
                   <p className="font-display truncate" style={{ fontSize: "var(--text-title)", lineHeight: 1.1 }}>
                     {p}
                   </p>
+                  {active && way && (
+                    <p className="truncate font-semibold" style={{ color: "var(--color-teal)", fontSize: "var(--text-small)" }}>
+                      Ut: {way}
+                    </p>
+                  )}
                   <p className="truncate" style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>
                     {avg !== null ? `Snitt ${oneDecimal(avg)}` : "Ikke kastet"}
                     {last ? ` · siste ${last.bust ? "over" : last.scored}` : ""}
@@ -243,6 +254,17 @@ function CountdownGameScreen({
           })}
         </ul>
 
+        <div className="mb-3">
+          <SwitchRow
+            label="Stemme"
+            hint="Sier tallet høyt etter hver runde"
+            checked={voice}
+            onChange={(on) => {
+              setVoice(on);
+              setCallerEnabled(on);
+            }}
+          />
+        </div>
         <ScoreKeypad
           onSubmit={submit}
           onUndo={undo}
