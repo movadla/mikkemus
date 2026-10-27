@@ -5,6 +5,7 @@ import { PIN, THEMES, openApp } from "./helpers";
 /** 301 and 501: only what each round made is written in, and a round that can only be what it says goes in by itself. */
 async function begin(page: Page, theme: "dark" | "light") {
   await openApp(page, theme);
+  await page.getByRole("button", { name: "Andre spill" }).click();
   await page.getByRole("button", { name: "301 / 501" }).click();
   for (const name of ["Lars", "Vadla"]) {
     await page.getByRole("button", { name: "Ny spiller" }).click();

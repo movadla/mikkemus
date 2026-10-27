@@ -10,7 +10,7 @@ import { loadActiveTournamentId } from "@/lib/tournamentStorage";
 import { useScolia } from "@/lib/useScolia";
 import dynamic from "next/dynamic";
 import { HeroMascot } from "./HeroMascot";
-import { BullseyeIcon, DartIcon, HeartIcon, KeypadIcon, TrophyIcon } from "./icons";
+import { BullseyeIcon, DartIcon, FlameIcon, GridIcon, HeartIcon, KeypadIcon, TrophyIcon } from "./icons";
 import { RulesIntro } from "./RulesIntro";
 import { ScoliaDot, summarizeScolia } from "./ScoliaStatusBadge";
 import { SkeletonRows } from "./ui/Skeleton";
@@ -33,19 +33,22 @@ const loading = () => (
 const MikkeMusApp = dynamic(() => import("./MikkeMusApp").then((m) => m.MikkeMusApp), { loading });
 const TournamentApp = dynamic(() => import("./TournamentApp").then((m) => m.TournamentApp), { loading });
 const BullDuelApp = dynamic(() => import("./BullDuelApp").then((m) => m.BullDuelApp), { loading });
+const LavaApp = dynamic(() => import("./LavaApp").then((m) => m.LavaApp), { loading });
 const HighstrikerApp = dynamic(() => import("./HighstrikerApp").then((m) => m.HighstrikerApp), { loading });
 const CountdownApp = dynamic(() => import("./CountdownApp").then((m) => m.CountdownApp), { loading });
 
-type Mode = "home" | "single" | "tournament" | "bullduel" | "countdown" | "highstriker";
+type Mode = "home" | "single" | "tournament" | "bullduel" | "countdown" | "highstriker" | "lava";
 
 const TOURNAMENTS_OFFERED = true;
 
 /** A way in to a kind of game: its icon above its name, or beside it when it has the whole row to itself. */
-function Tile({ icon, label, onClick, wide = false }: { icon: React.ReactNode; label: string; onClick: () => void; wide?: boolean }) {
+function Tile({ icon, label, onClick, wide = false, expanded, controls }: { icon: React.ReactNode; label: string; onClick: () => void; wide?: boolean; expanded?: boolean; controls?: string }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      aria-expanded={expanded}
+      aria-controls={controls}
       className={`tactile flex items-center justify-center ${wide ? "flex-row gap-3" : "flex-col gap-2"} ${FOCUS_RING}`}
       style={{ minHeight: "5.5rem", borderRadius: "var(--radius-m)", background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-cream)", fontSize: "var(--text-body)", fontWeight: 600 }}
     >
@@ -64,6 +67,8 @@ export function AppRoot() {
   const [matchUnderway, setMatchUnderway] = useState<string[] | null>(null);
   // The rules introduction, on request (the address ?m=regler, from Mer). The first-time showing is MikkeMusApp's.
   const [showRules, setShowRules] = useState(false);
+  // The other games (301 / 501, Highstriker, Lava and what comes) are under one tile, opened on request.
+  const [moreOpen, setMoreOpen] = useState(false);
   const [welcomed, setWelcomed] = useState(true);
   const loaded = useRosterLoaded();
   // Only connected while the home screen itself is showing — MikkeMusApp/TournamentApp own their
@@ -125,6 +130,7 @@ export function AppRoot() {
   if (mode === "single") return <MikkeMusApp onExitToHome={() => setMode("home")} />;
   if (mode === "tournament") return <TournamentApp onExitToHome={() => setMode("home")} />;
   if (mode === "bullduel") return <BullDuelApp onExitToHome={() => setMode("home")} />;
+  if (mode === "lava" && !limited) return <LavaApp onExitToHome={() => setMode("home")} />;
   if (mode === "highstriker" && !limited) return <HighstrikerApp onExitToHome={() => setMode("home")} />;
   if (mode === "countdown" && !limited) return <CountdownApp onExitToHome={() => setMode("home")} />;
 
@@ -171,17 +177,23 @@ export function AppRoot() {
         {/* One tile has the whole row, as it should look; two or three share it. */}
         {(() => {
           // 301/501 is for the full code only.
-          const tiles = (resume ? 1 : 0) + (tournamentsOn ? 1 : 0) + 1 + (limited ? 0 : 2);
+          const tiles = (resume ? 1 : 0) + (tournamentsOn ? 1 : 0) + 1 + (limited ? 0 : 1);
           return (
             <div className={`grid gap-2 mb-6 ${tiles === 1 ? "grid-cols-1" : tiles === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
               {resume && <Tile icon={<DartIcon className="w-6 h-6" />} label="Enkeltkamp" onClick={() => setMode("single")} />}
               {tournamentsOn && <Tile icon={<TrophyIcon className="w-6 h-6" />} label="Turnering" onClick={() => setMode("tournament")} />}
               <Tile wide={tiles === 1} icon={<BullseyeIcon className="w-6 h-6" />} label="Bull-duell" onClick={() => setMode("bullduel")} />
-              {!limited && <Tile icon={<KeypadIcon className="w-6 h-6" />} label="301 / 501" onClick={() => setMode("countdown")} />}
-              {!limited && <Tile icon={<HeartIcon className="w-6 h-6" />} label="Highstriker" onClick={() => setMode("highstriker")} />}
+              {!limited && <Tile icon={<GridIcon className="w-6 h-6" />} label="Andre spill" onClick={() => setMoreOpen((o) => !o)} expanded={moreOpen} controls="andre-spill" />}
             </div>
           );
         })()}
+        {!limited && moreOpen && (
+          <div id="andre-spill" className="grid grid-cols-3 gap-2 mb-6 -mt-4 animate-screen-enter" role="group" aria-label="Andre spill">
+            <Tile icon={<KeypadIcon className="w-6 h-6" />} label="301 / 501" onClick={() => setMode("countdown")} />
+            <Tile icon={<HeartIcon className="w-6 h-6" />} label="Highstriker" onClick={() => setMode("highstriker")} />
+            <Tile icon={<FlameIcon className="w-6 h-6" />} label="Lava" onClick={() => setMode("lava")} />
+          </div>
+        )}
 
         </div>
 

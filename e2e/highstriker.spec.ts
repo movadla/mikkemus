@@ -5,6 +5,7 @@ import { PIN, THEMES, openApp } from "./helpers";
 /** Highstriker: every round has to beat the one before, and a life goes when it does not. */
 async function begin(page: Page, theme: "dark" | "light", lives?: number) {
   await openApp(page, theme);
+  await page.getByRole("button", { name: "Andre spill" }).click();
   await page.getByRole("button", { name: "Highstriker" }).click();
   for (const name of ["Lars", "Vadla"]) {
     await page.getByRole("button", { name: "Ny spiller" }).click();

@@ -521,3 +521,15 @@ export function HeartIcon({ className, filled = true }: IconProps & { filled?: b
     </Svg>
   );
 }
+
+/** Four tiles: the other games. */
+export function GridIcon({ className }: IconProps) {
+  return (
+    <Svg className={className}>
+      <rect x="4" y="4" width="6.5" height="6.5" rx="1.6" />
+      <rect x="13.5" y="4" width="6.5" height="6.5" rx="1.6" />
+      <rect x="4" y="13.5" width="6.5" height="6.5" rx="1.6" />
+      <rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.6" />
+    </Svg>
+  );
+}

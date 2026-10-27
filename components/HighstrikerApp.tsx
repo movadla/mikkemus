@@ -27,7 +27,8 @@ import { individualSetupProblem, setupSummary } from "@/lib/setupProblem";
 import { useRoster } from "@/lib/storage";
 import { uiSound } from "@/lib/uiSound";
 import { ConfirmDialog } from "./ConfirmDialog";
-import { HeartIcon, MinusIcon, PlusIcon } from "./icons";
+import { Hearts } from "./Hearts";
+import { MinusIcon, PlusIcon } from "./icons";
 import { PlayerPicker } from "./PlayerPicker";
 import { ScoreKeypad } from "./ScoreKeypad";
 import { ScreenTop } from "./ScreenTop";
@@ -38,23 +39,6 @@ import { Button } from "./ui/Button";
 import { SwitchRow } from "./ui/Switch";
 
 const oneDecimal = (n: number) => n.toFixed(1).replace(".", ",");
-
-/** A row of hearts: the lives there are, the ones that are gone as outlines, and the one that was lost just now breaking. */
-function Hearts({ total, left, fresh }: { total: number; left: number; fresh: boolean }) {
-  return (
-    <span className="inline-flex flex-wrap gap-0.5" role="img" aria-label={`${left} av ${total} liv igjen`}>
-      {Array.from({ length: total }, (_, i) => {
-        const alive = i < left;
-        const justLost = fresh && i === left;
-        return (
-          <span key={i} className={`heart ${alive ? "" : "heart--lost"} ${justLost ? "heart--fresh" : ""}`}>
-            <HeartIcon className="w-5 h-5" filled={alive || justLost} />
-          </span>
-        );
-      })}
-    </span>
-  );
-}
 
 /**
  * Highstriker: three lives each, and every round has to be more than the round before. Written in the same way as 301 and 501, and it
