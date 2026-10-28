@@ -94,7 +94,7 @@ export function PubScene() {
       {/* A string of bulbs along the cornice */}
       {BULBS.map((i) => (
         <g key={i}>
-          <circle cx={80 + i * 27} cy={92 + Math.sin(i * 1.3) * 3 + 6} r="6" fill={C.bulbs} opacity=".25" />
+          <circle cx={80 + i * 27} cy={92 + Math.sin(i * 1.3) * 3 + 6} r="6" fill={C.bulbs} opacity=".25" className="sc-twinkle" style={{ animationDelay: `${(i % 5) * 0.3}s` }} />
           <circle cx={80 + i * 27} cy={92 + Math.sin(i * 1.3) * 3 + 6} r="2.4" fill={C.bulbs} />
         </g>
       ))}

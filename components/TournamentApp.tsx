@@ -33,6 +33,8 @@ import { DrawScreen } from "./DrawScreen";
 import { PilotOverview } from "./PilotOverview";
 import { EliminatedScreen } from "./EliminatedScreen";
 import { FinalIntro } from "./FinalIntro";
+import { MatchIntro } from "./MatchIntro";
+import type { Place } from "@/lib/career";
 import { KnockoutOverview } from "./KnockoutOverview";
 import { MikkeMusApp } from "./MikkeMusApp";
 import { TournamentHistoryScreen } from "./TournamentHistoryScreen";
@@ -53,7 +55,21 @@ export type CareerHooks = {
   /** The player is out, or the cup is over: on to the pay-out. */
   onDone: () => void;
   onAbandon: () => void;
+  /** What it cost to get in, for the question before giving up. */
+  cost: number;
+  /** The player's level on the bots' scale, and what each place pays: for the card before a match. */
+  level: number;
+  prizes: Partial<Record<Place, number>>;
 };
+
+/** The career has no champion screen of its own: when a cup is done the player goes straight on to the pay-out. */
+function AutoDone({ onDone }: { onDone: () => void }) {
+  useEffect(() => {
+    onDone();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, when the screen comes up
+  }, []);
+  return null;
+}
 
 type Screen = "loading" | "setup" | "draw" | "overview" | "match" | "final" | "bulloff" | "eliminated" | "champion" | "history";
 
@@ -252,8 +268,8 @@ export function TournamentApp({ onExitToHome, career }: { onExitToHome: () => vo
     setJustPlayedId(null);
     setElsewhereIds([]);
     setCurrentMatch(match);
-    // The final of a career has a moment of its own before it is thrown.
-    setScreen(career && match.bracketRoundSize === 1 && !match.isBronzeMatch ? "final" : "match");
+    // Every match of a career has a card before it is thrown, and the final a scene of its own.
+    setScreen(career ? "final" : "match");
     // A final and a semi-final have their fanfare. Nothing speaks the names: no voice when a match starts.
     const level = getFxLevel();
     if (level !== "simple" && tournament && isPilot(tournament)) {
@@ -422,11 +438,15 @@ export function TournamentApp({ onExitToHome, career }: { onExitToHome: () => vo
   }
 
   if (screen === "draw" && pendingMode && pendingParticipants) {
-    return <DrawScreen seeded={seededOrder()} cup={pendingCup ?? undefined} summary={[pendingName || pendingCup?.name || "Turnering", String(pendingParticipants.length)].join(" · ")} onBack={() => (career ? onExitToHome() : setScreen("setup"))} onStart={createAndOpen} />;
+    return <DrawScreen seeded={seededOrder()} cup={pendingCup ?? undefined} summary={[pendingName || pendingCup?.name || "Turnering", String(pendingParticipants.length)].join(" · ")} onBack={() => (career ? onExitToHome() : setScreen("setup"))} onStart={createAndOpen} career={career ? { player: pendingParticipants.find((p) => !p.isBot)?.name ?? "" } : undefined} />;
   }
 
-  if (screen === "final" && tournament && currentMatch) {
-    return <FinalIntro tournament={tournament} match={currentMatch} onStart={() => setScreen("match")} />;
+  if (screen === "final" && tournament && currentMatch && career) {
+    if (currentMatch.bracketRoundSize === 1 && !currentMatch.isBronzeMatch) return <FinalIntro tournament={tournament} match={currentMatch} prizes={career.prizes} onStart={() => setScreen("match")} onBack={() => setScreen("overview")} />;
+    const { botLevels } = botSetupForMatch(tournament, currentMatch);
+    const names = matchParticipants(currentMatch);
+    const bot = names.find((n) => botLevels[n] !== undefined);
+    return <MatchIntro tournament={tournament} match={currentMatch} player={names.find((n) => n !== bot) ?? names[0]} level={career.level} opponentLevel={bot ? Number(botLevels[bot]) : career.level} prizes={career.prizes} onStart={() => setScreen("match")} onBack={() => setScreen("overview")} />;
   }
 
   if (screen === "match" && tournament && currentMatch && matchParticipants(currentMatch).length >= 2) {
@@ -474,12 +494,13 @@ export function TournamentApp({ onExitToHome, career }: { onExitToHome: () => vo
   }
 
   if (screen === "champion" && tournament && tournament.status === "done") {
-    return <ChampionScreen tournament={tournament} onNewWithSame={career ? undefined : handleNewWithSame} onHome={career ? career.onDone : onExitToHome} homeLabel={career ? "Fortsett" : undefined} onUndo={handleUndo} />;
+    if (career) return <AutoDone onDone={career.onDone} />;
+    return <ChampionScreen tournament={tournament} onNewWithSame={handleNewWithSame} onHome={onExitToHome} onUndo={handleUndo} />;
   }
 
   if (screen === "eliminated" && tournament) {
     const house = tournament.participants.filter((p) => (p.members ? p.members.some((m) => !m.isBot) : !p.isBot)).map((p) => p.name);
-    return <EliminatedScreen tournament={tournament} names={house} onWatchRest={handleWatchRest} onLeave={career ? career.onDone : onExitToHome} leaveLabel={career ? "Fortsett" : undefined} />;
+    return <EliminatedScreen tournament={tournament} names={house} onWatchRest={handleWatchRest} onLeave={career ? career.onDone : onExitToHome} leaveLabel={career ? "Fortsett til oppgjøret" : undefined} career={!!career} />;
   }
 
   if (tournament && isPilot(tournament)) {
@@ -509,7 +530,8 @@ export function TournamentApp({ onExitToHome, career }: { onExitToHome: () => vo
         onUndo={handleUndo}
         onCancelTournament={handleCancelTournament}
         cancelingTournament={submitting}
-        onHistory={() => openHistory("overview")}
+        onHistory={career ? undefined : () => openHistory("overview")}
+        career={career ? { cost: career.cost } : undefined}
       />
     );
   }

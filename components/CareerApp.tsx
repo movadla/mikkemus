@@ -6,18 +6,6 @@ import {
   DARTS,
   GAMES,
   HOMES,
-  PLACES,
-  SLOTS,
-  buyPlace,
-  nextPlace,
-  whyNotMove,
-  arenaBonus,
-  arenaSteps,
-  buyUpgrade,
-  nextPrice,
-  whyNotBuy,
-  type SlotId,
-  LADDER,
   PLACE_LABEL,
   START_LEVELS,
   TIERS,
@@ -29,19 +17,13 @@ import {
   dollars,
   finishEvent,
   newCareer,
-  offerChallenge,
   setTournament,
   settleChallenge,
-  stakeFor,
-  startEvent,
-  whyNot,
   type ActiveEvent,
   type Career,
   type Challenge,
   type DartsId,
-  type GameId,
   type HomeId,
-  type Tier,
 } from "@/lib/career";
 import { DRILL_ROUNDS, sessionFrom, trainCareer } from "@/lib/training";
 import { newGame as newCountdown, winnerOf as countdownWinner } from "@/lib/countdown";
@@ -50,14 +32,23 @@ import { newGame as newLava, stateOf as lavaState } from "@/lib/lava";
 import { DEFAULT_LIVES } from "@/lib/lava";
 import { deleteCareer, loadCareers, saveCareer } from "@/lib/careerStorage";
 import { setKits, teamKitsOf, useRoster } from "@/lib/storage";
+import { applyTheme } from "@/lib/theme";
+import { rankOf } from "@/lib/careerGoals";
 import { fxFlags, useFxLevel } from "@/lib/fxLevel";
-import { ConfirmDialog } from "./ConfirmDialog";
+import { haptics } from "@/lib/haptics";
+import { playFanfare } from "@/lib/fanfare";
+import { careerSound } from "@/lib/uiSound";
+import { CoinBurst } from "./CoinBurst";
+import { roadOf } from "@/lib/knockout";
+import { levelOfMed } from "@/lib/botLevels";
+import { roundName } from "./KnockoutOverview";
+import { Hub } from "./CareerHub";
+import { levelLabel, oneDecimal, signed } from "./careerFormat";
 import { Trophy } from "./Trophy";
 import { CountdownGameScreen } from "./CountdownApp";
 import { EventIntro } from "./EventIntro";
 import { ScoreKeypad } from "./ScoreKeypad";
 import { HighstrikerGameScreen } from "./HighstrikerApp";
-import { HomeScene } from "./HomeScene";
 import { LavaGameScreen } from "./LavaApp";
 import { KitEditor } from "./KitSettings";
 import { ScreenTop } from "./ScreenTop";
@@ -67,14 +58,9 @@ import { Avatar } from "./ui/Avatar";
 import { Button } from "./ui/Button";
 import { Card } from "./ui/Card";
 import { CountUp } from "./ui/CountUp";
-import { CupEmblem } from "./ui/CupEmblem";
 import { SkeletonRows } from "./ui/Skeleton";
 import { FOCUS_RING } from "./ui/focus";
 
-const newSeed = () => Math.floor(Math.random() * 1_000_000_000);
-const signed = (n: number) => (n > 0 ? `+${dollars(n)}` : dollars(n));
-const homeName = (id: HomeId) => HOMES.find((h) => h.id === id)?.name ?? PLACES.find((p) => p.id === id)?.name ?? "";
-const dartsName = (id: DartsId) => DARTS.find((d) => d.id === id)?.name ?? "";
 
 /**
  * Karriere: play events against bots for dollars and ranking points (CAREER_PLAN.md). One career per person. An event is the app's own
@@ -82,6 +68,11 @@ const dartsName = (id: DartsId) => DARTS.find((d) => d.id === id)?.name ?? "";
  * every result, so an event can be left and picked up again, on this phone or another.
  */
 export function CareerApp({ onExitToHome }: { onExitToHome: () => void }) {
+  // A game of evenings keeps to its night look whatever the rest of the app is set to, and gives the page back when it is left.
+  useEffect(() => {
+    applyTheme("dark");
+    return () => applyTheme();
+  }, []);
   const roster = useRoster();
   const [careers, setCareers] = useState<Career[] | null>(null);
   const [id, setId] = useState<string | null>(null);
@@ -187,6 +178,23 @@ function Choice({ selected, onPick, title, about }: { selected: boolean; onPick:
   );
 }
 
+/** The three steps of a start: who, what they look like, and the first tournament (which is the pub's, and free). */
+function Steps({ step }: { step: 1 | 2 }) {
+  const items = ["Hvem er du", "Utseende", "Første turnering"];
+  return (
+    <ol className="flex gap-2 mb-4" aria-label="Steg">
+      {items.map((label, i) => (
+        <li key={label} className="flex-1" aria-current={i + 1 === step ? "step" : undefined}>
+          <span className="block" style={{ height: "0.3rem", borderRadius: "var(--radius-pill)", background: i + 1 <= step ? "var(--color-teal)" : "var(--color-cell)" }} />
+          <span className="block mt-1" style={{ fontSize: "var(--text-micro)", color: i + 1 === step ? "var(--color-cream)" : "var(--color-muted)", fontWeight: i + 1 === step ? 700 : 500 }}>
+            {label}
+          </span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 /** Two steps: who and how good, then the look and the start (the shirt, the darts, the place). */
 function NewCareer({ taken, onBack, onCreate }: { taken: string[]; onBack: () => void; onCreate: (player: string, level: string, profile: { home: HomeId; darts: DartsId }) => void }) {
   const roster = useRoster();
@@ -204,6 +212,7 @@ function NewCareer({ taken, onBack, onCreate }: { taken: string[]; onBack: () =>
       <div className="animate-screen-push screen has-sticky-action">
         <div className="screen-inner">
           <ScreenTop title="Utseende" onBack={() => setStep(1)} sub={<span style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>{record.name}</span>} />
+          <Steps step={2} />
           <KitEditor label="SKJORTE" kit={kits.home} onChange={(kit) => setKits(record.name, { ...kits, home: kit })} name={record.name} />
           <p className="section-label mb-2">DARTPILER</p>
           <div className="space-y-2 mb-5" role="radiogroup" aria-label="Dartpiler">
@@ -217,6 +226,9 @@ function NewCareer({ taken, onBack, onCreate }: { taken: string[]; onBack: () =>
               <Choice key={h.id} selected={home === h.id} onPick={() => setHome(h.id)} title={h.name} about={h.about} />
             ))}
           </div>
+          <p className="mb-3" style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>
+            Neste er din første turnering: Lü-cupen på puben. Den er gratis.
+          </p>
           <Button block variant="primary" size="lg" onClick={() => onCreate(record.name, level, { home, darts })}>
             Start karrieren
           </Button>
@@ -229,6 +241,7 @@ function NewCareer({ taken, onBack, onCreate }: { taken: string[]; onBack: () =>
     <div className="animate-screen-push screen has-sticky-action">
       <div className="screen-inner">
         <ScreenTop title="Ny karriere" onBack={onBack} />
+        <Steps step={1} />
         <p className="section-label mb-2">HVEM SPILLER</p>
         {people.length === 0 ? (
           <p className="mb-4" style={{ color: "var(--color-muted)" }}>
@@ -258,358 +271,6 @@ function NewCareer({ taken, onBack, onCreate }: { taken: string[]; onBack: () =>
   );
 }
 
-type View = "home" | "tournaments" | "challenges" | "arena" | "training";
-
-/** The name of the start level a MED is nearest to, for telling the player where they stand. */
-const levelLabel = (med: number) => [...START_LEVELS].sort((a, b) => Math.abs(a.med - med) - Math.abs(b.med - med))[0].name;
-const oneDecimal = (n: number) => n.toFixed(1).replace(".", ",");
-
-/** A row of the status: the money, the points, the titles. */
-function Status({ career }: { career: Career }) {
-  return (
-    <div className="grid grid-cols-3 gap-2 mb-4 text-center" role="group" aria-label="Status">
-      {[
-        ["Saldo", <CountUp key="m" value={career.money} format={dollars} />],
-        ["Rankingpoeng", <CountUp key="p" value={career.points} />],
-        ["Titler", String(career.titles)],
-      ].map(([label, value]) => (
-        <div key={String(label)} style={{ padding: "0.5rem 0.25rem", borderRadius: "var(--radius-m)", background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
-          <span className="num block" style={{ fontSize: "var(--text-title)", color: "var(--color-cream)" }}>
-            {value}
-          </span>
-          <span style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>{label}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-/** One of the three things to do at home: a big button with a line under it. */
-function Door({ title, about, onClick, disabled }: { title: string; about: string; onClick?: () => void; disabled?: boolean }) {
-  return (
-    <button type="button" onClick={onClick} disabled={disabled} className={`tactile w-full text-left ${FOCUS_RING}`} style={{ padding: "0.8rem 1rem", borderRadius: "var(--radius-m)", background: "var(--color-surface)", border: "1px solid var(--color-border)", minHeight: "var(--control-lg)", opacity: disabled ? 0.55 : 1 }}>
-      <span className="block font-display" style={{ fontSize: "var(--text-title)", color: "var(--color-cream)" }}>
-        {title}
-      </span>
-      <span className="block" style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>
-        {about}
-      </span>
-    </button>
-  );
-}
-
-function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDelete }: { career: Career; onBack: () => void; onPlay: () => void; onChallenge: () => void; onTrain: () => void; commit: (c: Career) => void; onDelete: () => void }) {
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const [view, setView] = useState<View>("home");
-  // The thing just bought flashes in the picture for a moment.
-  const [pop, setPop] = useState<SlotId | null>(null);
-  const roster = useRoster();
-  const record = roster.find((r) => r.name === career.player);
-  const active = career.active;
-  const challenge = career.challenge;
-
-  const title = view === "training" ? "Trening" : view === "tournaments" ? "Turneringer" : view === "challenges" ? "Utfordringer" : view === "arena" ? "Hjemmearena" : "Karriere";
-  return (
-    <div className="animate-screen-push screen">
-      {confirmDelete && (
-        <ConfirmDialog
-          message={`Slette karrieren til ${career.player}?`}
-          buttons={[
-            { label: "Behold", onClick: () => setConfirmDelete(false), background: "var(--color-green)" },
-            { label: "Slett karriere", onClick: onDelete, background: "var(--color-red)" },
-          ]}
-        />
-      )}
-      <div className="screen-inner">
-        <ScreenTop
-          title={title}
-          onBack={view === "home" ? onBack : () => setView("home")}
-          backLabel={view === "home" ? "Alle karrierer" : "Hjem"}
-          right={record ? <TeamKit kit={teamKitsOf(record).home} size={40} title="Skjorten din" /> : undefined}
-          sub={
-            <span style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
-              {career.player} · {homeName(career.profile.home)} · {dartsName(career.profile.darts)} dart
-            </span>
-          }
-        />
-        <div className="mb-4">
-          <HomeScene home={career.profile.home} arena={career.arena} pop={pop} compact={view !== "home" && view !== "arena"} />
-        </div>
-        <Status career={career} />
-
-        {view === "home" && (
-          <>
-            {(active || challenge) && (
-              <Card className="mb-4">
-                <p className="section-label mb-1">PÅGÅR</p>
-                <h2 className="font-display mb-3" style={{ fontSize: "var(--text-title)", color: "var(--color-cream)" }}>
-                  {active ? TIERS[active.tier].name : `${GAMES[challenge!.game].name} mot ${challenge!.opponent.name}`}
-                </h2>
-                <Button block variant="primary" size="lg" onClick={active ? onPlay : onChallenge}>
-                  {(active ? active.result : challenge!.won !== null) ? "Se resultatet" : "Fortsett"}
-                </Button>
-              </Card>
-            )}
-            <div className="space-y-2 mb-4" aria-label="Hva vil du gjøre">
-              <Door title="Trening" about="Kast 15 runder og la nivået ditt følge kastingen" onClick={() => setView("training")} />
-              <Door title="Hjemmearena" about={arenaSteps(career) === 0 ? "Bygg opp rommet: lys, brett, pynt og publikum" : `${arenaSteps(career)} av 18 trinn kjøpt`} onClick={() => setView("arena")} />
-              <Door title="Turneringer" about={`${LADDER.length} å velge mellom, fra Lü til VM`} onClick={() => setView("tournaments")} />
-              <Door title="Utfordringer" about="501, Lava og Highstriker om penger" onClick={() => setView("challenges")} />
-            </div>
-            {career.history.length > 0 && (
-              <section className="mb-6" aria-label="Siste">
-                <p className="section-label mb-2">SISTE</p>
-                <ul className="space-y-1">
-                  {career.history.slice(0, 3).map((h) => (
-                    <li key={h.at} className="flex items-baseline justify-between gap-3" style={{ fontSize: "var(--text-small)", color: "var(--color-text-2)" }}>
-                      <span className="truncate">{h.place ? `${h.event} · ${PLACE_LABEL[h.place]}` : `${h.event} · ${h.won ? "vant" : "tapt"}`}</span>
-                      <span className="tabular shrink-0" style={{ color: "var(--color-muted)" }}>
-                        {signed(h.prize - h.cost)}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            )}
-            <div className="mt-6 text-center">
-              <Button variant="ghost" onClick={() => setConfirmDelete(true)}>
-                Slett karrieren
-              </Button>
-            </div>
-          </>
-        )}
-
-        {view === "tournaments" && (
-          <ul className="space-y-3 mb-6" aria-label="Turneringer">
-            {LADDER.map((tier) => (
-              <TournamentCard
-                key={tier.id}
-                career={career}
-                tier={tier}
-                onEnter={() => {
-                  commit(startEvent(career, tier.id, newSeed()));
-                  onPlay();
-                }}
-                onContinue={onPlay}
-              />
-            ))}
-          </ul>
-        )}
-
-        {view === "training" && (
-          <>
-            <Card className="mb-4">
-              <p className="section-label mb-1">DITT NIVÅ</p>
-              <p className="num" style={{ fontSize: "var(--text-num)", color: "var(--color-cream)" }}>
-                {levelLabel(career.skillMed)}
-              </p>
-              <p className="tabular" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
-                MED {oneDecimal(career.skillMed)} mm · motstanderne settes ut fra dette
-              </p>
-            </Card>
-            <Card className="mb-4">
-              <h2 className="font-display mb-1" style={{ fontSize: "var(--text-title)", color: "var(--color-cream)" }}>
-                Trebling 20
-              </h2>
-              <p className="mb-3" style={{ color: "var(--color-text-2)", fontSize: "var(--text-body)" }}>
-                Kast tre piler mot trebling 20, {DRILL_ROUNDS} ganger, og skriv inn summen av hver runde. Det tar ca. 8 minutter. Resultatet flytter nivået ditt litt, så motstanderne passer til hvordan du faktisk kaster. Penger kan ikke gjøre kastet bedre, bare rommet.
-              </p>
-              <Button block variant="primary" size="lg" onClick={onTrain}>
-                Start økten
-              </Button>
-            </Card>
-            {career.training.length > 0 && (
-              <section className="mb-6" aria-label="Siste økter">
-                <p className="section-label mb-2">SISTE ØKTER</p>
-                <ul className="space-y-1">
-                  {career.training.slice(0, 5).map((t) => (
-                    <li key={t.at} className="flex items-baseline justify-between gap-3 tabular" style={{ fontSize: "var(--text-small)", color: "var(--color-text-2)" }}>
-                      <span>snitt {oneDecimal(t.average)} per runde</span>
-                      <span style={{ color: "var(--color-muted)" }}>
-                        {oneDecimal(t.before)} → {oneDecimal(t.after)} mm
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            )}
-          </>
-        )}
-
-        {view === "arena" && (
-          <>
-            <p className="mb-3" style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>
-              {arenaBonus(career) === 1 ? "Et bedre rom gjør motstanderne litt svakere. Det er fortsatt du som kaster." : `Motstanderne er ${((arenaBonus(career) - 1) * 100).toFixed(1).replace(".", ",")} % svakere på grunn av rommet.`}
-            </p>
-            {nextPlace(career) && (
-              <Card className="mb-4">
-                <p className="section-label mb-1">NYTT STED</p>
-                <h2 className="font-display" style={{ fontSize: "var(--text-title)", color: "var(--color-cream)" }}>
-                  {nextPlace(career)!.name}
-                </h2>
-                <p className="mb-3" style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>
-                  {nextPlace(career)!.about}. Alt du har kjøpt flytter med, og stedet i seg selv gjør motstanderne {(nextPlace(career)!.bonus * 100).toFixed(0)} % svakere.
-                </p>
-                <Button
-                  block
-                  variant="primary"
-                  disabled={!!whyNotMove(career)}
-                  onClick={() => {
-                    commit(buyPlace(career));
-                    setPop("wall");
-                    setTimeout(() => setPop(null), 1500);
-                  }}
-                >
-                  Kjøp for {dollars(nextPlace(career)!.price)}
-                </Button>
-                {whyNotMove(career) && (
-                  <p className="mt-2" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
-                    {whyNotMove(career)}
-                  </p>
-                )}
-              </Card>
-            )}
-            <ul className="space-y-3 mb-6" aria-label="Hjemmearena">
-              {SLOTS.map((slot) => {
-                const step = career.arena[slot.id];
-                const price = nextPrice(career, slot.id);
-                const why = whyNotBuy(career, slot.id);
-                return (
-                  <li key={slot.id}>
-                    <Card>
-                      <div className="flex items-baseline justify-between gap-3 mb-1">
-                        <h2 className="font-display" style={{ fontSize: "var(--text-title)", color: "var(--color-cream)" }}>
-                          {slot.name}
-                        </h2>
-                        <span className="tabular" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
-                          {step} av 3
-                        </span>
-                      </div>
-                      <p style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>{slot.steps[step]}</p>
-                      {price === null ? (
-                        <p className="mt-2" style={{ color: "var(--color-gold-strong)", fontSize: "var(--text-small)" }}>
-                          Fullt utbygd
-                        </p>
-                      ) : (
-                        <>
-                          <p className="mt-2 mb-3" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
-                            Neste: {slot.steps[step + 1]}
-                          </p>
-                          <Button
-                            block
-                            variant="primary"
-                            disabled={!!why}
-                            onClick={() => {
-                              commit(buyUpgrade(career, slot.id));
-                              setPop(slot.id);
-                              setTimeout(() => setPop(null), 1500);
-                            }}
-                          >
-                            Kjøp for {dollars(price)}
-                          </Button>
-                          {why && (
-                            <p className="mt-2" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
-                              {why}
-                            </p>
-                          )}
-                        </>
-                      )}
-                    </Card>
-                  </li>
-                );
-              })}
-            </ul>
-          </>
-        )}
-
-        {view === "challenges" && (
-          <ul className="space-y-3 mb-6" aria-label="Utfordringer">
-            {(Object.keys(GAMES) as GameId[]).map((game) => (
-              <li key={game}>
-                <Card>
-                  <h2 className="font-display" style={{ fontSize: "var(--text-title)", color: "var(--color-cream)" }}>
-                    {GAMES[game].name}
-                  </h2>
-                  <p className="mb-2" style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>
-                    {GAMES[game].about} · ca. {GAMES[game].minutes} min
-                  </p>
-                  <p className="mb-3 tabular" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
-                    Vinn {dollars(stakeFor(career, game))} · ingen inngang
-                  </p>
-                  {challenge?.game === game || active || challenge ? (
-                    <Button block disabled>
-                      {active ? "Turnering pågår" : challenge?.game === game ? "Utfordring pågår" : "Fullfør den andre utfordringen først"}
-                    </Button>
-                  ) : (
-                    <Button
-                      block
-                      variant="primary"
-                      onClick={() => {
-                        commit(offerChallenge(career, game, newSeed()));
-                        onChallenge();
-                      }}
-                    >
-                      Utfordre
-                    </Button>
-                  )}
-                </Card>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </div>
-  );
-}
-
-/** A step of the ladder: what it is, what it costs and pays, and whether the player can sign up. */
-function TournamentCard({ career, tier, onEnter, onContinue }: { career: Career; tier: Tier; onEnter: () => void; onContinue: () => void }) {
-  const mine = career.active?.tier === tier.id;
-  const why = mine ? null : whyNot(career, tier);
-  const colour = cupColor(tier.kind);
-  return (
-    <li>
-      <Card>
-        <div className="flex items-center gap-3 mb-2">
-          <span style={{ color: colour }}>
-            <CupEmblem kind={tier.kind} className="w-8 h-8" />
-          </span>
-          <div className="min-w-0">
-            <h2 className="font-display truncate" style={{ fontSize: "var(--text-title)", color: "var(--color-cream)" }}>
-              {tier.name}
-            </h2>
-            <p style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>
-              {tier.venue} · {tier.size} spillere · ca. {tier.minutes} min
-            </p>
-          </div>
-        </div>
-        <p className="mb-3 tabular" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
-          Inngang {tier.fee === 0 ? "gratis" : dollars(tier.fee)} · vinneren får {dollars(tier.prizes.winner ?? 0)}
-          {tier.qualify && career.qualified.includes(tier.id) ? " · du er kvalifisert" : ""}
-        </p>
-        {mine ? (
-          <Button block variant="primary" onClick={onContinue}>
-            {career.active?.result ? "Se resultatet" : "Fortsett"}
-          </Button>
-        ) : why ? (
-          <>
-            <Button block disabled>
-              Meld deg på
-            </Button>
-            <p className="mt-2" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
-              {why}
-            </p>
-          </>
-        ) : (
-          <Button block variant="primary" onClick={onEnter}>
-            Meld deg på
-          </Button>
-        )}
-      </Card>
-    </li>
-  );
-}
-
 function Play({ career, commit, onHub }: { career: Career; commit: (c: Career) => void; onHub: () => void }) {
   const a = career.active!;
   // The scene before the draw is only for an event that has just been entered, not one that is picked up again.
@@ -636,6 +297,9 @@ function Play({ career, commit, onHub }: { career: Career; commit: (c: Career) =
         tournament: a.tournament,
         onChange: (t) => commit(setTournament(career, t)),
         onDone: () => commit(finishEvent(career, new Date().toISOString())),
+        cost: a.cost,
+        level: levelOfMed(career.skillMed),
+        prizes: TIERS[a.tier].prizes,
         onAbandon: () => {
           commit(abandonEvent(career));
           onHub();
@@ -696,7 +360,7 @@ function ChallengePlay({ career, commit, onHub }: { career: Career; commit: (c: 
             <p style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>Vinn og pengene er dine. Taper du, koster det ingenting.</p>
           </Card>
           <Button block variant="primary" size="lg" onClick={() => setPlaying(true)}>
-            Spill
+            Spill {GAMES[c.game].name} mot {c.opponent.name}
           </Button>
         </div>
       </div>
@@ -714,6 +378,9 @@ function ChallengePlay({ career, commit, onHub }: { career: Career; commit: (c: 
 function ChallengeResult({ career, c, onDone }: { career: Career; c: Challenge; onDone: () => void }) {
   const won = c.won === true;
   const roster = useRoster();
+  useEffect(() => {
+    if (won) haptics.win();
+  }, [won]);
   return (
     <div className="animate-screen-enter screen cup-lamp relative overflow-hidden" style={won ? ({ "--cup": "var(--color-gold)" } as React.CSSProperties) : undefined}>
       <div className="screen-inner relative z-10">
@@ -737,9 +404,27 @@ function ChallengeResult({ career, c, onDone }: { career: Career; c: Challenge; 
           </li>
         </ul>
         <Button block variant="primary" size="lg" onClick={onDone}>
-          Hjem
+          Til rommet
         </Button>
       </div>
+    </div>
+  );
+}
+
+/** The banner that comes up when a result opens the next step of the road. */
+function UnlockBanner({ label, name, colour }: { label: string; name: string; colour: string }) {
+  useEffect(() => {
+    const t = setTimeout(() => careerSound("unlock"), 1500);
+    return () => clearTimeout(t);
+  }, []);
+  return (
+    <div role="status" className="unlock-banner mb-4 text-center" style={{ borderColor: colour, color: colour }}>
+      <span className="section-label block" style={{ color: colour }}>
+        {label}
+      </span>
+      <span className="font-display" style={{ fontSize: "var(--text-title)", color: "var(--color-cream)" }}>
+        {name}
+      </span>
     </div>
   );
 }
@@ -751,14 +436,28 @@ function Result({ career, a, onDone }: { career: Career; a: ActiveEvent; onDone:
   const roster = useRoster();
   const opened = tier.opens && tier.opens.places.includes(r.place) ? TIERS[tier.opens.tier] : null;
   const record = roster.find((x) => x.name === career.player);
+  // The title the points have just given, when it is a new one.
+  const before = rankOf({ ...career, points: career.points - r.points, worldTitles: career.worldTitles - (won && tier.id === "vm" ? 1 : 0) });
+  const newRank = rankOf(career) !== before ? rankOf(career) : null;
   const fx = fxFlags(useFxLevel());
+  // The sounds of the moment: a win is a fanfare and a cheer, whatever place it is a pay-out for is a touch.
+  useEffect(() => {
+    if (won) {
+      if (fx.confetti) playFanfare();
+      careerSound("cheer");
+      haptics.win();
+    } else haptics.confirm();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, when the result comes up
+  }, []);
   return (
     <div className="animate-screen-enter screen cup-lamp relative overflow-hidden" style={{ "--cup": won ? "var(--color-gold)" : cupColor(tier.kind) } as React.CSSProperties}>
       <div className="screen-inner relative z-10">
         {won ? (
           // The ceremony: the trophy rises over the player, the player in their own shirt, and then the name of the cup and what it paid.
           <div className="flex flex-col items-center text-center mb-5 mt-2">
-            <Trophy cannons={fx.confetti} />
+            <div className="trophy-soft w-full">
+              <Trophy cannons={fx.confetti} />
+            </div>
             <div className="final-fade flex items-center gap-3 -mt-1" style={{ "--d": "0.9s" } as React.CSSProperties}>
               <Avatar name={career.player} photo={record?.photo} px={128} state="winner" />
               {record && <TeamKit kit={teamKitsOf(record).home} size={72} title="Skjorten din" />}
@@ -800,13 +499,26 @@ function Result({ career, a, onDone }: { career: Career; a: ActiveEvent; onDone:
             </span>
           </li>
         </ul>
-        {opened && (
-          <p className="mb-4 text-center" style={{ color: cupColor(opened.kind), fontWeight: 600 }}>
-            Du er kvalifisert til {opened.name}
-          </p>
+        {won && a.tournament && (
+          <section className="mb-4" aria-label="Veien til pokalen" style={{ padding: "0.75rem 0.9rem", borderRadius: "var(--radius-m)", background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
+            <p className="section-label mb-2">VEIEN</p>
+            <ol className="space-y-1">
+              {roadOf(a.tournament, career.player)
+                .filter((x) => !x.match.isBye)
+                .map((x) => (
+                  <li key={x.match.id} className="flex justify-between gap-3" style={{ fontSize: "var(--text-small)" }}>
+                    <span style={{ color: "var(--color-muted)" }}>{roundName(x.match)}</span>
+                    <span style={{ color: "var(--color-cream)", fontWeight: 600 }}>slo {x.opponent}</span>
+                  </li>
+                ))}
+            </ol>
+          </section>
         )}
+        {opened && <UnlockBanner label="NY TURNERING ÅPNET" name={opened.name} colour={cupColor(opened.kind)} />}
+        {newRank && <UnlockBanner label="NY TITTEL" name={newRank} colour="var(--color-gold)" />}
+        {r.prize > 0 && <CoinBurst />}
         <Button block variant="primary" size="lg" onClick={onDone}>
-          Hjem
+          Til rommet
         </Button>
       </div>
     </div>
@@ -849,7 +561,7 @@ function TrainingPlay({ career, commit, onHub }: { career: Career; commit: (c: C
             </p>
           </Card>
           <Button block variant="primary" size="lg" onClick={onHub}>
-            Ferdig
+            Tilbake til rommet
           </Button>
         </div>
       </div>

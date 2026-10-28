@@ -101,3 +101,6 @@ export const STAGE = {
   /** The dark before a final. */
   final: { top: "#07060c", bottom: "#1a1424", beam: "#f4f0e7" },
 };
+
+/** The colour of each cup's trophy on the shelf at home: the colours of the cups. */
+export const TROPHY = { lu: "#e0a045", region: "#3fb6b0", nm: "#ee6b57", gs: "#a47ae6", vm: "#f2c75a", shelf: "#6c4a2c" } as const;

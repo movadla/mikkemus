@@ -34,6 +34,7 @@ export function DrawScreen({
   cup,
   onBack,
   onStart,
+  career,
 }: {
   /** The entrants strongest first. */
   seeded: Participant[];
@@ -43,6 +44,8 @@ export function DrawScreen({
   cup?: CupConfig;
   onBack: () => void;
   onStart: (order: Participant[]) => void;
+  /** In the career the draw is not set up: no changing the cup, no choosing the kind of draw, the pairs are cards that turn over, the player's own lights up, and the button says what it starts. */
+  career?: { player: string };
 }) {
   const [mode, setMode] = useState<Mode>("seeded");
   const [order, setOrder] = useState<Participant[]>(seeded);
@@ -145,12 +148,13 @@ export function DrawScreen({
         <ScreenTop title="Trekning" onBack={onBack} backLabel="← Tilbake" />
         <StepStrip step={1} />
         {cup && <CupBanner cup={cup} />}
-        {summary && (
+        {summary && !career && (
           <button type="button" onClick={onBack} className={`tactile w-full rounded-lg px-4 flex items-center justify-between gap-3 mb-4 ${FOCUS_RING}`} style={{ minHeight: "var(--control)", background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-cream)", fontSize: "var(--text-body)" }}>
             <span className="truncate">{summary}</span>
             <span style={{ color: "var(--color-teal)" }}>Endre</span>
           </button>
         )}
+        {!career && (
         <div className="flex gap-2 mb-4" role="radiogroup" aria-label="Type trekning">
           {(["seeded", "open"] as const).map((m) => (
             <button
@@ -166,6 +170,7 @@ export function DrawScreen({
             </button>
           ))}
         </div>
+        )}
         {mode === "open" && (
           <p className="mb-3" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
             Trykk to navn for å bytte
@@ -209,6 +214,31 @@ export function DrawScreen({
             </div>
           </div>
         )}
+        {career ? (
+          <div className="grid grid-cols-2 gap-2 mb-4" aria-label="Trekningen">
+            {pairs.map((p, i) => {
+              const up = i < revealed;
+              const mine = p.a === career.player || p.b === career.player;
+              return (
+                <div key={`${round}-${i}`} className="draw-card" data-up={up} data-mine={mine} style={{ "--draw": colour } as React.CSSProperties}>
+                  <div className="draw-card-back" aria-hidden />
+                  <div className="draw-card-front">
+                    {mine && <span className="draw-card-me">DU</span>}
+                    <span className="truncate w-full text-center" style={{ fontWeight: p.a === career.player ? 800 : 500 }}>
+                      {p.a ?? "Walkover"}
+                      {seedNo(p.a ?? "") ? <span style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}> ({seedNo(p.a ?? "")})</span> : null}
+                    </span>
+                    <span style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>mot</span>
+                    <span className="truncate w-full text-center" style={{ fontWeight: p.b === career.player ? 800 : 500 }}>
+                      {p.b ?? "Walkover"}
+                      {seedNo(p.b ?? "") ? <span style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}> ({seedNo(p.b ?? "")})</span> : null}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
         <div className="space-y-2 mb-4">
           {pairs.map((p, i) => (
             <div key={`${round}-${i}`} className={`flex items-center gap-2 rounded-xl p-2 ${i === revealed - 1 && drawing ? "draw-flash" : ""}`} style={{ "--draw": colour, background: "var(--color-panel)", border: "1px solid var(--color-border)" } as React.CSSProperties}>
@@ -220,7 +250,17 @@ export function DrawScreen({
             </div>
           ))}
         </div>
-        {!drawing && (
+        )}
+        {!drawing && career && (
+          <p className="mb-4 text-center" style={{ color: "var(--color-gold-strong)", fontWeight: 600 }}>
+            {(() => {
+              const first = pairs.find((p) => p.a === career.player || p.b === career.player);
+              const against = first ? (first.a === career.player ? first.b : first.a) : null;
+              return against ? `Din første kamp: mot ${against}` : "Du er videre uten kamp i første runde";
+            })()}
+          </p>
+        )}
+        {!drawing && !career && (
           <div className="mb-4">
             <MiniBracket pairs={pairs} accent={colour} seedOf={seedNo} />
           </div>
@@ -233,7 +273,7 @@ export function DrawScreen({
           </div>
         )}
         <StickyAction onClick={() => onStart(order)} ready reason={null}>
-          Start
+          {career ? "Start turneringen" : "Start"}
         </StickyAction>
       </div>
     </div>

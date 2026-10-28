@@ -452,3 +452,13 @@ describe("a new place", () => {
     expect(arenaBonus(c)).toBe(1);
   });
 });
+
+describe("trophies", () => {
+  it("keeps a cup for each title, newest first, and nothing for a place", () => {
+    const won = finishEvent(playOut(entered(), 3), AT);
+    expect(won.trophies).toEqual([{ tier: "lu", at: AT, prize: 500 }]);
+    expect(finishEvent(playOut(entered(), 2), AT).trophies).toEqual([]);
+    const second = finishEvent(playOut(entered(closeEvent(won), "lu", 9), 3), "2026-10-29T20:00:00.000Z");
+    expect(second.trophies.map((t) => t.at)).toEqual(["2026-10-29T20:00:00.000Z", AT]);
+  });
+});

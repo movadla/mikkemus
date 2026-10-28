@@ -4485,3 +4485,283 @@ html[data-fx="full"] .hs-last {
     animation: none;
   }
 }
+
+/* The tournaments button of the career breathes when something is open that has not been entered. */
+.tab-pulse {
+  animation: tab-pulse 2.4s ease-in-out infinite;
+}
+@keyframes tab-pulse {
+  50% {
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--color-teal) 28%, transparent), var(--elevation-3);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tab-pulse {
+    animation: none;
+  }
+}
+
+/* The road from the pub to the world championship: a line down the left with a round node for each step. */
+.career-road {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.career-road-node {
+  position: relative;
+  display: flex;
+  gap: 0.75rem;
+  padding-bottom: 0.75rem;
+}
+.career-road-node::before {
+  content: "";
+  position: absolute;
+  left: 1.4rem;
+  top: 2.8rem;
+  bottom: -0.2rem;
+  width: 2px;
+  background: var(--color-border);
+}
+.career-road-node:last-child::before {
+  display: none;
+}
+.career-road-dot {
+  position: relative;
+  z-index: 1;
+  flex: none;
+  width: 2.8rem;
+  height: 2.8rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 2px solid var(--color-border);
+  background: var(--color-bg);
+}
+
+/* The draw of the career: the pairs are cards that are face down until their turn, then turn over; the player's own is lit in gold. */
+.draw-card {
+  position: relative;
+  aspect-ratio: 5 / 3;
+  perspective: 700px;
+}
+.draw-card-back,
+.draw-card-front {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-m);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transition: transform 0.6s cubic-bezier(0.3, 0.8, 0.3, 1);
+}
+.draw-card-back {
+  background: repeating-linear-gradient(45deg, var(--color-surface), var(--color-surface) 6px, var(--color-cell) 6px 12px);
+  border: 1px solid color-mix(in srgb, var(--draw) 45%, var(--color-border));
+}
+.draw-card-front {
+  transform: rotateY(180deg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  padding: 0.4rem;
+  background: var(--color-panel);
+  border: 1px solid var(--color-border);
+  color: var(--color-cream);
+  font-size: var(--text-body);
+  line-height: 1.2;
+}
+.draw-card[data-up="true"] .draw-card-back {
+  transform: rotateY(-180deg);
+}
+.draw-card[data-up="true"] .draw-card-front {
+  transform: rotateY(0);
+}
+.draw-card[data-mine="true"] .draw-card-front {
+  border-color: var(--color-gold);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--color-gold) 40%, transparent);
+  background: color-mix(in srgb, var(--color-gold) 10%, var(--color-panel));
+}
+.draw-card-me {
+  position: absolute;
+  top: 0.3rem;
+  right: 0.4rem;
+  font-size: var(--text-micro);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--color-gold-strong);
+}
+@media (prefers-reduced-motion: reduce) {
+  .draw-card-back,
+  .draw-card-front {
+    transition: none;
+  }
+}
+
+/* Coins that fly up to the balance when money arrives. */
+.coin-burst {
+  position: fixed;
+  left: 50%;
+  top: 62%;
+  width: 0;
+  height: 0;
+  z-index: 45;
+  pointer-events: none;
+}
+.coin-burst-coin {
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--color-gold-strong);
+  opacity: 0;
+  animation: coin-fly 1.5s cubic-bezier(0.2, 0.7, 0.3, 1) var(--d, 0s) forwards;
+}
+@keyframes coin-fly {
+  0% {
+    opacity: 0;
+    transform: translate(var(--dx), 0) scale(0.5) rotate(0);
+  }
+  15% {
+    opacity: 1;
+  }
+  60% {
+    opacity: 1;
+    transform: translate(calc(var(--dx) * 0.4), -40vh) scale(1) rotate(var(--rot));
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-18vw, -62vh) scale(0.5) rotate(calc(var(--rot) * 2));
+  }
+}
+/* The money chip pops when it grows, with the amount floating up from it. */
+.hud-pop {
+  animation: hud-pop 0.9s ease-out;
+}
+@keyframes hud-pop {
+  30% {
+    transform: scale(1.18);
+    box-shadow: 0 0 14px color-mix(in srgb, var(--color-gold) 55%, transparent);
+  }
+}
+.hud-delta {
+  position: absolute;
+  left: 50%;
+  top: -0.2rem;
+  font-weight: 800;
+  font-size: var(--text-small);
+  color: var(--color-green);
+  white-space: nowrap;
+  pointer-events: none;
+  animation: hud-delta 1.4s ease-out forwards;
+}
+@keyframes hud-delta {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 0);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -1.6rem);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .coin-burst-coin,
+  .hud-pop,
+  .hud-delta {
+    animation: none;
+  }
+  .coin-burst {
+    display: none;
+  }
+  .hud-delta {
+    opacity: 1;
+  }
+}
+
+/* The banner for a step of the road that has just opened: it comes up after the pay-out has been read. */
+.unlock-banner {
+  padding: 0.7rem 0.9rem;
+  border-radius: var(--radius-m);
+  border: 1px solid currentColor;
+  background: color-mix(in srgb, currentColor 10%, var(--color-surface));
+  opacity: 0;
+  animation: unlock-in 0.6s cubic-bezier(0.2, 1.2, 0.4, 1) 1.4s forwards;
+}
+@keyframes unlock-in {
+  from {
+    opacity: 0;
+    transform: translateY(1.2rem) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .unlock-banner {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+/* The beams behind a trophy end in a soft edge instead of a box. */
+.trophy-soft {
+  -webkit-mask-image: radial-gradient(ellipse 70% 80% at 50% 62%, #000 40%, transparent 78%);
+  mask-image: radial-gradient(ellipse 70% 80% at 50% 62%, #000 40%, transparent 78%);
+}
+
+/* Dust that drifts in the light of the room. */
+.home-dust {
+  animation: home-dust 7s ease-in-out infinite alternate;
+}
+@keyframes home-dust {
+  from {
+    transform: translate(0, 0);
+    opacity: 0.2;
+  }
+  to {
+    transform: translate(10px, -14px);
+    opacity: 0.7;
+  }
+}
+/* The main button of the home screen catches the light now and then. */
+.career-hero .glossy {
+  position: relative;
+  overflow: hidden;
+}
+.career-hero .glossy::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -60%;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  transform: skewX(-20deg);
+  animation: cta-shine 5s ease-in-out 1.5s infinite;
+  pointer-events: none;
+}
+@keyframes cta-shine {
+  0%,
+  60% {
+    left: -60%;
+  }
+  100% {
+    left: 130%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-dust,
+  .career-hero .glossy::after {
+    animation: none;
+  }
+  .career-hero .glossy::after {
+    display: none;
+  }
+}

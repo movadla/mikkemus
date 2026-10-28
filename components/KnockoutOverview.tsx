@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import { bracketRoundLabel, tournamentTitle, type Tournament, type TournamentMatch } from "@/lib/tournament";
 import { isSimulable, nextToThrow } from "@/lib/botSim";
 import { cupColor } from "@/lib/botCup";
+import { dollars } from "@/lib/career";
+import { MoreIcon } from "./icons";
 import { outIn, placeholderLabel, seedOf, undoableMatch, upcomingFor } from "@/lib/knockout";
 import { winChanceFor } from "@/lib/nextUp";
 import { useRoster } from "@/lib/storage";
@@ -181,6 +183,7 @@ export function KnockoutOverview({
   onCancelTournament,
   cancelingTournament,
   onHistory,
+  career,
 }: {
   tournament: Tournament;
   justDecidedId: string | null;
@@ -192,6 +195,8 @@ export function KnockoutOverview({
   onCancelTournament: () => void;
   cancelingTournament: boolean;
   onHistory?: () => void;
+  /** In the career: giving up costs the entry fee, there is no trophy cabinet, and nothing is deleted. */
+  career?: { cost: number };
 }) {
   const [selected, setSelected] = useState<TournamentMatch | null>(null);
   const [confirm, setConfirm] = useState<"cancel" | "undo" | null>(null);
@@ -203,10 +208,10 @@ export function KnockoutOverview({
     <div className="animate-screen-push screen cup-lamp" style={{ "--cup": cupColor(tournament.cup?.kind) } as React.CSSProperties}>
       {confirm === "cancel" && (
         <ConfirmDialog
-          message="Slette turneringen?"
+          message={career ? `Gi opp turneringen? ${career.cost > 0 ? `Innskuddet på ${dollars(career.cost)} er tapt` : "Du får ingenting"}, og kampene som er spilt teller ikke.` : "Slette turneringen?"}
           buttons={[
-            { label: "Behold", onClick: () => setConfirm(null), background: "var(--color-green)" },
-            { label: cancelingTournament ? "Sletter …" : "Slett", onClick: cancelingTournament ? () => {} : onCancelTournament, background: "var(--color-red)" },
+            { label: career ? "Spill videre" : "Behold", onClick: () => setConfirm(null), background: "var(--color-green)" },
+            { label: career ? "Gi opp" : cancelingTournament ? "Sletter …" : "Slett", onClick: cancelingTournament ? () => {} : onCancelTournament, background: "var(--color-red)" },
           ]}
         />
       )}
@@ -221,7 +226,7 @@ export function KnockoutOverview({
       )}
       {selected && <MatchSheet tournament={tournament} match={selected} onClose={() => setSelected(null)} />}
       <div className="screen-inner" style={{ maxWidth: "min(100%, 64rem)" }}>
-        <ScreenTop title={tournamentTitle(tournament)} sub={tournament.cup ? <CupLine cup={tournament.cup} /> : undefined} onBack={onExitToHome} right={onHistory ? <button type="button" onClick={onHistory} className={`tactile rounded-lg text-sm px-3 ${FOCUS_RING}`} style={{ minHeight: "var(--control)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}>Pokaler</button> : undefined} />
+        <ScreenTop title={tournamentTitle(tournament)} sub={tournament.cup ? <CupLine cup={tournament.cup} /> : undefined} onBack={onExitToHome} right={career ? <button type="button" onClick={() => setConfirm("cancel")} aria-label="Meny" className={`tactile inline-flex items-center justify-center ${FOCUS_RING}`} style={{ width: "var(--control)", height: "var(--control)", borderRadius: "var(--radius-m)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}><MoreIcon className="w-5 h-5" /></button> : onHistory ? <button type="button" onClick={onHistory} className={`tactile rounded-lg text-sm px-3 ${FOCUS_RING}`} style={{ minHeight: "var(--control)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}>Pokaler</button> : undefined} />
         <StageStrip tournament={tournament} />
         <div className="mx-auto" style={{ maxWidth: "28rem" }}>
           {just && <ResultCard tournament={tournament} match={just} />}
@@ -249,13 +254,15 @@ export function KnockoutOverview({
         </div>
         <div className="mx-auto space-y-2" style={{ maxWidth: "28rem" }}>
           {undoable && (
-            <button type="button" onClick={() => setConfirm("undo")} className={`tactile w-full rounded-lg text-sm ${FOCUS_RING}`} style={{ minHeight: "var(--control)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}>
+            <button type="button" onClick={() => setConfirm("undo")} className={`tactile w-full rounded-lg text-sm ${FOCUS_RING}`} style={career ? { minHeight: "var(--control)", background: "transparent", color: "var(--color-muted)", textDecoration: "underline" } : { minHeight: "var(--control)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}>
               Angre siste resultat
             </button>
           )}
-          <button type="button" onClick={() => setConfirm("cancel")} className={`tactile w-full rounded-lg text-sm ${FOCUS_RING}`} style={{ minHeight: "var(--control)", background: "var(--color-surface)", color: "var(--color-red)", border: "1px solid var(--color-border)" }}>
-            Slett turnering
-          </button>
+          {!career && (
+            <button type="button" onClick={() => setConfirm("cancel")} className={`tactile w-full rounded-lg text-sm ${FOCUS_RING}`} style={{ minHeight: "var(--control)", background: "var(--color-surface)", color: "var(--color-red)", border: "1px solid var(--color-border)" }}>
+              Slett turnering
+            </button>
+          )}
         </div>
       </div>
     </div>

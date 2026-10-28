@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+import { careerSound } from "@/lib/uiSound";
 import type { Tier } from "@/lib/career";
 import { dollars } from "@/lib/career";
 import { cupColor } from "@/lib/botCup";
@@ -8,7 +10,7 @@ import { CountUp } from "./ui/CountUp";
 import { CupEmblem } from "./ui/CupEmblem";
 
 /** The ground each event stands on: the top and the bottom of its sky or its roof. */
-const GROUND = {
+export const GROUND = {
   lu: [PUB.skyTop, PUB.skyBottom],
   region: [STAGE.region.top, STAGE.region.bottom],
   nm: [STAGE.nm.top, STAGE.nm.bottom],
@@ -32,6 +34,10 @@ const ENTRANCE = {
  * there from the start.
  */
 export function EventIntro({ tier, onDone }: { tier: Tier; onDone: () => void }) {
+  // The crowd of the place swells as the scene comes up: the murmur of the pub, a hall filling, an arena roaring.
+  useEffect(() => {
+    careerSound(tier.scale <= 1 ? "crowd-1" : tier.scale <= 3 ? "crowd-2" : "crowd-3");
+  }, [tier.scale]);
   const [top, bottom] = GROUND[tier.id];
   const big = tier.scale >= 3;
   return (
@@ -80,7 +86,7 @@ export function EventIntro({ tier, onDone }: { tier: Tier; onDone: () => void })
         </ul>
         <div className="w-full intro-rise" style={{ "--d": "1.6s" } as React.CSSProperties}>
           <Button block variant="primary" size="lg" onClick={onDone}>
-            Til trekningen
+            Trekk lodd
           </Button>
         </div>
       </div>

@@ -1117,3 +1117,69 @@ export function playDrawTick(progress: number, last = false) {
     // A sound that fails to play must never get in the way of the draw.
   }
 }
+
+/**
+ * The sounds of the career, made from the same noise and tones as the rest: a coin, a door that opens on something new, and a crowd of three
+ * sizes (the murmur of the pub, a hall filling up, an arena that roars), plus the cheer that comes with a win. The crowd is the shared noise
+ * through a filter that opens and closes: the bigger the place, the higher and wider the filter and the longer the swell.
+ */
+export type CareerSoundKind = "coin" | "unlock" | "crowd-1" | "crowd-2" | "crowd-3" | "cheer";
+
+export function playCareerSound(kind: CareerSoundKind) {
+  const ctx = getContext();
+  if (!ctx) return;
+  try {
+    if (ctx.state === "suspended") ctx.resume().catch(() => {});
+    const buses = getBuses(ctx);
+    if (!buses) return;
+    const t0 = ctx.currentTime + 0.005;
+    const tone = (freq: number, start: number, length: number, peak: number, type: OscillatorType = "triangle") => {
+      const env = ctx.createGain();
+      env.gain.setValueAtTime(0.0001, start);
+      env.gain.exponentialRampToValueAtTime(peak, start + 0.008);
+      env.gain.exponentialRampToValueAtTime(0.0001, start + length);
+      env.connect(buses.master);
+      env.connect(buses.reverb);
+      const osc = ctx.createOscillator();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, start);
+      osc.connect(env);
+      osc.start(start);
+      osc.stop(start + length + 0.02);
+    };
+    if (kind === "coin") {
+      tone(1568, t0, 0.09, 0.1, "sine");
+      tone(2093, t0 + 0.07, 0.22, 0.1, "sine");
+      return;
+    }
+    if (kind === "unlock") {
+      [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, t0 + i * 0.07, 0.3, 0.12));
+      return;
+    }
+    // A crowd: noise through a band that swells and fades.
+    const noise = getNoise(ctx);
+    if (!noise) return;
+    const spec = { "crowd-1": { centre: 500, q: 0.7, peak: 0.07, rise: 0.9, length: 2.6 }, "crowd-2": { centre: 800, q: 0.6, peak: 0.1, rise: 1.1, length: 3.2 }, "crowd-3": { centre: 1100, q: 0.5, peak: 0.15, rise: 1.3, length: 3.8 }, cheer: { centre: 1500, q: 0.6, peak: 0.2, rise: 0.25, length: 2.4 } }[kind];
+    const src = ctx.createBufferSource();
+    src.buffer = noise;
+    src.loop = true;
+    src.playbackRate.value = 0.9;
+    const band = ctx.createBiquadFilter();
+    band.type = "bandpass";
+    band.frequency.setValueAtTime(spec.centre * 0.7, t0);
+    band.frequency.linearRampToValueAtTime(spec.centre * 1.15, t0 + spec.rise);
+    band.Q.value = spec.q;
+    const env = ctx.createGain();
+    env.gain.setValueAtTime(0.0001, t0);
+    env.gain.linearRampToValueAtTime(spec.peak, t0 + spec.rise);
+    env.gain.exponentialRampToValueAtTime(0.0001, t0 + spec.length);
+    src.connect(band);
+    band.connect(env);
+    env.connect(buses.master);
+    env.connect(buses.reverb);
+    src.start(t0);
+    src.stop(t0 + spec.length + 0.05);
+  } catch {
+    // A sound that fails to play must never get in the way of what asked for it.
+  }
+}

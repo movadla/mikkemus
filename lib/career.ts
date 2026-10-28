@@ -201,6 +201,9 @@ export type HistoryEntry = { at: string; event: string; place?: Place; prize: nu
 /** A training session: what the player threw, what it says about their level, and how the level moved. */
 export type TrainingSession = { at: string; /** The average of a round of three darts at the treble 20. */ average: number; /** The level the average points to, as a MED in mm. */ measured: number; before: number; after: number };
 
+/** A cup the player has won: kept for the shelf at home (the history only holds the last thirty events). */
+export type Trophy = { tier: TierId; at: string; prize: number };
+
 export type Career = {
   v: 1;
   /** The same for the same name. */
@@ -222,6 +225,8 @@ export type Career = {
   active: ActiveEvent | null;
   /** The steps the player has qualified for, each for one entry. */
   qualified: TierId[];
+  /** The cups won, newest first. */
+  trophies: Trophy[];
   /** The last training sessions, newest first. */
   training: TrainingSession[];
   /** What has been bought for the home arena: the step of each thing, 0 (as it was when the career began) to 3. */
@@ -238,7 +243,7 @@ export const DEFAULT_PROFILE: Profile = { home: "garage", darts: "middels" };
 
 export function newCareer(player: string, startLevel: string, now: string, profile: Profile = DEFAULT_PROFILE): Career {
   const level = START_LEVELS.find((l) => l.key === startLevel) ?? START_LEVELS[2];
-  return { v: 1, id: careerId(player), player, createdAt: now, savedAt: now, profile, startLevel: level.key, skillMed: level.med, money: START_MONEY, points: 0, titles: 0, worldTitles: 0, played: 0, history: [], active: null, qualified: [], training: [], arena: { ...START_ARENA }, challenge: null, challenges: 0 };
+  return { v: 1, id: careerId(player), player, createdAt: now, savedAt: now, profile, startLevel: level.key, skillMed: level.med, money: START_MONEY, points: 0, titles: 0, worldTitles: 0, played: 0, history: [], active: null, qualified: [], trophies: [], training: [], arena: { ...START_ARENA }, challenge: null, challenges: 0 };
 }
 
 /** The money, as the career writes it: dollars, so nobody takes it for real money. */
@@ -363,6 +368,7 @@ export function finishEvent(career: Career, now: string): Career {
     money: career.money + result.prize,
     points: career.points + result.points,
     titles: career.titles + (won ? 1 : 0),
+    trophies: won ? [{ tier: a.tier, at: now, prize: result.prize }, ...career.trophies] : career.trophies,
     worldTitles: career.worldTitles + (won && tier.id === "vm" ? 1 : 0),
     played: career.played + 1,
     history: [entry, ...career.history].slice(0, 30),

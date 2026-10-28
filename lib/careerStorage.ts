@@ -1,4 +1,12 @@
-import { DEFAULT_PROFILE, START_ARENA, type Career } from "./career";
+import { DEFAULT_PROFILE, LADDER, START_ARENA, type Career, type Trophy } from "./career";
+
+/** Trophies for a career from before they were kept: one for each title in the history. */
+function trophiesFromHistory(c: Career): Trophy[] {
+  return (c.history ?? []).flatMap((h) => {
+    const tier = LADDER.find((t) => t.name === h.event);
+    return h.place === "winner" && tier ? [{ tier: tier.id, at: h.at, prize: h.prize }] : [];
+  });
+}
 import { supabase } from "./supabaseClient";
 
 /**
@@ -15,7 +23,7 @@ const latest = new Map<string, Career>();
 /** A career from before it had a look, or one whose event was of an older kind, is brought up to date rather than dropped. */
 function normalize(c: Career): Career {
   const old = c.active && !("cup" in c.active);
-  return { ...c, profile: c.profile ?? DEFAULT_PROFILE, worldTitles: c.worldTitles ?? 0, qualified: c.qualified ?? [], training: c.training ?? [], arena: { ...START_ARENA, ...(c.arena ?? {}) }, challenge: c.challenge ?? null, challenges: c.challenges ?? 0, active: old ? null : c.active };
+  return { ...c, profile: c.profile ?? DEFAULT_PROFILE, worldTitles: c.worldTitles ?? 0, qualified: c.qualified ?? [], trophies: c.trophies ?? trophiesFromHistory(c), training: c.training ?? [], arena: { ...START_ARENA, ...(c.arena ?? {}) }, challenge: c.challenge ?? null, challenges: c.challenges ?? 0, active: old ? null : c.active };
 }
 
 function readLocal(): Career[] {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { playDrawTick, playUiSound } from "./fanfare";
+import { playCareerSound, playDrawTick, playUiSound, type CareerSoundKind } from "./fanfare";
 import { getFxLevel } from "./fxLevel";
 import { haptics } from "./haptics";
 
@@ -68,4 +68,12 @@ export function drawSound(progress: number, last = false): void {
   if (level !== "party" && level !== "full") return;
   if (!getUiSound()) return;
   playDrawTick(progress, last);
+}
+
+/** The career's sounds (a coin, something opened, the crowd, a cheer), on the same terms as the rest: Party and up, and the setting. */
+export function careerSound(kind: CareerSoundKind): void {
+  const level = getFxLevel();
+  if (level !== "party" && level !== "full") return;
+  if (!getUiSound()) return;
+  playCareerSound(kind);
 }

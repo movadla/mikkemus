@@ -20,6 +20,7 @@ export function EliminatedScreen({
   onWatchRest,
   onLeave,
   leaveLabel = "Til forsiden",
+  career = false,
 }: {
   tournament: Tournament;
   /** The house's own sides, all out. */
@@ -27,6 +28,8 @@ export function EliminatedScreen({
   onWatchRest: () => void;
   onLeave: () => void;
   leaveLabel?: string;
+  /** In the career the way on to the pay-out is the main button, and watching the rest is the smaller one. */
+  career?: boolean;
 }) {
   const photos = new Map(useRoster().map((r) => [r.name, r.photo]));
   return (
@@ -57,12 +60,25 @@ export function EliminatedScreen({
           })}
         </div>
         <div className="space-y-2">
-          <button type="button" onClick={onWatchRest} className={`glossy w-full rounded-xl font-semibold text-lg ${FOCUS_RING}`} style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", minHeight: "var(--control-lg)" } as React.CSSProperties}>
-            Se resten
-          </button>
-          <button type="button" onClick={onLeave} className={`tactile w-full rounded-lg ${FOCUS_RING}`} style={{ minHeight: "var(--control)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}>
-            {leaveLabel}
-          </button>
+          {career ? (
+            <>
+              <button type="button" onClick={onLeave} className={`glossy w-full rounded-xl font-semibold text-lg ${FOCUS_RING}`} style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", minHeight: "var(--control-lg)" } as React.CSSProperties}>
+                {leaveLabel}
+              </button>
+              <button type="button" onClick={onWatchRest} className={`tactile w-full rounded-lg ${FOCUS_RING}`} style={{ minHeight: "var(--control)", background: "transparent", color: "var(--color-muted)", textDecoration: "underline" }}>
+                Se resten av turneringen
+              </button>
+            </>
+          ) : (
+            <>
+              <button type="button" onClick={onWatchRest} className={`glossy w-full rounded-xl font-semibold text-lg ${FOCUS_RING}`} style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", minHeight: "var(--control-lg)" } as React.CSSProperties}>
+                Se resten
+              </button>
+              <button type="button" onClick={onLeave} className={`tactile w-full rounded-lg ${FOCUS_RING}`} style={{ minHeight: "var(--control)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}>
+                {leaveLabel}
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

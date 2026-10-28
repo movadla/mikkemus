@@ -1,5 +1,5 @@
-import { START_ARENA, type Arena, type HomeId, type SlotId } from "@/lib/career";
-import { HOME as C } from "@/lib/scenePalette";
+import { START_ARENA, type Arena, type HomeId, type SlotId, type Trophy } from "@/lib/career";
+import { HOME as C, TROPHY } from "@/lib/scenePalette";
 
 const NAME: Record<HomeId, string> = { garage: "Garasjen", basement: "Kjelleren", loft: "Loftet", club: "Klubbrommet", hall: "Arenaen" };
 const DUST: [number, number][] = [[150, 90], [210, 130], [300, 70], [340, 150], [250, 180], [120, 160]];
@@ -43,7 +43,7 @@ function Board({ step }: { step: number }) {
  * the shop (lib/career.ts SLOTS) is drawn in the step it is at, so a purchase shows in the room at once; `pop` is the one just bought, which flashes.
  * The first pictures of the home arena; better ones come later (CAREER_ART_PLAN.md). Shapes only, the same in both themes.
  */
-export function HomeScene({ home, arena = START_ARENA, pop = null, compact = false }: { home: HomeId; arena?: Arena; pop?: SlotId | null; compact?: boolean }) {
+export function HomeScene({ home, arena = START_ARENA, pop = null, compact = false, trophies = [] }: { home: HomeId; arena?: Arena; pop?: SlotId | null; compact?: boolean; /** The cups won, newest first: they stand on a shelf on the wall. */ trophies?: Trophy[] }) {
   const a = { ...START_ARENA, ...arena };
   const flash = (id: SlotId) => (pop === id ? "arena-pop" : undefined);
   return (
@@ -52,6 +52,10 @@ export function HomeScene({ home, arena = START_ARENA, pop = null, compact = fal
         <radialGradient id="home-bulb" cx="50%" cy="0%" r="90%">
           <stop offset="0" stopColor={C.bulbGlow} stopOpacity=".55" />
           <stop offset="1" stopColor={C.bulbGlow} stopOpacity="0" />
+        </radialGradient>
+        <radialGradient id="home-vignette" cx="50%" cy="45%" r="75%">
+          <stop offset="0.55" stopColor={C.boardDark} stopOpacity="0" />
+          <stop offset="1" stopColor={C.boardDark} stopOpacity=".55" />
         </radialGradient>
         <pattern id="home-brick" width="32" height="16" patternUnits="userSpaceOnUse">
           <rect width="32" height="16" fill={C.brickWall} />
@@ -145,6 +149,21 @@ export function HomeScene({ home, arena = START_ARENA, pop = null, compact = fal
         <rect x="170" y="270" width="140" height="4" rx="2" fill={C.line} opacity=".85" />
       </g>
 
+      {/* The cups that have been won, on a shelf high on the wall: the five newest, the oldest on the left. */}
+      {trophies.length > 0 && (
+        <g>
+          <rect x="22" y="64" width="136" height="5" rx="1" fill={TROPHY.shelf} />
+          {[...trophies.slice(0, 5)].reverse().map((t, i) => (
+            <path key={`${t.at}-${i}`} d={`M${30 + i * 25} 64L${32 + i * 25} 44H${44 + i * 25}L${46 + i * 25} 64Z`} fill={TROPHY[t.tier]} stroke={C.boardDark} strokeWidth=".6" />
+          ))}
+          {trophies.length > 5 && (
+            <text x="152" y="58" textAnchor="end" fontSize="9" fontWeight="700" fill={C.dust}>
+              +{trophies.length - 5}
+            </text>
+          )}
+        </g>
+      )}
+
       {/* The decoration: a box and a bucket, then a chalkboard, a shelf with a neon sign, and a cabinet with banners */}
       <g className={flash("decor")}>
         {a.decor === 0 && (
@@ -235,9 +254,11 @@ export function HomeScene({ home, arena = START_ARENA, pop = null, compact = fal
           range(2).map((r) => range(14).map((i) => <Figure key={`${r}-${i}`} x={i * 36 + (r % 2) * 18 + 10} y={246 + r * 18} s={1.3 + r * 0.2} fill={C.crowdDark} />))}
       </g>
 
-      {DUST.map(([x, y]) => (
-        <circle key={`${x}-${y}`} cx={x} cy={y} r="1.3" fill={C.dust} opacity=".5" />
+      {DUST.map(([x, y], i) => (
+        <circle key={`${x}-${y}`} cx={x} cy={y} r="1.3" fill={C.dust} opacity=".5" className="home-dust" style={{ animationDelay: `${i * 0.9}s` }} />
       ))}
+      {/* The corners fall into shadow, so the eye goes to the board. */}
+      <rect width="480" height="300" fill="url(#home-vignette)" pointerEvents="none" />
     </svg>
   );
 }
