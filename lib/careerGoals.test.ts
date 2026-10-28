@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buyUpgrade, newCareer, type Career } from "./career";
-import { RANKS, WORLD_CHAMPION, goalsOf, nextRank, rankOf } from "./careerGoals";
+import { RANKS, WORLD_CHAMPION, goalsOf, nextRank, rankLevel, rankOf, rankProgress, roomBadge } from "./careerGoals";
 
 const AT = "2026-10-28T20:00:00.000Z";
 const fresh = (): Career => newCareer("Lars", "dyktig", AT);
@@ -64,5 +64,25 @@ describe("goals", () => {
 
   it("drops what is done: no rank goal for a world champion", () => {
     expect(goalsOf({ ...fresh(), worldTitles: 1 }).some((g) => g.id === "rank")).toBe(false);
+  });
+});
+
+describe("the level and the dot", () => {
+  it("counts the rank as a number, from 1, and one above for a world champion", () => {
+    expect(rankLevel(fresh())).toBe(1);
+    expect(rankLevel({ ...fresh(), points: 10 })).toBe(2);
+    expect(rankLevel({ ...fresh(), points: 350 })).toBe(5);
+    expect(rankLevel({ ...fresh(), worldTitles: 1 })).toBe(6);
+  });
+
+  it("measures the way to the next level, and stops at the top", () => {
+    expect(rankProgress({ ...fresh(), points: 25 })).toMatchObject({ next: 3, need: 40, points: 25 });
+    expect(rankProgress({ ...fresh(), points: 25 })!.progress).toBeCloseTo(0.5, 5);
+    expect(rankProgress({ ...fresh(), worldTitles: 1 })).toBeNull();
+  });
+
+  it("flags the room only when there is something the player can afford", () => {
+    expect(roomBadge({ ...fresh(), money: 100 })).toBe(false);
+    expect(roomBadge({ ...fresh(), money: 150 })).toBe(true);
   });
 });

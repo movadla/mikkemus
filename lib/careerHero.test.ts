@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { newCareer, offerChallenge, openCup, setTournament, settleChallenge, startEvent, finishEvent, type Career } from "./career";
-import { heroCta, heroFor } from "./careerHero";
+import { heroButton, heroFor } from "./careerHero";
 import { nextPlayable, recordKnockoutResult } from "./knockout";
 import { matchParticipants } from "./tournament";
 
@@ -11,30 +11,31 @@ const inCup = (c = fresh(), tier: "lu" | "region" = "lu") => {
   return openCup(s, s.active!.entrants, AT);
 };
 
-describe("the hero of the home screen", () => {
-  it("is the pub for a new player: free, with the name on the button", () => {
+describe("the main button of the home screen", () => {
+  it("says SPILL for a new player, with the free pub under it", () => {
     const c = { ...fresh(), money: 100 };
-    const hero = heroFor(c);
-    expect(hero).toMatchObject({ kind: "enter" });
-    expect(heroCta(hero)).toBe("Spill Lü-cupen · gratis");
+    expect(heroFor(c)).toMatchObject({ kind: "enter" });
+    expect(heroButton(heroFor(c))).toEqual({ label: "SPILL", sub: "Lü · gratis" });
   });
 
-  it("is the biggest step the player can enter: the regional championship once there is money for it", () => {
-    expect(heroCta(heroFor({ ...fresh(), money: 500 }))).toMatch(/^Spill Regionmesterskapet · \$200$/);
-    expect(heroCta(heroFor({ ...fresh(), money: 20000, qualified: ["nm"] }))).toMatch(/^Spill Norgesmesterskapet/);
+  it("goes to the biggest step the player can enter: the regional championship once there is money for it", () => {
+    expect(heroButton(heroFor({ ...fresh(), money: 500 }))).toEqual({ label: "SPILL", sub: "Region · $200" });
+    expect(heroButton(heroFor({ ...fresh(), money: 20000, qualified: ["nm"] })).sub).toMatch(/^NM · /);
   });
 
-  it("is the cup that is going, with the round and the opponent on the button", () => {
+  it("is the cup that is going, with the round and the opponent under the word", () => {
     const hero = heroFor(inCup());
     expect(hero).toMatchObject({ kind: "event", drawn: true, done: false, round: "Kvartfinale" });
-    expect(heroCta(hero)).toMatch(/^Spill kvartfinalen mot \S+/);
+    const b = heroButton(hero);
+    expect(b.label).toBe("SPILL");
+    expect(b.sub).toMatch(/^Kvartfinale · \S+/);
   });
 
-  it("says to draw when the draw is not made", () => {
-    expect(heroCta(heroFor(startEvent(fresh(), "lu", 3)))).toBe("Trekk lodd");
+  it("says TREKK when the draw is not made", () => {
+    expect(heroButton(heroFor(startEvent(fresh(), "lu", 3)))).toEqual({ label: "TREKK", sub: "Lü" });
   });
 
-  it("puts the prize on the button when the cup is over", () => {
+  it("says HENT with the prize when the cup is over", () => {
     let c = inCup();
     let t = c.active!.tournament!;
     for (let g = 0; g < 12 && t.status !== "done"; g++) {
@@ -45,13 +46,14 @@ describe("the hero of the home screen", () => {
       t = recordKnockoutResult(t, m.id, [winner, winner === a ? b : a], {});
     }
     c = finishEvent(setTournament(c, t), AT);
-    expect(heroCta(heroFor(c))).toMatch(/^Hent premien \(\$500\)$/);
+    expect(heroButton(heroFor(c))).toEqual({ label: "HENT", sub: "$500" });
   });
 
   it("is a challenge that is on, and then what it came to", () => {
     const c = offerChallenge(fresh(), "501", 4);
-    expect(heroCta(heroFor(c))).toMatch(/^Spill 501 mot \S+/);
-    expect(heroCta(heroFor(settleChallenge(c, true, AT)))).toMatch(/^Hent \$150$/);
-    expect(heroCta(heroFor(settleChallenge(c, false, AT)))).toBe("Tilbake til rommet");
+    expect(heroButton(heroFor(c)).label).toBe("SPILL");
+    expect(heroButton(heroFor(c)).sub).toMatch(/^501 · \S+/);
+    expect(heroButton(heroFor(settleChallenge(c, true, AT)))).toEqual({ label: "HENT", sub: "$150" });
+    expect(heroButton(heroFor(settleChallenge(c, false, AT))).label).toBe("OK");
   });
 });

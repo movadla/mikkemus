@@ -27,6 +27,8 @@ export type Tier = {
   kind: CupKind;
   /** The event, and where it is held. */
   name: string;
+  /** One short word for buttons and rows. */
+  short: string;
   trophy: string;
   venue: string;
   /** What the opening scene calls it. */
@@ -55,6 +57,7 @@ export const TIERS: Record<TierId, Tier> = {
     id: "lu",
     kind: "lu",
     name: "Lü-cupen",
+    short: "Lü",
     trophy: "Lü-pokalen",
     venue: "Lü",
     stage: "Fredagskveld på puben",
@@ -71,6 +74,7 @@ export const TIERS: Record<TierId, Tier> = {
     id: "region",
     kind: "region",
     name: "Regionmesterskapet",
+    short: "Region",
     trophy: "Regionpokalen",
     venue: "Regionhallen",
     stage: "Regionalt mesterskap",
@@ -88,6 +92,7 @@ export const TIERS: Record<TierId, Tier> = {
     id: "nm",
     kind: "nm",
     name: "Norgesmesterskapet",
+    short: "NM",
     trophy: "Norgesmesterpokalen",
     venue: "Nasjonalarenaen",
     stage: "Nasjonalt mesterskap",
@@ -106,6 +111,7 @@ export const TIERS: Record<TierId, Tier> = {
     id: "gs",
     kind: "gs",
     name: "Grand Slam",
+    short: "Slam",
     trophy: "Grand Slam-pokalen",
     venue: "Slam-arenaen",
     stage: "Grand Slam",
@@ -124,6 +130,7 @@ export const TIERS: Record<TierId, Tier> = {
     id: "vm",
     kind: "vm",
     name: "VM i dart",
+    short: "VM",
     trophy: "Verdensmesterpokalen",
     venue: "Verdensarenaen",
     stage: "Verdensmesterskapet",

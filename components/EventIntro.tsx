@@ -5,7 +5,8 @@ import { dollars } from "@/lib/career";
 import { cupColor } from "@/lib/botCup";
 import { PUB, STAGE } from "@/lib/scenePalette";
 import { EventScene } from "./EventScenes";
-import { Button } from "./ui/Button";
+import { CoinIcon } from "./icons";
+import { PlayButton } from "./PlayButton";
 import { CountUp } from "./ui/CountUp";
 import { CupEmblem } from "./ui/CupEmblem";
 
@@ -16,15 +17,6 @@ export const GROUND = {
   nm: [STAGE.nm.top, STAGE.nm.bottom],
   gs: [STAGE.gs.top, STAGE.gs.bottom],
   vm: [STAGE.vm.top, STAGE.vm.bottom],
-} as const;
-
-/** What is said as the player walks in. */
-const ENTRANCE = {
-  lu: "Du går inn på Lü. Fredagskvelden er i gang.",
-  region: "Hallen er full. Regionens beste er her.",
-  nm: "Norge ser på. Dette er mesterskapet.",
-  gs: "Lysene går ned. Slam-arenaen venter på deg.",
-  vm: "Verden ser på. Det finnes ikke noe større enn dette.",
 } as const;
 
 /**
@@ -67,27 +59,12 @@ export function EventIntro({ tier, onDone }: { tier: Tier; onDone: () => void })
         <h1 className={`font-display ${big ? "intro-slam" : "intro-rise"}`} style={{ "--d": "0.7s", color: "var(--color-cream)", fontSize: `clamp(1.7rem, 8.4vw, ${2.2 + tier.scale * 0.3}rem)`, lineHeight: 1.05 } as React.CSSProperties}>
           {tier.name}
         </h1>
-        <p className="intro-rise" style={{ "--d": "1s", color: "var(--color-text-2)", maxWidth: "26rem" } as React.CSSProperties}>
-          {ENTRANCE[tier.id]}
-        </p>
-        <ul className="grid grid-cols-3 gap-2 w-full" aria-label="Om turneringen">
-          {[
-            ["Spillere", String(tier.size)],
-            ["Inngang", tier.fee === 0 ? "Gratis" : dollars(tier.fee)],
-            ["Til vinneren", <CountUp key="p" value={tier.prizes.winner ?? 0} format={dollars} />],
-          ].map(([label, value], i) => (
-            <li key={String(label)} className="intro-rise" style={{ "--d": `${1.2 + i * 0.12}s`, padding: "0.5rem 0.25rem", borderRadius: "var(--radius-m)", background: "color-mix(in srgb, var(--color-surface) 80%, transparent)", border: "1px solid var(--color-border)" } as React.CSSProperties}>
-              <span className="num block tabular" style={{ fontSize: "var(--text-title)", color: "var(--color-cream)" }}>
-                {value}
-              </span>
-              <span style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>{label}</span>
-            </li>
-          ))}
-        </ul>
-        <div className="w-full intro-rise" style={{ "--d": "1.6s" } as React.CSSProperties}>
-          <Button block variant="primary" size="lg" onClick={onDone}>
-            Trekk lodd
-          </Button>
+        <span className="intro-rise inline-flex items-center gap-2 tabular" style={{ "--d": "1s", padding: "0.35rem 0.9rem", borderRadius: "var(--radius-pill)", background: "var(--gold-soft)", border: "1px solid var(--color-gold)", color: "var(--color-gold-strong)", fontWeight: 800, fontSize: "var(--text-title)" } as React.CSSProperties}>
+          <CoinIcon className="w-5 h-5" />
+          <CountUp value={tier.prizes.winner ?? 0} format={dollars} />
+        </span>
+        <div className="w-full intro-rise" style={{ "--d": "1.4s" } as React.CSSProperties}>
+          <PlayButton label="TREKK" onClick={onDone} />
         </div>
       </div>
     </div>

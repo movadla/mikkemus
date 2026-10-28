@@ -1,6 +1,6 @@
 "use client";
 
-import { DARTS, HOMES, PLACES, TIERS, dollars, type Career } from "@/lib/career";
+import { DARTS, HOMES, PLACES, PLACE_LABEL, TIERS, dollars, type Career } from "@/lib/career";
 import { nextRank, rankOf } from "@/lib/careerGoals";
 import { teamKitsOf, useRoster } from "@/lib/storage";
 import { levelLabel, oneDecimal } from "./careerFormat";
@@ -60,6 +60,22 @@ export function CareerProfile({ career }: { career: Career }) {
       <p style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
         {place} · {darts} dart · MED {oneDecimal(career.skillMed)} mm · saldo {dollars(career.money)}
       </p>
+      {career.history.length > 0 && (
+        <section aria-label="Siste">
+          <p className="section-label mb-2">SISTE</p>
+          <ul className="space-y-1">
+            {career.history.slice(0, 6).map((h) => (
+              <li key={h.at} className="flex items-baseline justify-between gap-3" style={{ fontSize: "var(--text-small)", color: "var(--color-text-2)" }}>
+                <span className="truncate">{h.place ? `${h.event} · ${PLACE_LABEL[h.place]}` : `${h.event} · ${h.won ? "vant" : "tapt"}`}</span>
+                <span className="tabular shrink-0" style={{ color: "var(--color-muted)" }}>
+                  {h.prize - h.cost > 0 ? "+" : ""}
+                  {dollars(h.prize - h.cost)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       <section aria-label="Pokaler">
         <p className="section-label mb-2">POKALER</p>
         {career.trophies.length === 0 ? (

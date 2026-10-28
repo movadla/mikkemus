@@ -500,7 +500,7 @@ export function TournamentApp({ onExitToHome, career }: { onExitToHome: () => vo
 
   if (screen === "eliminated" && tournament) {
     const house = tournament.participants.filter((p) => (p.members ? p.members.some((m) => !m.isBot) : !p.isBot)).map((p) => p.name);
-    return <EliminatedScreen tournament={tournament} names={house} onWatchRest={handleWatchRest} onLeave={career ? career.onDone : onExitToHome} leaveLabel={career ? "Fortsett til oppgjøret" : undefined} career={!!career} />;
+    return <EliminatedScreen tournament={tournament} names={house} onWatchRest={handleWatchRest} onLeave={career ? career.onDone : onExitToHome} leaveLabel={career ? "OK" : undefined} career={!!career} />;
   }
 
   if (tournament && isPilot(tournament)) {

@@ -6,7 +6,8 @@ import { STAGE } from "@/lib/scenePalette";
 import { matchParticipants, type Tournament, type TournamentMatch } from "@/lib/tournament";
 import { useRoster } from "@/lib/storage";
 import { Avatar } from "./ui/Avatar";
-import { Button } from "./ui/Button";
+import { ArrowLeftIcon, CoinIcon } from "./icons";
+import { PlayButton } from "./PlayButton";
 import { CupEmblem } from "./ui/CupEmblem";
 
 /**
@@ -33,16 +34,23 @@ export function FinalIntro({ tournament, match, prizes, onStart, onBack }: { tou
     >
       <div className="final-beam" aria-hidden />
       <div className="screen-inner relative z-10 flex flex-col items-center text-center" style={{ minHeight: "88dvh", justifyContent: "center", gap: "1.2rem" }}>
+        {onBack && (
+          <button type="button" onClick={onBack} aria-label="Tilbake" className="tactile absolute top-0 left-0 inline-flex items-center justify-center" style={{ width: "var(--control)", height: "var(--control)", borderRadius: "var(--radius-pill)", background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-cream)" }}>
+            <ArrowLeftIcon className="w-5 h-5" />
+          </button>
+        )}
         <div className="final-emblem" style={{ color: colour }}>
           <CupEmblem kind={tournament.cup?.kind ?? "lu"} className="w-14 h-14" />
         </div>
         <h1 className="font-display final-title" style={{ color: "var(--color-cream)", fontSize: "clamp(2.6rem, 14vw, 4.4rem)", lineHeight: 1, letterSpacing: "0.04em" }}>
           FINALEN
         </h1>
-        <p className="final-fade" style={{ "--d": "1.1s", color: colour, fontWeight: 600 } as React.CSSProperties}>
-          {tournament.cup?.trophy ?? tournament.name}
-          {prizes?.winner ? ` · seier ${dollars(prizes.winner)}${prizes.final ? ", nr. 2 " + dollars(prizes.final) : ""}` : ""}
-        </p>
+        {prizes?.winner ? (
+          <span className="final-fade inline-flex items-center gap-2 tabular" style={{ "--d": "1.1s", padding: "0.35rem 0.9rem", borderRadius: "var(--radius-pill)", background: "var(--gold-soft)", border: "1px solid var(--color-gold)", color: "var(--color-gold-strong)", fontWeight: 800, fontSize: "var(--text-title)" } as React.CSSProperties}>
+            <CoinIcon className="w-5 h-5" />
+            {dollars(prizes.winner)}
+          </span>
+        ) : null}
         <div className="flex items-start justify-center gap-3 w-full">
           {[left, right].map((s, i) => (
             <Fragment key={s.name}>
@@ -61,14 +69,7 @@ export function FinalIntro({ tournament, match, prizes, onStart, onBack }: { tou
           ))}
         </div>
         <div className="w-full final-fade" style={{ "--d": "1.6s" } as React.CSSProperties}>
-          <Button block variant="primary" size="lg" onClick={onStart}>
-            Start finalen
-          </Button>
-          {onBack && (
-            <button type="button" onClick={onBack} className="tactile w-full mt-1" style={{ minHeight: "var(--control)", background: "transparent", color: "var(--color-muted)", textDecoration: "underline", fontSize: "var(--text-small)" }}>
-              Tilbake til oversikten
-            </button>
-          )}
+          <PlayButton label="KAST" onClick={onStart} />
         </div>
       </div>
     </div>

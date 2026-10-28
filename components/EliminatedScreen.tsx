@@ -66,7 +66,7 @@ export function EliminatedScreen({
                 {leaveLabel}
               </button>
               <button type="button" onClick={onWatchRest} className={`tactile w-full rounded-lg ${FOCUS_RING}`} style={{ minHeight: "var(--control)", background: "transparent", color: "var(--color-muted)", textDecoration: "underline" }}>
-                Se resten av turneringen
+                Se resten
               </button>
             </>
           ) : (

@@ -43,11 +43,11 @@ function Board({ step }: { step: number }) {
  * the shop (lib/career.ts SLOTS) is drawn in the step it is at, so a purchase shows in the room at once; `pop` is the one just bought, which flashes.
  * The first pictures of the home arena; better ones come later (CAREER_ART_PLAN.md). Shapes only, the same in both themes.
  */
-export function HomeScene({ home, arena = START_ARENA, pop = null, compact = false, trophies = [] }: { home: HomeId; arena?: Arena; pop?: SlotId | null; compact?: boolean; /** The cups won, newest first: they stand on a shelf on the wall. */ trophies?: Trophy[] }) {
+export function HomeScene({ home, arena = START_ARENA, pop = null, compact = false, fill = false, trophies = [] }: { home: HomeId; arena?: Arena; pop?: SlotId | null; compact?: boolean; /** Fills the height it is given (the home screen), cutting the picture at the sides rather than leaving space. */ fill?: boolean; /** The cups won, newest first: they stand on a shelf on the wall. */ trophies?: Trophy[] }) {
   const a = { ...START_ARENA, ...arena };
   const flash = (id: SlotId) => (pop === id ? "arena-pop" : undefined);
   return (
-    <svg viewBox="0 0 480 300" role="img" aria-label={`${NAME[home]} ${home === "club" || home === "loft" ? "ditt" : "din"}`} preserveAspectRatio={compact ? "xMidYMid slice" : undefined} className="w-full block" style={{ borderRadius: "var(--radius-l)", background: C.concreteDark, height: compact ? "8.5rem" : undefined }}>
+    <svg viewBox="0 0 480 300" role="img" aria-label={`${NAME[home]} ${home === "club" || home === "loft" ? "ditt" : "din"}`} preserveAspectRatio={compact || fill ? "xMidYMid slice" : undefined} className="w-full block" style={{ borderRadius: "var(--radius-l)", background: C.concreteDark, height: fill ? "100%" : compact ? "8.5rem" : undefined }}>
       <defs>
         <radialGradient id="home-bulb" cx="50%" cy="0%" r="90%">
           <stop offset="0" stopColor={C.bulbGlow} stopOpacity=".55" />

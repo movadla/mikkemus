@@ -1,63 +1,34 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { cupColor } from "@/lib/botCup";
 import {
   DARTS,
-  GAMES,
   HOMES,
-  PLACE_LABEL,
   START_LEVELS,
   TIERS,
   abandonEvent,
   careerId,
-  closeChallenge,
   closeEvent,
-  declineChallenge,
   dollars,
   finishEvent,
   newCareer,
   setTournament,
-  settleChallenge,
-  type ActiveEvent,
   type Career,
-  type Challenge,
   type DartsId,
   type HomeId,
 } from "@/lib/career";
-import { DRILL_ROUNDS, sessionFrom, trainCareer } from "@/lib/training";
-import { newGame as newCountdown, winnerOf as countdownWinner } from "@/lib/countdown";
-import { newGame as newHighstriker, winnerOf as highstrikerWinner } from "@/lib/highstriker";
-import { newGame as newLava, stateOf as lavaState } from "@/lib/lava";
-import { DEFAULT_LIVES } from "@/lib/lava";
 import { deleteCareer, loadCareers, saveCareer } from "@/lib/careerStorage";
 import { setKits, teamKitsOf, useRoster } from "@/lib/storage";
 import { applyTheme } from "@/lib/theme";
-import { rankOf } from "@/lib/careerGoals";
-import { fxFlags, useFxLevel } from "@/lib/fxLevel";
-import { haptics } from "@/lib/haptics";
-import { playFanfare } from "@/lib/fanfare";
-import { careerSound } from "@/lib/uiSound";
-import { CoinBurst } from "./CoinBurst";
-import { roadOf } from "@/lib/knockout";
 import { levelOfMed } from "@/lib/botLevels";
-import { roundName } from "./KnockoutOverview";
 import { Hub } from "./CareerHub";
-import { levelLabel, oneDecimal, signed } from "./careerFormat";
-import { Trophy } from "./Trophy";
-import { CountdownGameScreen } from "./CountdownApp";
+import { ChallengePlay, Result, TrainingPlay } from "./CareerScreens";
 import { EventIntro } from "./EventIntro";
-import { ScoreKeypad } from "./ScoreKeypad";
-import { HighstrikerGameScreen } from "./HighstrikerApp";
-import { LavaGameScreen } from "./LavaApp";
 import { KitEditor } from "./KitSettings";
 import { ScreenTop } from "./ScreenTop";
-import { TeamKit } from "./TeamKit";
 import { TournamentApp } from "./TournamentApp";
 import { Avatar } from "./ui/Avatar";
 import { Button } from "./ui/Button";
-import { Card } from "./ui/Card";
-import { CountUp } from "./ui/CountUp";
 import { SkeletonRows } from "./ui/Skeleton";
 import { FOCUS_RING } from "./ui/focus";
 
@@ -309,282 +280,3 @@ function Play({ career, commit, onHub }: { career: Career; commit: (c: Career) =
   );
 }
 
-/** A challenge: who it is, the game and the stake, then the game itself, then what it came to. */
-function ChallengePlay({ career, commit, onHub }: { career: Career; commit: (c: Career) => void; onHub: () => void }) {
-  const c = career.challenge!;
-  const roster = useRoster();
-  const photos = useMemo(() => new Map(roster.map((r) => [r.name, r.photo])), [roster]);
-  const [playing, setPlaying] = useState(false);
-  const players = [career.player, c.opponent.name];
-  const botLevels = { [c.opponent.name]: c.opponent.skill };
-  const [cd, setCd] = useState(() => newCountdown(501, true, players));
-  const [lava, setLava] = useState(() => newLava(DEFAULT_LIVES, players));
-  const [hs, setHs] = useState(() => newHighstriker(DEFAULT_LIVES, players));
-  const settle = (winner: string | null) => commit(settleChallenge(career, winner === career.player, new Date().toISOString()));
-  const giveUp = () => {
-    commit(declineChallenge(career));
-    onHub();
-  };
-  if (c.won !== null) {
-    return (
-      <ChallengeResult
-        career={career}
-        c={c}
-        onDone={() => {
-          commit(closeChallenge(career));
-          onHub();
-        }}
-      />
-    );
-  }
-  if (!playing) {
-    return (
-      <div className="animate-screen-enter screen">
-        <div className="screen-inner">
-          <ScreenTop title="Utfordring" onBack={giveUp} backLabel="Si nei" />
-          <div className="flex flex-col items-center text-center my-6">
-            <Avatar name={c.opponent.name} size="xl" bot />
-            <p className="section-label mt-4">UTFORDRER DEG</p>
-            <h1 className="font-display" style={{ color: "var(--color-cream)", fontSize: "clamp(1.8rem, 9vw, 2.6rem)", lineHeight: 1.05 }}>
-              {c.opponent.name}
-            </h1>
-            <p style={{ color: "var(--color-text-2)" }}>
-              {GAMES[c.game].name} · {GAMES[c.game].about}
-            </p>
-          </div>
-          <Card className="mb-4 text-center">
-            <p className="section-label mb-1">INNSATS</p>
-            <p className="num" style={{ fontSize: "var(--text-num)", color: "var(--color-gold-strong)" }}>
-              {dollars(c.stake)}
-            </p>
-            <p style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>Vinn og pengene er dine. Taper du, koster det ingenting.</p>
-          </Card>
-          <Button block variant="primary" size="lg" onClick={() => setPlaying(true)}>
-            Spill {GAMES[c.game].name} mot {c.opponent.name}
-          </Button>
-        </div>
-      </div>
-    );
-  }
-  if (c.game === "501") {
-    return <CountdownGameScreen game={cd} setGame={setCd} botLevels={botLevels} photos={photos} onHome={giveUp} onNew={() => undefined} career={{ onDone: () => settle(countdownWinner(cd)), giveUp: true }} />;
-  }
-  if (c.game === "lava") {
-    return <LavaGameScreen game={lava} setGame={setLava} botLevels={botLevels} photos={photos} onHome={giveUp} onNew={() => undefined} career={{ onDone: () => settle(lavaState(lava).winner) }} />;
-  }
-  return <HighstrikerGameScreen game={hs} setGame={setHs} botLevels={botLevels} photos={photos} onHome={giveUp} onNew={() => undefined} career={{ onDone: () => settle(highstrikerWinner(hs)) }} />;
-}
-
-function ChallengeResult({ career, c, onDone }: { career: Career; c: Challenge; onDone: () => void }) {
-  const won = c.won === true;
-  const roster = useRoster();
-  useEffect(() => {
-    if (won) haptics.win();
-  }, [won]);
-  return (
-    <div className="animate-screen-enter screen cup-lamp relative overflow-hidden" style={won ? ({ "--cup": "var(--color-gold)" } as React.CSSProperties) : undefined}>
-      <div className="screen-inner relative z-10">
-        <div className="flex flex-col items-center text-center mb-5 mt-6">
-          <Avatar name={career.player} photo={roster.find((x) => x.name === career.player)?.photo} size="xl" state={won ? "winner" : "idle"} />
-          <p className="section-label mt-4">{GAMES[c.game].name.toUpperCase()} MOT {c.opponent.name.toUpperCase()}</p>
-          <h1 className="font-display" style={{ color: won ? "var(--color-gold)" : "var(--color-cream)", fontSize: "clamp(2rem, 10vw, 3rem)", lineHeight: 1.05 }}>
-            {won ? "Du vant" : "Du tapte"}
-          </h1>
-        </div>
-        <ul className="space-y-2 mb-6" aria-label="Oppgjør">
-          <li className="flex items-baseline justify-between" style={{ padding: "0.6rem 0.9rem", borderRadius: "var(--radius-m)", background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
-            <span style={{ color: "var(--color-text-2)" }}>Innsats</span>
-            <span className="tabular font-bold">{won ? signed(c.stake) : dollars(0)}</span>
-          </li>
-          <li className="flex items-baseline justify-between" style={{ padding: "0.6rem 0.9rem", borderRadius: "var(--radius-m)", background: "var(--gold-soft)", border: "1px solid var(--color-gold)" }}>
-            <span style={{ color: "var(--color-gold-strong)" }}>Saldo</span>
-            <span className="num" style={{ fontSize: "var(--text-title)", color: "var(--color-gold-strong)" }}>
-              <CountUp value={career.money} format={dollars} />
-            </span>
-          </li>
-        </ul>
-        <Button block variant="primary" size="lg" onClick={onDone}>
-          Til rommet
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-/** The banner that comes up when a result opens the next step of the road. */
-function UnlockBanner({ label, name, colour }: { label: string; name: string; colour: string }) {
-  useEffect(() => {
-    const t = setTimeout(() => careerSound("unlock"), 1500);
-    return () => clearTimeout(t);
-  }, []);
-  return (
-    <div role="status" className="unlock-banner mb-4 text-center" style={{ borderColor: colour, color: colour }}>
-      <span className="section-label block" style={{ color: colour }}>
-        {label}
-      </span>
-      <span className="font-display" style={{ fontSize: "var(--text-title)", color: "var(--color-cream)" }}>
-        {name}
-      </span>
-    </div>
-  );
-}
-
-function Result({ career, a, onDone }: { career: Career; a: ActiveEvent; onDone: () => void }) {
-  const r = a.result!;
-  const tier = TIERS[a.tier];
-  const won = r.place === "winner";
-  const roster = useRoster();
-  const opened = tier.opens && tier.opens.places.includes(r.place) ? TIERS[tier.opens.tier] : null;
-  const record = roster.find((x) => x.name === career.player);
-  // The title the points have just given, when it is a new one.
-  const before = rankOf({ ...career, points: career.points - r.points, worldTitles: career.worldTitles - (won && tier.id === "vm" ? 1 : 0) });
-  const newRank = rankOf(career) !== before ? rankOf(career) : null;
-  const fx = fxFlags(useFxLevel());
-  // The sounds of the moment: a win is a fanfare and a cheer, whatever place it is a pay-out for is a touch.
-  useEffect(() => {
-    if (won) {
-      if (fx.confetti) playFanfare();
-      careerSound("cheer");
-      haptics.win();
-    } else haptics.confirm();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, when the result comes up
-  }, []);
-  return (
-    <div className="animate-screen-enter screen cup-lamp relative overflow-hidden" style={{ "--cup": won ? "var(--color-gold)" : cupColor(tier.kind) } as React.CSSProperties}>
-      <div className="screen-inner relative z-10">
-        {won ? (
-          // The ceremony: the trophy rises over the player, the player in their own shirt, and then the name of the cup and what it paid.
-          <div className="flex flex-col items-center text-center mb-5 mt-2">
-            <div className="trophy-soft w-full">
-              <Trophy cannons={fx.confetti} />
-            </div>
-            <div className="final-fade flex items-center gap-3 -mt-1" style={{ "--d": "0.9s" } as React.CSSProperties}>
-              <Avatar name={career.player} photo={record?.photo} px={128} state="winner" />
-              {record && <TeamKit kit={teamKitsOf(record).home} size={72} title="Skjorten din" />}
-            </div>
-            <p className="section-label mt-4 final-fade" style={{ "--d": "1.3s", color: "var(--color-gold)" } as React.CSSProperties}>
-              {tier.name.toUpperCase()} · MESTER
-            </p>
-            <h1 className="font-display intro-slam" style={{ "--d": "1.5s", color: "var(--color-gold)", fontSize: "clamp(2.4rem, 13vw, 3.8rem)", lineHeight: 1.05 } as React.CSSProperties}>
-              {career.player}
-            </h1>
-            <p className="final-fade" style={{ "--d": "1.9s", color: "var(--color-cream)" } as React.CSSProperties}>
-              vinner {tier.trophy}
-            </p>
-          </div>
-        ) : (
-          <div className="flex flex-col items-center text-center mb-5 mt-6">
-            <Avatar name={career.player} photo={record?.photo} size="xl" state="idle" />
-            <p className="section-label mt-4">{tier.name.toUpperCase()}</p>
-            <h1 className="font-display" style={{ color: "var(--color-cream)", fontSize: "clamp(2rem, 10vw, 3rem)", lineHeight: 1.05 }}>
-              {PLACE_LABEL[r.place]}
-            </h1>
-          </div>
-        )}
-        <ul className="space-y-2 mb-4" aria-label="Oppgjør">
-          {[
-            ["Inngang", signed(-r.cost)],
-            ["Premie", signed(r.prize)],
-            ["Rankingpoeng", `+${r.points}`],
-          ].map(([label, value]) => (
-            <li key={label} className="flex items-baseline justify-between" style={{ padding: "0.6rem 0.9rem", borderRadius: "var(--radius-m)", background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
-              <span style={{ color: "var(--color-text-2)" }}>{label}</span>
-              <span className="tabular font-bold">{value}</span>
-            </li>
-          ))}
-          <li className="flex items-baseline justify-between" style={{ padding: "0.6rem 0.9rem", borderRadius: "var(--radius-m)", background: "var(--gold-soft)", border: "1px solid var(--color-gold)" }}>
-            <span style={{ color: "var(--color-gold-strong)" }}>Saldo</span>
-            <span className="num" style={{ fontSize: "var(--text-title)", color: "var(--color-gold-strong)" }}>
-              <CountUp value={career.money} format={dollars} />
-            </span>
-          </li>
-        </ul>
-        {won && a.tournament && (
-          <section className="mb-4" aria-label="Veien til pokalen" style={{ padding: "0.75rem 0.9rem", borderRadius: "var(--radius-m)", background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
-            <p className="section-label mb-2">VEIEN</p>
-            <ol className="space-y-1">
-              {roadOf(a.tournament, career.player)
-                .filter((x) => !x.match.isBye)
-                .map((x) => (
-                  <li key={x.match.id} className="flex justify-between gap-3" style={{ fontSize: "var(--text-small)" }}>
-                    <span style={{ color: "var(--color-muted)" }}>{roundName(x.match)}</span>
-                    <span style={{ color: "var(--color-cream)", fontWeight: 600 }}>slo {x.opponent}</span>
-                  </li>
-                ))}
-            </ol>
-          </section>
-        )}
-        {opened && <UnlockBanner label="NY TURNERING ÅPNET" name={opened.name} colour={cupColor(opened.kind)} />}
-        {newRank && <UnlockBanner label="NY TITTEL" name={newRank} colour="var(--color-gold)" />}
-        {r.prize > 0 && <CoinBurst />}
-        <Button block variant="primary" size="lg" onClick={onDone}>
-          Til rommet
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-/** A training session: fifteen rounds at the treble 20 written in, and then what it says about the level. */
-function TrainingPlay({ career, commit, onHub }: { career: Career; commit: (c: Career) => void; onHub: () => void }) {
-  const [rounds, setRounds] = useState<number[]>([]);
-  const [done, setDone] = useState<ReturnType<typeof sessionFrom> | null>(null);
-  const submit = (score: number) => {
-    const next = [...rounds, score];
-    if (next.length >= DRILL_ROUNDS) {
-      const now = new Date().toISOString();
-      setDone(sessionFrom(career, next, now));
-      commit(trainCareer(career, next, now));
-    }
-    setRounds(next);
-  };
-  if (done) {
-    const move = done.after - done.before;
-    return (
-      <div className="animate-screen-enter screen">
-        <div className="screen-inner">
-          <ScreenTop title="Trening" onBack={onHub} backLabel="Hjem" />
-          <Card className="mb-4 text-center">
-            <p className="section-label mb-1">SNITT PER RUNDE</p>
-            <p className="num" style={{ fontSize: "var(--text-num)", color: "var(--color-cream)" }}>
-              {oneDecimal(done.average)}
-            </p>
-            <p style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>Det tilsvarer MED {oneDecimal(done.measured)} mm</p>
-          </Card>
-          <Card className="mb-4 text-center">
-            <p className="section-label mb-1">NIVÅET DITT</p>
-            <p className="num tabular" style={{ fontSize: "var(--text-num)", color: "var(--color-gold-strong)" }}>
-              {oneDecimal(done.before)} → {oneDecimal(done.after)} mm
-            </p>
-            <p style={{ color: "var(--color-text-2)", fontSize: "var(--text-body)" }}>
-              {Math.abs(move) < 0.05 ? "Uendret. Du kastet som nivået sier." : move < 0 ? "Du ble skarpere. Motstanderne blir litt sterkere." : "Du var litt unøyaktig i dag. Motstanderne blir litt svakere."} {levelLabel(done.after)}.
-            </p>
-          </Card>
-          <Button block variant="primary" size="lg" onClick={onHub}>
-            Tilbake til rommet
-          </Button>
-        </div>
-      </div>
-    );
-  }
-  return (
-    <div className="animate-screen-push screen">
-      <div className="screen-inner">
-        <ScreenTop title="Trebling 20" onBack={onHub} backLabel="Avbryt" />
-        <div className="mb-3" role="progressbar" aria-valuemin={0} aria-valuemax={DRILL_ROUNDS} aria-valuenow={rounds.length} aria-label="Runder kastet" style={{ height: "0.5rem", borderRadius: "var(--radius-pill)", background: "var(--color-cell)" }}>
-          <div style={{ width: `${(rounds.length / DRILL_ROUNDS) * 100}%`, height: "100%", borderRadius: "var(--radius-pill)", background: "var(--color-teal)", transition: "width var(--pull)" }} />
-        </div>
-        <ScoreKeypad
-          onSubmit={submit}
-          onUndo={() => setRounds((r) => r.slice(0, -1))}
-          canUndo={rounds.length > 0}
-          line={() => (
-            <span style={{ color: "var(--color-text-2)" }}>
-              Runde {rounds.length + 1} av {DRILL_ROUNDS} · tre piler mot trebling 20 · skriv summen
-            </span>
-          )}
-        />
-      </div>
-    </div>
-  );
-}

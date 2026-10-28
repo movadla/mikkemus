@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { dollars, type Career } from "@/lib/career";
-import { rankOf } from "@/lib/careerGoals";
-import { CoinIcon, TrophyIcon } from "./icons";
+import { rankLevel, rankOf } from "@/lib/careerGoals";
+import { ArrowLeftIcon, CoinIcon } from "./icons";
+import { FOCUS_RING } from "./ui/focus";
 import { StarIcon } from "./careerIcons";
 import { CountUp } from "./ui/CountUp";
 
@@ -17,10 +18,10 @@ const subscribeOnline = (cb: () => void) => {
 };
 
 /**
- * A small mark of where the progress is: "Lagret" for a moment after every save, and a standing note when there is no network that it is safe on
- * the phone. The player never has to wonder whether the career is kept.
+ * A dot that says the career is kept: green for a moment after every save, and gold with a word when there is no network (it is then safe on
+ * the phone). Nothing is written out, so there is nothing to read.
  */
-function SaveChip({ savedAt }: { savedAt: string }) {
+function SaveDot({ savedAt }: { savedAt: string }) {
   const online = useSyncExternalStore(subscribeOnline, () => navigator.onLine, () => true);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -30,18 +31,20 @@ function SaveChip({ savedAt }: { savedAt: string }) {
   const fresh = now - Date.parse(savedAt) < 3500;
   if (!fresh && online) return null;
   return (
-    <span role="status" className="inline-flex items-center gap-1.5" style={{ fontSize: "var(--text-micro)", color: "var(--color-muted)" }}>
-      <span aria-hidden style={{ width: "0.4rem", height: "0.4rem", borderRadius: "50%", background: online ? "var(--color-green)" : "var(--color-gold)" }} />
-      {online ? "Lagret" : "Ingen nett: lagret på telefonen"}
+    <span role="status" className="inline-flex items-center gap-1" aria-label={online ? "Lagret" : "Ingen nett: lagret på telefonen"} style={{ fontSize: "var(--text-micro)", color: "var(--color-muted)" }}>
+      <span aria-hidden style={{ width: "0.5rem", height: "0.5rem", borderRadius: "50%", background: online ? "var(--color-green)" : "var(--color-gold)" }} />
+      {!online && "Offline"}
     </span>
   );
 }
 
+const chip = { padding: "0.3rem 0.7rem", borderRadius: "var(--radius-pill)", background: "var(--color-surface)", border: "1px solid var(--color-border)", fontSize: "var(--text-body)", fontWeight: 700 } as const;
+
 /**
- * The line that is always up in the career: the money, the ranking points and the titles, as chips with an icon each, and the player's title
- * under it. It sits in the top of the screen, so it is still there when the page scrolls, and it is the one place the money is shown.
+ * The line at the top of every screen of the career: the money on the left, the level as a star and a number on the right, and what goes
+ * with it (the menu) at the end. It is the only place the money is written. A gain pops the chip and floats the amount above it.
  */
-export function CareerHud({ career }: { career: Career }) {
+export function CareerHud({ career, end, onBack, title }: { career: Career; end?: ReactNode; /** On a screen behind a button: the way back, and what the screen is called. */ onBack?: () => void; title?: string }) {
   const [delta, setDelta] = useState<number | null>(null);
   const [prev, setPrev] = useState(career.money);
   if (career.money !== prev) {
@@ -54,29 +57,42 @@ export function CareerHud({ career }: { career: Career }) {
     const t = setTimeout(() => setDelta(null), 1500);
     return () => clearTimeout(t);
   }, [delta]);
-  const chip = { padding: "0.2rem 0.6rem", borderRadius: "var(--radius-pill)", background: "var(--color-surface)", border: "1px solid var(--color-border)", fontSize: "var(--text-small)", fontWeight: 700 } as const;
-  return (
-    <div className="flex items-center gap-2 flex-wrap" role="group" aria-label="Status">
-      <span key={delta === null ? "still" : career.money} className={`relative inline-flex items-center gap-1 tabular ${delta !== null && delta > 0 ? "hud-pop" : ""}`} style={{ ...chip, color: "var(--color-gold-strong)" }} title="Saldo">
+  const coin = (
+    <span key={delta === null ? "still" : career.money} className={`relative inline-flex items-center gap-1.5 tabular ${delta !== null && delta > 0 ? "hud-pop" : ""}`} style={{ ...chip, color: "var(--color-gold-strong)" }} title="Saldo">
         {delta !== null && delta !== 0 && (
           <span className="hud-delta" style={{ color: delta > 0 ? "var(--color-green)" : "var(--color-red)" }}>
             {delta > 0 ? "+" : "−"}
             {dollars(Math.abs(delta))}
           </span>
         )}
-        <CoinIcon className="w-4 h-4" />
+        <CoinIcon className="w-5 h-5" />
         <CountUp value={career.money} format={dollars} />
+    </span>
+  );
+  if (onBack) {
+    return (
+      <div className="flex items-center gap-3" role="group" aria-label="Status">
+        <button type="button" onClick={onBack} aria-label="Tilbake" className={`tactile inline-flex items-center justify-center shrink-0 ${FOCUS_RING}`} style={{ width: "var(--control)", height: "var(--control)", borderRadius: "var(--radius-pill)", background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-cream)" }}>
+          <ArrowLeftIcon className="w-5 h-5" />
+        </button>
+        <h1 className="font-display flex-1 min-w-0 truncate" style={{ fontSize: "var(--text-num)", color: "var(--color-cream)", lineHeight: 1 }}>
+          {title}
+        </h1>
+        {coin}
+        <SaveDot savedAt={career.savedAt} />
+      </div>
+    );
+  }
+  return (
+    <div className="flex items-center gap-2" role="group" aria-label="Status">
+      {coin}
+      <SaveDot savedAt={career.savedAt} />
+      <span className="flex-1" />
+      <span className="inline-flex items-center gap-1.5 tabular" style={{ ...chip, color: "var(--color-teal)" }} title={rankOf(career)} aria-label={`Nivå ${rankLevel(career)}, ${rankOf(career)}`}>
+        <StarIcon className="w-5 h-5" />
+        {rankLevel(career)}
       </span>
-      <span className="inline-flex items-center gap-1 tabular" style={{ ...chip, color: "var(--color-teal)" }} title="Rankingpoeng">
-        <StarIcon className="w-4 h-4" />
-        <CountUp value={career.points} />
-      </span>
-      <span className="inline-flex items-center gap-1 tabular" style={{ ...chip, color: "var(--color-cream)" }} title="Titler">
-        <TrophyIcon className="w-4 h-4" />
-        {career.titles}
-      </span>
-      <span style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>{rankOf(career)}</span>
-      <SaveChip savedAt={career.savedAt} />
+      {end}
     </div>
   );
 }

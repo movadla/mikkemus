@@ -1,11 +1,10 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { FOCUS_RING } from "./ui/focus";
 
 /**
- * A short hint the first time something is met in the career, said once and then gone: what it is, in a sentence, and one button to get rid of
- * it. Which hints have been seen is kept on the device. This is the whole guide for a new player; it never blocks anything.
+ * The whole guide to the career: a small bubble with an arrow that points at the one thing to press, the first time, and is gone as soon as it is
+ * pressed. Which ones have been seen is kept on the device. Nothing is read and nothing is closed.
  */
 const KEY = "mikke-mus-career-tips";
 const listeners = new Set<() => void>();
@@ -19,11 +18,12 @@ function seen(): string[] {
   }
 }
 
-function markSeen(id: string) {
+/** The pointer for this id has been dealt with: it does not come back. */
+export function markTipSeen(id: string) {
   try {
     localStorage.setItem(KEY, JSON.stringify([...new Set([...seen(), id])]));
   } catch {
-    // The hint then comes back next time, which is harmless.
+    // The pointer then comes back next time, which is harmless.
   }
   listeners.forEach((l) => l());
 }
@@ -38,15 +38,18 @@ const subscribe = (l: () => void) => {
 // A string snapshot, so React sees the same value until something changes.
 const snapshot = () => seen().join("|");
 
-export function CareerTip({ id, children }: { id: string; children: React.ReactNode }) {
-  const done = useSyncExternalStore(subscribe, snapshot, () => id).split("|").includes(id);
-  if (done) return null;
+/** Whether the pointer for this id has been seen. Server side it counts as seen, so nothing flashes in. */
+export function useTipSeen(id: string): boolean {
+  return useSyncExternalStore(subscribe, snapshot, () => id).split("|").includes(id);
+}
+
+/** The bubble and arrow, placed above the (relatively placed) thing it points at. */
+export function TipPointer({ id, label }: { id: string; label: string }) {
+  if (useTipSeen(id)) return null;
   return (
-    <div role="note" className="career-tip flex items-start gap-3" style={{ padding: "0.7rem 0.85rem", borderRadius: "var(--radius-m)", background: "var(--teal-soft)", border: "1px solid var(--color-teal)", color: "var(--color-cream)", fontSize: "var(--text-small)" }}>
-      <span className="flex-1">{children}</span>
-      <button type="button" onClick={() => markSeen(id)} className={`tactile shrink-0 ${FOCUS_RING}`} style={{ minHeight: "var(--control)", padding: "0 0.75rem", borderRadius: "var(--radius-m)", background: "var(--color-surface)", color: "var(--color-teal)", border: "1px solid var(--color-teal)", fontWeight: 700 }}>
-        Skjønner
-      </button>
+    <div className="tip-pointer" role="note">
+      <span>{label}</span>
+      <i aria-hidden />
     </div>
   );
 }

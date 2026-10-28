@@ -273,7 +273,7 @@ export function DrawScreen({
           </div>
         )}
         <StickyAction onClick={() => onStart(order)} ready reason={null}>
-          {career ? "Start turneringen" : "Start"}
+          {career ? "START" : "Start"}
         </StickyAction>
       </div>
     </div>

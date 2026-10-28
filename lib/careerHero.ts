@@ -28,19 +28,22 @@ export function heroFor(career: Career): Hero {
 /** "Semifinale" is "semifinalen" in a sentence; "Runde av 16" stays. */
 const inSentence = (round: string) => (round.toLowerCase().endsWith("finale") ? `${round.toLowerCase()}n` : round.toLowerCase());
 
-/** What the main button says. */
-export function heroCta(hero: Hero): string {
-  if (hero.kind === "enter") return `Spill ${hero.tier.name} · ${hero.tier.fee === 0 ? "gratis" : dollars(hero.tier.fee)}`;
+/** What the main button says: one word, and a small line under it for where it leads. */
+export function heroButton(hero: Hero): { label: string; sub: string } {
+  if (hero.kind === "enter") return { label: "SPILL", sub: `${hero.tier.short} · ${hero.tier.fee === 0 ? "gratis" : dollars(hero.tier.fee)}` };
   if (hero.kind === "challenge") {
     const c = hero.challenge;
-    if (hero.done) return c.won ? `Hent ${dollars(c.stake)}` : "Tilbake til rommet";
-    return `Spill ${GAMES[c.game].name} mot ${c.opponent.name}`;
+    if (hero.done) return c.won ? { label: "HENT", sub: dollars(c.stake) } : { label: "OK", sub: GAMES[c.game].name };
+    return { label: "SPILL", sub: `${GAMES[c.game].name} · ${c.opponent.name}` };
   }
-  if (hero.done) return hero.prize > 0 ? `Hent premien (${dollars(hero.prize)})` : "Se resultatet";
-  if (!hero.drawn) return "Trekk lodd";
-  if (hero.round && hero.opponent) return `Spill ${inSentence(hero.round)} mot ${hero.opponent}`;
-  return "Fullfør turneringen";
+  if (hero.done) return hero.prize > 0 ? { label: "HENT", sub: dollars(hero.prize) } : { label: "OK", sub: hero.tier.short };
+  if (!hero.drawn) return { label: "TREKK", sub: hero.tier.short };
+  if (hero.round && hero.opponent) return { label: "SPILL", sub: `${hero.round} · ${hero.opponent}` };
+  return { label: "FULLFØR", sub: hero.tier.short };
 }
+
+/** The short word of a round, for the line under the button. */
+export { inSentence };
 
 /** The next match for the player in a cup that is going: its round, and who it is against. Null when the player is out, or nothing is ready. */
 function botSimNext(t: Tournament, player: string): { round: string; opponent: string } | null {

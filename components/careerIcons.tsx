@@ -43,3 +43,59 @@ export function StarIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+/** The icons of the six things for the room. */
+export function SlotIcon({ id, className }: { id: "wall" | "floor" | "board" | "light" | "decor" | "crowd"; className?: string }) {
+  return (
+    <svg {...base} className={className}>
+      {id === "wall" && (
+        <>
+          <rect x="3" y="4" width="18" height="16" rx="1" />
+          <path d="M3 10h18M3 15h18M9 4v6M15 10v5M9 15v5" />
+        </>
+      )}
+      {id === "floor" && (
+        <>
+          <path d="M3 20 8 8h8l5 12z" />
+          <path d="M6 14h12" />
+        </>
+      )}
+      {id === "board" && (
+        <>
+          <circle cx="12" cy="12" r="9" />
+          <circle cx="12" cy="12" r="5" />
+          <circle cx="12" cy="12" r="1.5" />
+        </>
+      )}
+      {id === "light" && (
+        <>
+          <path d="M9 3h6l2 7H7z" />
+          <path d="M12 10v3M9 20h6M12 13v7" />
+        </>
+      )}
+      {id === "decor" && (
+        <>
+          <path d="M7 4h10v5a5 5 0 0 1-10 0z" />
+          <path d="M12 14v4M8 20h8" />
+        </>
+      )}
+      {id === "crowd" && (
+        <>
+          <circle cx="9" cy="8" r="3" />
+          <circle cx="17" cy="9" r="2.5" />
+          <path d="M3 20c0-4 3-6 6-6s6 2 6 6M15 14c3 0 6 2 6 6" />
+        </>
+      )}
+    </svg>
+  );
+}
+
+/** A snowflake: an opponent who is cold today. */
+export function SnowIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9" />
+      <path d="m9.5 4.5 2.5 2 2.5-2M9.5 19.5l2.5-2 2.5 2" />
+    </svg>
+  );
+}

@@ -91,3 +91,28 @@ export const stepsOpen = (career: Career) => LADDER.filter((t) => isUnlocked(car
 export const roomShare = (career: Career) => arenaSteps(career) / (SLOTS.length * 3);
 
 export { TIERS };
+
+/** The rank as a number for the star on the screen: 1 for a pub player, one more for each title above, and one above the last for a world champion. */
+export function rankLevel(career: Career): number {
+  if (career.worldTitles > 0) return RANKS.length + 1;
+  return RANKS.filter((r) => career.points >= r.min).length;
+}
+
+/** How far the player is to the next rank, 0 to 1, for the bar on the home screen; null at the top. */
+export function rankProgress(career: Career): { next: number; progress: number; points: number; need: number } | null {
+  const next = nextRank(career);
+  if (!next) return null;
+  const from = [...RANKS].reverse().find((r) => career.points >= r.min)?.min ?? 0;
+  return { next: rankLevel(career) + 1, progress: clamp01((career.points - from) / (next.min - from)), points: career.points, need: next.min };
+}
+
+/** Whether there is something new to buy for the room that the player can afford: the red dot on the room button. */
+export function roomBadge(career: Career): boolean {
+  return SLOTS.some((s) => {
+    const price = nextPrice(career, s.id);
+    return price !== null && career.money >= price;
+  }) || (() => {
+    const place = nextPlace(career);
+    return !!place && career.money >= place.price;
+  })();
+}

@@ -4765,3 +4765,288 @@ html[data-fx="full"] .hs-last {
     display: none;
   }
 }
+
+/* The career, made simple: one big button, four round ones, a room that fills what is left. */
+.career-home {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: calc(100dvh - 2rem);
+  padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
+}
+.career-home-room {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  min-height: 13rem;
+}
+.career-home-room > svg {
+  box-shadow: var(--elevation-2);
+}
+.play-btn {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  gap: 0.1rem;
+  width: 100%;
+  padding: 0.8rem 1rem;
+  border: 0;
+  border-radius: var(--radius-l);
+  text-align: center;
+  color: #04201f;
+  background: linear-gradient(#52d3df, #2aa7b6);
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--color-teal) 35%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+.play-btn strong {
+  font-family: var(--font-display);
+  font-size: var(--text-num);
+  line-height: 1;
+  letter-spacing: 0.05em;
+  font-weight: 800;
+}
+.play-btn small {
+  font-size: var(--text-micro);
+  font-weight: 600;
+  opacity: 0.8;
+}
+.play-btn-gold {
+  color: #261a04;
+  background: linear-gradient(#ecc66a, #c8962f);
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--color-gold) 35%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+.play-btn::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -60%;
+  width: 40%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  transform: skewX(-20deg);
+  animation: cta-shine 5s ease-in-out 1.5s infinite;
+  pointer-events: none;
+}
+.play-btn:disabled {
+  filter: grayscale(0.8);
+  opacity: 0.55;
+}
+.round4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+}
+.round-btn {
+  display: grid;
+  justify-items: center;
+  gap: 0.3rem;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  color: var(--color-text-2);
+  min-width: 0;
+}
+.round-btn-disc {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 3.4rem;
+  height: 3.4rem;
+  border-radius: 50%;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--elevation-2);
+  color: var(--color-cream);
+}
+.round-btn-disc svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+.round-btn-dot {
+  position: absolute;
+  top: -0.15rem;
+  right: -0.15rem;
+  width: 0.9rem;
+  height: 0.9rem;
+  border-radius: 50%;
+  background: var(--color-red);
+  border: 2px solid var(--color-bg);
+  animation: dot-bob 1.6s ease-in-out infinite;
+}
+@keyframes dot-bob {
+  50% {
+    transform: translateY(-2px) scale(1.12);
+  }
+}
+.round-btn-label {
+  font-size: var(--text-micro);
+  font-weight: 600;
+}
+/* The hand that shows the one thing to press the first time. */
+.tip-pointer {
+  position: absolute;
+  z-index: 5;
+  left: 50%;
+  bottom: calc(100% + 0.3rem);
+  transform: translateX(-50%);
+  display: grid;
+  justify-items: center;
+  gap: 0.1rem;
+  pointer-events: none;
+  animation: tip-bob 1.2s ease-in-out infinite;
+}
+.tip-pointer span {
+  padding: 0.2rem 0.7rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-teal);
+  color: #04201f;
+  font-weight: 800;
+  font-size: var(--text-small);
+  white-space: nowrap;
+}
+.tip-pointer i {
+  width: 0;
+  height: 0;
+  border-left: 0.45rem solid transparent;
+  border-right: 0.45rem solid transparent;
+  border-top: 0.55rem solid var(--color-teal);
+}
+@keyframes tip-bob {
+  50% {
+    transform: translate(-50%, -6px);
+  }
+}
+/* The one goal: a star, a bar and a number. */
+.goal-strip {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  font-size: var(--text-small);
+}
+@media (prefers-reduced-motion: reduce) {
+  .play-btn::after,
+  .round-btn-dot,
+  .tip-pointer {
+    animation: none;
+  }
+  .play-btn::after {
+    display: none;
+  }
+}
+
+/* The room: tiles with an icon, three dots for the steps and the price as a button. */
+.room-tile {
+  list-style: none;
+  display: grid;
+  justify-items: center;
+  gap: 0.4rem;
+  padding: 0.75rem 0.6rem;
+  border-radius: var(--radius-m);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  text-align: center;
+}
+.room-tile-wide {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-align: left;
+}
+.room-tile-ico {
+  display: grid;
+  place-items: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: var(--radius-m);
+  background: var(--color-cell);
+  color: var(--color-cream);
+}
+.room-tile-ico svg {
+  width: 1.4rem;
+  height: 1.4rem;
+}
+.pips {
+  display: inline-flex;
+  gap: 0.3rem;
+}
+.pips i {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: var(--color-cell);
+  border: 1px solid var(--color-border);
+}
+.pips i.on {
+  background: var(--color-gold);
+  border-color: var(--color-gold);
+}
+.buy-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  min-width: 5rem;
+  min-height: var(--control);
+  padding: 0 0.9rem;
+  border: 0;
+  border-radius: var(--radius-m);
+  font-weight: 800;
+  font-size: var(--text-body);
+  font-variant-numeric: tabular-nums;
+  color: #04201f;
+  background: linear-gradient(#52d3df, #2aa7b6);
+}
+.room-tile:not(.room-tile-wide) > .buy-btn {
+  width: 100%;
+}
+.buy-btn-off {
+  background: var(--color-cell);
+  color: var(--color-muted);
+  border: 1px solid var(--color-border);
+}
+.buy-btn-full {
+  background: transparent;
+  color: var(--color-gold-strong);
+  border: 1px solid color-mix(in srgb, var(--color-gold) 45%, transparent);
+}
+/* A row of the road: the node, the short name and the first prize. */
+.road-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-m);
+  background: transparent;
+  border: 1px solid transparent;
+  box-shadow: none;
+  text-align: left;
+}
+.road-row-on {
+  background: var(--color-surface);
+  border-color: var(--cup);
+}
+
+.room-tile-wide > .buy-btn {
+  width: auto;
+}
+
+/* A choice among a few, as a row: the name on the left and the stake on the right. Not the main button, so it does not glow. */
+.pick-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 4rem;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-l);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--elevation-1);
+}
+.pick-row:disabled {
+  opacity: 0.45;
+}
