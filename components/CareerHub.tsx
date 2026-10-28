@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { DRILL_ROUNDS } from "@/lib/training";
 import { GAMES, LADDER, ROOM_MAX, STAGES, buyStage, dollars, isUnlocked, nextStage, offerChallenge, stakeFor, startEvent, whyNot, whyNotBuy, type Career, type GameId, type Tier } from "@/lib/career";
 import { cupColor } from "@/lib/botCup";
+import { TROPHY } from "@/lib/scenePalette";
 import { rankOf, rankProgress, roomBadge } from "@/lib/careerGoals";
 import { heroButton, heroFor } from "@/lib/careerHero";
 import { careerSound, uiFeedback } from "@/lib/uiSound";
@@ -13,10 +14,10 @@ import { CareerHud } from "./CareerHud";
 import { CareerProfile } from "./CareerProfile";
 import { markTipSeen, TipPointer, useTipSeen } from "./CareerTip";
 import { ConfirmDialog } from "./ConfirmDialog";
-import { BoltIcon, BullseyeIcon, CoinIcon, MoreIcon } from "./icons";
+import { BoltIcon, BullseyeIcon, CoinIcon, MoreIcon, TrophyIcon } from "./icons";
 import { PlayButton } from "./PlayButton";
 import { OverRoom } from "./RoomBackdrop";
-import { RoomPicture } from "./RoomPicture";
+import { CoinFlight, RoomHero, buyMode, revealAt, type BuyMode, type CoinFlightPath } from "./RoomHero";
 import { RoundButton } from "./RoundButton";
 import { Button } from "./ui/Button";
 import { CupEmblem } from "./ui/CupEmblem";
@@ -26,6 +27,42 @@ import { FOCUS_RING } from "./ui/focus";
 type View = "home" | "rooms" | "road" | "training" | "challenges";
 
 const TITLE: Record<Exclude<View, "home">, string> = { rooms: "Rom", road: "Turneringer", training: "Trening", challenges: "Duell" };
+
+/** Where the player is: the room is a place with a name and a step, so the picture behind everything reads as theirs. */
+function PlaceChip({ room }: { room: number }) {
+  return (
+    <span className="place-chip">
+      <HomeIcon className="w-4 h-4 shrink-0" />
+      Garasjen din
+      <em>
+        · {STAGES[room].name} · {room + 1} av {ROOM_MAX + 1}
+      </em>
+    </span>
+  );
+}
+
+/** What a step gave, as a sentence: Maling og veggpaneler. */
+const listText = (items: string[]) => {
+  const words = items.map((x, i) => (i === 0 ? x : x.charAt(0).toLowerCase() + x.slice(1)));
+  return words.length > 1 ? `${words.slice(0, -1).join(", ")} og ${words[words.length - 1]}` : words[0] ?? "";
+};
+
+/** The cups the player has won, on a shelf under their name: a cup in the colour of each event. */
+function TrophyShelf({ career }: { career: Career }) {
+  if (career.trophies.length === 0) return null;
+  const shown = career.trophies.slice(-6);
+  return (
+    <div className="trophy-shelf trophy-shelf-new" role="img" aria-label={`${career.trophies.length} ${career.trophies.length === 1 ? "pokal" : "pokaler"}`}>
+      {shown.map((t, i) => (
+        <span key={i} style={{ color: TROPHY[t.tier] }}>
+          <TrophyIcon className="w-full h-full" />
+        </span>
+      ))}
+    </div>
+  );
+}
+
+const ROOM_TITLE = { fontSize: "var(--text-num)", textTransform: "uppercase", letterSpacing: "0.04em", lineHeight: 1.05, color: "var(--color-cream)", textAlign: "center" } as const;
 
 /** The one goal on the home screen: the star the player is working towards, a bar, and the points. */
 function GoalStrip({ career }: { career: Career }) {
@@ -53,8 +90,23 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
   const [menu, setMenu] = useState(false);
   const [profile, setProfile] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  // A room that has just changed: the step it came from, while the new picture comes in over it.
-  const [from, setFrom] = useState<number | null>(null);
+  // A room that has just changed: the step it came from (kept so it can be compared), the buy that is playing, and the way it is played.
+  const [before, setBefore] = useState<number | null>(null);
+  const [playing, setPlaying] = useState(false);
+  const [bmode, setBmode] = useState<BuyMode>("wipe");
+  const [compare, setCompare] = useState(false);
+  const [coins, setCoins] = useState<CoinFlightPath | null>(null);
+  // What the last step gave, shown on the home screen when the player gets back, with a ring where the board hangs.
+  const [news, setNews] = useState<string | null>(null);
+  // An event that is being started: its colour spreads from the button for a moment before the scene.
+  const [launch, setLaunch] = useState<{ id: Tier["id"]; x: number; y: number } | null>(null);
+  const launchTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(launchTimer.current), []);
+  useEffect(() => {
+    if (!news || view !== "home") return;
+    const t = setTimeout(() => setNews(null), 5200);
+    return () => clearTimeout(t);
+  }, [news, view]);
   // The step of the road that is picked (the one that is going, or the one the main button leads to).
   const hero = heroFor(career);
   const [picked, setPicked] = useState<Tier["id"] | null>(null);
@@ -63,13 +115,23 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
     uiFeedback("pick");
     setView(v);
   };
-  const press = () => {
+  /** Start an event: its colour spreads from the button that was pressed, and then the scene opens. Without motion it opens at once. */
+  const enter = (tier: Tier["id"], from: HTMLElement) => {
+    if (launch) return;
+    const begin = () => {
+      commit(startEvent(career, tier, newSeed()));
+      onPlay();
+    };
+    if (typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches) return begin();
+    const r = from.getBoundingClientRect();
+    setLaunch({ id: tier, x: r.left + r.width / 2, y: r.top + r.height / 2 });
+    launchTimer.current = setTimeout(begin, 600);
+  };
+  const press = (e: React.MouseEvent<HTMLButtonElement>) => {
     uiFeedback("click");
     markTipSeen("play");
-    if (hero.kind === "enter") {
-      commit(startEvent(career, hero.tier.id, newSeed()));
-      onPlay();
-    } else if (hero.kind === "event") onPlay();
+    if (hero.kind === "enter") enter(hero.tier.id, e.currentTarget);
+    else if (hero.kind === "event") onPlay();
     else onChallenge();
   };
   const button = heroButton(hero);
@@ -77,11 +139,29 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
   const roadDot = !career.active && !career.challenge && LADDER.some((t) => t.id !== "lu" && whyNot(career, t) === null);
   const buy = () => {
     const was = career.room;
+    const bought = nextStage(career);
+    if (!bought) return;
     uiFeedback("confirm");
     careerSound("unlock");
+    // Coins fly from the button to the balance.
+    const btn = document.querySelector(".room-buy .play-btn")?.getBoundingClientRect();
+    const chip = document.querySelector('.room-buy [title="Saldo"]')?.getBoundingClientRect();
+    if (btn && chip) {
+      setCoins({ x0: btn.left + btn.width / 2, y0: btn.top + btn.height / 2, x1: chip.left + chip.width / 2, y1: chip.top + chip.height / 2 });
+      setTimeout(() => setCoins(null), 1600);
+    }
     commit(buyStage(career));
-    setFrom(was);
-    setTimeout(() => setFrom(null), 1100);
+    setBefore(was);
+    setBmode(buyMode(was + 1));
+    setCompare(false);
+    setPlaying(true);
+    setNews(listText(bought.items));
+    setTimeout(() => setPlaying(false), 3200);
+  };
+  const leaveRooms = () => {
+    setView("home");
+    setBefore(null);
+    setCompare(false);
   };
 
   const menuButton = (
@@ -139,18 +219,28 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
 
   if (view === "home") {
     return (
-      <OverRoom stage={career.room} dim={30} blur={1.5}>
+      <OverRoom stage={career.room} clear>
+        {news && <span className="room-news-ring" aria-hidden />}
+        {launch && <span className="launch-iris" aria-hidden style={{ "--c": TROPHY[launch.id], "--ox": `${launch.x}px`, "--oy": `${launch.y}px` } as React.CSSProperties} />}
         <div className="animate-screen-push screen">
           {sheets}
           <div className="screen-inner career-home">
             <CareerHud career={career} end={menuButton} />
             <GoalStrip career={career} />
+            <PlaceChip room={career.room} />
+            {news && (
+              <button type="button" className="room-news" onClick={() => setNews(null)} aria-label={`Nytt i rommet: ${news}`}>
+                <StarIcon className="w-4 h-4" />
+                Nytt i rommet: <b>{news}</b>
+              </button>
+            )}
             <div className="flex-1" />
             <div className="room-text rise-in" style={{ "--d": "0.1s" } as React.CSSProperties}>
               <p className="font-display" style={{ fontSize: "var(--text-num)", lineHeight: 1.05, color: "var(--color-cream)" }}>
                 {career.player}
               </p>
               <p style={{ color: "var(--color-gold-strong)", fontWeight: 700, fontSize: "var(--text-small)", letterSpacing: "0.06em", textTransform: "uppercase" }}>{rankOf(career)}</p>
+              <TrophyShelf career={career} />
             </div>
             <div className="relative rise-in" style={{ "--d": "0.2s" } as React.CSSProperties}>
               {!playTip && <TipPointer id="play" label="Trykk her" />}
@@ -174,38 +264,79 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
   const next = nextStage(career);
   const buyWhy = whyNotBuy(career);
 
+  if (view === "rooms") {
+    return (
+      <div className="room-buy" data-mode={bmode} data-playing={playing ? "" : undefined} style={{ "--rv": `${revealAt(bmode)}s` } as React.CSSProperties}>
+        <RoomHero stage={career.room} before={before} playing={playing} compare={compare} mode={bmode} />
+        {coins && <CoinFlight path={coins} />}
+        <div className="room-over">
+          <div className="animate-screen-push screen" style={{ paddingBottom: "1rem" }}>
+            {sheets}
+            <div className="screen-inner flex flex-col gap-3" style={{ minHeight: "calc(100dvh - 2rem)" }}>
+              <CareerHud career={career} onBack={leaveRooms} title={TITLE.rooms} />
+              <div className="flex-1" />
+              <div className="flex flex-col items-center gap-2">
+                <PlaceChip room={career.room} />
+                <div className="room-title-swap w-full">
+                  {playing && before !== null && (
+                    <p aria-hidden className="font-display room-text room-title-old" style={ROOM_TITLE}>
+                      {STAGES[before].name}
+                    </p>
+                  )}
+                  <p key={career.room} className={`font-display room-text ${playing ? "room-title-new" : ""}`} style={ROOM_TITLE}>
+                    {STAGES[career.room].name}
+                  </p>
+                </div>
+                <div className="pips10" role="img" aria-label={`Trinn ${career.room + 1} av ${ROOM_MAX + 1}`}>
+                  {STAGES.map((s, i) => (
+                    <i key={s.name} className={`${i <= career.room ? "on" : ""} ${playing && i === career.room ? "pip-new" : ""}`} />
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-3 mt-3">
+                {before !== null && before !== career.room && !playing && (
+                  <div className="flex justify-center">
+                    <Button variant="ghost" onClick={() => setCompare((c) => !c)}>
+                      {compare ? "Lukk sammenligningen" : "Før og etter"}
+                    </Button>
+                  </div>
+                )}
+                {next && (
+                  <div className="room-title-swap">
+                    {playing && (
+                      <ul aria-hidden className="flex gap-2 justify-center flex-wrap">
+                        {STAGES[career.room].items.map((item) => (
+                          <li key={item} className="stage-chip stage-chip-old">
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    <ul className="flex gap-2 justify-center flex-wrap" aria-label="Du får">
+                      {next.items.map((item, i) => (
+                        <li key={item} className={`stage-chip ${playing ? "stage-chip-new" : ""}`} style={{ "--i": `${(i * 0.12).toFixed(2)}s` } as React.CSSProperties}>
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                <PlayButton label={next ? "KJØP" : "FERDIG"} sub={next ? (buyWhy ?? dollars(next.price)) : "Drømmerommet er på plass"} disabled={!!buyWhy} onClick={buy} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <OverRoom stage={career.room} dim={view === "rooms" ? 78 : 58} blur={view === "rooms" ? 10 : 5}>
+    <OverRoom stage={career.room} dim={58} blur={5}>
+      {launch && <span className="launch-iris" aria-hidden style={{ "--c": TROPHY[launch.id], "--ox": `${launch.x}px`, "--oy": `${launch.y}px` } as React.CSSProperties} />}
       <div className="animate-screen-push screen" style={{ paddingBottom: "1rem" }}>
         {sheets}
         <div className="screen-inner flex flex-col gap-3" style={{ minHeight: "calc(100dvh - 2rem)" }}>
           <CareerHud career={career} onBack={() => setView("home")} title={TITLE[view]} />
-
-          {view === "rooms" && (
-            <>
-              <RoomPicture stage={career.room} from={from} alt={`Rommet ditt, trinn ${career.room + 1}: ${STAGES[career.room].name}`} className="room-card" />
-              <div className="pips10" role="img" aria-label={`Trinn ${career.room + 1} av ${ROOM_MAX + 1}`}>
-                {STAGES.map((s, i) => (
-                  <i key={s.name} className={i <= career.room ? "on" : ""} />
-                ))}
-              </div>
-              <p className="font-display text-center room-text" style={{ fontSize: "var(--text-num)", textTransform: "uppercase", letterSpacing: "0.04em", lineHeight: 1.05, color: "var(--color-cream)" }}>
-                {STAGES[career.room].name}
-              </p>
-              <div className="mt-auto space-y-3">
-                {next && (
-                  <ul className="flex gap-2 justify-center flex-wrap" aria-label="Du får">
-                    {next.items.map((item) => (
-                      <li key={item} className="stage-chip">
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                <PlayButton label={next ? "KJØP" : "FERDIG"} sub={next ? (buyWhy ?? dollars(next.price)) : "Drømmerommet er på plass"} disabled={!!buyWhy} onClick={buy} />
-              </div>
-            </>
-          )}
 
           {view === "road" && (
             <>
@@ -244,13 +375,10 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
                   label="SPILL"
                   sub={selState === "active" ? "Fortsett" : selState === "locked" ? selected.qualify : selState === "short" ? selWhy ?? undefined : `${selected.name} · ${selected.fee === 0 ? "gratis" : dollars(selected.fee)}`}
                   disabled={selState === "locked" || selState === "short"}
-                  onClick={() => {
+                  onClick={(e) => {
                     uiFeedback("click");
                     if (selState === "active") onPlay();
-                    else {
-                      commit(startEvent(career, selected.id, newSeed()));
-                      onPlay();
-                    }
+                    else enter(selected.id, e.currentTarget);
                   }}
                 />
               </div>

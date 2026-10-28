@@ -50,8 +50,8 @@ function Tile({ icon, label, onClick, wide = false, expanded, controls }: { icon
       onClick={onClick}
       aria-expanded={expanded}
       aria-controls={controls}
-      className={`tactile flex items-center justify-center ${wide ? "flex-row gap-3" : "flex-col gap-2"} ${FOCUS_RING}`}
-      style={{ minHeight: "5.5rem", borderRadius: "var(--radius-m)", background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-cream)", fontSize: "var(--text-body)", fontWeight: 600 }}
+      className={`tactile flex items-center justify-center ${wide ? "flex-row gap-3 w-full" : "flex-col gap-2"} ${FOCUS_RING}`}
+      style={{ minHeight: wide ? "4.25rem" : "5.5rem", borderRadius: "var(--radius-m)", background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-cream)", fontSize: "var(--text-body)", fontWeight: 600 }}
     >
       <span style={{ color: "var(--color-teal)" }}>{icon}</span>
       {label}

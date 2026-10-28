@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { dollars, type Career } from "@/lib/career";
-import { ArrowLeftIcon, CoinIcon, TrophyIcon } from "./icons";
+import { ArrowLeftIcon, CoinIcon } from "./icons";
 import { FOCUS_RING } from "./ui/focus";
 import { CountUp } from "./ui/CountUp";
 
@@ -58,7 +58,7 @@ export function CareerHud({ career, end, onBack, title }: { career: Career; end?
   const coin = (
     <span key={delta === null ? "still" : career.money} className={`relative inline-flex items-center gap-1.5 tabular ${delta !== null && delta > 0 ? "hud-pop" : ""}`} style={{ ...chip, color: "var(--color-gold-strong)" }} title="Saldo">
         {delta !== null && delta !== 0 && (
-          <span className="hud-delta" style={{ color: delta > 0 ? "var(--color-green)" : "var(--color-red)" }}>
+          <span className={`hud-delta ${delta < 0 ? "hud-delta-out" : ""}`} style={{ color: delta > 0 ? "var(--color-green)" : "var(--color-red)" }}>
             {delta > 0 ? "+" : "−"}
             {dollars(Math.abs(delta))}
           </span>
@@ -86,12 +86,6 @@ export function CareerHud({ career, end, onBack, title }: { career: Career; end?
       {coin}
       <SaveDot savedAt={career.savedAt} />
       <span className="flex-1" />
-      {career.trophies.length > 0 && (
-        <span className="inline-flex items-center gap-1.5 tabular" style={{ ...chip, color: "var(--color-gold-strong)" }} title="Pokaler" aria-label={`${career.trophies.length} pokaler`}>
-          <TrophyIcon className="w-5 h-5" />
-          {career.trophies.length}
-        </span>
-      )}
       {end}
     </div>
   );

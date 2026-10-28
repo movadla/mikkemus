@@ -1,14 +1,11 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { careerSound } from "@/lib/uiSound";
 import type { Tier } from "@/lib/career";
 import { dollars } from "@/lib/career";
-import { cupColor } from "@/lib/botCup";
-import { PUB, STAGE } from "@/lib/scenePalette";
+import { PUB, STAGE, TROPHY } from "@/lib/scenePalette";
+import { EVENT_PICTURES } from "./eventPictures";
 import { EventScene } from "./EventScenes";
-import { CoinIcon } from "./icons";
 import { PlayButton } from "./PlayButton";
-import { CountUp } from "./ui/CountUp";
-import { CupEmblem } from "./ui/CupEmblem";
 
 /** The ground each event stands on: the top and the bottom of its sky or its roof. */
 export const GROUND = {
@@ -19,51 +16,119 @@ export const GROUND = {
   vm: [STAGE.vm.top, STAGE.vm.bottom],
 } as const;
 
+/** The colour of the light of each event. */
+const BEAM = { lu: PUB.glow, region: STAGE.region.beam, nm: STAGE.nm.beam, gs: STAGE.gs.beam, vm: STAGE.vm.beam } as const;
+
+/** How hard the name hits, by the size of the event: how far it falls from, the shake of the screen and the size of the type. */
+const SLAM = [
+  { sc: 1, sh: 0, size: 2.0 },
+  { sc: 1.25, sh: 0, size: 2.1 },
+  { sc: 1.9, sh: 3, size: 2.25 },
+  { sc: 2.3, sh: 5, size: 2.45 },
+  { sc: 2.7, sh: 7, size: 2.7 },
+  { sc: 3.2, sh: 9, size: 2.9 },
+] as const;
+
+const CONFETTI = ["var(--color-cream)", "var(--color-gold-strong)", "var(--color-teal)"];
+
+function CupShape() {
+  return (
+    <svg viewBox="0 0 64 64" aria-hidden>
+      <path d="M18 8h28v14c0 9-6 16-14 16S18 31 18 22z" fill="currentColor" />
+      <path d="M18 12H8c0 10 4 16 12 18M46 12h10c0 10-4 16-12 18" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+      <rect x="29" y="38" width="6" height="10" fill="currentColor" />
+      <rect x="20" y="48" width="24" height="8" rx="2" fill="currentColor" />
+    </svg>
+  );
+}
+
 /**
- * The scene before the draw, one for each event: the pub on a Friday evening, the regional hall, the national arena, Grand Slam under its lasers
- * and the world championship under fireworks. It grows with the event: the pub is a warm picture and a line, the bigger ones add the title
- * slamming in, the prize counting up and, from Grand Slam, the black bars of a film opening. Nothing here is needed to play: the button is
- * there from the start.
+ * The opening of an event, and it grows with the event. The colour of the event comes up from the button, lights sweep, the stage is written
+ * out, the cup falls, the name hits with a blow to the screen, and three plates slide in with the players, the stake and the first prize.
+ * The pub is warm and quiet; the regional hall adds beams and a small blow; from the national championship there are black bars and confetti,
+ * Grand Slam adds lasers and the world championship fireworks and the hardest blow. A tap anywhere takes it to the end at once, and the
+ * button is there from the first second, so nothing here is needed to play.
  */
-export function EventIntro({ tier, onDone }: { tier: Tier; onDone: () => void }) {
+export function EventIntro({ tier, player, onDone }: { tier: Tier; player: string; onDone: () => void }) {
   // The crowd of the place swells as the scene comes up: the murmur of the pub, a hall filling, an arena roaring.
   useEffect(() => {
     careerSound(tier.scale <= 1 ? "crowd-1" : tier.scale <= 3 ? "crowd-2" : "crowd-3");
   }, [tier.scale]);
+  const [skip, setSkip] = useState(false);
+  const pictures = EVENT_PICTURES[tier.id];
   const [top, bottom] = GROUND[tier.id];
-  const big = tier.scale >= 3;
+  const s = tier.scale;
+  const slam = SLAM[s];
+  const beams = [
+    ["18%", 14, 0.5],
+    ["50%", 10, 0.4],
+    ["82%", 14, 0.5],
+    ["34%", 20, 0.3],
+    ["66%", 20, 0.3],
+  ].slice(0, s <= 1 ? 2 : s === 2 ? 3 : 5) as [string, number, number][];
+  const colours = [TROPHY[tier.id], ...CONFETTI];
+  const confetti = s >= 3 ? Array.from({ length: s === 3 ? 18 : 30 }, (_, i) => ({ x: (i * 37) % 100, c: colours[i % 4], d: 1.9 + ((i * 13) % 14) / 10, r: ((i * 83) % 700) - 350 })) : [];
   return (
     <div
-      className="animate-screen-enter screen cup-lamp intro-stage"
-      style={{ "--cup": cupColor(tier.kind), "--beam": tier.scale >= 5 ? 0.5 : tier.scale >= 4 ? 0.36 : 0.22, background: `linear-gradient(${top}, ${bottom})` } as React.CSSProperties}
-      data-scale={tier.scale}
+      className={`ev ${skip ? "ev-skip" : ""}`}
+      style={{ "--c": TROPHY[tier.id], "--top": top, "--bot": bottom, "--beam": BEAM[tier.id], "--laser": STAGE.gs.laser, "--sh": `${slam.sh}px`, "--sc": slam.sc } as React.CSSProperties}
+      data-scale={s}
       data-tier={tier.id}
+      onClick={() => setSkip(true)}
     >
-      {tier.scale >= 4 && (
+      <div className="ev-from" aria-hidden />
+      {pictures ? (
+        // The place the event is played in, from outside: the picture of the event.
+        <div className="ev-photo" role="img" aria-label={pictures.alt}>
+          {/* eslint-disable-next-line @next/next/no-img-element -- one fixed picture from public/career */}
+          <img src={pictures.outside} alt="" style={{ objectPosition: pictures.outsideFocus }} />
+        </div>
+      ) : (
+        <div className="ev-scene" aria-hidden>
+          <EventScene tier={tier.id} />
+        </div>
+      )}
+      {s >= 3 && (
         <>
-          <div className="intro-bar intro-bar-top" aria-hidden />
-          <div className="intro-bar intro-bar-bottom" aria-hidden />
+          <div className="ev-bar ev-bar-t" aria-hidden />
+          <div className="ev-bar ev-bar-b" aria-hidden />
         </>
       )}
-      {big && <div className="intro-beams" aria-hidden />}
-      <div className="screen-inner relative z-10 flex flex-col items-center text-center" style={{ minHeight: "88dvh", justifyContent: "center", gap: "0.9rem" }}>
-        <div className="intro-zoom w-full relative">
-          <EventScene tier={tier.id} />
-          <span className="intro-badge" style={{ color: "var(--cup)" }}>
-            <CupEmblem kind={tier.kind} className="w-6 h-6" />
-          </span>
+      {beams.map(([x, a, o], i) => (
+        <div key={i} className="ev-beam" aria-hidden style={{ "--x": x, "--a": `${a}deg`, "--bo": o * (s >= 4 ? 1.3 : 0.9) } as React.CSSProperties} />
+      ))}
+      {s >= 4 && [0, 1, 2].map((i) => <span key={i} className="ev-laser" aria-hidden style={{ top: `${20 + i * 8}%`, "--la": `${12 + i * 14}deg`, "--ld": `${(1.9 + i * 0.25).toFixed(2)}s` } as React.CSSProperties} />)}
+      {confetti.map((p, i) => (
+        <span key={i} className="ev-conf" aria-hidden style={{ left: `${p.x}%`, background: p.c, "--cd": `${p.d.toFixed(1)}s`, "--r": `${p.r}deg` } as React.CSSProperties} />
+      ))}
+      {s >= 5 && [[18, 22, 2.1], [78, 30, 2.5], [48, 16, 2.9], [30, 52, 3.2]].map(([x, y, d], i) => <span key={i} className="ev-fw" aria-hidden style={{ left: `${x}%`, top: `${y}%`, "--wd": `${d}s` } as React.CSSProperties} />)}
+      <div className="ev-inner">
+        <p className="ev-kick">{tier.stage}</p>
+        <div className="ev-cup">
+          <CupShape />
         </div>
-        <p className="section-label intro-rise" style={{ "--d": "0.5s", color: "var(--cup)" } as React.CSSProperties}>
-          {tier.stage.toUpperCase()}
-        </p>
-        <h1 className={`font-display ${big ? "intro-slam" : "intro-rise"}`} style={{ "--d": "0.7s", color: "var(--color-cream)", fontSize: `clamp(1.7rem, 8.4vw, ${2.2 + tier.scale * 0.3}rem)`, lineHeight: 1.05 } as React.CSSProperties}>
+        <h1 className="ev-title" style={{ fontSize: `clamp(1.7rem, 8.4vw, ${slam.size}rem)` }}>
           {tier.name}
+          <span className="ev-ring" aria-hidden />
         </h1>
-        <span className="intro-rise inline-flex items-center gap-2 tabular" style={{ "--d": "1s", padding: "0.35rem 0.9rem", borderRadius: "var(--radius-pill)", background: "var(--gold-soft)", border: "1px solid var(--color-gold)", color: "var(--color-gold-strong)", fontWeight: 800, fontSize: "var(--text-title)" } as React.CSSProperties}>
-          <CoinIcon className="w-5 h-5" />
-          <CountUp value={tier.prizes.winner ?? 0} format={dollars} />
-        </span>
-        <div className="w-full intro-rise" style={{ "--d": "1.4s" } as React.CSSProperties}>
+        <ul className="ev-plates" aria-label="Om turneringen">
+          <li className="ev-plate" style={{ "--i": "0s", "--fx": "-60px" } as React.CSSProperties}>
+            <small>Spillere</small>
+            <b>{tier.size}</b>
+          </li>
+          <li className="ev-plate" style={{ "--i": "0.12s", "--fx": "60px" } as React.CSSProperties}>
+            <small>Innskudd</small>
+            <b>{tier.fee === 0 ? "Gratis" : dollars(tier.fee)}</b>
+          </li>
+          <li className="ev-plate ev-plate-prize" style={{ "--i": "0.24s", "--fx": "-60px" } as React.CSSProperties}>
+            <small>Til vinneren</small>
+            <b>{dollars(tier.prizes.winner ?? 0)}</b>
+          </li>
+        </ul>
+        <p className="ev-you">
+          <b>{player}</b> er med. Trekningen starter nå.
+        </p>
+        <div className="ev-go" onClick={(e) => e.stopPropagation()}>
           <PlayButton label="TREKK" onClick={onDone} />
         </div>
       </div>

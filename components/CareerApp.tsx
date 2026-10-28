@@ -26,6 +26,8 @@ import { StarIcon } from "./careerIcons";
 import { Hub } from "./CareerHub";
 import { ChallengePlay, Result, TrainingPlay } from "./CareerScreens";
 import { EventIntro } from "./EventIntro";
+import { EVENT_PICTURES } from "./eventPictures";
+import { OverRoom } from "./RoomBackdrop";
 import { KitEditor } from "./KitSettings";
 import { ScreenTop } from "./ScreenTop";
 import { TournamentApp } from "./TournamentApp";
@@ -262,8 +264,8 @@ function Play({ career, commit, onHub }: { career: Career; commit: (c: Career) =
       />
     );
   }
-  if (intro) return <EventIntro tier={TIERS[a.tier]} onDone={() => setIntro(false)} />;
-  return (
+  if (intro) return <EventIntro tier={TIERS[a.tier]} player={career.player} onDone={() => setIntro(false)} />;
+  const tournament = (
     <TournamentApp
       onExitToHome={onHub}
       career={{
@@ -281,6 +283,15 @@ function Play({ career, commit, onHub }: { career: Career; commit: (c: Career) =
         },
       }}
     />
+  );
+  // An event with a picture is played inside it: the bar of Ly, the hall of the world championship, behind the draw and the matches.
+  const inside = EVENT_PICTURES[a.tier];
+  return inside ? (
+    <OverRoom stage={career.room} src={inside.inside} focus={inside.insideFocus} clear>
+      {tournament}
+    </OverRoom>
+  ) : (
+    tournament
   );
 }
 

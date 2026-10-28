@@ -57,6 +57,8 @@ test.describe("karriere", () => {
     await page.getByRole("button", { name: /Lars/ }).click();
     // The room is the picture behind everything: the first step of the room.
     await expect(page.locator(".room-backdrop-img")).toHaveAttribute("src", /room-02.jpg/);
+    // It says where the player is: the room is a place with a name and a step.
+    await expect(page.getByText(/Garasjen din/)).toContainText("Ryddet · 2 av 10");
     const hud = page.getByRole("group", { name: "Status" });
     await expect(hud.getByText("$300")).toBeVisible();
     // One star, not two: the goal says which rank it counts towards, and the rank is written under the name.
@@ -157,6 +159,15 @@ test.describe("karriere", () => {
     await expect.poll(async () => (await saved(page)).room).toBe(2);
     expect((await saved(page)).money).toBe(100);
     await expect(page.getByRole("img", { name: "Rommet ditt, trinn 3: Nye vegger" })).toBeVisible();
+    // The step is announced, and the room can be compared as it was and as it is.
+    await expect(page.getByText("NYTT I ROMMET")).toBeVisible();
+    await page.getByRole("button", { name: "Før og etter" }).click();
+    await expect(page.getByRole("slider", { name: /sammenligne/ })).toBeVisible();
+    await page.getByRole("button", { name: "Lukk sammenligningen" }).click();
+    // Back at home the new thing is named for a while.
+    await page.getByRole("button", { name: "Tilbake" }).click();
+    await expect(page.getByRole("button", { name: /Nytt i rommet: Maling og veggpaneler/ })).toBeVisible();
+    await place(page, "Rom").click();
     // The next step costs $2 000: too much, so the button is shut and says what is missing.
     await expect(play(page, /^KJØP Mangler/)).toBeDisabled();
   });

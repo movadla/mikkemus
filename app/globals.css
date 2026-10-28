@@ -5463,3 +5463,897 @@ html[data-fx="full"] .hs-last {
   padding-block: 0.5rem calc(0.5rem + env(safe-area-inset-bottom, 0px));
   background: linear-gradient(to bottom, transparent, color-mix(in srgb, #050807 70%, transparent) 40%);
 }
+
+/* ---- Visual lift: the room as a place, the buy as an event, the start of an event as an opening. ---- */
+
+/* A clearer room on the home screen: sharp, bright at the dartboard and dark at the edges and the foot, so the buttons can still be read. */
+.room-backdrop-clear .room-backdrop-img {
+  filter: saturate(0.95);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 22%, #000 62%, transparent 98%);
+  mask-image: linear-gradient(to bottom, transparent 0%, #000 22%, #000 62%, transparent 98%);
+}
+.room-backdrop-clear .room-backdrop-shade {
+  background: radial-gradient(75% 48% at 50% 36%, transparent 0%, rgba(5, 8, 7, 0.34) 70%, rgba(5, 8, 7, 0.72) 100%), linear-gradient(to bottom, rgba(5, 8, 7, 0.5), transparent 18%, transparent 56%, rgba(5, 8, 7, 0.82));
+}
+.place-chip {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  max-width: 100%;
+  padding: 0.3rem 0.8rem 0.3rem 0.6rem;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, #0d1512 55%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-gold) 45%, transparent);
+  color: var(--color-gold-strong);
+  font-size: var(--text-micro);
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  backdrop-filter: blur(6px);
+}
+.place-chip em {
+  font-style: normal;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-cream);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  opacity: 0.88;
+}
+.trophy-shelf {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  width: fit-content;
+  margin-top: 0.5rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 3px solid #6c4a2c;
+}
+.trophy-shelf svg {
+  width: 1.4rem;
+  height: 1.6rem;
+  filter: drop-shadow(0 0 6px currentColor);
+}
+.trophy-shelf-new {
+  animation: rb-shelf-glow 2.4s ease-out 1;
+}
+@keyframes rb-shelf-glow {
+  0% {
+    filter: brightness(2.2);
+  }
+  100% {
+    filter: none;
+  }
+}
+.room-news {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.9rem;
+  border-radius: var(--radius-m);
+  background: color-mix(in srgb, #0d1512 90%, transparent);
+  border: 1px solid var(--color-gold);
+  color: var(--color-cream);
+  font-size: var(--text-small);
+  font-weight: 700;
+  box-shadow: 0 0 24px color-mix(in srgb, var(--color-gold) 30%, transparent);
+  animation: rb-news-in 0.5s cubic-bezier(0.2, 1.3, 0.4, 1) both, rb-news-out 0.6s ease-in 4.4s forwards;
+}
+.room-news b {
+  color: var(--color-gold-strong);
+}
+@keyframes rb-news-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.9);
+  }
+}
+@keyframes rb-news-out {
+  to {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+/* A ring where the dartboard hangs in the new pictures (the middle of the screen, a little above): it pulses until the toast goes. */
+.room-news-ring {
+  position: fixed;
+  z-index: 1;
+  left: 50%;
+  top: 17dvh;
+  width: 9.5rem;
+  height: 9.5rem;
+  margin-left: -4.75rem;
+  border-radius: 50%;
+  border: 2px solid var(--color-gold-strong);
+  box-shadow: 0 0 30px color-mix(in srgb, var(--color-gold-strong) 55%, transparent), inset 0 0 30px color-mix(in srgb, var(--color-gold-strong) 35%, transparent);
+  pointer-events: none;
+  animation: rb-ring 2.2s ease-in-out 2, rb-news-out 0.6s ease-in 4.4s forwards;
+}
+@keyframes rb-ring {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1.04);
+  }
+}
+
+/* The room screen: the picture from the top of the screen, large, and under it the name of the step. */
+.room-hero-ground {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background: #050807;
+}
+.room-hero {
+  position: fixed;
+  z-index: 0;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 74dvh;
+  overflow: hidden;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(to bottom, #000 62%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 62%, transparent 100%);
+}
+.room-hero-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: cover;
+  object-position: 50% 42%;
+}
+.room-hero-top {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 6rem;
+  background: linear-gradient(rgba(5, 8, 7, 0.8), transparent);
+}
+.room-hero-slider {
+  position: fixed;
+  z-index: 3;
+  left: 0;
+  width: 100%;
+  top: 16dvh;
+  height: 36dvh;
+  opacity: 0;
+  cursor: ew-resize;
+}
+.room-hero-edge {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 4px;
+  z-index: 4;
+  background: linear-gradient(transparent, #fff 20%, #fff 80%, transparent);
+  box-shadow: 0 0 22px 8px rgba(255, 236, 170, 0.85);
+  opacity: 0;
+}
+.room-hero-edge-on {
+  opacity: 1;
+}
+.room-hero-flash {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  background: #fff7dc;
+  opacity: 0;
+}
+.room-hero-dust {
+  position: absolute;
+  z-index: 5;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #d8cdb8;
+  opacity: 0;
+}
+.room-hero-stamp {
+  position: absolute;
+  z-index: 6;
+  left: -10px;
+  bottom: 22%;
+  transform: translateX(-130%) rotate(-4deg);
+  background: linear-gradient(#f6dc8a, #d9ae4f);
+  color: #2b1d05;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  font-size: var(--text-small);
+  padding: 0.4rem 1.2rem 0.4rem 1.5rem;
+  border-radius: 0 0.5rem 0.5rem 0;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+  animation: rb-stamp 0.55s calc(var(--rv, 1.3s) + 0.05s) cubic-bezier(0.2, 1.2, 0.4, 1) forwards;
+}
+.room-hero-tag {
+  position: absolute;
+  z-index: 5;
+  top: 5.5rem;
+  font-size: var(--text-micro);
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  padding: 0.2rem 0.5rem;
+  border-radius: 0.4rem;
+  background: rgba(0, 0, 0, 0.6);
+}
+.room-hero-tag-l {
+  left: 1rem;
+  color: #7be0ea;
+}
+.room-hero-tag-r {
+  right: 1rem;
+  color: #f1c96a;
+}
+@keyframes rb-stamp {
+  0% {
+    transform: translateX(-130%) rotate(-4deg);
+  }
+  70% {
+    transform: translateX(6px) rotate(-4deg);
+  }
+  100% {
+    transform: translateX(0) rotate(-4deg);
+  }
+}
+.room-buy[data-playing] .room-hero-new {
+  animation: rb-settle 1.2s 0.3s ease-out;
+}
+@keyframes rb-settle {
+  from {
+    transform: scale(1.06);
+  }
+  to {
+    transform: none;
+  }
+}
+/* The sweep of light that uncovers the new room. */
+.room-buy[data-playing][data-mode="wipe"] .room-hero-old {
+  animation: rb-wipe 1s 0.3s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+}
+.room-buy[data-playing][data-mode="wipe"] .room-hero-edge {
+  animation: rb-edge 1s 0.3s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+}
+.room-buy[data-playing][data-mode="wipe"] .room-hero-flash {
+  animation: rb-flash 0.6s 1.1s ease-out;
+}
+@keyframes rb-wipe {
+  from {
+    clip-path: inset(0 0 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 100%);
+  }
+}
+@keyframes rb-edge {
+  0% {
+    opacity: 1;
+    left: 0;
+  }
+  95% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    left: 100%;
+  }
+}
+@keyframes rb-flash {
+  0% {
+    opacity: 0.95;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+/* The lights go out, it knocks, dust whirls, and the lights come on in the new room. */
+.room-buy[data-playing][data-mode="lights"] .room-hero-old {
+  animation: rb-dark 0.5s ease-in forwards;
+}
+.room-buy[data-playing][data-mode="lights"] .room-hero-new {
+  opacity: 0;
+  animation: rb-on 0.9s 1.1s ease-out forwards;
+}
+.room-buy[data-playing][data-mode="lights"] .room-hero {
+  animation: rb-shake 0.5s 0.5s linear;
+}
+.room-buy[data-playing][data-mode="lights"] .room-hero-dust {
+  animation: rb-dust 1s var(--dd) ease-out forwards;
+}
+.room-buy[data-playing][data-mode="lights"] .room-hero-flash {
+  animation: rb-flash 0.5s 1.05s ease-out;
+}
+@keyframes rb-dark {
+  to {
+    filter: brightness(0.05);
+  }
+}
+@keyframes rb-on {
+  0% {
+    opacity: 1;
+    filter: brightness(2.6);
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    filter: brightness(1);
+    transform: none;
+  }
+}
+@keyframes rb-shake {
+  0%,
+  100% {
+    transform: translate(0);
+  }
+  15% {
+    transform: translate(-3px, 2px);
+  }
+  30% {
+    transform: translate(3px, -2px);
+  }
+  45% {
+    transform: translate(-2px, -3px);
+  }
+  60% {
+    transform: translate(3px, 2px);
+  }
+  80% {
+    transform: translate(-1px, 1px);
+  }
+}
+@keyframes rb-dust {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0);
+  }
+  20% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--ux), var(--uy));
+  }
+}
+/* What comes after the room is in place. */
+.room-title-swap {
+  display: grid;
+}
+.room-title-swap > * {
+  grid-area: 1 / 1;
+}
+.room-title-old {
+  animation: rb-out 0.3s calc(var(--rv, 1.3s) - 0.1s) ease-in forwards;
+}
+.room-title-new {
+  opacity: 0;
+  animation: rb-slam 0.5s var(--rv, 1.3s) cubic-bezier(0.2, 1.3, 0.4, 1) forwards;
+}
+.stage-chip-new {
+  opacity: 0;
+  animation: rb-pop 0.4s calc(var(--rv, 1.3s) + var(--i, 0s)) cubic-bezier(0.2, 1.4, 0.4, 1) forwards;
+}
+.stage-chip-old {
+  animation: rb-out 0.3s calc(var(--rv, 1.3s) - 0.1s) ease-in forwards;
+}
+.pips10 i.pip-new {
+  animation: rb-pip 0.5s calc(var(--rv, 1.3s) + 0.1s) ease-out both;
+}
+.room-buy[data-playing] .play-btn:not(:disabled) {
+  animation: rb-press 0.35s ease-out;
+}
+@keyframes rb-out {
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+@keyframes rb-slam {
+  0% {
+    opacity: 0;
+    transform: scale(1.5);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes rb-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.4) translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes rb-pip {
+  0% {
+    background: var(--color-cell);
+  }
+  40% {
+    background: #fff3b0;
+    transform: scale(1.8);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes rb-press {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(0.95);
+    filter: brightness(1.15);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.coin-fly {
+  position: fixed;
+  z-index: 60;
+  width: 0.9rem;
+  height: 0.9rem;
+  margin: -0.45rem 0 0 -0.45rem;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff3b0, #e0a82e 60%, #9a6a10);
+  pointer-events: none;
+  opacity: 0;
+  animation: rb-fly 0.9s var(--cd) cubic-bezier(0.5, 0, 0.75, 0.4) forwards;
+}
+@keyframes rb-fly {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.6);
+  }
+  12% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--dx), var(--dy)) scale(1);
+  }
+}
+/* A sum that goes out of the balance falls out under the chip instead of lying over the figure. */
+.hud-delta-out {
+  top: calc(100% + 0.1rem);
+  animation-name: hud-delta-out;
+}
+@keyframes hud-delta-out {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -0.4rem);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, 0.9rem);
+  }
+}
+
+/* The start of an event: the colour of the event spreads from the button, then lights sweep, the cup falls, the name slams, the facts slide in. */
+.launch-iris {
+  position: fixed;
+  z-index: 70;
+  left: var(--ox, 50%);
+  top: var(--oy, 80%);
+  width: 4rem;
+  height: 4rem;
+  margin: -2rem 0 0 -2rem;
+  border-radius: 50%;
+  background: var(--c);
+  transform: scale(0);
+  pointer-events: none;
+  animation: ev-iris 0.65s cubic-bezier(0.6, 0, 0.3, 1) forwards;
+}
+@keyframes ev-iris {
+  to {
+    transform: scale(48);
+  }
+}
+.ev {
+  --b: 0.15s;
+  position: relative;
+  overflow: hidden;
+  min-height: 100dvh;
+  background: linear-gradient(var(--top), var(--bot));
+}
+.ev-from {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  background: var(--c);
+  pointer-events: none;
+  animation: ev-from 0.5s ease-out forwards;
+}
+@keyframes ev-from {
+  to {
+    opacity: 0;
+  }
+}
+.ev-scene {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 46%;
+  opacity: 0.32;
+  -webkit-mask-image: linear-gradient(#000, transparent);
+  mask-image: linear-gradient(#000, transparent);
+  pointer-events: none;
+}
+.ev-inner {
+  position: relative;
+  z-index: 5;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.9rem;
+  padding: 1.2rem;
+  text-align: center;
+  animation: ev-shake 0.5s calc(var(--b) + 1.3s) linear;
+}
+@keyframes ev-shake {
+  0%,
+  100% {
+    transform: translate(0);
+  }
+  15% {
+    transform: translate(calc(var(--sh) * -1), var(--sh));
+  }
+  30% {
+    transform: translate(var(--sh), calc(var(--sh) * -1));
+  }
+  45% {
+    transform: translate(calc(var(--sh) * -1), calc(var(--sh) * -1));
+  }
+  60% {
+    transform: translate(var(--sh), var(--sh));
+  }
+  80% {
+    transform: translate(calc(var(--sh) * -0.4), 0);
+  }
+}
+.ev-beam {
+  position: absolute;
+  top: -40px;
+  width: 7.5rem;
+  height: 120dvh;
+  left: calc(var(--x) - 3.75rem);
+  transform-origin: 50% 0;
+  background: linear-gradient(color-mix(in srgb, var(--beam) calc(var(--bo) * 100%), transparent), transparent 85%);
+  clip-path: polygon(40% 0, 60% 0, 100% 100%, 0 100%);
+  mix-blend-mode: screen;
+  filter: blur(3px);
+  opacity: 0;
+  z-index: 1;
+  animation: ev-sweep 3.4s var(--b) ease-in-out infinite alternate, ev-show 0.6s var(--b) forwards;
+}
+@keyframes ev-sweep {
+  from {
+    transform: rotate(calc(var(--a) * -1));
+  }
+  to {
+    transform: rotate(var(--a));
+  }
+}
+@keyframes ev-show {
+  to {
+    opacity: 1;
+  }
+}
+.ev-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  background: #000;
+  z-index: 8;
+  animation: ev-barin 0.6s var(--b) ease-out forwards;
+}
+.ev-bar-t {
+  top: 0;
+}
+.ev-bar-b {
+  bottom: 0;
+}
+@keyframes ev-barin {
+  to {
+    height: 4rem;
+  }
+}
+.ev-kick {
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.9);
+  font-size: var(--text-small);
+  font-weight: 800;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--c);
+  opacity: 0;
+  animation: ev-kick 0.9s calc(var(--b) + 0.3s) ease-out forwards;
+}
+@keyframes ev-kick {
+  0% {
+    opacity: 0;
+    letter-spacing: 0.8em;
+  }
+  100% {
+    opacity: 1;
+    letter-spacing: 0.3em;
+  }
+}
+.ev-cup {
+  width: 4.6rem;
+  height: 4.6rem;
+  color: var(--c);
+  opacity: 0;
+  filter: drop-shadow(0 0 16px var(--c));
+  animation: ev-drop 0.7s calc(var(--b) + 0.45s) cubic-bezier(0.3, 1.5, 0.5, 1) forwards;
+}
+.ev-cup svg {
+  width: 100%;
+  height: 100%;
+}
+@keyframes ev-drop {
+  0% {
+    opacity: 0;
+    transform: translateY(-160px) scale(0.7);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+.ev-title {
+  position: relative;
+  font-family: var(--font-display);
+  font-weight: 800;
+  color: var(--color-cream);
+  line-height: 1.02;
+  opacity: 0;
+  text-shadow: 0 4px 30px rgba(0, 0, 0, 0.6);
+  animation: ev-slam 0.5s calc(var(--b) + 0.85s) cubic-bezier(0.15, 0.9, 0.3, 1.05) forwards;
+}
+@keyframes ev-slam {
+  0% {
+    opacity: 0;
+    transform: scale(var(--sc));
+    filter: blur(10px);
+  }
+  60% {
+    opacity: 1;
+    filter: blur(0);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+}
+.ev-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 2.5rem;
+  height: 2.5rem;
+  margin: -1.25rem;
+  border-radius: 50%;
+  border: 3px solid var(--c);
+  opacity: 0;
+  pointer-events: none;
+  animation: ev-ring 0.9s calc(var(--b) + 1.3s) ease-out;
+}
+@keyframes ev-ring {
+  0% {
+    opacity: 0.9;
+    transform: scale(0.4);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(16);
+  }
+}
+.ev-plates {
+  display: grid;
+  gap: 0.5rem;
+  width: 100%;
+  max-width: 26rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.ev-plate {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.65rem 0.9rem;
+  border-radius: var(--radius-m);
+  background: rgba(0, 0, 0, 0.42);
+  border: 1px solid color-mix(in srgb, var(--c) 45%, transparent);
+  opacity: 0;
+  font-weight: 700;
+  animation: ev-plate 0.5s calc(var(--b) + 1.55s + var(--i)) cubic-bezier(0.2, 1.2, 0.4, 1) forwards;
+}
+.ev-plate small {
+  color: #d3dad7;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: var(--text-micro);
+}
+.ev-plate b {
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-body);
+  color: var(--color-cream);
+}
+.ev-plate-prize b {
+  color: var(--color-gold-strong);
+  font-size: var(--text-title);
+}
+@keyframes ev-plate {
+  0% {
+    opacity: 0;
+    transform: translateX(var(--fx));
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+.ev-you {
+  color: #e8ece9;
+  font-size: var(--text-small);
+  opacity: 0;
+  animation: ev-show 0.5s calc(var(--b) + 2.25s) forwards;
+}
+.ev-you b {
+  color: var(--c);
+}
+.ev-go {
+  width: 100%;
+  max-width: 26rem;
+  opacity: 0;
+  animation: ev-show 0.5s calc(var(--b) + 2.45s) forwards;
+}
+.ev-go .play-btn {
+  animation: ev-pulse 1.4s calc(var(--b) + 3s) ease-in-out infinite;
+}
+@keyframes ev-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.04);
+  }
+}
+.ev-conf {
+  position: absolute;
+  top: -20px;
+  width: 7px;
+  height: 12px;
+  opacity: 0;
+  z-index: 2;
+  animation: ev-conf 2.8s var(--cd) ease-in forwards;
+}
+@keyframes ev-conf {
+  0% {
+    opacity: 0;
+    transform: translateY(0) rotate(0);
+  }
+  8% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(120dvh) rotate(var(--r));
+  }
+}
+.ev-laser {
+  position: absolute;
+  left: -20%;
+  width: 140%;
+  height: 2px;
+  background: var(--laser);
+  box-shadow: 0 0 10px var(--laser);
+  opacity: 0;
+  transform-origin: 0 50%;
+  z-index: 2;
+  animation: ev-laser 2.2s var(--ld) ease-in-out infinite alternate, ev-show 0.4s var(--ld) forwards;
+}
+@keyframes ev-laser {
+  from {
+    transform: rotate(var(--la));
+  }
+  to {
+    transform: rotate(calc(var(--la) * -1));
+  }
+}
+.ev-fw {
+  position: absolute;
+  z-index: 2;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  opacity: 0;
+  background: #fff7d6;
+  box-shadow: 0 -30px 0 #fff7d6, 21px -21px 0 #7be0ea, 30px 0 0 #ff8a6b, 21px 21px 0 #fff7d6, 0 30px 0 #7be0ea, -21px 21px 0 #ff8a6b, -30px 0 0 #fff7d6, -21px -21px 0 #7be0ea;
+  animation: ev-burst 1.6s var(--wd) ease-out infinite;
+}
+@keyframes ev-burst {
+  0% {
+    opacity: 0;
+    transform: scale(0.1);
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.6);
+  }
+}
+/* A tap anywhere takes it to the end at once. */
+.ev-skip,
+.ev-skip * {
+  animation-duration: 0.01s !important;
+  animation-delay: 0s !important;
+  animation-iteration-count: 1 !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ev *,
+  .ev-from,
+  .room-buy * {
+    animation-duration: 0.01s !important;
+    animation-delay: 0s !important;
+    animation-iteration-count: 1 !important;
+  }
+  .launch-iris,
+  .coin-fly {
+    display: none;
+  }
+}
+
+/* The pub of the Ly cup, from the street, as the picture of the event. */
+.ev-photo {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 52%;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(#000 55%, transparent);
+  mask-image: linear-gradient(#000 55%, transparent);
+  animation: room-drift 26s ease-in-out infinite alternate;
+}
+.ev-photo::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(rgba(5, 8, 16, 0.2), rgba(5, 8, 16, 0.72));
+}
+.ev-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 64% 40%;
+  max-width: none;
+}
