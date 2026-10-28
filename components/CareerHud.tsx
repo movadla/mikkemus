@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { dollars, type Career } from "@/lib/career";
-import { ArrowLeftIcon, CoinIcon } from "./icons";
+import { ArrowLeftIcon } from "./icons";
 import { FOCUS_RING } from "./ui/focus";
 import { CountUp } from "./ui/CountUp";
 
@@ -36,8 +36,6 @@ function SaveDot({ savedAt }: { savedAt: string }) {
   );
 }
 
-const chip = { padding: "0.3rem 0.7rem", borderRadius: "var(--radius-pill)", background: "var(--color-surface)", border: "1px solid var(--color-border)", fontSize: "var(--text-body)", fontWeight: 700 } as const;
-
 /**
  * The line at the top of every screen of the career: the money on the left, the level as a star and a number on the right, and what goes
  * with it (the menu) at the end. It is the only place the money is written. A gain pops the chip and floats the amount above it.
@@ -56,15 +54,17 @@ export function CareerHud({ career, end, onBack, title }: { career: Career; end?
     return () => clearTimeout(t);
   }, [delta]);
   const coin = (
-    <span key={delta === null ? "still" : career.money} className={`relative inline-flex items-center gap-1.5 tabular ${delta !== null && delta > 0 ? "hud-pop" : ""}`} style={{ ...chip, color: "var(--color-gold-strong)" }} title="Saldo">
+    <span key={delta === null ? "still" : career.money} className={`hud-coin relative tabular ${delta !== null && delta > 0 ? "hud-pop" : ""}`} title="Saldo">
         {delta !== null && delta !== 0 && (
           <span className={`hud-delta ${delta < 0 ? "hud-delta-out" : ""}`} style={{ color: delta > 0 ? "var(--color-green)" : "var(--color-red)" }}>
             {delta > 0 ? "+" : "−"}
             {dollars(Math.abs(delta))}
           </span>
         )}
-        <CoinIcon className="w-5 h-5" />
-        <CountUp value={career.money} format={dollars} />
+        <span className="coin-mark" aria-hidden />
+        <span className="coin-figure">
+          <CountUp value={career.money} format={dollars} />
+        </span>
     </span>
   );
   if (onBack) {

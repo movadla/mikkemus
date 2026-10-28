@@ -5,23 +5,24 @@ import { DRILL_ROUNDS } from "@/lib/training";
 import { GAMES, LADDER, ROOM_MAX, STAGES, buyStage, dollars, isUnlocked, nextStage, offerChallenge, stakeFor, startEvent, whyNot, whyNotBuy, type Career, type GameId, type Tier } from "@/lib/career";
 import { cupColor } from "@/lib/botCup";
 import { TROPHY } from "@/lib/scenePalette";
+import { foilVars, frameOf } from "@/lib/materials";
 import { rankOf, rankProgress, roomBadge } from "@/lib/careerGoals";
 import { heroButton, heroFor } from "@/lib/careerHero";
 import { careerSound, uiFeedback } from "@/lib/uiSound";
 import { levelLabel, newSeed, oneDecimal } from "./careerFormat";
 import { HomeIcon, LockIcon, RoadIcon, StarIcon } from "./careerIcons";
 import { CareerHud } from "./CareerHud";
+import { RankBadge, TrophyArt } from "./CareerTrophy";
 import { CareerProfile } from "./CareerProfile";
 import { markTipSeen, TipPointer, useTipSeen } from "./CareerTip";
 import { ConfirmDialog } from "./ConfirmDialog";
-import { BoltIcon, BullseyeIcon, CoinIcon, MoreIcon, TrophyIcon } from "./icons";
+import { BoltIcon, BullseyeIcon, CoinIcon, MoreIcon } from "./icons";
 import { PlayButton } from "./PlayButton";
 import { OverRoom } from "./RoomBackdrop";
 import { EVENT_PICTURES } from "./eventPictures";
 import { CoinFlight, RoomHero, buyMode, revealAt, type BuyMode, type CoinFlightPath } from "./RoomHero";
 import { RoundButton } from "./RoundButton";
 import { Button } from "./ui/Button";
-import { CupEmblem } from "./ui/CupEmblem";
 import { Sheet } from "./ui/Sheet";
 import { FOCUS_RING } from "./ui/focus";
 
@@ -48,17 +49,31 @@ const listText = (items: string[]) => {
   return words.length > 1 ? `${words.slice(0, -1).join(", ")} og ${words[words.length - 1]}` : words[0] ?? "";
 };
 
-/** The cups the player has won, on a shelf under their name: a cup in the colour of each event. */
+/** The cups of the career on a glass shelf with light over it: the ones that are won in metal, the rest as dark silhouettes with a lock. */
 function TrophyShelf({ career }: { career: Career }) {
-  if (career.trophies.length === 0) return null;
-  const shown = career.trophies.slice(-6);
+  const slots = LADDER.map((t) => ({ tier: t, n: career.trophies.filter((x) => x.tier === t.id).length }));
+  const have = slots.filter((s) => s.n > 0).length;
   return (
-    <div className="trophy-shelf trophy-shelf-new" role="img" aria-label={`${career.trophies.length} ${career.trophies.length === 1 ? "pokal" : "pokaler"}`}>
-      {shown.map((t, i) => (
-        <span key={i} style={{ color: TROPHY[t.tier] }}>
-          <TrophyIcon className="w-full h-full" />
-        </span>
-      ))}
+    <div className="shelf3d" role="img" aria-label={`Pokalhylle: ${have} av ${slots.length} pokaler`}>
+      <span className="shelf3d-light" aria-hidden />
+      <div className="shelf3d-items">
+        {slots.map(({ tier, n }) => (
+          <div key={tier.id} className="shelf3d-slot">
+            {n > 0 ? (
+              <TrophyArt kind={tier.id} bare />
+            ) : (
+              <>
+                <span className="t3d-locked block">
+                  <TrophyArt kind={tier.id} bare />
+                </span>
+                <LockIcon className="shelf3d-lock" />
+              </>
+            )}
+            {n > 1 && <span className="shelf3d-count">×{n}</span>}
+          </div>
+        ))}
+      </div>
+      <div className="shelf3d-board" aria-hidden />
     </div>
   );
 }
@@ -70,9 +85,9 @@ function GoalStrip({ career }: { career: Career }) {
   const g = rankProgress(career);
   if (!g) return null;
   return (
-    <div className="goal-strip tabular" role="progressbar" aria-label={`Neste rang: ${g.name}, ${g.points} av ${g.need} poeng`} aria-valuemin={0} aria-valuemax={g.need} aria-valuenow={g.points}>
-      <span className="inline-flex items-center gap-1 shrink-0" style={{ color: "var(--color-gold-strong)", fontWeight: 800 }}>
-        <StarIcon className="w-4 h-4" />
+    <div className="goal-strip goal-strip-badge tabular" role="progressbar" aria-label={`Neste rang: ${g.name}, ${g.points} av ${g.need} poeng`} aria-valuemin={0} aria-valuemax={g.need} aria-valuenow={g.points}>
+      <span className="inline-flex items-center gap-2 shrink-0" style={{ color: "var(--color-gold-strong)", fontWeight: 800 }}>
+        <RankBadge rank={g.name} />
         {g.name}
       </span>
       <span className="flex-1" style={{ height: "0.4rem", borderRadius: "var(--radius-pill)", background: "var(--color-cell)", overflow: "hidden" }}>
@@ -240,7 +255,10 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
               <p className="font-display" style={{ fontSize: "var(--text-num)", lineHeight: 1.05, color: "var(--color-cream)" }}>
                 {career.player}
               </p>
-              <p style={{ color: "var(--color-gold-strong)", fontWeight: 700, fontSize: "var(--text-small)", letterSpacing: "0.06em", textTransform: "uppercase" }}>{rankOf(career)}</p>
+              <p className="rank-line" style={{ color: "var(--color-gold-strong)", fontWeight: 700, fontSize: "var(--text-small)", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                <RankBadge rank={rankOf(career)} />
+                {rankOf(career)}
+              </p>
               <TrophyShelf career={career} />
             </div>
             <div className="relative rise-in" style={{ "--d": "0.2s" } as React.CSSProperties}>
@@ -354,14 +372,26 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
                   const takes = needs ? needs.charAt(0).toUpperCase() + needs.slice(1) : "Åpen for alle";
                   return (
                     <li key={tier.id}>
-                      <button type="button" onClick={() => setPicked(tier.id)} aria-pressed={selected.id === tier.id} className={`tourney-card tactile ${selected.id === tier.id ? "tourney-card-on" : ""} ${locked ? "tourney-card-locked" : ""} ${FOCUS_RING}`} style={{ "--cup": colour, "--pic": pic ? `url(${pic})` : "none" } as React.CSSProperties}>
-                        <span className="tourney-emblem" style={{ borderColor: locked ? "var(--color-border)" : colour, color: locked ? "var(--color-muted)" : colour }} aria-hidden>
-                          {locked ? <LockIcon className="w-5 h-5" /> : <CupEmblem kind={tier.kind} className="w-6 h-6" />}
+                      <button type="button" onClick={() => setPicked(tier.id)} aria-pressed={selected.id === tier.id} className={`tourney-card tactile ${selected.id === tier.id ? "tourney-card-on" : ""} ${locked ? "tourney-card-locked" : ""} ${FOCUS_RING}`} style={{ "--cup": colour, "--pic": pic ? `url(${pic})` : "none", "--frame": locked ? "var(--frame-locked)" : frameOf(tier.id) } as React.CSSProperties}>
+                        <span className="tourney-trophy" aria-hidden>
+                          {locked ? (
+                            <span className="t3d-locked block">
+                              <TrophyArt kind={tier.id} bare />
+                            </span>
+                          ) : (
+                            <TrophyArt kind={tier.id} bare />
+                          )}
                         </span>
                         <span className="min-w-0 text-left">
-                          <b className="font-display block" style={{ fontSize: "var(--text-body)", color: locked ? "var(--color-text-2)" : "var(--color-cream)" }}>
-                            {tier.name}
-                          </b>
+                          {locked ? (
+                            <b className="tourney-name" style={{ color: "var(--color-text-2)" }}>
+                              {tier.name}
+                            </b>
+                          ) : (
+                            <b className="tourney-name foil foil-soft" data-t={tier.name} style={foilVars(tier.id) as React.CSSProperties}>
+                              {tier.name}
+                            </b>
+                          )}
                           <span className="tourney-takes">{takes}</span>
                         </span>
                         <span className="tabular text-right grid gap-1 justify-items-end" style={{ color: locked ? "var(--color-muted)" : "var(--color-gold-strong)", fontWeight: 800 }}>

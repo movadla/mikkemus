@@ -6377,3 +6377,591 @@ html[data-fx="full"] .hs-last {
   font-size: var(--text-small);
   line-height: 1.3;
 }
+
+/* ---- Gloss and depth: the materials as tokens (the same ramps as lib/materials.ts), one light, three heights of shadow. ---- */
+:root {
+  --metal-bronze-x: #35190a; --metal-bronze-d: #6d3513; --metal-bronze-m: #b8682e; --metal-bronze-l: #eaa96a; --metal-bronze-hi: #ffe6c2;
+  --metal-silver-x: #28323a; --metal-silver-d: #586874; --metal-silver-m: #a1b1bd; --metal-silver-l: #e1e9ef; --metal-silver-hi: #ffffff;
+  --metal-gold-x: #3d2907; --metal-gold-d: #7c5414; --metal-gold-m: #c9962f; --metal-gold-l: #f5d57f; --metal-gold-hi: #fff6cf;
+  --metal-ruby-x: #360a0a; --metal-ruby-d: #6b1511; --metal-ruby-m: #b32b22; --metal-ruby-l: #ee5c49; --metal-ruby-hi: #ffb0a2;
+  --metal-chrome-x: #1e1842; --metal-chrome-d: #4a4079; --metal-chrome-m: #9087bd; --metal-chrome-l: #dcd6f0; --metal-chrome-hi: #ffffff;
+  --metal-amethyst-x: #241049; --metal-amethyst-d: #45228c; --metal-amethyst-m: #7f4ad2; --metal-amethyst-l: #bd92f7; --metal-amethyst-hi: #efdcff;
+  --metal-diamond-x: #124a66; --metal-diamond-d: #3b8fb5; --metal-diamond-m: #8fd3ee; --metal-diamond-l: #d8f6ff; --metal-diamond-hi: #ffffff;
+  --frame-locked: linear-gradient(145deg, #59656b, #2a3337 50%, #454f54);
+  --elev-1: 0 2px 4px rgba(0, 0, 0, 0.5);
+  --elev-2: 0 8px 16px rgba(0, 0, 0, 0.55);
+  --elev-3: 0 18px 32px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+/* The trophy: a metal drawing that tilts, with the gloss moving across it and a glint now and then. */
+.t3d {
+  position: relative;
+  display: block;
+  perspective: 520px;
+}
+.t3d-tilt {
+  touch-action: pan-y;
+}
+.t3d-glow {
+  position: absolute;
+  inset: 6% 6% 20% 6%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--tint) 45%, transparent), transparent 72%);
+  filter: blur(6px);
+  pointer-events: none;
+}
+.t3d-art {
+  position: relative;
+  display: block;
+  transform: rotateY(var(--ry, 0deg)) rotateX(var(--rx, 0deg));
+  transition: transform 0.18s ease-out;
+}
+.t3d-art svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  animation: t3d-bob 5s ease-in-out infinite alternate;
+}
+.t3d-spec {
+  transform: translateX(calc(var(--tx, 0) * 1px));
+  transition: transform 0.18s ease-out;
+}
+.t3d-spark {
+  transform-box: fill-box;
+  transform-origin: center;
+  opacity: 0;
+  animation: t3d-twinkle 3.2s ease-in-out infinite;
+}
+@keyframes t3d-bob {
+  from { transform: translateY(0); }
+  to { transform: translateY(-2.5%); }
+}
+@keyframes t3d-twinkle {
+  0%, 70%, 100% { opacity: 0; transform: scale(0.2) rotate(0); }
+  80% { opacity: 1; transform: scale(1.1) rotate(25deg); }
+  90% { opacity: 0.6; transform: scale(0.7) rotate(40deg); }
+}
+.t3d-locked {
+  filter: brightness(0) opacity(0.45);
+}
+.rank-badge {
+  display: inline-block;
+  width: 2rem;
+  flex: none;
+}
+.rank-badge svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.6));
+}
+
+/* Titles as foil: light at the top, a dark horizon through the letters, and a gleam that sweeps over now and then. Neon for the two biggest. */
+.foil {
+  position: relative;
+  background-image: var(--foil);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 1px 0 var(--edge)) drop-shadow(0 2px 0 var(--edge)) drop-shadow(0 6px 10px rgba(0, 0, 0, 0.6));
+}
+.foil::after {
+  content: attr(data-t);
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.95) 50%, transparent 60%) 220% 0 / 260% 100% no-repeat;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation: foil-sweep 4.6s ease-in-out infinite;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+}
+@keyframes foil-sweep {
+  0%, 35% { background-position: 220% 0; }
+  70%, 100% { background-position: -80% 0; }
+}
+.neon {
+  color: #fff;
+  text-shadow: 0 0 3px #fff, 0 0 8px var(--c), 0 0 20px var(--c), 0 0 42px var(--c), 0 0 80px var(--c);
+  animation: neon-flick 5s linear infinite;
+}
+@keyframes neon-flick {
+  0%, 18%, 22%, 62%, 64%, 100% { opacity: 1; }
+  20%, 63% { opacity: 0.55; }
+}
+
+/* Buttons with depth: a thick edge under, a gloss over, and they go down when pressed. */
+button.play-btn {
+  padding: 0.8rem 1rem 0.95rem;
+  background: linear-gradient(180deg, #a6f4fa 0%, #46d0de 46%, #1b98a9 100%);
+  color: #032a30;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.75),
+    inset 0 -4px 6px rgba(0, 70, 80, 0.35),
+    0 6px 0 #0f6a77,
+    var(--elev-2),
+    0 0 30px -4px color-mix(in srgb, var(--color-teal) 60%, transparent);
+  margin-bottom: 6px;
+}
+button.play-btn::before {
+  content: "";
+  position: absolute;
+  left: 5px;
+  right: 5px;
+  top: 3px;
+  height: 46%;
+  border-radius: 15px 15px 40% 40% / 15px 15px 20px 20px;
+  background: linear-gradient(rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.04));
+  pointer-events: none;
+}
+button.play-btn strong,
+button.play-btn small {
+  position: relative;
+}
+button.play-btn:active:not(:disabled) {
+  transform: translateY(5px);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.75),
+    inset 0 -3px 5px rgba(0, 70, 80, 0.35),
+    0 1px 0 #0f6a77,
+    0 6px 10px -4px rgba(0, 0, 0, 0.65),
+    0 0 18px -4px color-mix(in srgb, var(--color-teal) 50%, transparent);
+}
+button.play-btn.play-btn-gold {
+  color: #2b1c02;
+  background: linear-gradient(180deg, var(--metal-gold-hi) 0%, #eec45c 46%, #b78322 100%);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.8),
+    inset 0 -4px 6px rgba(90, 50, 0, 0.4),
+    0 6px 0 #7b560f,
+    var(--elev-2),
+    0 0 30px -4px color-mix(in srgb, var(--color-gold) 60%, transparent);
+}
+button.play-btn.play-btn-gold:active:not(:disabled) {
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.8),
+    inset 0 -3px 5px rgba(90, 50, 0, 0.4),
+    0 1px 0 #7b560f,
+    0 6px 10px -4px rgba(0, 0, 0, 0.65);
+}
+button.play-btn:disabled {
+  filter: none;
+  opacity: 1;
+  color: #9aa7a1;
+  background: linear-gradient(180deg, #3b4743, #232d2a 50%, #181f1d);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), inset 0 -3px 5px rgba(0, 0, 0, 0.5), 0 5px 0 #0d1211, var(--elev-2);
+  cursor: not-allowed;
+}
+button.play-btn:disabled::before {
+  background: linear-gradient(rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0));
+}
+button.play-btn:disabled::after {
+  display: none;
+}
+.round-btn .round-btn-disc,
+.room-over .round-btn .round-btn-disc {
+  position: relative;
+  background: radial-gradient(circle at 35% 25%, #4a625b 0%, #1d2a26 55%, #0e1513 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), inset 0 -3px 6px rgba(0, 0, 0, 0.55), 0 6px 12px rgba(0, 0, 0, 0.55), 0 0 0 1px #0a100e;
+  border: 0;
+  color: #e8f7f8;
+}
+.round-btn .round-btn-disc::after {
+  content: "";
+  position: absolute;
+  left: 18%;
+  right: 18%;
+  top: 7%;
+  height: 38%;
+  border-radius: 50%;
+  background: linear-gradient(rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0));
+  pointer-events: none;
+}
+.round-btn .round-btn-disc svg {
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--color-teal) 80%, transparent));
+}
+
+/* The balance: a capsule let into the metal, a gold coin, and the figure in foil. */
+[role="group"][aria-label="Status"] > span.hud-coin,
+.room-over [role="group"][aria-label="Status"] > span.hud-coin {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.22rem 0.9rem 0.22rem 0.28rem;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(#0a0f0d, #18211e);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.8), inset 0 -1px 0 rgba(255, 255, 255, 0.12), 0 1px 0 rgba(255, 255, 255, 0.1), 0 6px 14px rgba(0, 0, 0, 0.5);
+  font-size: var(--text-body);
+  font-weight: 800;
+}
+.coin-mark {
+  display: grid;
+  place-items: center;
+  width: 1.7rem;
+  height: 1.7rem;
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 28%, var(--metal-gold-hi), #efc863 30%, #bd871f 70%, #82560d);
+  box-shadow: inset 0 0 0 2px #e0b248, 0 2px 4px rgba(0, 0, 0, 0.6);
+  color: #7a520c;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.95rem;
+  line-height: 1;
+}
+.hud-coin .coin-figure {
+  background: linear-gradient(var(--metal-gold-hi), #f0c85e 50%, #c18f2a);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 1px 0 #6e4a0a);
+}
+
+/* The rank on the goal: a badge and a bar let into the metal. */
+.goal-strip.goal-strip-badge {
+  padding: 0.35rem 0.9rem 0.35rem 0.5rem;
+  background: linear-gradient(#0a0f0d, #18211e);
+  box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.8), inset 0 -1px 0 rgba(255, 255, 255, 0.12), 0 6px 14px rgba(0, 0, 0, 0.5);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.goal-strip-badge .rank-badge {
+  width: 1.9rem;
+}
+
+/* The tournaments: a plate in the metal of the event, with its picture behind and a trophy in front. */
+.room-over .tourney-card {
+  border: 2px solid transparent;
+  background:
+    linear-gradient(90deg, rgba(5, 8, 7, 0.9) 0%, rgba(5, 8, 7, 0.62) 55%, rgba(5, 8, 7, 0.3) 100%) padding-box,
+    var(--pic) center / cover padding-box,
+    linear-gradient(#17211e, #0e1513) padding-box,
+    var(--frame, var(--frame-locked)) border-box;
+  box-shadow: var(--elev-2), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+.room-over .tourney-card-on {
+  box-shadow: var(--elev-2), 0 0 0 1px var(--cup), 0 10px 24px -10px var(--cup);
+}
+.tourney-trophy {
+  display: block;
+  width: 2.6rem;
+}
+.tourney-trophy .t3d-art svg {
+  animation: none;
+}
+.tourney-name {
+  font-family: var(--font-display);
+  font-size: var(--text-body);
+  font-weight: 800;
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+}
+
+/* The shelf of cups at home: a glass shelf with light over it, a cup for each event, and a dark silhouette for what is not won. */
+.shelf3d {
+  position: relative;
+  margin-top: 0.4rem;
+  width: 100%;
+}
+.shelf3d-items {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  align-items: end;
+  gap: 2px;
+  padding: 0 0.3rem;
+}
+.shelf3d-slot {
+  position: relative;
+  margin-bottom: -4px;
+}
+.shelf3d-slot .t3d-art svg {
+  animation: none;
+}
+.shelf3d-lock {
+  position: absolute;
+  left: 50%;
+  top: 40%;
+  width: 0.95rem;
+  height: 0.95rem;
+  transform: translate(-50%, -50%);
+  color: #fff;
+  opacity: 0.8;
+}
+.shelf3d-count {
+  position: absolute;
+  right: 4%;
+  bottom: 14%;
+  min-width: 1.1rem;
+  padding: 0 0.25rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-gold);
+  color: #2b1c02;
+  font-size: var(--text-micro);
+  font-weight: 800;
+  text-align: center;
+}
+.shelf3d-board {
+  position: relative;
+  z-index: 1;
+  height: 0.75rem;
+  border-radius: 3px;
+  background: linear-gradient(#e8f2f0 0%, #9eb6b1 22%, #51635f 60%, #2a3532 100%);
+  box-shadow: 0 8px 14px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+.shelf3d-light {
+  position: absolute;
+  z-index: 0;
+  left: 6%;
+  right: 6%;
+  bottom: 0.2rem;
+  height: 120%;
+  background: linear-gradient(to top, rgba(255, 236, 190, 0.3), transparent 80%);
+  clip-path: polygon(12% 0, 88% 0, 100% 100%, 0 100%);
+  filter: blur(3px);
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+/* The ceremony: the cup rises in the light, the name is struck in foil and the plate is engraved. */
+.cer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  position: relative;
+}
+.cer-stage {
+  position: relative;
+  width: 100%;
+  max-width: 15rem;
+}
+.cer-spot {
+  position: absolute;
+  left: 50%;
+  top: -3rem;
+  width: 18rem;
+  height: 22rem;
+  margin-left: -9rem;
+  clip-path: polygon(42% 0, 58% 0, 100% 100%, 0 100%);
+  background: linear-gradient(rgba(255, 244, 214, 0.5), rgba(255, 244, 214, 0.02) 90%);
+  opacity: 0;
+  mix-blend-mode: screen;
+  filter: blur(3px);
+  pointer-events: none;
+  animation: cer-show 0.9s 0.2s ease-out forwards;
+}
+.cer-rays {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  width: 34rem;
+  height: 34rem;
+  margin: -17rem 0 0 -17rem;
+  background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--tint) 55%, white) 0 7deg, transparent 7deg 22deg);
+  -webkit-mask: radial-gradient(circle, #000 0, transparent 66%);
+  mask: radial-gradient(circle, #000 0, transparent 66%);
+  opacity: 0;
+  mix-blend-mode: screen;
+  pointer-events: none;
+  animation: cer-spin 16s linear infinite, cer-rays 0.8s 1.7s forwards;
+}
+.cer-trophy {
+  position: relative;
+  opacity: 0;
+  transform: translateY(8rem) scale(0.8);
+  animation: cer-rise 1.1s 0.5s cubic-bezier(0.2, 1.1, 0.3, 1) forwards;
+}
+.cer-flash {
+  position: fixed;
+  inset: 0;
+  z-index: 8;
+  background: #fff7dc;
+  opacity: 0;
+  pointer-events: none;
+  animation: cer-flash 0.7s 1.55s ease-out;
+}
+.cer-kicker {
+  font-size: var(--text-small);
+  font-weight: 800;
+  letter-spacing: 0.5em;
+  padding-left: 0.5em;
+  color: var(--tint);
+  opacity: 0;
+  animation: cer-kick 0.9s 1.9s ease-out forwards;
+}
+.cer-title {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(1.8rem, 9vw, 2.6rem);
+  line-height: 1.05;
+  text-align: center;
+  opacity: 0;
+  animation: cer-slam 0.55s 2.2s cubic-bezier(0.15, 0.9, 0.3, 1.05) forwards;
+}
+.cer-plate {
+  position: relative;
+  width: min(100%, 19rem);
+  padding: 0.7rem 0.9rem 0.8rem;
+  border-radius: 6px;
+  background: linear-gradient(145deg, #e8dcb4, #b59c5c 48%, #8d7338);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), inset 0 -2px 3px rgba(60, 40, 0, 0.5), var(--elev-2);
+  color: #3a2a08;
+  text-align: center;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.45);
+  opacity: 0;
+  animation: cer-plate 0.5s 2.7s ease-out forwards;
+}
+.cer-plate::before,
+.cer-plate::after {
+  content: "";
+  position: absolute;
+  top: 6px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff, #8d7338);
+}
+.cer-plate::before { left: 6px; }
+.cer-plate::after { right: 6px; }
+.cer-plate-1 {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--text-title);
+  letter-spacing: 0.03em;
+  clip-path: inset(0 100% 0 0);
+  animation: cer-type 1.2s 3.1s steps(24, end) forwards;
+}
+.cer-plate-2 {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: var(--text-small);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 700;
+  opacity: 0;
+  animation: cer-fade 0.5s 4.3s forwards;
+}
+@keyframes cer-show { to { opacity: 1; } }
+@keyframes cer-spin { to { transform: rotate(360deg); } }
+@keyframes cer-rays { to { opacity: 0.5; } }
+@keyframes cer-rise { to { opacity: 1; transform: none; } }
+@keyframes cer-flash { 0% { opacity: 0.9; } 100% { opacity: 0; } }
+@keyframes cer-kick { 0% { opacity: 0; letter-spacing: 1.1em; } 100% { opacity: 1; letter-spacing: 0.5em; } }
+@keyframes cer-slam { 0% { opacity: 0; transform: scale(2.4); filter: blur(8px); } 60% { opacity: 1; filter: blur(0); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes cer-plate { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes cer-type { to { clip-path: inset(0 0 0 0); } }
+@keyframes cer-fade { to { opacity: 0.85; } }
+.cer-skip, .cer-skip * {
+  animation-duration: 0.01s !important;
+  animation-delay: 0s !important;
+}
+
+/* A cup as a card: a frame in the metal of the event, the cup, the name in foil, the date and the prize. */
+.pokal {
+  position: relative;
+  border-radius: var(--radius-l);
+  padding: 3px;
+  background: var(--frame);
+  box-shadow: var(--elev-3);
+  overflow: hidden;
+  transform: perspective(700px) rotateY(var(--ry, 0deg)) rotateX(var(--rx, 0deg));
+  transition: transform 0.18s ease-out;
+}
+.pokal-in {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  gap: 0.35rem;
+  justify-items: center;
+  text-align: center;
+  padding: 0.8rem 0.5rem 0.75rem;
+  border-radius: calc(var(--radius-l) - 3px);
+  background: radial-gradient(120% 80% at 50% 0%, color-mix(in srgb, var(--tint) 28%, #141c19), #0a0f0d 70%);
+}
+.pokal-ribbon {
+  position: absolute;
+  top: 0.9rem;
+  right: -2rem;
+  transform: rotate(35deg);
+  width: 7.5rem;
+  text-align: center;
+  padding: 0.1rem 0;
+  font-size: var(--text-micro);
+  letter-spacing: 0.18em;
+  font-weight: 800;
+  color: #2b1c02;
+  background: linear-gradient(var(--metal-gold-hi), var(--color-gold));
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  z-index: 2;
+}
+.pokal-name {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--text-body);
+  line-height: 1.05;
+}
+.pokal-meta {
+  display: grid;
+  gap: 0.05rem;
+  color: #b4c0ba;
+  font-size: var(--text-small);
+}
+.pokal-meta b {
+  color: var(--color-gold-strong);
+  font-size: var(--text-body);
+}
+
+/* The rank on the home screen: the badge and the title side by side. */
+.rank-line {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  .t3d-art svg, .t3d-spark, .foil::after, .neon, .cer *, .shelf3d * {
+    animation-duration: 0.01s !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* Before a match: the two in a ring of metal, and the VS struck with a flash between them. */
+.vs-ring {
+  display: inline-block;
+  padding: 3px;
+  border-radius: 50%;
+  background: conic-gradient(from 30deg, var(--metal-gold-hi), var(--metal-gold-m), var(--metal-gold-hi), var(--metal-gold-d), var(--metal-gold-hi));
+  box-shadow: var(--elev-2);
+}
+.vs-ring-b {
+  background: conic-gradient(from 30deg, var(--metal-chrome-hi), var(--metal-chrome-m), var(--metal-chrome-hi), var(--metal-chrome-d), var(--metal-chrome-hi));
+}
+.vs-mark {
+  font-weight: 800;
+  line-height: 1;
+}
+.ev-cup .t3d-art svg {
+  height: auto;
+}
+.ev-cup {
+  width: 5.4rem;
+  height: auto;
+}
+
+.foil.foil-soft {
+  background-image: var(--foil-soft);
+}
+.coin-mark::before {
+  content: "$";
+}

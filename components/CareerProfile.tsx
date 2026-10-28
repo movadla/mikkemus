@@ -4,6 +4,7 @@ import { DARTS, PLACE_LABEL, STAGES, TIERS, dollars, type Career } from "@/lib/c
 import { nextRank, rankOf } from "@/lib/careerGoals";
 import { teamKitsOf, useRoster } from "@/lib/storage";
 import { levelLabel, oneDecimal } from "./careerFormat";
+import { PokalCard, RankBadge } from "./CareerTrophy";
 import { TeamKit } from "./TeamKit";
 import { Avatar } from "./ui/Avatar";
 
@@ -37,7 +38,10 @@ export function CareerProfile({ career }: { career: Career }) {
           <p className="font-display truncate" style={{ fontSize: "var(--text-num)", color: "var(--color-cream)", lineHeight: 1.05 }}>
             {career.player}
           </p>
-          <p style={{ color: "var(--color-gold-strong)", fontWeight: 700 }}>{rankOf(career)}</p>
+          <p className="rank-line" style={{ color: "var(--color-gold-strong)", fontWeight: 700 }}>
+            <RankBadge rank={rankOf(career)} />
+            {rankOf(career)}
+          </p>
         </div>
       </div>
       {next && (
@@ -80,13 +84,10 @@ export function CareerProfile({ career }: { career: Career }) {
         {career.trophies.length === 0 ? (
           <p style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>Ingen pokaler ennå</p>
         ) : (
-          <ul className="space-y-1">
+          <ul className="grid grid-cols-2 gap-3">
             {career.trophies.map((t) => (
-              <li key={t.at} className="flex items-baseline justify-between gap-3" style={{ fontSize: "var(--text-small)" }}>
-                <span style={{ color: "var(--color-cream)", fontWeight: 600 }}>{TIERS[t.tier].trophy}</span>
-                <span className="tabular" style={{ color: "var(--color-muted)" }}>
-                  {t.at.slice(0, 10)} · {dollars(t.prize)}
-                </span>
+              <li key={t.at}>
+                <PokalCard kind={t.tier} name={TIERS[t.tier].trophy} date={t.at.slice(0, 10)} prize={dollars(t.prize)} />
               </li>
             ))}
           </ul>

@@ -1,4 +1,6 @@
 import { cupColor } from "@/lib/botCup";
+import { TIER_LOOK, foilVars } from "@/lib/materials";
+import { TrophyArt } from "./CareerTrophy";
 import { dollars, type Place } from "@/lib/career";
 import { bracketRoundLabel, matchParticipants, type Tournament, type TournamentMatch } from "@/lib/tournament";
 import { useRoster } from "@/lib/storage";
@@ -6,8 +8,7 @@ import { FlameIcon } from "./icons";
 import { SnowIcon } from "./careerIcons";
 import { PlayButton } from "./PlayButton";
 import { Avatar } from "./ui/Avatar";
-import { CupEmblem } from "./ui/CupEmblem";
-import { ArrowLeftIcon, CoinIcon } from "./icons";
+import { ArrowLeftIcon } from "./icons";
 
 /** The place a player has at least reached once they have won a match of this round (the one they lose in next). */
 const FLOOR_AFTER_WIN: Record<number, Place | "winner"> = { 1: "winner", 2: "final", 4: "semi", 8: "quarter", 16: "r16", 32: "r32" };
@@ -40,6 +41,10 @@ export function MatchIntro({ tournament, match, player, level, opponentLevel, pr
   const colour = cupColor(tournament.cup?.kind);
   const stake = stakeOf(match.bracketRoundSize ?? 1, prizes);
   const photo = (n: string) => roster.find((r) => r.name === n)?.photo;
+  // The frame, the foil and the cup in the metal of the event; an event without a material (an open tournament) has none of them.
+  const kind = tournament.cup?.kind;
+  const tier = kind && kind in TIER_LOOK ? (kind as keyof typeof TIER_LOOK) : null;
+  const foil = tier ? (foilVars(tier) as React.CSSProperties) : undefined;
   const form = formWord(level, opponentLevel);
   return (
     <div className="animate-screen-enter screen cup-lamp" style={{ "--cup": colour } as React.CSSProperties}>
@@ -49,23 +54,31 @@ export function MatchIntro({ tournament, match, player, level, opponentLevel, pr
             <ArrowLeftIcon className="w-5 h-5" />
           </button>
           <p className="section-label inline-flex items-center gap-2" style={{ color: colour }}>
-            <CupEmblem kind={tournament.cup?.kind ?? "lu"} className="w-4 h-4" />
+            {tier && (
+              <span className="inline-block" style={{ width: "1.1rem" }}>
+                <TrophyArt kind={tier} bare />
+              </span>
+            )}
             {bracketRoundLabel(match.bracketRoundSize ?? 1, match.isBronzeMatch).toUpperCase()}
           </p>
         </div>
         <div className="flex-1 flex flex-col items-center justify-center gap-6">
           <div className="flex items-start justify-center gap-3 w-full text-center">
             <div className="final-left" style={{ flex: "1 1 0", minWidth: 0 }}>
-              <Avatar name={player} photo={photo(player)} size="xl" state="active" />
-              <p className="font-display truncate mt-2" style={{ color: "var(--color-cream)", fontSize: "var(--text-title)" }}>
+              <span className="vs-ring">
+                <Avatar name={player} photo={photo(player)} size="xl" state="active" />
+              </span>
+              <p className={`font-display truncate mt-2 ${tier ? "foil foil-soft" : ""}`} data-t={player} style={{ color: "var(--color-cream)", fontSize: "var(--text-title)", ...foil }}>
                 {player}
               </p>
             </div>
-            <span className="final-vs font-display" style={{ color: colour, fontSize: "var(--text-title)", paddingTop: "2.2rem" }} aria-hidden>
+            <span className={`final-vs font-display vs-mark ${tier ? "foil" : ""}`} data-t="VS" style={{ color: colour, fontSize: "var(--text-num)", paddingTop: "1.6rem", ...foil }} aria-hidden>
               VS
             </span>
             <div className="final-right" style={{ flex: "1 1 0", minWidth: 0 }}>
-              <Avatar name={opponent} photo={photo(opponent)} size="xl" bot={tournament.participants.find((p) => p.name === opponent)?.isBot} />
+              <span className="vs-ring vs-ring-b">
+                <Avatar name={opponent} photo={photo(opponent)} size="xl" bot={tournament.participants.find((p) => p.name === opponent)?.isBot} />
+              </span>
               <p className="font-display truncate mt-2 inline-flex items-center justify-center gap-1 max-w-full" style={{ color: "var(--color-cream)", fontSize: "var(--text-title)" }}>
                 <span className="truncate">{opponent}</span>
                 {form === "hot" && (
@@ -83,7 +96,7 @@ export function MatchIntro({ tournament, match, player, level, opponentLevel, pr
           </div>
           {stake.money > 0 && (
             <span className="final-fade inline-flex items-center gap-2 tabular" style={{ "--d": "1.2s", padding: "0.4rem 1rem", borderRadius: "var(--radius-pill)", background: "var(--gold-soft)", border: "1px solid var(--color-gold)", color: "var(--color-gold-strong)", fontWeight: 800, fontSize: "var(--text-title)" } as React.CSSProperties}>
-              <CoinIcon className="w-5 h-5" />
+              <span className="coin-mark" aria-hidden />
               {dollars(stake.money)}
             </span>
           )}

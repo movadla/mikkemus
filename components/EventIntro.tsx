@@ -3,6 +3,8 @@ import { careerSound } from "@/lib/uiSound";
 import type { Tier } from "@/lib/career";
 import { dollars } from "@/lib/career";
 import { PUB, STAGE, TROPHY } from "@/lib/scenePalette";
+import { TIER_LOOK, foilVars } from "@/lib/materials";
+import { TrophyArt } from "./CareerTrophy";
 import { EVENT_PICTURES } from "./eventPictures";
 import { EventScene } from "./EventScenes";
 import { PlayButton } from "./PlayButton";
@@ -30,17 +32,6 @@ const SLAM = [
 ] as const;
 
 const CONFETTI = ["var(--color-cream)", "var(--color-gold-strong)", "var(--color-teal)"];
-
-function CupShape() {
-  return (
-    <svg viewBox="0 0 64 64" aria-hidden>
-      <path d="M18 8h28v14c0 9-6 16-14 16S18 31 18 22z" fill="currentColor" />
-      <path d="M18 12H8c0 10 4 16 12 18M46 12h10c0 10-4 16-12 18" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-      <rect x="29" y="38" width="6" height="10" fill="currentColor" />
-      <rect x="20" y="48" width="24" height="8" rx="2" fill="currentColor" />
-    </svg>
-  );
-}
 
 /**
  * The opening of an event, and it grows with the event. The colour of the event comes up from the button, lights sweep, the stage is written
@@ -105,10 +96,18 @@ export function EventIntro({ tier, player, onDone }: { tier: Tier; player: strin
       <div className="ev-inner">
         <p className="ev-kick">{tier.stage}</p>
         <div className="ev-cup">
-          <CupShape />
+          <TrophyArt kind={tier.id} bare />
         </div>
         <h1 className="ev-title" style={{ fontSize: `clamp(1.7rem, 8.4vw, ${slam.size}rem)` }}>
-          {tier.name}
+          {s >= 4 ? (
+            <span className="neon" style={{ "--c": TIER_LOOK[tier.id].tint } as React.CSSProperties}>
+              {tier.name}
+            </span>
+          ) : (
+            <span className="foil" data-t={tier.name} style={foilVars(tier.id) as React.CSSProperties}>
+              {tier.name}
+            </span>
+          )}
           <span className="ev-ring" aria-hidden />
         </h1>
         <ul className="ev-plates" aria-label="Om turneringen">

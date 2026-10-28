@@ -13,7 +13,7 @@ type Piece = { x: number; y: number; vx: number; vy: number; r: number; vr: numb
  * celebrates with its own shirts instead (ShirtRain), so the cannons are left off for it and the
  * trophy comes alone. Full party only (lib/fxLevel.ts); it stands still under "reduce motion".
  */
-export function Trophy({ cannons = true }: { cannons?: boolean }) {
+export function Trophy({ cannons = true, plain = false }: { cannons?: boolean; /** Only the confetti, for a screen that has its own trophy. */ plain?: boolean }) {
   const cv = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -62,6 +62,7 @@ export function Trophy({ cannons = true }: { cannons?: boolean }) {
     };
   }, [cannons]);
 
+  if (plain) return cannons ? <canvas ref={cv} aria-hidden style={{ position: "fixed", inset: 0, width: "100%", height: "100%", zIndex: 40, pointerEvents: "none" }} /> : null;
   return (
     <div aria-hidden className="relative mx-auto pointer-events-none" style={{ width: "100%", maxWidth: 260, height: 200, overflow: "hidden" }}>
       <span className="trophy-beam trophy-beam-a" />

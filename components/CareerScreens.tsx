@@ -24,6 +24,8 @@ import { OverRoom } from "./RoomBackdrop";
 import { ScoreKeypad } from "./ScoreKeypad";
 import { TeamKit } from "./TeamKit";
 import { Trophy } from "./Trophy";
+import { TrophyArt } from "./CareerTrophy";
+import { TIER_LOOK, foilVars } from "@/lib/materials";
 import { Avatar } from "./ui/Avatar";
 import { CountUp } from "./ui/CountUp";
 import { FOCUS_RING } from "./ui/focus";
@@ -174,6 +176,46 @@ function UnlockBanner({ label, name, colour }: { label: string; name: string; co
 }
 
 /**
+ * The ceremony of a title. The light comes on, the cup rises from its plinth in a flash, rays turn behind it, the player stands in front of it,
+ * the name of the event is struck in foil and a plate is engraved with the name, the date and the prize. A tap takes it to the end.
+ */
+function Ceremony({ tier, player, prize, confetti, avatar, kit }: { tier: (typeof TIERS)[keyof typeof TIERS]; player: string; prize: number; confetti: boolean; avatar: React.ReactNode; kit: React.ReactNode }) {
+  const [skip, setSkip] = useState(false);
+  const [date] = useState(() => new Date().toISOString().slice(0, 10));
+  return (
+    <div className={`cer ${skip ? "cer-skip" : ""}`} style={{ "--tint": TIER_LOOK[tier.id].tint } as React.CSSProperties} onClick={() => setSkip(true)}>
+      <div className="cer-stage" aria-hidden>
+        <span className="cer-spot" />
+        <span className="cer-rays" />
+        <div className="cer-trophy">
+          <TrophyArt kind={tier.id} tilt />
+        </div>
+      </div>
+      <span className="cer-flash" aria-hidden />
+      <Trophy plain cannons={confetti} />
+      <div className="final-fade flex items-center gap-3" style={{ "--d": "2.1s" } as React.CSSProperties}>
+        {avatar}
+        {kit}
+      </div>
+      <p className="cer-kicker">VINNER</p>
+      <h2 className="cer-title">
+        <span className="foil" data-t={tier.name} style={foilVars(tier.id) as React.CSSProperties}>
+          {tier.name}
+        </span>
+      </h2>
+      <div className="cer-plate">
+        <span className="cer-plate-1">
+          {player} · {tier.short}
+        </span>
+        <span className="cer-plate-2">
+          {date} · {dollars(prize)}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/**
  * What a tournament came to: for a title the ceremony (the trophy rises over the player in their own shirt), for anything else the player and
  * the amount. One number and one button; the rest of the accounts are in the profile.
  */
@@ -202,18 +244,7 @@ export function Result({ career, a, onDone }: { career: Career; a: ActiveEvent; 
       <div className="screen-inner relative z-10 flex flex-col" style={{ minHeight: "calc(100dvh - 2rem)", gap: "1rem" }}>
         <div className="flex-1 flex flex-col items-center justify-center text-center gap-4">
           {won ? (
-            <>
-              <div className="trophy-soft w-full">
-                <Trophy cannons={fx.confetti} />
-              </div>
-              <div className="final-fade flex items-center gap-3 -mt-2" style={{ "--d": "0.9s" } as React.CSSProperties}>
-                <Avatar name={career.player} photo={record?.photo} px={112} state="winner" />
-                {record && <TeamKit kit={teamKitsOf(record).home} size={64} title="Skjorten din" />}
-              </div>
-              <p className="font-display intro-slam" style={{ "--d": "1.4s", color: "var(--color-gold)", fontSize: "clamp(2.2rem, 12vw, 3.4rem)", lineHeight: 1.05 } as React.CSSProperties}>
-                {career.player}
-              </p>
-            </>
+            <Ceremony tier={tier} player={career.player} prize={r.prize} confetti={fx.confetti} avatar={<Avatar name={career.player} photo={record?.photo} px={96} state="winner" />} kit={record ? <TeamKit kit={teamKitsOf(record).home} size={56} title="Skjorten din" /> : null} />
           ) : (
             <Avatar name={career.player} photo={record?.photo} size="xl" state="idle" />
           )}
