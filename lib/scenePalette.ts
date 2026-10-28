@@ -85,6 +85,11 @@ export const HOME = {
   figure: "#241a1a",
   banner: "#a13030",
   crowdDark: "#07080e",
+  clubWall: "#1f3a2e",
+  clubFloor: "#4a3220",
+  bottle: "#7fb08a",
+  hallStand: "#161a29",
+  hallFloor: "#10121b",
 };
 
 /** The stages of the bigger events of the career, one palette each: the regional hall, the national arena, Grand Slam and the world championship. */

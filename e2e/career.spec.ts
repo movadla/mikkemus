@@ -130,4 +130,25 @@ test.describe("karriere", () => {
     await page.getByRole("button", { name: "Ferdig" }).click();
     await expect(page.getByRole("button", { name: /Turneringer/ })).toBeVisible();
   });
+
+  test("nytt sted: kjøp klubbrommet, og alt du har kjøpt flytter med", async ({ page }) => {
+    const rich = { ...CAREER, money: 20000, profile: { home: "loft", darts: "middels" }, arena: { wall: 0, floor: 0, board: 1, light: 0, decor: 0, crowd: 0 } };
+    await page.addInitScript((c) => {
+      if (!sessionStorage.getItem("seeded")) {
+        sessionStorage.setItem("seeded", "1");
+        localStorage.setItem("mikke-mus-career:lars", c);
+      }
+    }, JSON.stringify(rich));
+    await openApp(page, "dark");
+    await page.getByRole("button", { name: "Karriere" }).click();
+    await page.getByRole("button", { name: /Lars/ }).click();
+    await expect(page.getByRole("img", { name: "Loftet ditt" })).toBeVisible();
+    await page.getByRole("button", { name: /Hjemmearena/ }).click();
+    await page.getByRole("button", { name: "Kjøp for $15 000" }).click();
+    await expect(page.getByRole("img", { name: "Klubbrommet ditt" })).toBeVisible();
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("mikke-mus-career:lars") ?? "null"));
+    expect(saved.profile.home).toBe("club");
+    expect(saved.money).toBe(5000);
+    expect(saved.arena.board).toBe(1);
+  });
 });

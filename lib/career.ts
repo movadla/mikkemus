@@ -160,7 +160,8 @@ export const START_LEVELS: { key: string; name: string; med: number; about: stri
 ];
 
 /** Where the player starts out. The picture of it is the first step of the home arena (see CAREER_PLAN.md). */
-export type HomeId = "garage" | "basement" | "loft";
+export type HomeId = "garage" | "basement" | "loft" | "club" | "hall";
+/** The places a career can start in. */
 export const HOMES: { id: HomeId; name: string; about: string }[] = [
   { id: "garage", name: "Garasjen", about: "Kald betong og et brett på en planke" },
   { id: "basement", name: "Kjelleren", about: "Én pære og en pappeske å sitte på" },
@@ -469,8 +470,8 @@ const STEP_BONUS = 0.008;
 
 export const arenaSteps = (career: Career) => SLOTS.reduce((s, sl) => s + (career.arena[sl.id] ?? 0), 0);
 
-/** The factor the arena puts on the opponents' MED: 1 with nothing bought, a little over with everything. */
-export const arenaBonus = (career: Career) => 1 + STEP_BONUS * arenaSteps(career);
+/** The factor the arena puts on the opponents' MED: 1 with nothing bought, a little over with everything, and more for a bigger place. */
+export const arenaBonus = (career: Career) => 1 + STEP_BONUS * arenaSteps(career) + (PLACES.find((p) => p.id === career.profile.home)?.bonus ?? 0);
 
 /** What the next step of a thing costs, or null when it is as good as it gets. */
 export function nextPrice(career: Career, id: SlotId): number | null {
@@ -492,4 +493,38 @@ export function buyUpgrade(career: Career, id: SlotId): Career {
   if (whyNotBuy(career, id)) return career;
   const price = nextPrice(career, id)!;
   return { ...career, money: career.money - price, arena: { ...career.arena, [id]: (career.arena[id] ?? 0) + 1 } };
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------------
+ * A new place: the garage, the basement and the loft are where a career starts; the club room and the arena are bought. Moving takes
+ * everything bought for the arena along, and the bigger place is worth a little more in itself (the same effect as a few steps).
+ * ------------------------------------------------------------------------------------------------------------------------------- */
+
+export type Place2 = { id: HomeId; name: string; about: string; price: number; /** What the place itself makes the opponents weaker. */ bonus: number };
+
+/** The places that are bought, the nearest first. */
+export const PLACES: Place2[] = [
+  { id: "club", name: "Klubbrommet", about: "Eget rom med bar, trepanel og plass til publikum", price: 15000, bonus: 0.02 },
+  { id: "hall", name: "Arenaen", about: "Egen hall med tribuner, scene og lysrigg", price: 60000, bonus: 0.04 },
+];
+
+/** The place the player can buy next, or null when they have the biggest. */
+export function nextPlace(career: Career): Place2 | null {
+  const at = PLACES.findIndex((p) => p.id === career.profile.home);
+  return PLACES[at + 1] ?? null;
+}
+
+/** Why the next place cannot be bought now, or null when it can. */
+export function whyNotMove(career: Career): string | null {
+  const next = nextPlace(career);
+  if (!next) return "Du har den største";
+  if (career.money < next.price) return `Du mangler ${dollars(next.price - career.money)}`;
+  return null;
+}
+
+/** Buys the next place: the money goes, and the career moves in with everything it has bought. */
+export function buyPlace(career: Career): Career {
+  if (whyNotMove(career)) return career;
+  const next = nextPlace(career)!;
+  return { ...career, money: career.money - next.price, profile: { ...career.profile, home: next.id } };
 }

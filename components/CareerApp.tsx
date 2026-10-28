@@ -6,7 +6,11 @@ import {
   DARTS,
   GAMES,
   HOMES,
+  PLACES,
   SLOTS,
+  buyPlace,
+  nextPlace,
+  whyNotMove,
   arenaBonus,
   arenaSteps,
   buyUpgrade,
@@ -69,7 +73,7 @@ import { FOCUS_RING } from "./ui/focus";
 
 const newSeed = () => Math.floor(Math.random() * 1_000_000_000);
 const signed = (n: number) => (n > 0 ? `+${dollars(n)}` : dollars(n));
-const homeName = (id: HomeId) => HOMES.find((h) => h.id === id)?.name ?? "";
+const homeName = (id: HomeId) => HOMES.find((h) => h.id === id)?.name ?? PLACES.find((p) => p.id === id)?.name ?? "";
 const dartsName = (id: DartsId) => DARTS.find((d) => d.id === id)?.name ?? "";
 
 /**
@@ -435,8 +439,36 @@ function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDelete }:
         {view === "arena" && (
           <>
             <p className="mb-3" style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>
-              {arenaSteps(career) === 0 ? "Et bedre rom gjør motstanderne litt svakere. Det er fortsatt du som kaster." : `Motstanderne er ${((arenaBonus(career) - 1) * 100).toFixed(1).replace(".", ",")} % svakere på grunn av rommet.`}
+              {arenaBonus(career) === 1 ? "Et bedre rom gjør motstanderne litt svakere. Det er fortsatt du som kaster." : `Motstanderne er ${((arenaBonus(career) - 1) * 100).toFixed(1).replace(".", ",")} % svakere på grunn av rommet.`}
             </p>
+            {nextPlace(career) && (
+              <Card className="mb-4">
+                <p className="section-label mb-1">NYTT STED</p>
+                <h2 className="font-display" style={{ fontSize: "var(--text-title)", color: "var(--color-cream)" }}>
+                  {nextPlace(career)!.name}
+                </h2>
+                <p className="mb-3" style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>
+                  {nextPlace(career)!.about}. Alt du har kjøpt flytter med, og stedet i seg selv gjør motstanderne {(nextPlace(career)!.bonus * 100).toFixed(0)} % svakere.
+                </p>
+                <Button
+                  block
+                  variant="primary"
+                  disabled={!!whyNotMove(career)}
+                  onClick={() => {
+                    commit(buyPlace(career));
+                    setPop("wall");
+                    setTimeout(() => setPop(null), 1500);
+                  }}
+                >
+                  Kjøp for {dollars(nextPlace(career)!.price)}
+                </Button>
+                {whyNotMove(career) && (
+                  <p className="mt-2" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
+                    {whyNotMove(career)}
+                  </p>
+                )}
+              </Card>
+            )}
             <ul className="space-y-3 mb-6" aria-label="Hjemmearena">
               {SLOTS.map((slot) => {
                 const step = career.arena[slot.id];

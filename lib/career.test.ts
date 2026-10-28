@@ -5,7 +5,10 @@ import {
   SLOTS,
   arenaBonus,
   arenaSteps,
+  buyPlace,
   buyUpgrade,
+  nextPlace,
+  whyNotMove,
   nextPrice,
   whyNotBuy,
   LADDER,
@@ -410,5 +413,42 @@ describe("the home arena", () => {
       return bots.reduce((s, b) => s + b.skill!, 0) / bots.length;
     };
     expect(mean(c)).toBeGreaterThan(mean(rich(1000000)));
+  });
+});
+
+describe("a new place", () => {
+  it("starts in one of the three and offers the club room first", () => {
+    const c = fresh();
+    expect(nextPlace(c)?.id).toBe("club");
+    expect(nextPlace({ ...c, profile: { ...c.profile, home: "loft" } })?.id).toBe("club");
+  });
+
+  it("takes the money, moves the career in, and keeps everything bought", () => {
+    let c = buyUpgrade(rich(100000), "board");
+    c = buyPlace(c);
+    expect(c.profile.home).toBe("club");
+    expect(c.money).toBe(100000 - SLOTS.find((s) => s.id === "board")!.prices[0] - 15000);
+    expect(c.arena.board).toBe(1);
+    expect(nextPlace(c)?.id).toBe("hall");
+    c = buyPlace(c);
+    expect(c.profile.home).toBe("hall");
+    expect(nextPlace(c)).toBeNull();
+    expect(whyNotMove(c)).toBe("Du har den største");
+    expect(buyPlace(c)).toBe(c);
+  });
+
+  it("will not sell what there is no money for", () => {
+    const poor = { ...fresh(), money: 1000 };
+    expect(whyNotMove(poor)).toMatch(/^Du mangler \$14\s000$/);
+    expect(buyPlace(poor)).toBe(poor);
+  });
+
+  it("makes the opponents weaker for a bigger place (the biggest counts 4 %, not on top of the club room)", () => {
+    const c = rich(1000000);
+    const club = buyPlace(c);
+    const hall = buyPlace(club);
+    expect(arenaBonus(club)).toBeCloseTo(1.02, 5);
+    expect(arenaBonus(hall)).toBeCloseTo(1.04, 5);
+    expect(arenaBonus(c)).toBe(1);
   });
 });

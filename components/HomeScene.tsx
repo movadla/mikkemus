@@ -1,7 +1,7 @@
 import { START_ARENA, type Arena, type HomeId, type SlotId } from "@/lib/career";
 import { HOME as C } from "@/lib/scenePalette";
 
-const NAME: Record<HomeId, string> = { garage: "Garasjen", basement: "Kjelleren", loft: "Loftet" };
+const NAME: Record<HomeId, string> = { garage: "Garasjen", basement: "Kjelleren", loft: "Loftet", club: "Klubbrommet", hall: "Arenaen" };
 const DUST: [number, number][] = [[150, 90], [210, 130], [300, 70], [340, 150], [250, 180], [120, 160]];
 const range = (n: number) => Array.from({ length: n }, (_, i) => i);
 
@@ -47,7 +47,7 @@ export function HomeScene({ home, arena = START_ARENA, pop = null, compact = fal
   const a = { ...START_ARENA, ...arena };
   const flash = (id: SlotId) => (pop === id ? "arena-pop" : undefined);
   return (
-    <svg viewBox="0 0 480 300" role="img" aria-label={`${NAME[home]} din`} preserveAspectRatio={compact ? "xMidYMid slice" : undefined} className="w-full block" style={{ borderRadius: "var(--radius-l)", background: C.concreteDark, height: compact ? "8.5rem" : undefined }}>
+    <svg viewBox="0 0 480 300" role="img" aria-label={`${NAME[home]} ${home === "club" || home === "loft" ? "ditt" : "din"}`} preserveAspectRatio={compact ? "xMidYMid slice" : undefined} className="w-full block" style={{ borderRadius: "var(--radius-l)", background: C.concreteDark, height: compact ? "8.5rem" : undefined }}>
       <defs>
         <radialGradient id="home-bulb" cx="50%" cy="0%" r="90%">
           <stop offset="0" stopColor={C.bulbGlow} stopOpacity=".55" />
@@ -93,6 +93,27 @@ export function HomeScene({ home, arena = START_ARENA, pop = null, compact = fal
             <path d="M400 96V144M376 120H424" stroke={C.roofBeam} strokeWidth="3" />
           </>
         )}
+        {a.wall === 0 && home === "club" && (
+          <>
+            <rect width="480" height="300" fill={C.clubWall} />
+            <rect x="0" y="140" width="480" height="74" fill={C.panel} />
+            <rect x="0" y="140" width="480" height="4" fill={C.panelLine} />
+            <rect x="330" y="70" width="120" height="5" fill={C.wood} />
+            <rect x="330" y="100" width="120" height="5" fill={C.wood} />
+            {range(8).map((i) => (
+              <rect key={i} x={338 + i * 14} y={i % 2 ? 80 : 50} width="8" height={i % 2 ? 20 : 25} rx="2" fill={C.bottle} opacity=".85" />
+            ))}
+          </>
+        )}
+        {a.wall === 0 && home === "hall" && (
+          <>
+            <rect width="480" height="300" fill={C.arenaWall} />
+            {range(4).map((r) => (
+              <rect key={r} x="0" y={30 + r * 36} width="480" height="36" fill={r % 2 ? C.hallStand : C.stage} />
+            ))}
+            {range(4).map((r) => range(18).map((i) => <Figure key={`${r}-${i}`} x={i * 28 + (r % 2) * 14 + 8} y={52 + r * 36} s={0.8} fill={C.crowdDark} />))}
+          </>
+        )}
         {a.wall === 1 && <rect width="480" height="300" fill={C.painted} />}
         {a.wall === 2 && (
           <>
@@ -116,7 +137,7 @@ export function HomeScene({ home, arena = START_ARENA, pop = null, compact = fal
 
       {/* The floor, and the line to throw from */}
       <g className={flash("floor")}>
-        <rect x="0" y="214" width="480" height="86" fill={a.floor === 0 ? C.floor : a.floor === 1 ? C.laminate : a.floor === 2 ? C.carpet : C.stage} />
+        <rect x="0" y="214" width="480" height="86" fill={a.floor === 0 ? (home === "club" ? C.clubFloor : home === "hall" ? C.hallFloor : C.floor) : a.floor === 1 ? C.laminate : a.floor === 2 ? C.carpet : C.stage} />
         {a.floor === 1 && range(12).map((i) => <rect key={i} x={i * 42} y="214" width="1.5" height="86" fill={C.laminateLine} />)}
         {a.floor === 2 && <rect x="150" y="240" width="180" height="52" rx="3" fill={C.carpetLine} opacity=".7" />}
         {a.floor === 3 && <rect x="0" y="214" width="480" height="4" fill={C.gold} className="sc-twinkle" />}

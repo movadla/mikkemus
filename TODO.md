@@ -13,7 +13,7 @@ Kjør hver fil én gang. Uten dem virker appen som før, men det nye lagres bare
 
 Er bygget: karrieren bak full kode, hjemmet (garasje, kjeller eller loft) som bakgrunn, hjemmearena med butikk (se rommet bygges om), med trening (nivået følger kastingen), turneringer og utfordringer, stigen Lü-cupen (gratis) → Regionmesterskapet (penger) → Norgesmesterskapet → Grand Slam → VM med kvalifisering, penger i dollar, rankingpoeng, utfordringer i 501, Lava og Highstriker, egen åpningsscene per turnering, scene før finalen og seremoni med pokal når man vinner.
 
-- [ ] **Kjøpe nytt sted** (fra garasje/kjeller/loft til klubbrom og arena), og bedre dart (vekt og type) i butikken. Hjemmearenaen med seks ting i tre trinn er bygget; hvert trinn gjør motstanderne 0,8 % svakere.
+- [ ] **Bedre dart** (vekt og type) i butikken, og at veggen i klubbrommet og arenaen beholder sitt eget utseende når man kjøper ny vegg. Hjemmearenaen (seks ting i tre trinn, 0,8 % per trinn) og nytt sted (klubbrommet $15 000, arenaen $60 000) er bygget.
 - [ ] **Sesong og kalender:** turneringer på bestemte «uker», ranking som teller over tid, flere cuper per trinn.
 - [ ] **Balansen må justeres etter at du har spilt:** tallene (faktor, premier, inngang) er satt ut fra simulering med spilleren som en bot.
 - [ ] **Flere treningsøvelser** (dobbel, trebling 19, utsjekk) og et bedre mål på nivået enn snittet i én øvelse. I dag flytter «Trebling 20» (15 runder) nivået en fjerdedel av veien, maks 3 mm per økt, siden 45 piler gir et støyende mål.
