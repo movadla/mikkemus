@@ -75,4 +75,6 @@ Slik bør de nye bildene være:
 - **Ingen tekst eller logoer** i bildene.
 - Hvert trinn laget ved å **redigere forrige bilde**, så det som ikke endres ser likt ut.
 
+Ferdige ledetekster, arbeidsgang og sjekkliste for de nye bildene: `art/prompts/room-9x16.md`. Kjør `npm run check:room` for å sjekke at filene er riktige.
+
 Lydfiler: se `public/career/sounds/README.md`. Mangler en fil, lager appen lyden selv.
