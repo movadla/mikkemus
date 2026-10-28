@@ -10,7 +10,7 @@ import { fxFlags, useFxLevel } from "@/lib/fxLevel";
 import { haptics } from "@/lib/haptics";
 import { winnerOf as highstrikerWinner, newGame as newHighstriker } from "@/lib/highstriker";
 import { DEFAULT_LIVES, newGame as newLava, stateOf as lavaState } from "@/lib/lava";
-import { teamKitsOf, useRoster } from "@/lib/storage";
+import { useRoster } from "@/lib/storage";
 import { DRILL_ROUNDS, sessionFrom, trainCareer } from "@/lib/training";
 import { careerSound } from "@/lib/uiSound";
 import { levelLabel, oneDecimal } from "./careerFormat";
@@ -22,9 +22,10 @@ import { LavaGameScreen } from "./LavaApp";
 import { PlayButton } from "./PlayButton";
 import { OverRoom } from "./RoomBackdrop";
 import { ScoreKeypad } from "./ScoreKeypad";
-import { TeamKit } from "./TeamKit";
 import { Trophy } from "./Trophy";
 import { TrophyArt } from "./CareerTrophy";
+import { CharacterFigure } from "./CharacterFigure";
+import { poseFor } from "@/lib/characters";
 import { TIER_LOOK, foilVars } from "@/lib/materials";
 import { Avatar } from "./ui/Avatar";
 import { CountUp } from "./ui/CountUp";
@@ -131,7 +132,6 @@ function ChallengeFlow({ career, commit, onHub }: { career: Career; commit: (c: 
 
 function ChallengeResult({ career, c, onDone }: { career: Career; c: Challenge; onDone: () => void }) {
   const won = c.won === true;
-  const roster = useRoster();
   useEffect(() => {
     if (won) haptics.win();
   }, [won]);
@@ -139,7 +139,9 @@ function ChallengeResult({ career, c, onDone }: { career: Career; c: Challenge; 
     <div className="animate-screen-enter screen cup-lamp relative overflow-hidden" style={won ? ({ "--cup": "var(--color-gold)" } as React.CSSProperties) : undefined}>
       <div className="screen-inner relative z-10 flex flex-col" style={{ minHeight: "calc(100dvh - 2rem)", gap: "1.25rem" }}>
         <div className="flex-1 flex flex-col items-center justify-center gap-5 text-center">
-          <Avatar name={career.player} photo={roster.find((x) => x.name === career.player)?.photo} size="xl" state={won ? "winner" : "idle"} />
+          <div className={`char-result ${won ? "" : "char-result-low"}`}>
+            <CharacterFigure id={career.profile.character} pose={won ? "jubel" : "skuffet"} glow={won} />
+          </div>
           {won ? (
             <p className="font-display tabular" style={{ fontSize: "clamp(2.6rem, 16vw, 4rem)", color: "var(--color-gold)", lineHeight: 1 }}>
               <CountUp value={c.stake} format={(n) => `+${dollars(n)}`} />
@@ -179,7 +181,7 @@ function UnlockBanner({ label, name, colour }: { label: string; name: string; co
  * The ceremony of a title. The light comes on, the cup rises from its plinth in a flash, rays turn behind it, the player stands in front of it,
  * the name of the event is struck in foil and a plate is engraved with the name, the date and the prize. A tap takes it to the end.
  */
-function Ceremony({ tier, player, prize, confetti, avatar, kit }: { tier: (typeof TIERS)[keyof typeof TIERS]; player: string; prize: number; confetti: boolean; avatar: React.ReactNode; kit: React.ReactNode }) {
+function Ceremony({ tier, player, prize, confetti, character }: { tier: (typeof TIERS)[keyof typeof TIERS]; player: string; prize: number; confetti: boolean; character?: string }) {
   const [skip, setSkip] = useState(false);
   const [date] = useState(() => new Date().toISOString().slice(0, 10));
   return (
@@ -193,9 +195,8 @@ function Ceremony({ tier, player, prize, confetti, avatar, kit }: { tier: (typeo
       </div>
       <span className="cer-flash" aria-hidden />
       <Trophy plain cannons={confetti} />
-      <div className="final-fade flex items-center gap-3" style={{ "--d": "2.1s" } as React.CSSProperties}>
-        {avatar}
-        {kit}
+      <div className="cer-hero" style={{ "--tint": TIER_LOOK[tier.id].tint } as React.CSSProperties}>
+        <CharacterFigure id={character} pose="jubel" glow />
       </div>
       <p className="cer-kicker">VINNER</p>
       <h2 className="cer-title">
@@ -223,8 +224,6 @@ export function Result({ career, a, onDone }: { career: Career; a: ActiveEvent; 
   const r = a.result!;
   const tier = TIERS[a.tier];
   const won = r.place === "winner";
-  const roster = useRoster();
-  const record = roster.find((x) => x.name === career.player);
   const opened = tier.opens && tier.opens.places.includes(r.place) ? TIERS[tier.opens.tier] : null;
   // The title the points have just given, when it is a new one.
   const before = rankOf({ ...career, points: career.points - r.points, worldTitles: career.worldTitles - (won && tier.id === "vm" ? 1 : 0) });
@@ -244,9 +243,11 @@ export function Result({ career, a, onDone }: { career: Career; a: ActiveEvent; 
       <div className="screen-inner relative z-10 flex flex-col" style={{ minHeight: "calc(100dvh - 2rem)", gap: "1rem" }}>
         <div className="flex-1 flex flex-col items-center justify-center text-center gap-4">
           {won ? (
-            <Ceremony tier={tier} player={career.player} prize={r.prize} confetti={fx.confetti} avatar={<Avatar name={career.player} photo={record?.photo} px={96} state="winner" />} kit={record ? <TeamKit kit={teamKitsOf(record).home} size={56} title="Skjorten din" /> : null} />
+            <Ceremony tier={tier} player={career.player} prize={r.prize} confetti={fx.confetti} character={career.profile.character} />
           ) : (
-            <Avatar name={career.player} photo={record?.photo} size="xl" state="idle" />
+            <div className={`char-result ${r.prize > 0 ? "" : "char-result-low"}`}>
+              <CharacterFigure id={career.profile.character} pose={poseFor(r)} glow={r.prize > 0} />
+            </div>
           )}
           {r.prize > 0 ? (
             <p className="font-display tabular" style={{ fontSize: "clamp(2.6rem, 16vw, 4rem)", color: "var(--color-gold)", lineHeight: 1 }}>

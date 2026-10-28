@@ -13,6 +13,7 @@ import { levelLabel, newSeed, oneDecimal } from "./careerFormat";
 import { HomeIcon, LockIcon, RoadIcon, StarIcon } from "./careerIcons";
 import { CareerHud } from "./CareerHud";
 import { RankBadge, TrophyArt } from "./CareerTrophy";
+import { CharacterFigure } from "./CharacterFigure";
 import { CareerProfile } from "./CareerProfile";
 import { markTipSeen, TipPointer, useTipSeen } from "./CareerTip";
 import { ConfirmDialog } from "./ConfirmDialog";
@@ -237,6 +238,9 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
     return (
       <OverRoom stage={career.room} clear>
         {news && <span className="room-news-ring" aria-hidden />}
+        <span className="char-home" aria-hidden>
+          <CharacterFigure id={career.profile.character} pose={hero.kind === "event" && hero.done ? "jubel" : "noytral"} glow />
+        </span>
         {launch && <span className="launch-iris" aria-hidden style={{ "--c": TROPHY[launch.id], "--ox": `${launch.x}px`, "--oy": `${launch.y}px` } as React.CSSProperties} />}
         <div className="animate-screen-push screen">
           {sheets}
@@ -251,7 +255,7 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
               </button>
             )}
             <div className="flex-1" />
-            <div className="room-text rise-in" style={{ "--d": "0.1s" } as React.CSSProperties}>
+            <div className="room-text char-home-text rise-in" style={{ "--d": "0.1s" } as React.CSSProperties}>
               <p className="font-display" style={{ fontSize: "var(--text-num)", lineHeight: 1.05, color: "var(--color-cream)" }}>
                 {career.player}
               </p>

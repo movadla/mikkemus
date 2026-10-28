@@ -6744,7 +6744,7 @@ button.play-btn:disabled::after {
 .cer-stage {
   position: relative;
   width: 100%;
-  max-width: 15rem;
+  max-width: 9.5rem;
 }
 .cer-spot {
   position: absolute;
@@ -6964,4 +6964,138 @@ button.play-btn:disabled::after {
 }
 .coin-mark::before {
   content: "$";
+}
+
+/* ---- The character: a standing figure with a transparent background, in the colour of its own light. ---- */
+.char-figure {
+  position: relative;
+  display: block;
+  aspect-ratio: 2 / 3;
+  pointer-events: none;
+}
+.char-figure-img {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: contain;
+  -webkit-mask-image: linear-gradient(to bottom, #000 78%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 78%, transparent 100%);
+  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.55));
+  animation: char-in 0.5s cubic-bezier(0.2, 1.1, 0.4, 1) both;
+}
+.char-figure-glow::before {
+  content: "";
+  position: absolute;
+  inset: 4% -10% 14% -10%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--tint) 42%, transparent), transparent 72%);
+  filter: blur(8px);
+}
+@keyframes char-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.97);
+  }
+}
+.char-face {
+  position: relative;
+  display: inline-block;
+  flex: none;
+  overflow: hidden;
+  border-radius: 50%;
+  border: 2px solid var(--tint);
+  background: radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--tint) 35%, #1a2220), #0b100e);
+  box-shadow: var(--elev-2);
+}
+.char-face img {
+  position: absolute;
+  left: 50%;
+  top: 4%;
+  width: 190%;
+  max-width: none;
+  transform: translateX(-50%);
+}
+@media (prefers-reduced-motion: reduce) {
+  .char-figure-img {
+    animation: none;
+  }
+}
+
+/* Home: the character stands to the right in the room, with name, rank and the shelf in a column to the left of it. */
+.char-home {
+  position: fixed;
+  z-index: 1;
+  right: max(-14vw, -3.5rem);
+  bottom: calc(9.4rem + env(safe-area-inset-bottom, 0px));
+  height: min(54dvh, 30rem);
+  pointer-events: none;
+}
+.char-home .char-figure {
+  height: 100%;
+  aspect-ratio: 2 / 3;
+}
+.char-home-text {
+  max-width: 58%;
+}
+.char-pick {
+  display: grid;
+  gap: 0.6rem;
+  justify-items: center;
+  padding: 0.8rem 0.6rem 0.9rem;
+  border-radius: var(--radius-l);
+  background: radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--tint) 24%, var(--color-surface)), var(--color-surface));
+  border: 1px solid var(--color-border);
+}
+.char-pick-stage {
+  width: min(62%, 14rem);
+}
+.char-pick-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.char-pick-item {
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  opacity: 0.7;
+}
+.char-pick-item[aria-checked="true"] {
+  opacity: 1;
+  box-shadow: 0 0 0 3px var(--tint), 0 6px 14px -4px var(--tint);
+}
+.char-pick-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--color-cream);
+}
+
+.ev-you {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-align: left;
+}
+
+/* The result: the character at a size that leaves room for the amount and the button. A letdown is a little darker and a little lower. */
+.char-result {
+  width: min(62%, 16rem);
+}
+.char-result-low .char-figure-img {
+  filter: saturate(0.75) brightness(0.85) drop-shadow(0 10px 18px rgba(0, 0, 0, 0.55));
+}
+.cer-hero {
+  position: relative;
+  width: min(34%, 8.5rem);
+  margin-top: -0.6rem;
+  opacity: 0;
+  animation: cer-show 0.7s 1.8s ease-out forwards;
+}
+.cer-hero .char-figure-img {
+  -webkit-mask-image: linear-gradient(to bottom, #000 62%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 62%, transparent 100%);
 }

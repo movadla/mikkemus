@@ -1,6 +1,7 @@
 import { cupColor } from "@/lib/botCup";
 import { TIER_LOOK, foilVars } from "@/lib/materials";
 import { TrophyArt } from "./CareerTrophy";
+import { CharacterFace } from "./CharacterFigure";
 import { dollars, type Place } from "@/lib/career";
 import { bracketRoundLabel, matchParticipants, type Tournament, type TournamentMatch } from "@/lib/tournament";
 import { useRoster } from "@/lib/storage";
@@ -34,7 +35,7 @@ export function formWord(you: number, opponent: number): "hot" | "even" | "cold"
  * The card before each match of the career: the two of them, what winning is worth, and one button. A flame by the opponent's name means
  * they are sharp today, a snowflake that they are not. There is nothing to read, and the moment still has something to lose.
  */
-export function MatchIntro({ tournament, match, player, level, opponentLevel, prizes, onStart, onBack }: { tournament: Tournament; match: TournamentMatch; player: string; /** The player's level on the bots' scale. */ level: number; opponentLevel: number; prizes: Partial<Record<Place, number>>; onStart: () => void; onBack: () => void }) {
+export function MatchIntro({ tournament, match, player, character, level, opponentLevel, prizes, onStart, onBack }: { tournament: Tournament; match: TournamentMatch; player: string; /** The id of the player's character. */ character?: string; /** The player's level on the bots' scale. */ level: number; opponentLevel: number; prizes: Partial<Record<Place, number>>; onStart: () => void; onBack: () => void }) {
   const roster = useRoster();
   const [a, b] = matchParticipants(match);
   const opponent = a === player ? b : a;
@@ -66,7 +67,7 @@ export function MatchIntro({ tournament, match, player, level, opponentLevel, pr
           <div className="flex items-start justify-center gap-3 w-full text-center">
             <div className="final-left" style={{ flex: "1 1 0", minWidth: 0 }}>
               <span className="vs-ring">
-                <Avatar name={player} photo={photo(player)} size="xl" state="active" />
+                <CharacterFace id={character} pose="kast" px={96} />
               </span>
               <p className={`font-display truncate mt-2 ${tier ? "foil foil-soft" : ""}`} data-t={player} style={{ color: "var(--color-cream)", fontSize: "var(--text-title)", ...foil }}>
                 {player}

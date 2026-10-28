@@ -183,7 +183,7 @@ export const DARTS: { id: DartsId; name: string; about: string }[] = [
   { id: "tunge", name: "Tunge", about: "26 g, tunge å stoppe" },
 ];
 
-export type Profile = { home: HomeId; darts: DartsId };
+export type Profile = { home: HomeId; darts: DartsId; /** The character the player is in the career (lib/characters.ts). Absent on a career from before there were any. */ character?: string };
 
 export const START_MONEY = 2000;
 
@@ -246,7 +246,7 @@ export type Career = {
 
 export const careerId = (player: string) => player.trim().toLowerCase();
 
-export const DEFAULT_PROFILE: Profile = { home: "garage", darts: "middels" };
+export const DEFAULT_PROFILE: Profile = { home: "garage", darts: "middels", character: "c03" };
 
 export function newCareer(player: string, startLevel: string, now: string, profile: Profile = DEFAULT_PROFILE): Career {
   const level = START_LEVELS.find((l) => l.key === startLevel) ?? START_LEVELS[2];

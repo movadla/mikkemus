@@ -57,6 +57,8 @@ test.describe("karriere", () => {
     await page.getByRole("button", { name: /Lars/ }).click();
     // The room is the picture behind everything: the first step of the room.
     await expect(page.locator(".room-backdrop-img")).toHaveAttribute("src", /room-02.jpg/);
+    // The character stands in the room (the career in the seed has none saved: it gets the one there is), and the profile has its face.
+    await expect(page.locator(".char-home .char-figure-img")).toHaveAttribute("src", /c03.noytral/);
     // It says where the player is: the room is a place with a name and a step.
     await expect(page.getByText(/Garasjen din/)).toContainText("Ryddet · 2 av 10");
     const hud = page.getByRole("group", { name: "Status" });

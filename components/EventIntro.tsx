@@ -5,6 +5,7 @@ import { dollars } from "@/lib/career";
 import { PUB, STAGE, TROPHY } from "@/lib/scenePalette";
 import { TIER_LOOK, foilVars } from "@/lib/materials";
 import { TrophyArt } from "./CareerTrophy";
+import { CharacterFace } from "./CharacterFigure";
 import { EVENT_PICTURES } from "./eventPictures";
 import { EventScene } from "./EventScenes";
 import { PlayButton } from "./PlayButton";
@@ -40,7 +41,7 @@ const CONFETTI = ["var(--color-cream)", "var(--color-gold-strong)", "var(--color
  * Grand Slam adds lasers and the world championship fireworks and the hardest blow. A tap anywhere takes it to the end at once, and the
  * button is there from the first second, so nothing here is needed to play.
  */
-export function EventIntro({ tier, player, onDone }: { tier: Tier; player: string; onDone: () => void }) {
+export function EventIntro({ tier, player, character, onDone }: { tier: Tier; player: string; /** The id of the player's character (lib/characters.ts). */ character?: string; onDone: () => void }) {
   // The crowd of the place swells as the scene comes up: the murmur of the pub, a hall filling, an arena roaring.
   useEffect(() => {
     careerSound(tier.scale <= 1 ? "crowd-1" : tier.scale <= 3 ? "crowd-2" : "crowd-3");
@@ -125,7 +126,12 @@ export function EventIntro({ tier, player, onDone }: { tier: Tier; player: strin
           </li>
         </ul>
         <p className="ev-you">
-          <b>{player}</b> er med. Trekningen starter nå.
+          <CharacterFace id={character} pose="kast" px={64} />
+          <span>
+            <b>{player}</b> er med.
+            <br />
+            Trekningen starter nå.
+          </span>
         </p>
         <div className="ev-go" onClick={(e) => e.stopPropagation()}>
           <PlayButton label="TREKK" onClick={onDone} />

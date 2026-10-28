@@ -60,6 +60,8 @@ export type CareerHooks = {
   /** The player's level on the bots' scale, and what each place pays: for the card before a match. */
   level: number;
   prizes: Partial<Record<Place, number>>;
+  /** The id of the player's character (lib/characters.ts), for the card before a match. */
+  character?: string;
 };
 
 /** The career has no champion screen of its own: when a cup is done the player goes straight on to the pay-out. */
@@ -446,7 +448,7 @@ export function TournamentApp({ onExitToHome, career }: { onExitToHome: () => vo
     const { botLevels } = botSetupForMatch(tournament, currentMatch);
     const names = matchParticipants(currentMatch);
     const bot = names.find((n) => botLevels[n] !== undefined);
-    return <MatchIntro tournament={tournament} match={currentMatch} player={names.find((n) => n !== bot) ?? names[0]} level={career.level} opponentLevel={bot ? Number(botLevels[bot]) : career.level} prizes={career.prizes} onStart={() => setScreen("match")} onBack={() => setScreen("overview")} />;
+    return <MatchIntro tournament={tournament} match={currentMatch} player={names.find((n) => n !== bot) ?? names[0]} character={career.character} level={career.level} opponentLevel={bot ? Number(botLevels[bot]) : career.level} prizes={career.prizes} onStart={() => setScreen("match")} onBack={() => setScreen("overview")} />;
   }
 
   if (screen === "match" && tournament && currentMatch && matchParticipants(currentMatch).length >= 2) {

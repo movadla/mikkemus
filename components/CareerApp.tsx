@@ -17,7 +17,7 @@ import {
   type HomeId,
 } from "@/lib/career";
 import { deleteCareer, loadCareers, mergeCareers, readLocalCareers, saveCareer } from "@/lib/careerStorage";
-import { setKits, teamKitsOf, useRoster } from "@/lib/storage";
+import { useRoster } from "@/lib/storage";
 import { applyTheme } from "@/lib/theme";
 import { levelOfMed } from "@/lib/botLevels";
 import { rankLevel } from "@/lib/careerGoals";
@@ -28,7 +28,8 @@ import { ChallengePlay, Result, TrainingPlay } from "./CareerScreens";
 import { EventIntro } from "./EventIntro";
 import { EVENT_PICTURES } from "./eventPictures";
 import { OverRoom } from "./RoomBackdrop";
-import { KitEditor } from "./KitSettings";
+import { CharacterFace, CharacterFigure } from "./CharacterFigure";
+import { CHARACTERS, DEFAULT_CHARACTER, characterOf } from "@/lib/characters";
 import { ScreenTop } from "./ScreenTop";
 import { TournamentApp } from "./TournamentApp";
 import { Avatar } from "./ui/Avatar";
@@ -164,7 +165,7 @@ function Choice({ selected, onPick, title, about }: { selected: boolean; onPick:
 
 /** The three steps of a start: who, what they look like, and the first tournament (which is the pub's, and free). */
 function Steps({ step }: { step: 1 | 2 }) {
-  const items = ["Hvem er du", "Utseende", "Første turnering"];
+  const items = ["Hvem er du", "Karakter", "Første turnering"];
   return (
     <ol className="flex gap-2 mb-4" aria-label="Steg">
       {items.map((label, i) => (
@@ -180,23 +181,36 @@ function Steps({ step }: { step: 1 | 2 }) {
 }
 
 /** Two steps: who and how good, then the look and the start (the shirt, the darts, the place). */
-function NewCareer({ taken, onBack, onCreate }: { taken: string[]; onBack: () => void; onCreate: (player: string, level: string, profile: { home: HomeId; darts: DartsId }) => void }) {
+function NewCareer({ taken, onBack, onCreate }: { taken: string[]; onBack: () => void; onCreate: (player: string, level: string, profile: { home: HomeId; darts: DartsId; character: string }) => void }) {
   const roster = useRoster();
   const people = roster.filter((r) => r.kind !== "team" && !taken.includes(careerId(r.name)));
   const [step, setStep] = useState<1 | 2>(1);
   const [player, setPlayer] = useState<string | null>(null);
   const [level, setLevel] = useState("dyktig");
   const [darts, setDarts] = useState<DartsId>("middels");
+  const [character, setCharacter] = useState(DEFAULT_CHARACTER);
   const record = roster.find((r) => r.name === player);
 
   if (step === 2 && record) {
-    const kits = teamKitsOf(record);
     return (
       <div className="animate-screen-push screen has-sticky-action career-skin">
         <div className="screen-inner">
-          <ScreenTop title="Utseende" onBack={() => setStep(1)} sub={<span style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>{record.name}</span>} />
+          <ScreenTop title="Karakter" onBack={() => setStep(1)} sub={<span style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>{record.name}</span>} />
           <Steps step={2} />
-          <KitEditor label="SKJORTE" kit={kits.home} onChange={(kit) => setKits(record.name, { ...kits, home: kit })} name={record.name} />
+          <p className="section-label mb-2">KARAKTER</p>
+          <div className="char-pick mb-5" role="radiogroup" aria-label="Karakter" style={{ "--tint": characterOf(character).tint } as React.CSSProperties}>
+            <div className="char-pick-stage">
+              <CharacterFigure id={character} glow />
+            </div>
+            <div className="char-pick-row">
+              {CHARACTERS.map((c) => (
+                <button key={c.id} type="button" role="radio" aria-checked={character === c.id} aria-label={c.name} onClick={() => setCharacter(c.id)} className={`char-pick-item tactile ${FOCUS_RING}`} style={{ "--tint": c.tint } as React.CSSProperties}>
+                  <CharacterFace id={c.id} px={56} />
+                </button>
+              ))}
+            </div>
+            <p className="char-pick-name">{characterOf(character).name}</p>
+          </div>
           <p className="section-label mb-2">PILER</p>
           <div className="space-y-2 mb-5" role="radiogroup" aria-label="Piler">
             {DARTS.map((d) => (
@@ -206,7 +220,7 @@ function NewCareer({ taken, onBack, onCreate }: { taken: string[]; onBack: () =>
           <p className="mb-3" style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>
             Neste er din første turnering: Ly-cupen på puben. Den er gratis.
           </p>
-          <Button block variant="primary" size="lg" onClick={() => onCreate(record.name, level, { home: "garage", darts })}>
+          <Button block variant="primary" size="lg" onClick={() => onCreate(record.name, level, { home: "garage", darts, character })}>
             Start karrieren
           </Button>
         </div>
@@ -264,7 +278,7 @@ function Play({ career, commit, onHub }: { career: Career; commit: (c: Career) =
       />
     );
   }
-  if (intro) return <EventIntro tier={TIERS[a.tier]} player={career.player} onDone={() => setIntro(false)} />;
+  if (intro) return <EventIntro tier={TIERS[a.tier]} player={career.player} character={career.profile.character} onDone={() => setIntro(false)} />;
   const tournament = (
     <TournamentApp
       onExitToHome={onHub}
@@ -276,6 +290,7 @@ function Play({ career, commit, onHub }: { career: Career; commit: (c: Career) =
         onDone: () => commit(finishEvent(career, new Date().toISOString())),
         cost: a.cost,
         level: levelOfMed(career.skillMed),
+        character: career.profile.character,
         prizes: TIERS[a.tier].prizes,
         onAbandon: () => {
           commit(abandonEvent(career));

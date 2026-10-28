@@ -2,11 +2,9 @@
 
 import { DARTS, PLACE_LABEL, STAGES, TIERS, dollars, type Career } from "@/lib/career";
 import { nextRank, rankOf } from "@/lib/careerGoals";
-import { teamKitsOf, useRoster } from "@/lib/storage";
 import { levelLabel, oneDecimal } from "./careerFormat";
 import { PokalCard, RankBadge } from "./CareerTrophy";
-import { TeamKit } from "./TeamKit";
-import { Avatar } from "./ui/Avatar";
+import { CharacterFace } from "./CharacterFigure";
 
 /** One number with its name under it. */
 function Stat({ label, value }: { label: string; value: string }) {
@@ -25,15 +23,12 @@ function Stat({ label, value }: { label: string; value: string }) {
  * the career so far and the cups that have been won. Opened from the menu on the home screen.
  */
 export function CareerProfile({ career }: { career: Career }) {
-  const roster = useRoster();
-  const record = roster.find((r) => r.name === career.player);
   const next = nextRank(career);
   const darts = DARTS.find((d) => d.id === career.profile.darts)?.name ?? "";
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-4">
-        <Avatar name={career.player} photo={record?.photo} size="xl" state="winner" />
-        {record && <TeamKit kit={teamKitsOf(record).home} size={64} title="Skjorten din" />}
+        <CharacterFace id={career.profile.character} px={88} />
         <div className="min-w-0">
           <p className="font-display truncate" style={{ fontSize: "var(--text-num)", color: "var(--color-cream)", lineHeight: 1.05 }}>
             {career.player}
