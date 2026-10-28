@@ -61,3 +61,18 @@ Draktene er tegnet i koden i dag og kan velges fritt. Bildet av spilleren er ros
 1. Velg stil og verktøy, lag stilbibelen og to prøvebilder av garasjen (trinn 1 og 2) for å se om redigeringen holder rommet likt.
 2. Lag resten av de 8 rommene, og la meg legge dem inn med myke overganger og enkle animasjoner.
 3. Hvis det fungerer, lag lag for hver ting og la meg klippe dem ut automatisk.
+
+## Slik brukes bildene nå (2026-10-28)
+
+Rommet er ti trinn, ett bilde per trinn, og bildet er bakgrunn for hjem, Rom, Veien, Trening og Utfordring. Bildene ligger i `public/career/room-01.jpg` til `room-10.jpg` (trinn 1 til 10: Start, Rydd, Fresh vegger, Oche, Belysning, Skjerm, Utstyr, Dekor, Pro setup, Ultimate). Trinnene, navnene og prisene står i `lib/career.ts` (`STAGES`).
+
+De ti bildene som ligger der nå er klippet ut av et rutenett og er bare 300 × 360 px, så de er grumsete på en stor skjerm. De er et utkast. For å bytte dem ut: lag nye filer med **samme navn** og legg dem i `public/career/`. Ingenting annet må endres.
+
+Slik bør de nye bildene være:
+- **Stående 9:16, 1080 × 1920**, JPEG eller WebP. Bildet dekker hele telefonskjermen, så 5:6 blir beskåret i sidene.
+- **Samme kamera på alle ti**, med dartbrettet nøyaktig midt i bildet på alle trinn (i dag flytter det seg litt mellom trinn 2 og 3).
+- **Luft øverst og nederst.** Saldo og nivå ligger øverst, og navn, SPILL-knappen og de runde knappene nederst. Det viktigste i rommet bør ligge i midten, mellom 20 og 70 prosent av høyden.
+- **Ingen tekst eller logoer** i bildene.
+- Hvert trinn laget ved å **redigere forrige bilde**, så det som ikke endres ser likt ut.
+
+Lydfiler: se `public/career/sounds/README.md`. Mangler en fil, lager appen lyden selv.

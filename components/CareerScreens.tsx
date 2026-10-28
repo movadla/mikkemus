@@ -20,6 +20,7 @@ import { HighstrikerGameScreen } from "./HighstrikerApp";
 import { ArrowLeftIcon, CoinIcon } from "./icons";
 import { LavaGameScreen } from "./LavaApp";
 import { PlayButton } from "./PlayButton";
+import { OverRoom } from "./RoomBackdrop";
 import { ScoreKeypad } from "./ScoreKeypad";
 import { TeamKit } from "./TeamKit";
 import { Trophy } from "./Trophy";
@@ -47,7 +48,15 @@ function Amount({ value, big = false }: { value: number; big?: boolean }) {
 }
 
 /** A challenge: the two of them and the stake, then the game itself, then what it came to. */
-export function ChallengePlay({ career, commit, onHub }: { career: Career; commit: (c: Career) => void; onHub: () => void }) {
+export function ChallengePlay(props: { career: Career; commit: (c: Career) => void; onHub: () => void }) {
+  return (
+    <OverRoom stage={props.career.room} dim={60} blur={5}>
+      <ChallengeFlow {...props} />
+    </OverRoom>
+  );
+}
+
+function ChallengeFlow({ career, commit, onHub }: { career: Career; commit: (c: Career) => void; onHub: () => void }) {
   const c = career.challenge!;
   const roster = useRoster();
   const photos = useMemo(() => new Map(roster.map((r) => [r.name, r.photo])), [roster]);
@@ -76,7 +85,7 @@ export function ChallengePlay({ career, commit, onHub }: { career: Career; commi
   }
   if (!playing) {
     return (
-      <div className="animate-screen-enter screen career-skin">
+      <div className="animate-screen-enter screen">
         <div className="screen-inner flex flex-col" style={{ minHeight: "calc(100dvh - 2rem)", gap: "1.25rem" }}>
           <div className="flex items-center gap-3">
             <BackArrow onClick={giveUp} label="Si nei" />
@@ -228,7 +237,15 @@ export function Result({ career, a, onDone }: { career: Career; a: ActiveEvent; 
 }
 
 /** A training session: fifteen rounds at the treble 20 written in, and then the level, before and after. */
-export function TrainingPlay({ career, commit, onHub }: { career: Career; commit: (c: Career) => void; onHub: () => void }) {
+export function TrainingPlay(props: { career: Career; commit: (c: Career) => void; onHub: () => void }) {
+  return (
+    <OverRoom stage={props.career.room} dim={60} blur={5}>
+      <TrainingFlow {...props} />
+    </OverRoom>
+  );
+}
+
+function TrainingFlow({ career, commit, onHub }: { career: Career; commit: (c: Career) => void; onHub: () => void }) {
   const [rounds, setRounds] = useState<number[]>([]);
   const [done, setDone] = useState<ReturnType<typeof sessionFrom> | null>(null);
   const submit = (score: number) => {
@@ -242,7 +259,7 @@ export function TrainingPlay({ career, commit, onHub }: { career: Career; commit
   };
   if (done) {
     return (
-      <div className="animate-screen-enter screen career-skin">
+      <div className="animate-screen-enter screen">
         <div className="screen-inner flex flex-col" style={{ minHeight: "calc(100dvh - 2rem)", gap: "1.25rem" }}>
           <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center">
             <p className="section-label">SNITT</p>
@@ -260,7 +277,7 @@ export function TrainingPlay({ career, commit, onHub }: { career: Career; commit
     );
   }
   return (
-    <div className="animate-screen-push screen career-skin">
+    <div className="animate-screen-push screen">
       <div className="screen-inner flex flex-col gap-3" style={{ minHeight: "calc(100dvh - 2rem)" }}>
         <div className="flex items-center gap-3">
           <BackArrow onClick={onHub} />

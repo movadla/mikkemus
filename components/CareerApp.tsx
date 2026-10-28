@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   DARTS,
-  HOMES,
   START_LEVELS,
   TIERS,
   abandonEvent,
@@ -185,7 +184,6 @@ function NewCareer({ taken, onBack, onCreate }: { taken: string[]; onBack: () =>
   const [step, setStep] = useState<1 | 2>(1);
   const [player, setPlayer] = useState<string | null>(null);
   const [level, setLevel] = useState("dyktig");
-  const [home, setHome] = useState<HomeId>("garage");
   const [darts, setDarts] = useState<DartsId>("middels");
   const record = roster.find((r) => r.name === player);
 
@@ -203,16 +201,10 @@ function NewCareer({ taken, onBack, onCreate }: { taken: string[]; onBack: () =>
               <Choice key={d.id} selected={darts === d.id} onPick={() => setDarts(d.id)} title={d.name} about={d.about} />
             ))}
           </div>
-          <p className="section-label mb-2">HVOR DU STARTER</p>
-          <div className="space-y-2 mb-6" role="radiogroup" aria-label="Hvor du starter">
-            {HOMES.map((h) => (
-              <Choice key={h.id} selected={home === h.id} onPick={() => setHome(h.id)} title={h.name} about={h.about} />
-            ))}
-          </div>
           <p className="mb-3" style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>
             Neste er din første turnering: Lü-cupen på puben. Den er gratis.
           </p>
-          <Button block variant="primary" size="lg" onClick={() => onCreate(record.name, level, { home, darts })}>
+          <Button block variant="primary" size="lg" onClick={() => onCreate(record.name, level, { home: "garage", darts })}>
             Start karrieren
           </Button>
         </div>

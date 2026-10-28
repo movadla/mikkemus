@@ -70,10 +70,43 @@ export function drawSound(progress: number, last = false): void {
   playDrawTick(progress, last);
 }
 
+/**
+ * The files the career's sounds can be played from, in public/career/sounds/. A sound with a file there is played from the file; one without
+ * (or one that cannot be played) is made by the synthesizer, so the files can be added one at a time, whenever they are ready.
+ */
+const SOUND_FILES: Record<CareerSoundKind, string> = {
+  coin: "coin",
+  unlock: "unlock",
+  "crowd-1": "crowd-pub",
+  "crowd-2": "crowd-hall",
+  "crowd-3": "crowd-arena",
+  cheer: "cheer",
+};
+const SOUND_VOLUME: Record<CareerSoundKind, number> = { coin: 0.6, unlock: 0.7, "crowd-1": 0.5, "crowd-2": 0.6, "crowd-3": 0.7, cheer: 0.8 };
+/** Whether a file was found for a sound: not asked about until the first time it is wanted. */
+const soundFound = new Map<CareerSoundKind, boolean>();
+
 /** The career's sounds (a coin, something opened, the crowd, a cheer), on the same terms as the rest: Party and up, and the setting. */
 export function careerSound(kind: CareerSoundKind): void {
   const level = getFxLevel();
   if (level !== "party" && level !== "full") return;
   if (!getUiSound()) return;
-  playCareerSound(kind);
+  if (soundFound.get(kind) === false || typeof Audio === "undefined") {
+    playCareerSound(kind);
+    return;
+  }
+  try {
+    const audio = new Audio(`/career/sounds/${SOUND_FILES[kind]}.mp3`);
+    audio.volume = SOUND_VOLUME[kind];
+    void audio.play().then(
+      () => soundFound.set(kind, true),
+      () => {
+        soundFound.set(kind, false);
+        playCareerSound(kind);
+      },
+    );
+  } catch {
+    soundFound.set(kind, false);
+    playCareerSound(kind);
+  }
 }

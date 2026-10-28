@@ -55,7 +55,8 @@ test.describe("karriere", () => {
   test("hjemmet: rommet, saldo og nivå, ett mål, én stor knapp og fire runde", async ({ page }) => {
     await toCareer(page);
     await page.getByRole("button", { name: /Lars/ }).click();
-    await expect(page.getByRole("img", { name: "Garasjen din" })).toBeVisible();
+    // The room is the picture behind everything: the first step of the room.
+    await expect(page.locator(".room-backdrop-img")).toHaveAttribute("src", /room-01.jpg/);
     const hud = page.getByRole("group", { name: "Status" });
     await expect(hud.getByText("$300")).toBeVisible();
     await expect(hud.getByLabel("Nivå 1, Pubspiller")).toBeVisible();
@@ -63,9 +64,9 @@ test.describe("karriere", () => {
     await expect(page.getByRole("progressbar", { name: "Veien til nivå 2" })).toBeVisible();
     // The one big button leads to the biggest step that can be entered, with the price as a small line.
     await expect(play(page, "SPILL Region · $200")).toBeVisible();
-    // Four round buttons, and the room has a dot: there is money for something new.
+    // Four round buttons. The room has no dot: the first step costs $500 and there is $300.
     for (const name of ["Rom", "Trening", "Utfordring", "Veien"] as const) await expect(place(page, name)).toBeVisible();
-    await expect(page.getByRole("button", { name: "Rom, nytt" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Rom, nytt" })).toHaveCount(0);
     // Nothing else: no lists, no explanations, no second row of tabs.
     await expect(page.getByRole("navigation", { name: "Karriere" })).toHaveCount(0);
     await expect(page.getByText(/Velkommen til rommet/)).toHaveCount(0);
@@ -135,19 +136,30 @@ test.describe("karriere", () => {
     expect(s.challenge).toBeNull();
   });
 
-  test("rom: kjøp gulv, pengene går, og rommet er bygget om", async ({ page }) => {
-    await toCareer(page);
+  test("rom: ti trinn, ett bilde og én knapp, og pengene går", async ({ page }) => {
+    await seed(page, { ...CAREER, money: 600 });
+    await page.getByRole("button", { name: /Lars/ }).click();
+    // There is money for the first step: the room button has a dot.
+    await expect(page.getByRole("button", { name: "Rom, nytt" })).toBeVisible();
+    await place(page, "Rom").click();
+    await expect(page.getByRole("img", { name: "Rommet ditt, trinn 1: Start" })).toBeVisible();
+    await expect(page.getByRole("img", { name: "Trinn 1 av 10" })).toBeVisible();
+    // What the next step adds, and the price as the button.
+    await expect(page.getByRole("list", { name: "Du får" }).getByText("Rydding")).toBeVisible();
+    await play(page, "KJØP $500").click();
+    await expect.poll(async () => (await saved(page)).room).toBe(1);
+    expect((await saved(page)).money).toBe(100);
+    await expect(page.getByRole("img", { name: "Rommet ditt, trinn 2: Rydd" })).toBeVisible();
+    // The next step costs $1 000: too much, so the button is shut and says what is missing.
+    await expect(play(page, /^KJØP Du mangler/)).toBeDisabled();
+  });
+
+  test("rommet er ferdig på det siste trinnet", async ({ page }) => {
+    await seed(page, { ...CAREER, room: 9, money: 100000 });
     await page.getByRole("button", { name: /Lars/ }).click();
     await place(page, "Rom").click();
-    const tiles = page.getByRole("list", { name: "Rom" });
-    // The wall costs $500: too much for the $300, so its button is grey with a lock.
-    await expect(tiles.getByRole("button", { name: /\$500/ })).toBeDisabled();
-    // The floor costs $300, and the price is the button.
-    await tiles.getByRole("listitem").filter({ hasText: "Gulv" }).getByRole("button").click();
-    await expect.poll(async () => (await saved(page)).arena.floor).toBe(1);
-    expect((await saved(page)).money).toBe(0);
-    // No sentences about what it does.
-    await expect(page.getByText(/svakere/)).toHaveCount(0);
+    await expect(page.getByRole("img", { name: "Rommet ditt, trinn 10: Ultimate" })).toBeVisible();
+    await expect(play(page, /^FULLT/)).toBeDisabled();
   });
 
   test("trening: femten runder flytter nivået, og det blir lagret", async ({ page }) => {
@@ -169,20 +181,6 @@ test.describe("karriere", () => {
     expect(s.training).toHaveLength(1);
     await play(page, "OK").click();
     await expect(play(page, /^SPILL/)).toBeVisible();
-  });
-
-  test("nytt sted: kjøp klubbrommet, og alt du har kjøpt flytter med", async ({ page }) => {
-    const rich = { ...CAREER, money: 20000, profile: { home: "loft", darts: "middels" }, arena: { wall: 0, floor: 0, board: 1, light: 0, decor: 0, crowd: 0 } };
-    await seed(page, rich);
-    await page.getByRole("button", { name: /Lars/ }).click();
-    await expect(page.getByRole("img", { name: "Loftet ditt" })).toBeVisible();
-    await place(page, "Rom").click();
-    await page.getByRole("button", { name: /^\$15.000$/ }).click();
-    await expect(page.getByRole("img", { name: "Klubbrommet ditt" })).toBeVisible();
-    const s = await saved(page);
-    expect(s.profile.home).toBe("club");
-    expect(s.money).toBe(5000);
-    expect(s.arena.board).toBe(1);
   });
 
   test("menyen: profil og slett karrieren ligger bak de tre prikkene, og slett sier hva det koster", async ({ page }) => {

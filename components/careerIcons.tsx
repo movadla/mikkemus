@@ -99,3 +99,13 @@ export function SnowIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+/** A flag on a pole: the road to the world championship. */
+export function RoadIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M6 21V4" />
+      <path d="M6 5h11l-2.5 3.5L17 12H6" />
+    </svg>
+  );
+}

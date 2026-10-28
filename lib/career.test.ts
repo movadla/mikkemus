@@ -2,14 +2,12 @@ import { describe, expect, it } from "vitest";
 import { levelOfMed } from "./botLevels";
 import {
   GAMES,
-  SLOTS,
-  arenaBonus,
-  arenaSteps,
-  buyPlace,
-  buyUpgrade,
-  nextPlace,
-  whyNotMove,
-  nextPrice,
+  ROOM_MAX,
+  STAGES,
+  buyStage,
+  nextStage,
+  roomBonus,
+  roomPicture,
   whyNotBuy,
   LADDER,
   START_MONEY,
@@ -365,91 +363,60 @@ describe("challenges", () => {
   });
 });
 
-describe("the home arena", () => {
-  it("starts with nothing bought and no effect on the opponents", () => {
+describe("the room", () => {
+  it("starts as it was, with no effect on the opponents", () => {
     const c = fresh();
-    expect(c.arena).toEqual({ wall: 0, floor: 0, board: 0, light: 0, decor: 0, crowd: 0 });
-    expect(arenaSteps(c)).toBe(0);
-    expect(arenaBonus(c)).toBe(1);
+    expect(c.room).toBe(0);
+    expect(roomBonus(c)).toBe(1);
+    expect(nextStage(c)).toBe(STAGES[1]);
   });
 
-  it("sells each thing in three steps, dearer each time", () => {
-    for (const slot of SLOTS) {
-      expect(slot.steps).toHaveLength(4);
-      expect(slot.prices[1]).toBeGreaterThan(slot.prices[0]);
-      expect(slot.prices[2]).toBeGreaterThan(slot.prices[1]);
-    }
+  it("has ten steps, each dearer than the one before, and nine to buy for about $69 500", () => {
+    expect(STAGES).toHaveLength(10);
+    expect(ROOM_MAX).toBe(9);
+    expect(STAGES[0].price).toBe(0);
+    for (let i = 2; i < STAGES.length; i++) expect(STAGES[i].price).toBeGreaterThan(STAGES[i - 1].price);
+    expect(STAGES.reduce((sum, st) => sum + st.price, 0)).toBe(69500);
   });
 
-  it("takes the money and lifts the step", () => {
-    const c = buyUpgrade(rich(1000), "light");
-    expect(c.money).toBe(1000 - SLOTS.find((s) => s.id === "light")!.prices[0]);
-    expect(c.arena.light).toBe(1);
-    expect(nextPrice(c, "light")).toBe(SLOTS.find((s) => s.id === "light")!.prices[1]);
+  it("has a picture for each step, the same name for the same step", () => {
+    expect(roomPicture(0)).toBe("/career/room-01.jpg");
+    expect(roomPicture(9)).toBe("/career/room-10.jpg");
+    expect(roomPicture(42)).toBe("/career/room-10.jpg");
+    expect(roomPicture(-1)).toBe("/career/room-01.jpg");
   });
 
-  it("will not sell what there is no money for, and nothing past the third step", () => {
-    const poor = { ...fresh(), money: 10 };
-    expect(whyNotBuy(poor, "wall")).toMatch(/^Du mangler/);
-    expect(buyUpgrade(poor, "wall")).toBe(poor);
+  it("takes the money and moves the room to the next step", () => {
+    const c = buyStage(rich(1000));
+    expect(c.room).toBe(1);
+    expect(c.money).toBe(500);
+    expect(nextStage(c)).toBe(STAGES[2]);
+  });
+
+  it("will not sell what there is no money for, and nothing past the last step", () => {
+    const poor = { ...fresh(), money: 400 };
+    expect(whyNotBuy(poor)).toMatch(/^Du mangler \$100$/);
+    expect(buyStage(poor)).toBe(poor);
     let c = rich(1000000);
-    for (let i = 0; i < 3; i++) c = buyUpgrade(c, "crowd");
-    expect(c.arena.crowd).toBe(3);
-    expect(whyNotBuy(c, "crowd")).toBe("Fullt utbygd");
-    expect(nextPrice(c, "crowd")).toBeNull();
-    expect(buyUpgrade(c, "crowd")).toBe(c);
+    for (let i = 0; i < 12; i++) c = buyStage(c);
+    expect(c.room).toBe(9);
+    expect(whyNotBuy(c)).toBe("Fullt");
+    expect(nextStage(c)).toBeNull();
+    expect(buyStage(c)).toBe(c);
   });
 
-  it("makes the opponents weaker, a little for each step, and 14 % when everything is bought", () => {
+  it("makes the opponents weaker, a little for each step, and 14 % at the last", () => {
     let c = rich(1000000);
-    const before = arenaBonus(c);
-    c = buyUpgrade(c, "board");
-    expect(arenaBonus(c)).toBeGreaterThan(before);
-    for (const slot of SLOTS) for (let i = 0; i < 3; i++) c = buyUpgrade(c, slot.id);
-    expect(arenaSteps(c)).toBe(18);
-    expect(arenaBonus(c)).toBeCloseTo(1.144, 3);
+    const before = roomBonus(c);
+    c = buyStage(c);
+    expect(roomBonus(c)).toBeGreaterThan(before);
+    for (let i = 0; i < 8; i++) c = buyStage(c);
+    expect(roomBonus(c)).toBeCloseTo(1.1395, 3);
     const mean = (cc: Career) => {
       const bots = fieldFor(cc, TIERS.region, 9).filter((e) => e.isBot);
-      return bots.reduce((s, b) => s + b.skill!, 0) / bots.length;
+      return bots.reduce((sum, bot) => sum + bot.skill!, 0) / bots.length;
     };
     expect(mean(c)).toBeGreaterThan(mean(rich(1000000)));
-  });
-});
-
-describe("a new place", () => {
-  it("starts in one of the three and offers the club room first", () => {
-    const c = fresh();
-    expect(nextPlace(c)?.id).toBe("club");
-    expect(nextPlace({ ...c, profile: { ...c.profile, home: "loft" } })?.id).toBe("club");
-  });
-
-  it("takes the money, moves the career in, and keeps everything bought", () => {
-    let c = buyUpgrade(rich(100000), "board");
-    c = buyPlace(c);
-    expect(c.profile.home).toBe("club");
-    expect(c.money).toBe(100000 - SLOTS.find((s) => s.id === "board")!.prices[0] - 15000);
-    expect(c.arena.board).toBe(1);
-    expect(nextPlace(c)?.id).toBe("hall");
-    c = buyPlace(c);
-    expect(c.profile.home).toBe("hall");
-    expect(nextPlace(c)).toBeNull();
-    expect(whyNotMove(c)).toBe("Du har den største");
-    expect(buyPlace(c)).toBe(c);
-  });
-
-  it("will not sell what there is no money for", () => {
-    const poor = { ...fresh(), money: 1000 };
-    expect(whyNotMove(poor)).toMatch(/^Du mangler \$14\s000$/);
-    expect(buyPlace(poor)).toBe(poor);
-  });
-
-  it("makes the opponents weaker for a bigger place (the biggest counts 4 %, not on top of the club room)", () => {
-    const c = rich(1000000);
-    const club = buyPlace(c);
-    const hall = buyPlace(club);
-    expect(arenaBonus(club)).toBeCloseTo(1.02, 5);
-    expect(arenaBonus(hall)).toBeCloseTo(1.04, 5);
-    expect(arenaBonus(c)).toBe(1);
   });
 });
 

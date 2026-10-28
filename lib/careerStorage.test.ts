@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { newCareer } from "./career";
-import { mergeCareers } from "./careerStorage";
+import { mergeCareers, normalizeCareer } from "./careerStorage";
 
 const mk = (name: string, savedAt: string, money = 100) => ({ ...newCareer(name, "dyktig", "2026-10-01T10:00:00.000Z"), savedAt, money });
 
@@ -23,5 +23,25 @@ describe("merging careers", () => {
     const local = [mk("Lars", "2026-10-01T10:00:00.000Z")];
     expect(mergeCareers(local, [])).toEqual(local);
     expect(mergeCareers([], [])).toEqual([]);
+  });
+});
+
+
+describe("a career from before the room had steps", () => {
+  it("is brought across: two of the old steps are one of the new", () => {
+    const old = { ...mk("Lars", "2026-10-01T10:00:00.000Z"), arena: { wall: 1, floor: 0, board: 1, light: 1, decor: 1, crowd: 0 } } as unknown as Record<string, unknown>;
+    delete old.room;
+    expect(normalizeCareer(old as never).room).toBe(2);
+  });
+
+  it("keeps the step a career already has", () => {
+    expect(normalizeCareer({ ...mk("Lars", "2026-10-01T10:00:00.000Z"), room: 5 }).room).toBe(5);
+  });
+
+  it("starts a career with nothing from before at the first step, and never past the last", () => {
+    expect(normalizeCareer(mk("Lars", "2026-10-01T10:00:00.000Z")).room).toBe(0);
+    const huge = { ...mk("Lars", "2026-10-01T10:00:00.000Z"), arena: { a: 18, b: 18 } } as unknown as Record<string, unknown>;
+    delete huge.room;
+    expect(normalizeCareer(huge as never).room).toBe(9);
   });
 });

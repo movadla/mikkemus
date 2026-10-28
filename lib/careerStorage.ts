@@ -1,4 +1,10 @@
-import { DEFAULT_PROFILE, LADDER, START_ARENA, type Career, type Trophy } from "./career";
+import { DEFAULT_PROFILE, LADDER, ROOM_MAX, type Career, type Trophy } from "./career";
+
+/** A career from the time the room was six things to buy: its steps, two for one, are the step of the room now. */
+function roomFromArena(arena: Record<string, number> | undefined): number {
+  const steps = Object.values(arena ?? {}).reduce((s, n) => s + (Number(n) || 0), 0);
+  return Math.min(ROOM_MAX, Math.round(steps / 2));
+}
 
 /** Trophies for a career from before they were kept: one for each title in the history. */
 function trophiesFromHistory(c: Career): Trophy[] {
@@ -23,7 +29,7 @@ const latest = new Map<string, Career>();
 /** A career from before it had a look, or one whose event was of an older kind, is brought up to date rather than dropped. */
 function normalize(c: Career): Career {
   const old = c.active && !("cup" in c.active);
-  return { ...c, profile: c.profile ?? DEFAULT_PROFILE, worldTitles: c.worldTitles ?? 0, qualified: c.qualified ?? [], trophies: c.trophies ?? trophiesFromHistory(c), training: c.training ?? [], arena: { ...START_ARENA, ...(c.arena ?? {}) }, challenge: c.challenge ?? null, challenges: c.challenges ?? 0, active: old ? null : c.active };
+  return { ...c, profile: c.profile ?? DEFAULT_PROFILE, worldTitles: c.worldTitles ?? 0, qualified: c.qualified ?? [], trophies: c.trophies ?? trophiesFromHistory(c), training: c.training ?? [], room: typeof c.room === "number" ? c.room : roomFromArena((c as { arena?: Record<string, number> }).arena), challenge: c.challenge ?? null, challenges: c.challenges ?? 0, active: old ? null : c.active };
 }
 
 function readLocal(): Career[] {
@@ -122,3 +128,4 @@ export async function deleteCareer(id: string): Promise<void> {
   const { error } = await supabase.from("careers").delete().eq("id", id);
   if (error) console.warn("Kunne ikke slette karrieren:", error.message);
 }
+export { normalize as normalizeCareer };

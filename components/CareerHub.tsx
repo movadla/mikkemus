@@ -2,40 +2,21 @@
 
 import { useState } from "react";
 import { DRILL_ROUNDS } from "@/lib/training";
-import {
-  GAMES,
-  LADDER,
-  SLOTS,
-  buyPlace,
-  buyUpgrade,
-  dollars,
-  isUnlocked,
-  nextPlace,
-  nextPrice,
-  offerChallenge,
-  stakeFor,
-  startEvent,
-  whyNot,
-  whyNotBuy,
-  whyNotMove,
-  type Career,
-  type GameId,
-  type SlotId,
-  type Tier,
-} from "@/lib/career";
+import { GAMES, LADDER, ROOM_MAX, STAGES, buyStage, dollars, isUnlocked, nextStage, offerChallenge, stakeFor, startEvent, whyNot, whyNotBuy, type Career, type GameId, type Tier } from "@/lib/career";
 import { cupColor } from "@/lib/botCup";
 import { rankOf, rankProgress, roomBadge } from "@/lib/careerGoals";
 import { heroButton, heroFor } from "@/lib/careerHero";
-import { uiFeedback } from "@/lib/uiSound";
+import { careerSound, uiFeedback } from "@/lib/uiSound";
 import { levelLabel, newSeed, oneDecimal } from "./careerFormat";
-import { ArenaIcon, HomeIcon, LockIcon, SlotIcon, StarIcon } from "./careerIcons";
+import { HomeIcon, LockIcon, RoadIcon, StarIcon } from "./careerIcons";
 import { CareerHud } from "./CareerHud";
 import { CareerProfile } from "./CareerProfile";
 import { markTipSeen, TipPointer, useTipSeen } from "./CareerTip";
 import { ConfirmDialog } from "./ConfirmDialog";
-import { HomeScene } from "./HomeScene";
 import { BoltIcon, BullseyeIcon, CoinIcon, MoreIcon } from "./icons";
 import { PlayButton } from "./PlayButton";
+import { OverRoom } from "./RoomBackdrop";
+import { RoomPicture } from "./RoomPicture";
 import { RoundButton } from "./RoundButton";
 import { Button } from "./ui/Button";
 import { CupEmblem } from "./ui/CupEmblem";
@@ -66,25 +47,14 @@ function GoalStrip({ career }: { career: Career }) {
   );
 }
 
-/** The price as a button: teal when it can be bought, grey with a lock when it cannot yet, and a gold frame when there is no more to buy. */
-function BuyButton({ price, off, full, onClick }: { price: number | null; off: boolean; full: boolean; onClick: () => void }) {
-  if (full || price === null) return <span className="buy-btn buy-btn-full">Full</span>;
-  return (
-    <button type="button" onClick={onClick} disabled={off} className={`buy-btn tactile ${off ? "buy-btn-off" : ""} ${FOCUS_RING}`}>
-      {off && <LockIcon className="w-3.5 h-3.5" />}
-      {dollars(price)}
-    </button>
-  );
-}
-
-/** The home of a career, made as simple as it goes: the room, one big button, four round ones. Everything else is behind one of them. */
+/** The home of a career, made as simple as it goes: the room behind it, one big button, four round ones. Everything else is behind one of them. */
 export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDelete }: { career: Career; onBack: () => void; onPlay: () => void; onChallenge: () => void; onTrain: () => void; commit: (c: Career) => void; onDelete: () => void }) {
   const [view, setView] = useState<View>("home");
   const [menu, setMenu] = useState(false);
   const [profile, setProfile] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  // The thing just bought flashes in the picture for a moment.
-  const [pop, setPop] = useState<SlotId | null>(null);
+  // A room that has just changed: the step it came from, while the new picture comes in over it.
+  const [from, setFrom] = useState<number | null>(null);
   // The step of the road that is picked (the one that is going, or the one the main button leads to).
   const hero = heroFor(career);
   const [picked, setPicked] = useState<Tier["id"] | null>(null);
@@ -105,11 +75,13 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
   const button = heroButton(hero);
   // Something beyond the pub is open and has not been entered: the road button says so.
   const roadDot = !career.active && !career.challenge && LADDER.some((t) => t.id !== "lu" && whyNot(career, t) === null);
-  const buy = (fn: () => Career, slot: SlotId) => {
+  const buy = () => {
+    const was = career.room;
     uiFeedback("confirm");
-    commit(fn());
-    setPop(slot);
-    setTimeout(() => setPop(null), 1500);
+    careerSound("unlock");
+    commit(buyStage(career));
+    setFrom(was);
+    setTimeout(() => setFrom(null), 1100);
   };
 
   const menuButton = (
@@ -167,173 +139,166 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
 
   if (view === "home") {
     return (
-      <div className="animate-screen-push screen career-skin">
-        {sheets}
-        <div className="screen-inner career-home">
-          <CareerHud career={career} end={menuButton} />
-          <GoalStrip career={career} />
-          <div className="career-home-room">
-            <div className="text-center">
+      <OverRoom stage={career.room} dim={14}>
+        <div className="animate-screen-push screen">
+          {sheets}
+          <div className="screen-inner career-home">
+            <CareerHud career={career} end={menuButton} />
+            <GoalStrip career={career} />
+            <div className="flex-1" />
+            <div className="room-text rise-in" style={{ "--d": "0.1s" } as React.CSSProperties}>
               <p className="font-display" style={{ fontSize: "var(--text-num)", lineHeight: 1.05, color: "var(--color-cream)" }}>
                 {career.player}
               </p>
               <p style={{ color: "var(--color-gold-strong)", fontWeight: 700, fontSize: "var(--text-small)", letterSpacing: "0.06em", textTransform: "uppercase" }}>{rankOf(career)}</p>
             </div>
-            <HomeScene home={career.profile.home} arena={career.arena} trophies={career.trophies} />
-          </div>
-          <div className="relative">
-            {!playTip && <TipPointer id="play" label="Trykk her" />}
-            <PlayButton label={button.label} sub={button.sub} tone={hero.kind === "event" && hero.done ? "gold" : hero.kind === "challenge" && hero.done && hero.challenge.won ? "gold" : "teal"} onClick={press} />
-          </div>
-          <div className="round4">
-            <RoundButton icon={<HomeIcon />} label="Rom" badge={roomBadge(career)} onClick={() => go("rooms")} />
-            <RoundButton icon={<BullseyeIcon />} label="Trening" onClick={() => go("training")} />
-            <RoundButton icon={<BoltIcon />} label="Utfordring" onClick={() => go("challenges")} />
-            <RoundButton icon={<ArenaIcon />} label="Veien" badge={roadDot} onClick={() => go("road")} />
+            <div className="relative rise-in" style={{ "--d": "0.2s" } as React.CSSProperties}>
+              {!playTip && <TipPointer id="play" label="Trykk her" />}
+              <PlayButton label={button.label} sub={button.sub} tone={hero.kind === "event" && hero.done ? "gold" : hero.kind === "challenge" && hero.done && hero.challenge.won ? "gold" : "teal"} onClick={press} />
+            </div>
+            <div className="round4 rise-in" style={{ "--d": "0.32s" } as React.CSSProperties}>
+              <RoundButton icon={<HomeIcon />} label="Rom" badge={roomBadge(career)} onClick={() => go("rooms")} />
+              <RoundButton icon={<BullseyeIcon />} label="Trening" onClick={() => go("training")} />
+              <RoundButton icon={<BoltIcon />} label="Utfordring" onClick={() => go("challenges")} />
+              <RoundButton icon={<RoadIcon />} label="Veien" badge={roadDot} onClick={() => go("road")} />
+            </div>
           </div>
         </div>
-      </div>
+      </OverRoom>
     );
   }
 
   const selected = LADDER.find((t) => t.id === (picked ?? (hero.kind === "challenge" ? "lu" : hero.tier.id))) ?? LADDER[0];
   const selWhy = career.active?.tier === selected.id ? null : whyNot(career, selected);
   const selState = career.active?.tier === selected.id ? "active" : !isUnlocked(career, selected) ? "locked" : selWhy ? "short" : "open";
+  const next = nextStage(career);
+  const buyWhy = whyNotBuy(career);
 
   return (
-    <div className="animate-screen-push screen career-skin" style={{ paddingBottom: "1rem" }}>
-      {sheets}
-      <div className="screen-inner flex flex-col gap-3" style={{ minHeight: "calc(100dvh - 2rem)" }}>
-        <CareerHud career={career} onBack={() => setView("home")} title={TITLE[view]} />
+    <OverRoom stage={career.room} dim={view === "rooms" ? 78 : 58} blur={view === "rooms" ? 10 : 5}>
+      <div className="animate-screen-push screen" style={{ paddingBottom: "1rem" }}>
+        {sheets}
+        <div className="screen-inner flex flex-col gap-3" style={{ minHeight: "calc(100dvh - 2rem)" }}>
+          <CareerHud career={career} onBack={() => setView("home")} title={TITLE[view]} />
 
-        {view === "rooms" && (
-          <>
-            <HomeScene home={career.profile.home} arena={career.arena} trophies={career.trophies} pop={pop} compact />
-            {nextPlace(career) && (
-              <div className="room-tile room-tile-wide">
-                <span className="room-tile-ico">
-                  <ArenaIcon />
-                </span>
-                <b className="flex-1 min-w-0 truncate">{nextPlace(career)!.name}</b>
-                <BuyButton price={nextPlace(career)!.price} off={!!whyNotMove(career)} full={false} onClick={() => buy(() => buyPlace(career), "wall")} />
+          {view === "rooms" && (
+            <>
+              <RoomPicture stage={career.room} from={from} alt={`Rommet ditt, trinn ${career.room + 1}: ${STAGES[career.room].name}`} className="room-card" />
+              <div className="pips10" role="img" aria-label={`Trinn ${career.room + 1} av ${ROOM_MAX + 1}`}>
+                {STAGES.map((s, i) => (
+                  <i key={s.name} className={i <= career.room ? "on" : ""} />
+                ))}
               </div>
-            )}
-            <ul className="grid grid-cols-2 gap-2" aria-label="Rom">
-              {SLOTS.map((slot) => {
-                const step = career.arena[slot.id];
-                const price = nextPrice(career, slot.id);
-                return (
-                  <li key={slot.id} className="room-tile">
-                    <span className="room-tile-ico">
-                      <SlotIcon id={slot.id} />
-                    </span>
-                    <b>{slot.name}</b>
-                    <span className="pips" role="img" aria-label={`${step} av 3`}>
-                      {[0, 1, 2].map((i) => (
-                        <i key={i} className={i < step ? "on" : ""} />
-                      ))}
-                    </span>
-                    <BuyButton price={price} off={!!whyNotBuy(career, slot.id)} full={price === null} onClick={() => buy(() => buyUpgrade(career, slot.id), slot.id)} />
-                  </li>
-                );
-              })}
-            </ul>
-          </>
-        )}
+              <p className="font-display text-center room-text" style={{ fontSize: "var(--text-num)", textTransform: "uppercase", letterSpacing: "0.04em", lineHeight: 1.05, color: "var(--color-cream)" }}>
+                {STAGES[career.room].name}
+              </p>
+              <div className="mt-auto space-y-3">
+                {next && (
+                  <ul className="flex gap-2 justify-center flex-wrap" aria-label="Du får">
+                    {next.items.map((item) => (
+                      <li key={item} className="stage-chip">
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <PlayButton label={next ? "KJØP" : "FULLT"} sub={next ? (buyWhy ?? dollars(next.price)) : "Rommet er ferdig"} disabled={!!buyWhy} onClick={buy} />
+              </div>
+            </>
+          )}
 
-        {view === "road" && (
-          <>
-            <ol className="career-road" aria-label="Veien til VM">
-              {[...LADDER].reverse().map((tier) => {
-                const locked = !isUnlocked(career, tier);
-                const here = career.active?.tier === tier.id;
-                const colour = cupColor(tier.kind);
-                return (
-                  <li key={tier.id} className="career-road-node" data-state={locked ? "locked" : "open"}>
-                    <button type="button" onClick={() => setPicked(tier.id)} aria-pressed={selected.id === tier.id} className={`road-row tactile ${selected.id === tier.id ? "road-row-on" : ""} ${FOCUS_RING}`} style={{ "--cup": colour } as React.CSSProperties}>
-                      <span className="career-road-dot" style={{ borderColor: locked ? "var(--color-border)" : colour, color: locked ? "var(--color-muted)" : colour, boxShadow: here ? `0 0 0 5px color-mix(in srgb, ${colour} 25%, transparent)` : "none" }} aria-hidden>
-                        {locked ? <LockIcon className="w-5 h-5" /> : <CupEmblem kind={tier.kind} className="w-6 h-6" />}
-                      </span>
-                      <b className="font-display flex-1 min-w-0 truncate" style={{ fontSize: "var(--text-title)", color: locked ? "var(--color-text-2)" : "var(--color-cream)" }}>
-                        {tier.short}
-                      </b>
-                      <span className="tabular" style={{ color: locked ? "var(--color-muted)" : "var(--color-gold-strong)", fontWeight: 800 }}>
-                        {dollars(tier.prizes.winner ?? 0)}
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ol>
-            <div className="mt-auto">
-              <PlayButton
-                label="SPILL"
-                sub={selState === "active" ? "Fortsett" : selState === "locked" ? selected.qualify : selState === "short" ? selWhy ?? undefined : selected.fee === 0 ? "gratis" : dollars(selected.fee)}
-                disabled={selState === "locked" || selState === "short"}
-                onClick={() => {
-                  uiFeedback("click");
-                  if (selState === "active") onPlay();
-                  else {
-                    commit(startEvent(career, selected.id, newSeed()));
-                    onPlay();
-                  }
-                }}
-              />
-            </div>
-          </>
-        )}
+          {view === "road" && (
+            <>
+              <ol className="career-road" aria-label="Veien til VM">
+                {[...LADDER].reverse().map((tier) => {
+                  const locked = !isUnlocked(career, tier);
+                  const here = career.active?.tier === tier.id;
+                  const colour = cupColor(tier.kind);
+                  return (
+                    <li key={tier.id} className="career-road-node" data-state={locked ? "locked" : "open"}>
+                      <button type="button" onClick={() => setPicked(tier.id)} aria-pressed={selected.id === tier.id} className={`road-row road-row-glass tactile ${selected.id === tier.id ? "road-row-on" : ""} ${FOCUS_RING}`} style={{ "--cup": colour } as React.CSSProperties}>
+                        <span className="career-road-dot" style={{ borderColor: locked ? "var(--color-border)" : colour, color: locked ? "var(--color-muted)" : colour, boxShadow: here ? `0 0 0 5px color-mix(in srgb, ${colour} 25%, transparent)` : "none" }} aria-hidden>
+                          {locked ? <LockIcon className="w-5 h-5" /> : <CupEmblem kind={tier.kind} className="w-6 h-6" />}
+                        </span>
+                        <b className="font-display flex-1 min-w-0 truncate" style={{ fontSize: "var(--text-title)", color: locked ? "var(--color-text-2)" : "var(--color-cream)" }}>
+                          {tier.short}
+                        </b>
+                        <span className="tabular" style={{ color: locked ? "var(--color-muted)" : "var(--color-gold-strong)", fontWeight: 800 }}>
+                          {dollars(tier.prizes.winner ?? 0)}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ol>
+              <div className="mt-auto">
+                <PlayButton
+                  label="SPILL"
+                  sub={selState === "active" ? "Fortsett" : selState === "locked" ? selected.qualify : selState === "short" ? selWhy ?? undefined : selected.fee === 0 ? "gratis" : dollars(selected.fee)}
+                  disabled={selState === "locked" || selState === "short"}
+                  onClick={() => {
+                    uiFeedback("click");
+                    if (selState === "active") onPlay();
+                    else {
+                      commit(startEvent(career, selected.id, newSeed()));
+                      onPlay();
+                    }
+                  }}
+                />
+              </div>
+            </>
+          )}
 
-        {view === "training" && (
-          <>
-            <HomeScene home={career.profile.home} arena={career.arena} trophies={career.trophies} compact />
-            <div className="room-tile room-tile-wide" style={{ display: "grid", justifyItems: "center", gap: "0.15rem", padding: "1rem" }}>
-              <span className="section-label">NIVÅ</span>
-              <b className="font-display" style={{ fontSize: "var(--text-num)", color: "var(--color-cream)" }}>
-                {levelLabel(career.skillMed)}
-              </b>
-              <span className="tabular" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
-                {oneDecimal(career.skillMed)} mm{career.training[0] ? ` · sist ${oneDecimal(career.training[0].average)}` : ""}
-              </span>
-            </div>
-            <div className="mt-auto">
+          {view === "training" && (
+            <>
+              <div className="flex-1" />
+              <div className="room-tile room-tile-wide" style={{ display: "grid", justifyItems: "center", gap: "0.15rem", padding: "1rem" }}>
+                <span className="section-label">NIVÅ</span>
+                <b className="font-display" style={{ fontSize: "var(--text-num)", color: "var(--color-cream)" }}>
+                  {levelLabel(career.skillMed)}
+                </b>
+                <span className="tabular" style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>
+                  {oneDecimal(career.skillMed)} mm{career.training[0] ? ` · sist ${oneDecimal(career.training[0].average)}` : ""}
+                </span>
+              </div>
               <PlayButton label="START" sub={`${DRILL_ROUNDS} runder · trebling 20`} onClick={onTrain} />
-            </div>
-          </>
-        )}
+            </>
+          )}
 
-        {view === "challenges" && (
-          <>
-            <HomeScene home={career.profile.home} arena={career.arena} trophies={career.trophies} compact />
-            <ul className="mt-auto space-y-2" aria-label="Utfordringer">
-              {(Object.keys(GAMES) as GameId[]).map((game) => {
-                const shut = !!career.active || !!career.challenge;
-                return (
-                  <li key={game}>
-                    <button
-                      type="button"
-                      disabled={shut}
-                      className={`pick-row tactile ${FOCUS_RING}`}
-                      onClick={() => {
-                        uiFeedback("click");
-                        commit(offerChallenge(career, game, newSeed()));
-                        onChallenge();
-                      }}
-                    >
-                      <b className="font-display flex-1 text-left" style={{ fontSize: "var(--text-num)", color: "var(--color-cream)" }}>
-                        {GAMES[game].name}
-                      </b>
-                      <span className="inline-flex items-center gap-1.5 tabular" style={{ color: "var(--color-gold-strong)", fontWeight: 800, fontSize: "var(--text-title)" }}>
-                        <CoinIcon className="w-5 h-5" />
-                        {dollars(stakeFor(career, game))}
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </>
-        )}
+          {view === "challenges" && (
+            <>
+              <div className="flex-1" />
+              <ul className="space-y-2" aria-label="Utfordringer">
+                {(Object.keys(GAMES) as GameId[]).map((game) => {
+                  const shut = !!career.active || !!career.challenge;
+                  return (
+                    <li key={game}>
+                      <button
+                        type="button"
+                        disabled={shut}
+                        className={`pick-row tactile ${FOCUS_RING}`}
+                        onClick={() => {
+                          uiFeedback("click");
+                          commit(offerChallenge(career, game, newSeed()));
+                          onChallenge();
+                        }}
+                      >
+                        <b className="font-display flex-1 text-left" style={{ fontSize: "var(--text-num)", color: "var(--color-cream)" }}>
+                          {GAMES[game].name}
+                        </b>
+                        <span className="inline-flex items-center gap-1.5 tabular" style={{ color: "var(--color-gold-strong)", fontWeight: 800, fontSize: "var(--text-title)" }}>
+                          <CoinIcon className="w-5 h-5" />
+                          {dollars(stakeFor(career, game))}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
+          )}
+        </div>
       </div>
-    </div>
+    </OverRoom>
   );
 }

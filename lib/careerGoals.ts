@@ -3,7 +3,7 @@
  * (the next tournament, the next rank, the next thing for the room). Each is a line, a bar and the way to it, so every visit to the home
  * screen ends with the player a bit closer to something. Plain data in and out.
  */
-import { LADDER, SLOTS, TIERS, arenaSteps, dollars, isUnlocked, nextPlace, nextPrice, whyNot, type Career, type Tier } from "./career";
+import { LADDER, TIERS, dollars, isUnlocked, nextStage, whyNot, type Career, type Tier } from "./career";
 
 export type Rank = { name: string; /** Ranking points it takes. */ min: number };
 
@@ -67,16 +67,11 @@ function rankGoal(career: Career): Goal | null {
   return { id: "rank", title: next.name, line: `${next.min - career.points} poeng igjen`, progress: clamp01((career.points - from) / (next.min - from)), note: `${career.points} av ${next.min} poeng` };
 }
 
-/** The cheapest thing left to buy for the room (or the next place when everything is bought). */
+/** The next step of the room, and how far the money is to it. */
 function roomGoal(career: Career): Goal | null {
-  const options = SLOTS.map((s) => ({ s, price: nextPrice(career, s.id) })).filter((o): o is { s: (typeof SLOTS)[number]; price: number } => o.price !== null);
-  if (options.length === 0) {
-    const place = nextPlace(career);
-    return place ? { id: "room", title: place.name, line: place.about, progress: clamp01(career.money / place.price), note: `${dollars(career.money)} av ${dollars(place.price)}` } : null;
-  }
-  const best = options.sort((a, b) => a.price - b.price)[0];
-  const step = career.arena[best.s.id];
-  return { id: "room", title: `${best.s.name}: ${best.s.steps[step + 1]}`, line: career.money >= best.price ? "Du har råd til den nå" : `Du mangler ${dollars(best.price - career.money)}`, progress: clamp01(career.money / best.price), note: `${dollars(Math.min(career.money, best.price))} av ${dollars(best.price)}` };
+  const next = nextStage(career);
+  if (!next) return null;
+  return { id: "room", title: next.name, line: career.money >= next.price ? "Du har råd til den nå" : `Du mangler ${dollars(next.price - career.money)}`, progress: clamp01(career.money / next.price), note: `${dollars(Math.min(career.money, next.price))} av ${dollars(next.price)}` };
 }
 
 /** The goals to show, in the order they are most likely to be reached. */
@@ -86,9 +81,6 @@ export function goalsOf(career: Career): Goal[] {
 
 /** How many steps of the ladder have been opened to this player (for the road). */
 export const stepsOpen = (career: Career) => LADDER.filter((t) => isUnlocked(career, t)).length;
-
-/** What the arena has made of the player: steps bought out of all there are. */
-export const roomShare = (career: Career) => arenaSteps(career) / (SLOTS.length * 3);
 
 export { TIERS };
 
@@ -108,11 +100,6 @@ export function rankProgress(career: Career): { next: number; progress: number; 
 
 /** Whether there is something new to buy for the room that the player can afford: the red dot on the room button. */
 export function roomBadge(career: Career): boolean {
-  return SLOTS.some((s) => {
-    const price = nextPrice(career, s.id);
-    return price !== null && career.money >= price;
-  }) || (() => {
-    const place = nextPlace(career);
-    return !!place && career.money >= place.price;
-  })();
+  const next = nextStage(career);
+  return !!next && career.money >= next.price;
 }

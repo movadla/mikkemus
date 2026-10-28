@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buyUpgrade, newCareer, type Career } from "./career";
+import { buyStage, newCareer, type Career } from "./career";
 import { RANKS, WORLD_CHAMPION, goalsOf, nextRank, rankLevel, rankOf, rankProgress, roomBadge } from "./careerGoals";
 
 const AT = "2026-10-28T20:00:00.000Z";
@@ -53,13 +53,14 @@ describe("goals", () => {
     expect(g.progress).toBeCloseTo(0.5, 5);
   });
 
-  it("points at the cheapest thing for the room, and says when it can be bought", () => {
-    const g = goalsOf({ ...fresh(), money: 100 }).find((x) => x.id === "room")!;
-    expect(g.title).toMatch(/^Publikum/);
-    expect(g.line).toMatch(/^Du mangler/);
+  it("points at the next step of the room, and says when it can be bought", () => {
+    const g = goalsOf({ ...fresh(), money: 300 }).find((x) => x.id === "room")!;
+    expect(g.title).toBe("Rydd");
+    expect(g.line).toMatch(/^Du mangler \$200$/);
+    expect(g.progress).toBeCloseTo(0.6, 5);
     const rich = goalsOf({ ...fresh(), money: 1000 }).find((x) => x.id === "room")!;
     expect(rich.line).toBe("Du har råd til den nå");
-    expect(buyUpgrade({ ...fresh(), money: 1000 }, "decor").arena.decor).toBe(1);
+    expect(buyStage({ ...fresh(), money: 1000 }).room).toBe(1);
   });
 
   it("drops what is done: no rank goal for a world champion", () => {
@@ -82,7 +83,8 @@ describe("the level and the dot", () => {
   });
 
   it("flags the room only when there is something the player can afford", () => {
-    expect(roomBadge({ ...fresh(), money: 100 })).toBe(false);
-    expect(roomBadge({ ...fresh(), money: 150 })).toBe(true);
+    expect(roomBadge({ ...fresh(), money: 400 })).toBe(false);
+    expect(roomBadge({ ...fresh(), money: 500 })).toBe(true);
+    expect(roomBadge({ ...fresh(), money: 1000000, room: 9 })).toBe(false);
   });
 });

@@ -3,7 +3,7 @@
 import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { dollars, type Career } from "@/lib/career";
 import { rankLevel, rankOf } from "@/lib/careerGoals";
-import { ArrowLeftIcon, CoinIcon } from "./icons";
+import { ArrowLeftIcon, CoinIcon, TrophyIcon } from "./icons";
 import { FOCUS_RING } from "./ui/focus";
 import { StarIcon } from "./careerIcons";
 import { CountUp } from "./ui/CountUp";
@@ -88,6 +88,12 @@ export function CareerHud({ career, end, onBack, title }: { career: Career; end?
       {coin}
       <SaveDot savedAt={career.savedAt} />
       <span className="flex-1" />
+      {career.trophies.length > 0 && (
+        <span className="inline-flex items-center gap-1.5 tabular" style={{ ...chip, color: "var(--color-gold-strong)" }} title="Pokaler" aria-label={`${career.trophies.length} pokaler`}>
+          <TrophyIcon className="w-5 h-5" />
+          {career.trophies.length}
+        </span>
+      )}
       <span className="inline-flex items-center gap-1.5 tabular" style={{ ...chip, color: "var(--color-teal)" }} title={rankOf(career)} aria-label={`Nivå ${rankLevel(career)}, ${rankOf(career)}`}>
         <StarIcon className="w-5 h-5" />
         {rankLevel(career)}

@@ -1,6 +1,6 @@
 "use client";
 
-import { DARTS, HOMES, PLACES, PLACE_LABEL, TIERS, dollars, type Career } from "@/lib/career";
+import { DARTS, PLACE_LABEL, STAGES, TIERS, dollars, type Career } from "@/lib/career";
 import { nextRank, rankOf } from "@/lib/careerGoals";
 import { teamKitsOf, useRoster } from "@/lib/storage";
 import { levelLabel, oneDecimal } from "./careerFormat";
@@ -27,7 +27,6 @@ export function CareerProfile({ career }: { career: Career }) {
   const roster = useRoster();
   const record = roster.find((r) => r.name === career.player);
   const next = nextRank(career);
-  const place = HOMES.find((h) => h.id === career.profile.home)?.name ?? PLACES.find((p) => p.id === career.profile.home)?.name ?? "";
   const darts = DARTS.find((d) => d.id === career.profile.darts)?.name ?? "";
   return (
     <div className="space-y-4">
@@ -58,7 +57,7 @@ export function CareerProfile({ career }: { career: Career }) {
         <Stat label="Nivå" value={levelLabel(career.skillMed)} />
       </div>
       <p style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
-        {place} · {darts} dart · MED {oneDecimal(career.skillMed)} mm · saldo {dollars(career.money)}
+        Rom: {STAGES[career.room].name} · {darts} dart · MED {oneDecimal(career.skillMed)} mm · saldo {dollars(career.money)}
       </p>
       {career.history.length > 0 && (
         <section aria-label="Siste">
