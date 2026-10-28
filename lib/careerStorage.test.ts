@@ -39,7 +39,7 @@ describe("a career from before the room had steps", () => {
   });
 
   it("starts a career with nothing from before at the first step, and never past the last", () => {
-    expect(normalizeCareer(mk("Lars", "2026-10-01T10:00:00.000Z")).room).toBe(0);
+    expect(normalizeCareer(mk("Lars", "2026-10-01T10:00:00.000Z")).room).toBe(1);
     const huge = { ...mk("Lars", "2026-10-01T10:00:00.000Z"), arena: { a: 18, b: 18 } } as unknown as Record<string, unknown>;
     delete huge.room;
     expect(normalizeCareer(huge as never).room).toBe(9);

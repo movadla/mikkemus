@@ -139,7 +139,7 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
 
   if (view === "home") {
     return (
-      <OverRoom stage={career.room} dim={14}>
+      <OverRoom stage={career.room} dim={30} blur={1.5}>
         <div className="animate-screen-push screen">
           {sheets}
           <div className="screen-inner career-home">

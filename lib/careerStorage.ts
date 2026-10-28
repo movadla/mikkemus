@@ -1,4 +1,4 @@
-import { DEFAULT_PROFILE, LADDER, ROOM_MAX, type Career, type Trophy } from "./career";
+import { DEFAULT_PROFILE, LADDER, ROOM_MAX, START_ROOM, type Career, type Trophy } from "./career";
 
 /** A career from the time the room was six things to buy: its steps, two for one, are the step of the room now. */
 function roomFromArena(arena: Record<string, number> | undefined): number {
@@ -44,7 +44,7 @@ function renamed(a: Career["active"]): Career["active"] {
 function normalize(career: Career): Career {
   const c = { ...career, history: (career.history ?? []).map((h) => ({ ...h, event: ly(h.event) ?? h.event })) };
   const old = c.active && !("cup" in c.active);
-  return { ...c, profile: c.profile ?? DEFAULT_PROFILE, worldTitles: c.worldTitles ?? 0, qualified: c.qualified ?? [], trophies: c.trophies ?? trophiesFromHistory(c), training: c.training ?? [], room: typeof c.room === "number" ? c.room : roomFromArena((c as { arena?: Record<string, number> }).arena), challenge: c.challenge ?? null, challenges: c.challenges ?? 0, active: old ? null : renamed(c.active) };
+  return { ...c, profile: c.profile ?? DEFAULT_PROFILE, worldTitles: c.worldTitles ?? 0, qualified: c.qualified ?? [], trophies: c.trophies ?? trophiesFromHistory(c), training: c.training ?? [], room: Math.max(START_ROOM, typeof c.room === "number" ? c.room : roomFromArena((c as { arena?: Record<string, number> }).arena)), challenge: c.challenge ?? null, challenges: c.challenges ?? 0, active: old ? null : renamed(c.active) };
 }
 
 function readLocal(): Career[] {

@@ -3,6 +3,7 @@ import { levelOfMed } from "./botLevels";
 import {
   GAMES,
   ROOM_MAX,
+  START_ROOM,
   STAGES,
   buyStage,
   nextStage,
@@ -364,11 +365,12 @@ describe("challenges", () => {
 });
 
 describe("the room", () => {
-  it("starts as it was, with no effect on the opponents", () => {
+  it("starts at the second picture, tidied, with no effect on the opponents", () => {
     const c = fresh();
-    expect(c.room).toBe(0);
+    expect(c.room).toBe(START_ROOM);
+    expect(START_ROOM).toBe(1);
     expect(roomBonus(c)).toBe(1);
-    expect(nextStage(c)).toBe(STAGES[1]);
+    expect(nextStage(c)).toBe(STAGES[2]);
   });
 
   it("has ten steps, each dearer than the one before, and nine to buy for about $69 500", () => {
@@ -387,15 +389,15 @@ describe("the room", () => {
   });
 
   it("takes the money and moves the room to the next step", () => {
-    const c = buyStage(rich(1000));
-    expect(c.room).toBe(1);
+    const c = buyStage(rich(1500));
+    expect(c.room).toBe(2);
     expect(c.money).toBe(500);
-    expect(nextStage(c)).toBe(STAGES[2]);
+    expect(nextStage(c)).toBe(STAGES[3]);
   });
 
   it("will not sell what there is no money for, and nothing past the last step", () => {
     const poor = { ...fresh(), money: 400 };
-    expect(whyNotBuy(poor)).toBe("Mangler $100");
+    expect(whyNotBuy(poor)).toBe("Mangler $600");
     expect(buyStage(poor)).toBe(poor);
     let c = rich(1000000);
     for (let i = 0; i < 12; i++) c = buyStage(c);
@@ -410,8 +412,9 @@ describe("the room", () => {
     const before = roomBonus(c);
     c = buyStage(c);
     expect(roomBonus(c)).toBeGreaterThan(before);
-    for (let i = 0; i < 8; i++) c = buyStage(c);
-    expect(roomBonus(c)).toBeCloseTo(1.1395, 3);
+    for (let i = 0; i < 7; i++) c = buyStage(c);
+    expect(c.room).toBe(ROOM_MAX);
+    expect(roomBonus(c)).toBeCloseTo(1.14, 5);
     const mean = (cc: Career) => {
       const bots = fieldFor(cc, TIERS.region, 9).filter((e) => e.isBot);
       return bots.reduce((sum, bot) => sum + bot.skill!, 0) / bots.length;

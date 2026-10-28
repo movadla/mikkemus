@@ -55,12 +55,12 @@ describe("goals", () => {
 
   it("points at the next step of the room, and says when it can be bought", () => {
     const g = goalsOf({ ...fresh(), money: 300 }).find((x) => x.id === "room")!;
-    expect(g.title).toBe("Ryddet");
-    expect(g.line).toBe("Mangler $200");
-    expect(g.progress).toBeCloseTo(0.6, 5);
+    expect(g.title).toBe("Nye vegger");
+    expect(g.line).toBe("Mangler $700");
+    expect(g.progress).toBeCloseTo(0.3, 5);
     const rich = goalsOf({ ...fresh(), money: 1000 }).find((x) => x.id === "room")!;
     expect(rich.line).toBe("Du har råd til den nå");
-    expect(buyStage({ ...fresh(), money: 1000 }).room).toBe(1);
+    expect(buyStage({ ...fresh(), money: 1000 }).room).toBe(2);
   });
 
   it("drops what is done: no rank goal for a world champion", () => {
@@ -83,8 +83,8 @@ describe("the level and the dot", () => {
   });
 
   it("flags the room only when there is something the player can afford", () => {
-    expect(roomBadge({ ...fresh(), money: 400 })).toBe(false);
-    expect(roomBadge({ ...fresh(), money: 500 })).toBe(true);
+    expect(roomBadge({ ...fresh(), money: 900 })).toBe(false);
+    expect(roomBadge({ ...fresh(), money: 1000 })).toBe(true);
     expect(roomBadge({ ...fresh(), money: 1000000, room: 9 })).toBe(false);
   });
 });

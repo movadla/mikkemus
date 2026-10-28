@@ -250,7 +250,7 @@ export const DEFAULT_PROFILE: Profile = { home: "garage", darts: "middels" };
 
 export function newCareer(player: string, startLevel: string, now: string, profile: Profile = DEFAULT_PROFILE): Career {
   const level = START_LEVELS.find((l) => l.key === startLevel) ?? START_LEVELS[2];
-  return { v: 1, id: careerId(player), player, createdAt: now, savedAt: now, profile, startLevel: level.key, skillMed: level.med, money: START_MONEY, points: 0, titles: 0, worldTitles: 0, played: 0, history: [], active: null, qualified: [], trophies: [], training: [], room: 0, challenge: null, challenges: 0 };
+  return { v: 1, id: careerId(player), player, createdAt: now, savedAt: now, profile, startLevel: level.key, skillMed: level.med, money: START_MONEY, points: 0, titles: 0, worldTitles: 0, played: 0, history: [], active: null, qualified: [], trophies: [], training: [], room: START_ROOM, challenge: null, challenges: 0 };
 }
 
 /** The money, as the career writes it: dollars, so nobody takes it for real money. */
@@ -482,11 +482,14 @@ export const STAGES: RoomStage[] = [
 /** The last step of the room. */
 export const ROOM_MAX = STAGES.length - 1;
 
-/** How much weaker each step makes the opponents (their MED is that much higher). The nine steps together: 14 %. */
-const ROOM_BONUS = 0.0155;
+/** The step a career starts at: the second picture, the first being a room so full of junk that it is no place to start. Set to 0 to start at the first. */
+export const START_ROOM = 1;
 
-/** The factor the room puts on the opponents' MED: 1 with the room as it was, a little over with the best one. */
-export const roomBonus = (career: Career) => 1 + ROOM_BONUS * career.room;
+/** How much weaker each step bought makes the opponents (their MED is that much higher). All the steps there are to buy: 14 %. */
+const ROOM_BONUS = 0.14 / (ROOM_MAX - START_ROOM);
+
+/** The factor the room puts on the opponents' MED: 1 with the room as the career started, a little over with the best one. */
+export const roomBonus = (career: Career) => 1 + ROOM_BONUS * (career.room - START_ROOM);
 
 /** The step after the one the room is at, or null when it is as good as it gets. */
 export const nextStage = (career: Career): RoomStage | null => STAGES[career.room + 1] ?? null;

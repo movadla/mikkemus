@@ -56,7 +56,7 @@ test.describe("karriere", () => {
     await toCareer(page);
     await page.getByRole("button", { name: /Lars/ }).click();
     // The room is the picture behind everything: the first step of the room.
-    await expect(page.locator(".room-backdrop-img")).toHaveAttribute("src", /room-01.jpg/);
+    await expect(page.locator(".room-backdrop-img")).toHaveAttribute("src", /room-02.jpg/);
     const hud = page.getByRole("group", { name: "Status" });
     await expect(hud.getByText("$300")).toBeVisible();
     // One star, not two: the goal says which rank it counts towards, and the rank is written under the name.
@@ -144,20 +144,20 @@ test.describe("karriere", () => {
   });
 
   test("rom: ti trinn, ett bilde og én knapp, og pengene går", async ({ page }) => {
-    await seed(page, { ...CAREER, money: 600 });
+    await seed(page, { ...CAREER, money: 1100 });
     await page.getByRole("button", { name: /Lars/ }).click();
     // There is money for the first step: the room button has a dot.
     await expect(page.getByRole("button", { name: "Rom, nytt" })).toBeVisible();
     await place(page, "Rom").click();
-    await expect(page.getByRole("img", { name: "Rommet ditt, trinn 1: Start" })).toBeVisible();
-    await expect(page.getByRole("img", { name: "Trinn 1 av 10" })).toBeVisible();
-    // What the next step adds, and the price as the button.
-    await expect(page.getByRole("list", { name: "Du får" }).getByText("Rydding")).toBeVisible();
-    await play(page, "KJØP $500").click();
-    await expect.poll(async () => (await saved(page)).room).toBe(1);
-    expect((await saved(page)).money).toBe(100);
     await expect(page.getByRole("img", { name: "Rommet ditt, trinn 2: Ryddet" })).toBeVisible();
-    // The next step costs $1 000: too much, so the button is shut and says what is missing.
+    await expect(page.getByRole("img", { name: "Trinn 2 av 10" })).toBeVisible();
+    // What the next step adds, and the price as the button.
+    await expect(page.getByRole("list", { name: "Du får" }).getByText("Maling")).toBeVisible();
+    await play(page, "KJØP $1 000").click();
+    await expect.poll(async () => (await saved(page)).room).toBe(2);
+    expect((await saved(page)).money).toBe(100);
+    await expect(page.getByRole("img", { name: "Rommet ditt, trinn 3: Nye vegger" })).toBeVisible();
+    // The next step costs $2 000: too much, so the button is shut and says what is missing.
     await expect(play(page, /^KJØP Mangler/)).toBeDisabled();
   });
 
