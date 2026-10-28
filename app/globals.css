@@ -4777,7 +4777,9 @@ html[data-fx="full"] .hs-last {
 .career-home-room {
   flex: 1 1 auto;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1rem;
   min-height: 13rem;
 }
 .career-home-room > svg {
@@ -5049,4 +5051,153 @@ html[data-fx="full"] .hs-last {
 }
 .pick-row:disabled {
   opacity: 0.45;
+}
+
+/* ---- The career, polished: a deeper ground, buttons with a lit top and a foot, and numbers that line up. ---- */
+.career-skin {
+  background:
+    radial-gradient(120% 46% at 50% -6%, color-mix(in srgb, var(--color-teal) 24%, transparent), transparent 72%),
+    radial-gradient(90% 36% at 50% 106%, color-mix(in srgb, var(--color-gold) 11%, transparent), transparent 72%),
+    var(--color-bg);
+}
+.career-skin h1,
+.career-skin h2,
+.career-skin h3 {
+  text-wrap: balance;
+}
+.career-skin p {
+  text-wrap: pretty;
+}
+/* The main button: lit on top, a darker foot like the edge of a key, a shadow in its own colour, and it gives when pressed. */
+.play-btn {
+  border-radius: 1.15rem;
+  background: linear-gradient(180deg, #86e6ee 0%, #3bc8d6 46%, #1f98a8 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.2),
+    0 2px 4px rgba(0, 0, 0, 0.4),
+    0 14px 26px -8px color-mix(in srgb, var(--color-teal) 60%, transparent);
+  transition:
+    transform var(--duration-instant) var(--ease-standard),
+    box-shadow var(--duration-instant) var(--ease-standard),
+    filter var(--duration-instant) var(--ease-standard);
+}
+.play-btn strong {
+  font-size: clamp(1.6rem, 8vw, 2rem);
+  letter-spacing: 0.07em;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+.play-btn small {
+  text-wrap: balance;
+  line-height: 1.25;
+  opacity: 0.85;
+}
+.play-btn:active:not(:disabled) {
+  transform: translateY(2px) scale(0.99);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.2),
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    0 6px 14px -8px color-mix(in srgb, var(--color-teal) 60%, transparent);
+}
+@media (hover: hover) {
+  .play-btn:hover:not(:disabled) {
+    filter: brightness(1.05);
+  }
+}
+.play-btn-gold {
+  background: linear-gradient(180deg, #f6d985 0%, #dcb04f 46%, #b8862e 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.22),
+    0 2px 4px rgba(0, 0, 0, 0.4),
+    0 14px 26px -8px color-mix(in srgb, var(--color-gold) 60%, transparent);
+}
+.play-btn:disabled {
+  filter: grayscale(0.85) brightness(0.8);
+  opacity: 0.6;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+/* The round buttons: a disc with a soft light from above and a thin edge. */
+.round-btn-disc {
+  background:
+    radial-gradient(circle at 32% 24%, rgba(255, 255, 255, 0.16), transparent 58%),
+    var(--color-surface);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.07),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.25),
+    0 2px 4px rgba(0, 0, 0, 0.4),
+    0 10px 18px -8px rgba(0, 0, 0, 0.7);
+  transition: transform var(--duration-instant) var(--ease-standard);
+}
+.round-btn:active .round-btn-disc {
+  transform: translateY(2px) scale(0.95);
+}
+.round-btn-label {
+  color: var(--color-text-2);
+  letter-spacing: 0.02em;
+}
+/* The price buttons and the rows to pick from share the same lit top and foot. */
+.buy-btn {
+  background: linear-gradient(180deg, #86e6ee 0%, #3bc8d6 46%, #1f98a8 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.2),
+    0 6px 12px -6px color-mix(in srgb, var(--color-teal) 55%, transparent);
+}
+.buy-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.buy-btn-off {
+  box-shadow: none;
+}
+.pick-row {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-surface) 92%, white), var(--color-surface));
+}
+.pick-row:active:not(:disabled) {
+  transform: scale(0.985);
+}
+/* The chips at the top, and the goal. */
+.goal-strip,
+.career-skin [role="group"][aria-label="Status"] > span:not(.hud-delta) {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 4px 10px -6px rgba(0, 0, 0, 0.7);
+}
+.goal-strip span span[style*="gold"] {
+  background-image: linear-gradient(90deg, var(--color-gold), color-mix(in srgb, var(--color-gold) 70%, white));
+  box-shadow: 0 0 8px color-mix(in srgb, var(--color-gold) 45%, transparent);
+}
+.room-tile {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-surface) 94%, white), var(--color-surface));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 6px 14px -10px rgba(0, 0, 0, 0.8);
+}
+.road-row-on {
+  box-shadow: 0 0 0 1px var(--cup), 0 8px 20px -10px var(--cup);
+}
+
+/* A button that cannot be pressed yet reads as a locked door, not as a faded one: a flat dark face with the word in a calm colour. */
+.play-btn:disabled {
+  background: var(--color-surface);
+  color: var(--color-text-2);
+  filter: none;
+  opacity: 1;
+  border: 1px solid var(--color-border);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+.play-btn:disabled strong {
+  text-shadow: none;
+}
+.play-btn:disabled small {
+  opacity: 1;
+  color: var(--color-muted);
+}
+.play-btn:disabled::after {
+  display: none;
+}
+/* A price that cannot be paid yet is a flat grey button with a lock, whatever the lit one above it looks like. */
+.buy-btn.buy-btn-off,
+.buy-btn:disabled {
+  background: var(--color-cell);
+  color: var(--color-text-2);
+  border: 1px solid var(--color-border);
+  box-shadow: none;
 }

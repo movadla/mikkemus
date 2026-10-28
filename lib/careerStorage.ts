@@ -41,21 +41,45 @@ function readLocal(): Career[] {
   return found;
 }
 
+const newestFirst = (list: Career[]) => [...list].sort((a, b) => (a.savedAt < b.savedAt ? 1 : -1));
+
+/** The careers on this device, at once: nothing waits for the network to show what is already here. */
+export function readLocalCareers(): Career[] {
+  return newestFirst(readLocal());
+}
+
+/** Two sets of careers made one, the newest copy of each. */
+export function mergeCareers(a: Career[], b: Career[]): Career[] {
+  const byId = new Map<string, Career>();
+  for (const c of [...a, ...b]) {
+    const here = byId.get(c.id);
+    if (!here || here.savedAt < c.savedAt) byId.set(c.id, c);
+  }
+  return newestFirst([...byId.values()]);
+}
+
+/** How long to wait for the database before going on with what is on the device. */
+const REMOTE_TIMEOUT_MS = 5000;
+
+/** The careers in the database, or nothing when it cannot be reached (no network, a slow one, or no table). */
+async function readRemote(): Promise<Career[]> {
+  if (!supabase) return [];
+  const client = supabase;
+  try {
+    const answer = await Promise.race([client.from("careers").select("data"), new Promise<null>((resolve) => setTimeout(() => resolve(null), REMOTE_TIMEOUT_MS))]);
+    if (!answer || answer.error || !Array.isArray(answer.data)) return [];
+    return (answer.data as { data: Career }[]).flatMap((row) => {
+      const c = row.data && normalize(row.data);
+      return c && c.v === 1 && typeof c.id === "string" ? [c] : [];
+    });
+  } catch {
+    return [];
+  }
+}
+
 /** Every career there is, the newest copy of each. */
 export async function loadCareers(): Promise<Career[]> {
-  const byId = new Map<string, Career>(readLocal().map((c) => [c.id, c]));
-  if (supabase) {
-    const { data, error } = await supabase.from("careers").select("data");
-    if (!error && Array.isArray(data)) {
-      for (const row of data as { data: Career }[]) {
-        const c = row.data && normalize(row.data);
-        if (!c || c.v !== 1 || typeof c.id !== "string") continue;
-        const here = byId.get(c.id);
-        if (!here || here.savedAt < c.savedAt) byId.set(c.id, c);
-      }
-    }
-  }
-  return [...byId.values()].sort((a, b) => (a.savedAt < b.savedAt ? 1 : -1));
+  return mergeCareers(readLocal(), await readRemote());
 }
 
 async function writeRemote(c: Career) {

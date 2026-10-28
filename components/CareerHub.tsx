@@ -24,7 +24,7 @@ import {
   type Tier,
 } from "@/lib/career";
 import { cupColor } from "@/lib/botCup";
-import { rankProgress, roomBadge } from "@/lib/careerGoals";
+import { rankOf, rankProgress, roomBadge } from "@/lib/careerGoals";
 import { heroButton, heroFor } from "@/lib/careerHero";
 import { uiFeedback } from "@/lib/uiSound";
 import { levelLabel, newSeed, oneDecimal } from "./careerFormat";
@@ -167,12 +167,18 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
 
   if (view === "home") {
     return (
-      <div className="animate-screen-push screen">
+      <div className="animate-screen-push screen career-skin">
         {sheets}
         <div className="screen-inner career-home">
           <CareerHud career={career} end={menuButton} />
           <GoalStrip career={career} />
           <div className="career-home-room">
+            <div className="text-center">
+              <p className="font-display" style={{ fontSize: "var(--text-num)", lineHeight: 1.05, color: "var(--color-cream)" }}>
+                {career.player}
+              </p>
+              <p style={{ color: "var(--color-gold-strong)", fontWeight: 700, fontSize: "var(--text-small)", letterSpacing: "0.06em", textTransform: "uppercase" }}>{rankOf(career)}</p>
+            </div>
             <HomeScene home={career.profile.home} arena={career.arena} trophies={career.trophies} />
           </div>
           <div className="relative">
@@ -195,7 +201,7 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
   const selState = career.active?.tier === selected.id ? "active" : !isUnlocked(career, selected) ? "locked" : selWhy ? "short" : "open";
 
   return (
-    <div className="animate-screen-push screen" style={{ paddingBottom: "1rem" }}>
+    <div className="animate-screen-push screen career-skin" style={{ paddingBottom: "1rem" }}>
       {sheets}
       <div className="screen-inner flex flex-col gap-3" style={{ minHeight: "calc(100dvh - 2rem)" }}>
         <CareerHud career={career} onBack={() => setView("home")} title={TITLE[view]} />

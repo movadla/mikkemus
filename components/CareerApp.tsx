@@ -17,10 +17,13 @@ import {
   type DartsId,
   type HomeId,
 } from "@/lib/career";
-import { deleteCareer, loadCareers, saveCareer } from "@/lib/careerStorage";
+import { deleteCareer, loadCareers, mergeCareers, readLocalCareers, saveCareer } from "@/lib/careerStorage";
 import { setKits, teamKitsOf, useRoster } from "@/lib/storage";
 import { applyTheme } from "@/lib/theme";
 import { levelOfMed } from "@/lib/botLevels";
+import { rankLevel } from "@/lib/careerGoals";
+import { CoinIcon } from "./icons";
+import { StarIcon } from "./careerIcons";
 import { Hub } from "./CareerHub";
 import { ChallengePlay, Result, TrainingPlay } from "./CareerScreens";
 import { EventIntro } from "./EventIntro";
@@ -45,7 +48,8 @@ export function CareerApp({ onExitToHome }: { onExitToHome: () => void }) {
     return () => applyTheme();
   }, []);
   const roster = useRoster();
-  const [careers, setCareers] = useState<Career[] | null>(null);
+  const [careers, setCareers] = // What is on the device is there at once (the career is only ever opened by a tap, so this never runs on the server).
+  useState<Career[] | null>(() => (typeof window === "undefined" ? null : readLocalCareers()));
   const [id, setId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [screen, setScreen] = useState<"hub" | "play" | "challenge" | "training">("hub");
@@ -53,7 +57,8 @@ export function CareerApp({ onExitToHome }: { onExitToHome: () => void }) {
 
   useEffect(() => {
     let live = true;
-    void loadCareers().then((list) => live && setCareers(list));
+    // What the database has is merged in when it answers (or not at all, with no network).
+    void loadCareers().then((list) => live && setCareers((cur) => mergeCareers(cur ?? [], list)));
     return () => {
       live = false;
     };
@@ -99,7 +104,7 @@ export function CareerApp({ onExitToHome }: { onExitToHome: () => void }) {
       );
     }
     return (
-      <div className="animate-screen-push screen">
+      <div className="animate-screen-push screen career-skin">
         <div className="screen-inner">
           <ScreenTop title="Karriere" onBack={onExitToHome} />
           <ul className="space-y-2 mb-4" aria-label="Karrierer">
@@ -109,8 +114,15 @@ export function CareerApp({ onExitToHome }: { onExitToHome: () => void }) {
                   <Avatar name={c.player} photo={photos.get(c.player)} size="m" />
                   <span className="flex-1 min-w-0">
                     <span className="block truncate font-semibold">{c.player}</span>
-                    <span className="block tabular" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>
-                      {dollars(c.money)} · {c.points} poeng
+                    <span className="flex items-center gap-3 tabular" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
+                      <span className="inline-flex items-center gap-1" style={{ color: "var(--color-gold-strong)", fontWeight: 700 }}>
+                        <CoinIcon className="w-4 h-4" />
+                        {dollars(c.money)}
+                      </span>
+                      <span className="inline-flex items-center gap-1" style={{ color: "var(--color-teal)", fontWeight: 700 }}>
+                        <StarIcon className="w-4 h-4" />
+                        {rankLevel(c)}
+                      </span>
                     </span>
                   </span>
                 </button>
@@ -180,7 +192,7 @@ function NewCareer({ taken, onBack, onCreate }: { taken: string[]; onBack: () =>
   if (step === 2 && record) {
     const kits = teamKitsOf(record);
     return (
-      <div className="animate-screen-push screen has-sticky-action">
+      <div className="animate-screen-push screen has-sticky-action career-skin">
         <div className="screen-inner">
           <ScreenTop title="Utseende" onBack={() => setStep(1)} sub={<span style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>{record.name}</span>} />
           <Steps step={2} />
@@ -209,7 +221,7 @@ function NewCareer({ taken, onBack, onCreate }: { taken: string[]; onBack: () =>
   }
 
   return (
-    <div className="animate-screen-push screen has-sticky-action">
+    <div className="animate-screen-push screen has-sticky-action career-skin">
       <div className="screen-inner">
         <ScreenTop title="Ny karriere" onBack={onBack} />
         <Steps step={1} />

@@ -75,7 +75,7 @@ export function CareerHud({ career, end, onBack, title }: { career: Career; end?
         <button type="button" onClick={onBack} aria-label="Tilbake" className={`tactile inline-flex items-center justify-center shrink-0 ${FOCUS_RING}`} style={{ width: "var(--control)", height: "var(--control)", borderRadius: "var(--radius-pill)", background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-cream)" }}>
           <ArrowLeftIcon className="w-5 h-5" />
         </button>
-        <h1 className="font-display flex-1 min-w-0 truncate" style={{ fontSize: "var(--text-num)", color: "var(--color-cream)", lineHeight: 1 }}>
+        <h1 className="font-display flex-1 min-w-0 truncate" style={{ fontSize: "var(--text-title)", color: "var(--color-cream)", lineHeight: 1.1 }}>
           {title}
         </h1>
         {coin}

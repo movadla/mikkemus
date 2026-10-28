@@ -76,7 +76,7 @@ export function ChallengePlay({ career, commit, onHub }: { career: Career; commi
   }
   if (!playing) {
     return (
-      <div className="animate-screen-enter screen">
+      <div className="animate-screen-enter screen career-skin">
         <div className="screen-inner flex flex-col" style={{ minHeight: "calc(100dvh - 2rem)", gap: "1.25rem" }}>
           <div className="flex items-center gap-3">
             <BackArrow onClick={giveUp} label="Si nei" />
@@ -242,7 +242,7 @@ export function TrainingPlay({ career, commit, onHub }: { career: Career; commit
   };
   if (done) {
     return (
-      <div className="animate-screen-enter screen">
+      <div className="animate-screen-enter screen career-skin">
         <div className="screen-inner flex flex-col" style={{ minHeight: "calc(100dvh - 2rem)", gap: "1.25rem" }}>
           <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center">
             <p className="section-label">SNITT</p>
@@ -260,7 +260,7 @@ export function TrainingPlay({ career, commit, onHub }: { career: Career; commit
     );
   }
   return (
-    <div className="animate-screen-push screen">
+    <div className="animate-screen-push screen career-skin">
       <div className="screen-inner flex flex-col gap-3" style={{ minHeight: "calc(100dvh - 2rem)" }}>
         <div className="flex items-center gap-3">
           <BackArrow onClick={onHub} />
