@@ -20,7 +20,7 @@ type Slot = "primary" | "secondary";
  * three suggestions for a pattern colour that goes with the main one. Every tap is saved at once. A plain shirt has one colour, so the
  * second slot is off.
  */
-function KitEditor({ label, kit, onChange, name }: { label: string; kit: Kit; onChange: (kit: Kit) => void; name: string }) {
+export function KitEditor({ label, kit, onChange, name }: { label: string; kit: Kit; onChange: (kit: Kit) => void; name: string }) {
   const [slot, setSlot] = useState<Slot>("primary");
   const two = usesSecondColour(kit.pattern);
   const active: Slot = two ? slot : "primary";

@@ -1,4 +1,4 @@
-export type BotLevel = "1" | "2" | "3" | "4" | "5" | "6";
+export type BotLevel = "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8";
 
 export type BotLevelConfig = {
   key: BotLevel;
@@ -10,7 +10,7 @@ export type BotLevelConfig = {
   targetMed: number;
 };
 
-export const BOT_LEVEL_ORDER: BotLevel[] = ["1", "2", "3", "4", "5", "6"];
+export const BOT_LEVEL_ORDER: BotLevel[] = ["1", "2", "3", "4", "5", "6", "7", "8"];
 
 /** The levels offered in the pickers: the three medal tiers, then ChrisBell and Kjetil, who are modelled on real players
  *  (just under Vadla and just under Hans). Level 6 still exists for matches that already have it. */
@@ -51,4 +51,21 @@ export const BOT_LEVELS: Record<BotLevel, BotLevelConfig> = {
   "4": { key: "4", name: "ChrisBell", targetMed: 39 },
   "5": { key: "5", name: "Kjetil", targetMed: 49 },
   "6": { key: "6", name: "Nivå 6", targetMed: 55 },
+  // The two weakest are for the career (lib/career.ts), where the opponents are set from the player's own level and a beginner has to be
+  // able to meet people who are worse than they are. They are not offered in any picker.
+  "7": { key: "7", name: "Nivå 7", targetMed: 65 },
+  "8": { key: "8", name: "Nivå 8", targetMed: 80 },
 };
+
+/** Where a MED in mm falls on the scale of levels, between the levels (1 is the sharpest, 8 the weakest). The inverse of what each level throws at. */
+export function levelOfMed(med: number): number {
+  const points = BOT_LEVEL_ORDER.map((k) => ({ level: Number(k), med: BOT_LEVELS[k].targetMed }));
+  if (med <= points[0].med) return points[0].level;
+  for (let i = 1; i < points.length; i++) {
+    if (med <= points[i].med) {
+      const [a, b] = [points[i - 1], points[i]];
+      return a.level + ((med - a.med) / (b.med - a.med)) * (b.level - a.level);
+    }
+  }
+  return points[points.length - 1].level;
+}

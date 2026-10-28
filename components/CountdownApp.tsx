@@ -102,20 +102,26 @@ export function CountdownApp({ onExitToHome }: { onExitToHome: () => void }) {
   return <CountdownGameScreen game={game} setGame={setGame} botLevels={botLevels} photos={photos} onHome={onExitToHome} onNew={() => setGame(null)} />;
 }
 
-function CountdownGameScreen({
+/**
+ * The board of a leg. In the career (`career`) it is one leg of a tournament: the result is not kept with the other games' statistics, the
+ * winner screen only goes on (`onDone`), and leaving is a pause, since the career keeps the leg as it stands.
+ */
+export function CountdownGameScreen({
   game,
   setGame,
   botLevels,
   photos,
   onHome,
   onNew,
+  career,
 }: {
   game: CountdownGame;
   setGame: (g: CountdownGame) => void;
-  botLevels: Record<string, BotLevel>;
+  botLevels: Record<string, BotLevel | number>;
   photos: Map<string, string | null | undefined>;
   onHome: () => void;
   onNew: () => void;
+  career?: { onDone: () => void };
 }) {
   const [finishing, setFinishing] = useState<number | null>(null);
   const [notice, setNotice] = useState("");
@@ -133,7 +139,7 @@ function CountdownGameScreen({
   const leader = leaderOf(game);
   const isBot = (p: string) => botLevels[p] !== undefined;
   const botUp = !winner && isBot(up);
-  useRecordResult(winner, game.turns.length === 0, (id, at) => countdownResult(game, Object.keys(botLevels), id, at));
+  useRecordResult(career ? null : winner, game.turns.length === 0, (id, at) => countdownResult(game, Object.keys(botLevels), id, at));
   const rain = useMemo(() => (winner && fx.confetti ? generateConfettiRain(fx.bigConfetti ? 60 : 36) : []), [winner, fx.confetti, fx.bigConfetti]);
 
   useEffect(() => {
@@ -255,18 +261,28 @@ function CountdownGameScreen({
             ))}
           </ul>
           <div className="space-y-2">
-            <Button block variant="primary" size="lg" onClick={() => setGame(newGame(game.start, game.doubleOut, game.players))}>
-              Spill igjen
-            </Button>
+            {career ? (
+              <Button block variant="primary" size="lg" onClick={career.onDone}>
+                Fortsett
+              </Button>
+            ) : (
+              <Button block variant="primary" size="lg" onClick={() => setGame(newGame(game.start, game.doubleOut, game.players))}>
+                Spill igjen
+              </Button>
+            )}
             <Button block onClick={undo}>
               Angre siste runde
             </Button>
-            <Button block onClick={onNew}>
-              Ny kamp
-            </Button>
-            <Button block variant="ghost" onClick={onHome}>
-              Til forsiden
-            </Button>
+            {!career && (
+              <>
+                <Button block onClick={onNew}>
+                  Ny kamp
+                </Button>
+                <Button block variant="ghost" onClick={onHome}>
+                  Til forsiden
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -284,10 +300,10 @@ function CountdownGameScreen({
       )}
       {confirmExit && (
         <ConfirmDialog
-          message="Avslutte kampen?"
+          message={career ? "Ta en pause? Kampen er lagret." : "Avslutte kampen?"}
           buttons={[
             { label: "Fortsett spill", onClick: () => setConfirmExit(false), background: "var(--color-green)" },
-            { label: "Avslutt kamp", onClick: onHome, background: "var(--color-red)" },
+            { label: career ? "Pause" : "Avslutt kamp", onClick: onHome, background: career ? "var(--color-teal)" : "var(--color-red)" },
           ]}
         />
       )}
@@ -317,7 +333,7 @@ function CountdownGameScreen({
         </Sheet>
       )}
       <div className="screen-inner">
-        <ScreenTop title={String(game.start)} onBack={() => setConfirmExit(true)} backLabel="Avslutt kampen" />
+        <ScreenTop title={String(game.start)} onBack={() => setConfirmExit(true)} backLabel={career ? "Pause" : "Avslutt kampen"} />
         <p key={`${up}-${game.turns.length}`} className="turn-banner" aria-hidden>
           {up} kaster
         </p>

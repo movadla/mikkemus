@@ -31,6 +31,7 @@ export function ChampionScreen({
   onHome,
   onClose,
   onUndo,
+  homeLabel = "Til forsiden",
 }: {
   tournament: Tournament;
   onNewWithSame?: () => void;
@@ -38,6 +39,8 @@ export function ChampionScreen({
   onClose?: () => void;
   /** Takes the final back, when the wrong winner was recorded. */
   onUndo?: () => void;
+  /** What the way out is called: in the career it goes on to the pay-out. */
+  homeLabel?: string;
 }) {
   const level = useFxLevel();
   const fx = fxFlags(level);
@@ -177,7 +180,7 @@ export function ChampionScreen({
           )}
           {onHome && (
             <button type="button" onClick={onHome} className={`tactile w-full rounded-lg ${FOCUS_RING}`} style={{ minHeight: "var(--control)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}>
-              Til forsiden
+              {homeLabel}
             </button>
           )}
         </div>

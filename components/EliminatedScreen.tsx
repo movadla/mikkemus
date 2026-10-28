@@ -19,12 +19,14 @@ export function EliminatedScreen({
   names,
   onWatchRest,
   onLeave,
+  leaveLabel = "Til forsiden",
 }: {
   tournament: Tournament;
   /** The house's own sides, all out. */
   names: string[];
   onWatchRest: () => void;
   onLeave: () => void;
+  leaveLabel?: string;
 }) {
   const photos = new Map(useRoster().map((r) => [r.name, r.photo]));
   return (
@@ -59,7 +61,7 @@ export function EliminatedScreen({
             Se resten
           </button>
           <button type="button" onClick={onLeave} className={`tactile w-full rounded-lg ${FOCUS_RING}`} style={{ minHeight: "var(--control)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)" }}>
-            Til forsiden
+            {leaveLabel}
           </button>
         </div>
       </div>

@@ -38,6 +38,22 @@ import { TournamentHistoryScreen } from "./TournamentHistoryScreen";
 import { TournamentSetupScreen } from "./TournamentSetupScreen";
 import { TournamentOverviewScreen } from "./TournamentOverviewScreen";
 
+/**
+ * What the career (lib/career.ts) gives the tournament to run: the draw to make or the cup that is on, and where to send what happens.
+ * With it the tournament is not kept with the others (no history, no active-tournament pointer): the career keeps it.
+ */
+export type CareerHooks = {
+  /** The entrants, strongest first, while the draw is still to be made. */
+  draw: Participant[] | null;
+  cup: CupConfig;
+  tournament: Tournament | null;
+  /** The cup was made, or a match was played or taken back. */
+  onChange: (t: Tournament) => void;
+  /** The player is out, or the cup is over: on to the pay-out. */
+  onDone: () => void;
+  onAbandon: () => void;
+};
+
 type Screen = "loading" | "setup" | "draw" | "overview" | "match" | "bulloff" | "eliminated" | "champion" | "history";
 
 /** Finds the tournament match a resumed single-match session belongs to, by matching its two
@@ -55,7 +71,7 @@ function findResumableMatch(tournament: Tournament): TournamentMatch | null {
   );
 }
 
-export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
+export function TournamentApp({ onExitToHome, career }: { onExitToHome: () => void; career?: CareerHooks }) {
   const roster = useRoster();
   const [screen, setScreen] = useState<Screen>("loading");
   const [tournament, setTournament] = useState<Tournament | null>(null);
@@ -84,6 +100,26 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
   // already used for MikkeMusApp's own activeMatch restore, not a render-loop.
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
+    if (career) {
+      const t = career.tournament;
+      if (!t) {
+        setPendingMode("individual");
+        setPendingParticipants(career.draw);
+        setPendingVariant("standard");
+        setPendingCup(career.cup);
+        setScreen("draw");
+        return;
+      }
+      setTournament(t);
+      const resumable = findResumableMatch(t);
+      if (t.status === "done") setScreen("champion");
+      else if (resumable) {
+        setCurrentMatch(resumable);
+        setScreen("match");
+      } else if (isKnockout(t) && t.cup && !houseAlive(t)) setScreen("eliminated");
+      else setScreen("overview");
+      return;
+    }
     const id = loadActiveTournamentId();
     if (!id) {
       setScreen("setup");
@@ -121,8 +157,19 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
         setScreen("overview");
       }
     });
+    // The career is given once, at the start: what it holds later is held here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
+
+  /** Where a tournament is kept: with the career when there is one, otherwise with the others. */
+  const persist = (t: Tournament) => (career ? Promise.resolve(career.onChange(t)) : upsertTournament(t));
+  const markActive = (id: string) => {
+    if (!career) saveActiveTournamentId(id);
+  };
+  const unmarkActive = () => {
+    if (!career) clearActiveTournamentId();
+  };
 
   /** The draw's order is the seeding: strongest first, by what the matches say about each. */
   function seededOrder(): Participant[] {
@@ -142,9 +189,9 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
     setTournament(created);
     setJustPlayedId(null);
     setElsewhereIds([]);
-    saveActiveTournamentId(id);
+    markActive(id);
     setScreen("overview");
-    await upsertTournament(created);
+    await persist(created);
     setSubmitting(false);
   }
 
@@ -166,9 +213,9 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
     setTournament(started);
     setJustPlayedId(null);
     setElsewhereIds(decided);
-    saveActiveTournamentId(id);
+    markActive(id);
     setScreen("overview");
-    await upsertTournament(started);
+    await persist(started);
     setSubmitting(false);
   }
 
@@ -245,8 +292,8 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
     setTies(null);
     clearPendingTies();
     setScreen(updated.status === "done" ? "champion" : "overview");
-    await upsertTournament(updated);
-    if (updated.status === "done") clearActiveTournamentId();
+    await persist(updated);
+    if (updated.status === "done") unmarkActive();
   }
 
   async function handleMatchComplete(result: { winner: string; placements: string[]; stats: Record<string, import("@/lib/game").TurnAggregate>; remaining?: Record<string, number> }) {
@@ -279,8 +326,8 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
     if (updated.status === "done") setScreen("champion");
     else if (isKnockout(updated) && updated.cup && wasAlive && !houseAlive(updated)) setScreen("eliminated");
     else setScreen("overview");
-    await upsertTournament(updated);
-    if (updated.status === "done") clearActiveTournamentId();
+    await persist(updated);
+    if (updated.status === "done") unmarkActive();
   }
 
   /** The house is out and wants to see how it ends: everything left is decided, and the champion is shown. */
@@ -289,8 +336,8 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
     const { tournament: finished } = playElsewhere(tournament);
     setTournament(finished);
     setScreen(finished.status === "done" ? "champion" : "overview");
-    await upsertTournament(finished);
-    if (finished.status === "done") clearActiveTournamentId();
+    await persist(finished);
+    if (finished.status === "done") unmarkActive();
   }
 
   /** Takes the latest result back and reopens the match. */
@@ -303,8 +350,8 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
     setElsewhereIds([]);
     setScreen("overview");
     // A cup that was finished was taken off the device when it ended; it is live again.
-    saveActiveTournamentId(back.id);
-    await upsertTournament(back);
+    markActive(back.id);
+    await persist(back);
   }
 
   /** Permanently abandons the tournament (confirmed on the overview first) — unlike a completed
@@ -312,6 +359,10 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
    *  rather than just cleared locally. */
   async function handleCancelTournament() {
     if (!tournament || submitting) return;
+    if (career) {
+      career.onAbandon();
+      return;
+    }
     setSubmitting(true);
     clearActiveTournamentId();
     await deleteTournament(tournament.id);
@@ -369,7 +420,7 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
   }
 
   if (screen === "draw" && pendingMode && pendingParticipants) {
-    return <DrawScreen seeded={seededOrder()} cup={pendingCup ?? undefined} summary={[pendingName || pendingCup?.name || "Turnering", String(pendingParticipants.length)].join(" · ")} onBack={() => setScreen("setup")} onStart={createAndOpen} />;
+    return <DrawScreen seeded={seededOrder()} cup={pendingCup ?? undefined} summary={[pendingName || pendingCup?.name || "Turnering", String(pendingParticipants.length)].join(" · ")} onBack={() => (career ? onExitToHome() : setScreen("setup"))} onStart={createAndOpen} />;
   }
 
   if (screen === "match" && tournament && currentMatch && matchParticipants(currentMatch).length >= 2) {
@@ -417,12 +468,12 @@ export function TournamentApp({ onExitToHome }: { onExitToHome: () => void }) {
   }
 
   if (screen === "champion" && tournament && tournament.status === "done") {
-    return <ChampionScreen tournament={tournament} onNewWithSame={handleNewWithSame} onHome={onExitToHome} onUndo={handleUndo} />;
+    return <ChampionScreen tournament={tournament} onNewWithSame={career ? undefined : handleNewWithSame} onHome={career ? career.onDone : onExitToHome} homeLabel={career ? "Fortsett" : undefined} onUndo={handleUndo} />;
   }
 
   if (screen === "eliminated" && tournament) {
     const house = tournament.participants.filter((p) => (p.members ? p.members.some((m) => !m.isBot) : !p.isBot)).map((p) => p.name);
-    return <EliminatedScreen tournament={tournament} names={house} onWatchRest={handleWatchRest} onLeave={onExitToHome} />;
+    return <EliminatedScreen tournament={tournament} names={house} onWatchRest={handleWatchRest} onLeave={career ? career.onDone : onExitToHome} leaveLabel={career ? "Fortsett" : undefined} />;
   }
 
   if (tournament && isPilot(tournament)) {

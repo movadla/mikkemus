@@ -21,7 +21,7 @@ export function CupTypePicker({ value, onChange, maxSize }: { value: CupChoice; 
   }, [value.kind]);
   return (
     <div ref={box} className="cup-posters mb-6" role="radiogroup" aria-label="Turnering">
-      {CUP_TYPES.map((t) => {
+      {CUP_TYPES.filter((t) => !t.career).map((t) => {
         const selected = t.kind === value.kind;
         return (
           <button

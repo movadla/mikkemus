@@ -2114,6 +2114,7 @@ html[data-theme="light"] body::before {
   --cup-gs: #a47ae6;
   --cup-nm: #ee6b57;
   --cup-open: #58b072;
+  --cup-lu: #e0a045;
 }
 
 html[data-theme="light"] {
@@ -2122,6 +2123,7 @@ html[data-theme="light"] {
   --cup-gs: #6c43b8;
   --cup-nm: #bf3f2b;
   --cup-open: #2a7a47;
+  --cup-lu: #a86a12;
 }
 
 /* -- wide screens --

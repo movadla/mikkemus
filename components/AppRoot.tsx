@@ -36,8 +36,9 @@ const BullDuelApp = dynamic(() => import("./BullDuelApp").then((m) => m.BullDuel
 const LavaApp = dynamic(() => import("./LavaApp").then((m) => m.LavaApp), { loading });
 const HighstrikerApp = dynamic(() => import("./HighstrikerApp").then((m) => m.HighstrikerApp), { loading });
 const CountdownApp = dynamic(() => import("./CountdownApp").then((m) => m.CountdownApp), { loading });
+const CareerApp = dynamic(() => import("./CareerApp").then((m) => m.CareerApp), { loading });
 
-type Mode = "home" | "single" | "tournament" | "bullduel" | "countdown" | "highstriker" | "lava";
+type Mode = "home" | "single" | "tournament" | "bullduel" | "countdown" | "highstriker" | "lava" | "career";
 
 const TOURNAMENTS_OFFERED = true;
 
@@ -133,6 +134,7 @@ export function AppRoot() {
   if (mode === "lava" && !limited) return <LavaApp onExitToHome={() => setMode("home")} />;
   if (mode === "highstriker" && !limited) return <HighstrikerApp onExitToHome={() => setMode("home")} />;
   if (mode === "countdown" && !limited) return <CountdownApp onExitToHome={() => setMode("home")} />;
+  if (mode === "career" && !limited) return <CareerApp onExitToHome={() => setMode("home")} />;
 
   const tournamentsOn = !limited && (TOURNAMENTS_OFFERED || hasActiveTournament);
   const resume = matchUnderway ? { title: matchUnderway.join(" mot "), label: "Kamp pågår", go: () => setMode("single") } : tournamentsOn && hasActiveTournament ? { title: "Turnering", label: "Pågår", go: () => setMode("tournament") } : null;
@@ -192,6 +194,12 @@ export function AppRoot() {
             <Tile icon={<KeypadIcon className="w-6 h-6" />} label="301 / 501" onClick={() => setMode("countdown")} />
             <Tile icon={<HeartIcon className="w-6 h-6" />} label="Highstriker" onClick={() => setMode("highstriker")} />
             <Tile icon={<FlameIcon className="w-6 h-6" />} label="Lava" onClick={() => setMode("lava")} />
+          </div>
+        )}
+        {/* Karriere is behind the full code while it is built. */}
+        {!limited && (
+          <div className="mb-6">
+            <Tile wide icon={<TrophyIcon className="w-6 h-6" />} label="Karriere" onClick={() => setMode("career")} />
           </div>
         )}
 

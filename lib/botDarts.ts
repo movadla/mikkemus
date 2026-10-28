@@ -13,6 +13,9 @@ import { formatSectorLabel, parseSector } from "./scoliaMapping";
 
 export type Aim = [number, number];
 
+/** How well a bot throws: one of the levels, or a MED in mm of its own (the career sets its bots between the levels). */
+export type Skill = BotLevel | number;
+
 /** A dart as it landed: what it is called on the board, what it scores, and which number (or the bull) it is on. */
 export type BotDart = {
   sector: string;
@@ -36,13 +39,13 @@ export function dartOfSector(sector: string): BotDart {
 }
 
 /** A dart thrown at a point by a bot of this level: the point and the spread of the level decide where it lands. */
-export function throwAt(aim: Aim, level: BotLevel): BotDart {
+export function throwAt(aim: Aim, level: Skill): BotDart {
   const sigma = sigmaForLevel(level);
   return dartOfSector(sectorAt([aim[0] + gaussianSample(sigma), aim[1] + gaussianSample(sigma)]));
 }
 
 /** The throw of a bot: given as a parameter so the tests can throw perfectly. */
-export type Thrower = (aim: Aim, level: BotLevel) => BotDart;
+export type Thrower = (aim: Aim, level: Skill) => BotDart;
 
 /** Where to aim for a dart as the checkout lines call it: "T20", "D16", "20", "25", "Bull". */
 export function aimForLabel(label: string): Aim {
@@ -97,7 +100,7 @@ export type BotRound = {
 };
 
 /** One round of 301 or 501 by a bot: up to three darts, stopping on the finish or on going over. A finish has to be a double with a double out. */
-export function botCountdownRound(left: number, doubleOut: boolean, level: BotLevel, thrower: Thrower = throwAt): BotRound {
+export function botCountdownRound(left: number, doubleOut: boolean, level: Skill, thrower: Thrower = throwAt): BotRound {
   const labels: string[] = [];
   let total = 0;
   for (let n = 1; n <= 3; n++) {
@@ -127,15 +130,15 @@ const NOISE: Aim[] = (() => {
 })();
 
 /** Where the dart lands when thrown at `aim` with the spread of the level, for each of the weighing draws. */
-const landings = (aim: Aim, level: BotLevel) => {
+const landings = (aim: Aim, level: Skill) => {
   const sigma = sigmaForLevel(level);
   return NOISE.map(([dx, dy]) => dartOfSector(sectorAt([aim[0] + dx * sigma, aim[1] + dy * sigma])));
 };
 
-const lowAims = new Map<BotLevel, Aim>();
+const lowAims = new Map<Skill, Aim>();
 
 /** Where to aim for the fewest points: the single of the number that, with the neighbours it can land on, makes the least on average. */
-export function lowAim(level: BotLevel): Aim {
+export function lowAim(level: Skill): Aim {
   const known = lowAims.get(level);
   if (known) return known;
   let best: { aim: Aim; mean: number } | null = null;
@@ -152,7 +155,7 @@ export function lowAim(level: BotLevel): Aim {
  * One round of Highstriker by a bot, to beat `least` (null in the first round, where there is nothing to beat). It throws for the
  * treble 20 until it has made enough, then for as little as it can, so the next one has as little to beat as possible.
  */
-export function botHighstrikerRound(least: number | null, level: BotLevel, thrower: Thrower = throwAt): { scored: number; labels: string[] } {
+export function botHighstrikerRound(least: number | null, level: Skill, thrower: Thrower = throwAt): { scored: number; labels: string[] } {
   const labels: string[] = [];
   let total = 0;
   for (let n = 0; n < 3; n++) {
@@ -185,7 +188,7 @@ const lavaCandidates: Aim[] = (() => {
  * Where a bot aims in Lava: the point where a dart is least likely to land in a section that is burning, weighing where it could land
  * with the spread of its level. A section not yet burning is worth a little, so of two as safe the one that sets more on fire wins.
  */
-export function chooseLavaAim(burned: ReadonlySet<number>, level: BotLevel): Aim {
+export function chooseLavaAim(burned: ReadonlySet<number>, level: Skill): Aim {
   let best: { aim: Aim; value: number } | null = null;
   for (const aim of lavaCandidates) {
     let value = 0;
@@ -199,6 +202,6 @@ export function chooseLavaAim(burned: ReadonlySet<number>, level: BotLevel): Aim
 }
 
 /** One dart of Lava by a bot: the section it hit, or MISS. */
-export function botLavaDart(burned: ReadonlySet<number>, level: BotLevel, thrower: Thrower = throwAt): BotDart {
+export function botLavaDart(burned: ReadonlySet<number>, level: Skill, thrower: Thrower = throwAt): BotDart {
   return thrower(chooseLavaAim(burned, level), level);
 }

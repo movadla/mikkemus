@@ -119,8 +119,9 @@ export function gaussianSample(sigma: number): number {
 const MED_TO_SIGMA = Math.sqrt(2 / Math.PI);
 
 /** A level's calibrated throw dispersion — exact, not cached (cheap to recompute). */
-export function sigmaForLevel(level: BotLevel): number {
-  return BOT_LEVELS[level].targetMed * MED_TO_SIGMA;
+export function sigmaForLevel(level: BotLevel | number): number {
+  // A number is a MED of its own, in mm: the career's bots are set between the levels.
+  return (typeof level === "number" ? level : BOT_LEVELS[level].targetMed) * MED_TO_SIGMA;
 }
 
 function monteCarloProfile(aim: [number, number], sigma: number): OutcomeProbs {

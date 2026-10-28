@@ -22,6 +22,13 @@ export function CupEmblem({ kind, className = "w-5 h-5" }: { kind: CupKind; clas
         </>
       )}
       {kind === "nm" && <path d="M12 3 5 6v5.5c0 4.5 3 8 7 9.5 4-1.5 7-5 7-9.5V6z" />}
+      {kind === "lu" && (
+        <>
+          <path d="M6 7h9v11a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2z" />
+          <path d="M15 9h2.5a2 2 0 0 1 0 5H15" />
+          <path d="M9 4v1M12 3v2" />
+        </>
+      )}
       {kind === "open" && (
         <>
           <path d="m3 11 9-7 9 7" />
