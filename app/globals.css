@@ -6357,3 +6357,23 @@ html[data-fx="full"] .hs-last {
   object-position: 64% 40%;
   max-width: none;
 }
+
+/* The picture of the tournament is the background of its card, dark on the side of the text. One line under the name, and no more. */
+.room-over .tourney-card {
+  background: linear-gradient(90deg, rgba(5, 8, 7, 0.9) 0%, rgba(5, 8, 7, 0.62) 55%, rgba(5, 8, 7, 0.3) 100%), var(--pic) center / cover, color-mix(in srgb, var(--color-surface) 80%, transparent);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.tourney-card-locked {
+  filter: saturate(0.5);
+}
+.tourney-takes {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #c9d3ce;
+  font-size: var(--text-small);
+  line-height: 1.3;
+}

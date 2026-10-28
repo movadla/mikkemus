@@ -17,6 +17,7 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import { BoltIcon, BullseyeIcon, CoinIcon, MoreIcon, TrophyIcon } from "./icons";
 import { PlayButton } from "./PlayButton";
 import { OverRoom } from "./RoomBackdrop";
+import { EVENT_PICTURES } from "./eventPictures";
 import { CoinFlight, RoomHero, buyMode, revealAt, type BuyMode, type CoinFlightPath } from "./RoomHero";
 import { RoundButton } from "./RoundButton";
 import { Button } from "./ui/Button";
@@ -347,9 +348,13 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
                   const qualified = !locked && !!tier.qualify;
                   const colour = cupColor(tier.kind);
                   const state = here ? "pågår" : locked ? "låst" : qualified ? "kvalifisert" : "åpen";
+                  const pic = EVENT_PICTURES[tier.id]?.outside;
+                  // One line under the name: what it takes. The stake and the number of players are on the opening and the draw.
+                  const needs = tier.qualify?.replace(/^Krever /, "").replace("Regionmesterskapet", "Region").replace("Norgesmesterskapet", "NM");
+                  const takes = needs ? needs.charAt(0).toUpperCase() + needs.slice(1) : "Åpen for alle";
                   return (
                     <li key={tier.id}>
-                      <button type="button" onClick={() => setPicked(tier.id)} aria-pressed={selected.id === tier.id} className={`tourney-card tactile ${selected.id === tier.id ? "tourney-card-on" : ""} ${FOCUS_RING}`} style={{ "--cup": colour } as React.CSSProperties}>
+                      <button type="button" onClick={() => setPicked(tier.id)} aria-pressed={selected.id === tier.id} className={`tourney-card tactile ${selected.id === tier.id ? "tourney-card-on" : ""} ${locked ? "tourney-card-locked" : ""} ${FOCUS_RING}`} style={{ "--cup": colour, "--pic": pic ? `url(${pic})` : "none" } as React.CSSProperties}>
                         <span className="tourney-emblem" style={{ borderColor: locked ? "var(--color-border)" : colour, color: locked ? "var(--color-muted)" : colour }} aria-hidden>
                           {locked ? <LockIcon className="w-5 h-5" /> : <CupEmblem kind={tier.kind} className="w-6 h-6" />}
                         </span>
@@ -357,9 +362,7 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
                           <b className="font-display block" style={{ fontSize: "var(--text-body)", color: locked ? "var(--color-text-2)" : "var(--color-cream)" }}>
                             {tier.name}
                           </b>
-                          <span className="block" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)", lineHeight: 1.3 }}>
-                            {tier.qualify ?? "Åpen for alle"} · {tier.fee === 0 ? "gratis" : dollars(tier.fee)} · {tier.size} spillere
-                          </span>
+                          <span className="tourney-takes">{takes}</span>
                         </span>
                         <span className="tabular text-right grid gap-1 justify-items-end" style={{ color: locked ? "var(--color-muted)" : "var(--color-gold-strong)", fontWeight: 800 }}>
                           {dollars(tier.prizes.winner ?? 0)}
