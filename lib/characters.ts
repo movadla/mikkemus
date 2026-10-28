@@ -16,7 +16,10 @@ export type Character = {
 
 const poses = (id: string, which: Pose[]): Partial<Record<Pose, string>> => Object.fromEntries(which.map((p) => [p, `/career/chars/${id}/${p}.webp`]));
 
-export const CHARACTERS: Character[] = [{ id: "c03", name: "Skjegg og tatoveringer", tint: "#e8553a", poses: poses("c03", ["noytral", "jubel", "skuffet", "kast"]) }];
+export const CHARACTERS: Character[] = [
+  { id: "c03", name: "Skjegg og tatoveringer", tint: "#e8553a", poses: poses("c03", ["noytral", "jubel", "skuffet", "kast"]) },
+  { id: "c02", name: "Skallen", tint: "#4cc24a", poses: poses("c02", ["noytral", "jubel", "skuffet", "kast"]) },
+];
 
 export const DEFAULT_CHARACTER = CHARACTERS[0].id;
 
