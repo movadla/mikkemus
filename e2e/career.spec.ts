@@ -46,10 +46,10 @@ test.describe("karriere", () => {
   test("meld deg på, trekning, start cupen, og den ligger der etter en omlasting", async ({ page }) => {
     await toCareer(page);
     await page.getByRole("button", { name: /Lars/ }).click();
-    // The home is the background; from it there is training (later), tournaments and challenges.
+    // The home is the background; from it there is training, the arena, tournaments and challenges.
     await expect(page.getByRole("img", { name: "Garasjen din" })).toBeVisible();
     await expect(page.getByText("$300")).toBeVisible();
-    await expect(page.getByRole("button", { name: /Trening/ })).toBeDisabled();
+    await expect(page.getByRole("button", { name: /Trening/ })).toBeEnabled();
     await page.getByRole("button", { name: /Turneringer/ }).click();
     // Every step of the ladder is there; the pub is free and the rest are shut until the player has qualified, or has the money.
     await expect(page.getByRole("heading", { name: "Verdensmesterskapet" }).or(page.getByRole("heading", { name: "VM i dart" }))).toBeVisible();
@@ -107,5 +107,27 @@ test.describe("karriere", () => {
     const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("mikke-mus-career:lars") ?? "null"));
     expect(saved.money).toBe(0);
     await expect(page.getByText("Motstanderne er 0,8 % svakere")).toBeVisible();
+  });
+
+  test("trening: femten runder flytter nivået, og det blir lagret", async ({ page }) => {
+    await toCareer(page);
+    await page.getByRole("button", { name: /Lars/ }).click();
+    await page.getByRole("button", { name: /Trening/ }).click();
+    await expect(page.getByText("MED 37,0 mm")).toBeVisible();
+    await page.getByRole("button", { name: "Start økten" }).click();
+    const keys = page.getByRole("group", { name: "Tastatur" });
+    for (let i = 0; i < 15; i++) {
+      await expect(page.getByText(`Runde ${i + 1} av 15`)).toBeVisible();
+      await keys.getByRole("button", { name: "4", exact: true }).click();
+      await keys.getByRole("button", { name: "5", exact: true }).click();
+    }
+    await expect(page.getByText("SNITT PER RUNDE")).toBeVisible();
+    await expect(page.getByText("Du ble skarpere")).toBeVisible();
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("mikke-mus-career:lars") ?? "null"));
+    expect(saved.skillMed).toBeLessThan(37);
+    expect(saved.skillMed).toBeGreaterThanOrEqual(34);
+    expect(saved.training).toHaveLength(1);
+    await page.getByRole("button", { name: "Ferdig" }).click();
+    await expect(page.getByRole("button", { name: /Turneringer/ })).toBeVisible();
   });
 });

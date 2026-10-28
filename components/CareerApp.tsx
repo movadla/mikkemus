@@ -39,6 +39,7 @@ import {
   type HomeId,
   type Tier,
 } from "@/lib/career";
+import { DRILL_ROUNDS, sessionFrom, trainCareer } from "@/lib/training";
 import { newGame as newCountdown, winnerOf as countdownWinner } from "@/lib/countdown";
 import { newGame as newHighstriker, winnerOf as highstrikerWinner } from "@/lib/highstriker";
 import { newGame as newLava, stateOf as lavaState } from "@/lib/lava";
@@ -50,6 +51,7 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import { Trophy } from "./Trophy";
 import { CountdownGameScreen } from "./CountdownApp";
 import { EventIntro } from "./EventIntro";
+import { ScoreKeypad } from "./ScoreKeypad";
 import { HighstrikerGameScreen } from "./HighstrikerApp";
 import { HomeScene } from "./HomeScene";
 import { LavaGameScreen } from "./LavaApp";
@@ -80,7 +82,7 @@ export function CareerApp({ onExitToHome }: { onExitToHome: () => void }) {
   const [careers, setCareers] = useState<Career[] | null>(null);
   const [id, setId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
-  const [screen, setScreen] = useState<"hub" | "play" | "challenge">("hub");
+  const [screen, setScreen] = useState<"hub" | "play" | "challenge" | "training">("hub");
   const photos = useMemo(() => new Map(roster.map((r) => [r.name, r.photo])), [roster]);
 
   useEffect(() => {
@@ -160,10 +162,13 @@ export function CareerApp({ onExitToHome }: { onExitToHome: () => void }) {
   if (screen === "play" && career.active) {
     return <Play career={career} commit={commit} onHub={() => setScreen("hub")} />;
   }
+  if (screen === "training") {
+    return <TrainingPlay career={career} commit={commit} onHub={() => setScreen("hub")} />;
+  }
   if (screen === "challenge" && career.challenge) {
     return <ChallengePlay career={career} commit={commit} onHub={() => setScreen("hub")} />;
   }
-  return <Hub career={career} onBack={() => setId(null)} onPlay={() => setScreen("play")} onChallenge={() => setScreen("challenge")} commit={commit} onDelete={() => remove(career)} />;
+  return <Hub career={career} onBack={() => setId(null)} onPlay={() => setScreen("play")} onChallenge={() => setScreen("challenge")} onTrain={() => setScreen("training")} commit={commit} onDelete={() => remove(career)} />;
 }
 
 /** A card to pick one of a few things: the name, and one line about it. */
@@ -249,7 +254,11 @@ function NewCareer({ taken, onBack, onCreate }: { taken: string[]; onBack: () =>
   );
 }
 
-type View = "home" | "tournaments" | "challenges" | "arena";
+type View = "home" | "tournaments" | "challenges" | "arena" | "training";
+
+/** The name of the start level a MED is nearest to, for telling the player where they stand. */
+const levelLabel = (med: number) => [...START_LEVELS].sort((a, b) => Math.abs(a.med - med) - Math.abs(b.med - med))[0].name;
+const oneDecimal = (n: number) => n.toFixed(1).replace(".", ",");
 
 /** A row of the status: the money, the points, the titles. */
 function Status({ career }: { career: Career }) {
@@ -285,7 +294,7 @@ function Door({ title, about, onClick, disabled }: { title: string; about: strin
   );
 }
 
-function Hub({ career, onBack, onPlay, onChallenge, commit, onDelete }: { career: Career; onBack: () => void; onPlay: () => void; onChallenge: () => void; commit: (c: Career) => void; onDelete: () => void }) {
+function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDelete }: { career: Career; onBack: () => void; onPlay: () => void; onChallenge: () => void; onTrain: () => void; commit: (c: Career) => void; onDelete: () => void }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [view, setView] = useState<View>("home");
   // The thing just bought flashes in the picture for a moment.
@@ -295,7 +304,7 @@ function Hub({ career, onBack, onPlay, onChallenge, commit, onDelete }: { career
   const active = career.active;
   const challenge = career.challenge;
 
-  const title = view === "tournaments" ? "Turneringer" : view === "challenges" ? "Utfordringer" : view === "arena" ? "Hjemmearena" : "Karriere";
+  const title = view === "training" ? "Trening" : view === "tournaments" ? "Turneringer" : view === "challenges" ? "Utfordringer" : view === "arena" ? "Hjemmearena" : "Karriere";
   return (
     <div className="animate-screen-push screen">
       {confirmDelete && (
@@ -338,7 +347,7 @@ function Hub({ career, onBack, onPlay, onChallenge, commit, onDelete }: { career
               </Card>
             )}
             <div className="space-y-2 mb-4" aria-label="Hva vil du gjøre">
-              <Door title="Trening" about="Kommer snart: tren hjemme og bli skarpere" disabled />
+              <Door title="Trening" about="Kast 15 runder og la nivået ditt følge kastingen" onClick={() => setView("training")} />
               <Door title="Hjemmearena" about={arenaSteps(career) === 0 ? "Bygg opp rommet: lys, brett, pynt og publikum" : `${arenaSteps(career)} av 18 trinn kjøpt`} onClick={() => setView("arena")} />
               <Door title="Turneringer" about={`${LADDER.length} å velge mellom, fra Lü til VM`} onClick={() => setView("tournaments")} />
               <Door title="Utfordringer" about="501, Lava og Highstriker om penger" onClick={() => setView("challenges")} />
@@ -381,6 +390,46 @@ function Hub({ career, onBack, onPlay, onChallenge, commit, onDelete }: { career
               />
             ))}
           </ul>
+        )}
+
+        {view === "training" && (
+          <>
+            <Card className="mb-4">
+              <p className="section-label mb-1">DITT NIVÅ</p>
+              <p className="num" style={{ fontSize: "var(--text-num)", color: "var(--color-cream)" }}>
+                {levelLabel(career.skillMed)}
+              </p>
+              <p className="tabular" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
+                MED {oneDecimal(career.skillMed)} mm · motstanderne settes ut fra dette
+              </p>
+            </Card>
+            <Card className="mb-4">
+              <h2 className="font-display mb-1" style={{ fontSize: "var(--text-title)", color: "var(--color-cream)" }}>
+                Trebling 20
+              </h2>
+              <p className="mb-3" style={{ color: "var(--color-text-2)", fontSize: "var(--text-body)" }}>
+                Kast tre piler mot trebling 20, {DRILL_ROUNDS} ganger, og skriv inn summen av hver runde. Det tar ca. 8 minutter. Resultatet flytter nivået ditt litt, så motstanderne passer til hvordan du faktisk kaster. Penger kan ikke gjøre kastet bedre, bare rommet.
+              </p>
+              <Button block variant="primary" size="lg" onClick={onTrain}>
+                Start økten
+              </Button>
+            </Card>
+            {career.training.length > 0 && (
+              <section className="mb-6" aria-label="Siste økter">
+                <p className="section-label mb-2">SISTE ØKTER</p>
+                <ul className="space-y-1">
+                  {career.training.slice(0, 5).map((t) => (
+                    <li key={t.at} className="flex items-baseline justify-between gap-3 tabular" style={{ fontSize: "var(--text-small)", color: "var(--color-text-2)" }}>
+                      <span>snitt {oneDecimal(t.average)} per runde</span>
+                      <span style={{ color: "var(--color-muted)" }}>
+                        {oneDecimal(t.before)} → {oneDecimal(t.after)} mm
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+          </>
         )}
 
         {view === "arena" && (
@@ -727,6 +776,70 @@ function Result({ career, a, onDone }: { career: Career; a: ActiveEvent; onDone:
         <Button block variant="primary" size="lg" onClick={onDone}>
           Hjem
         </Button>
+      </div>
+    </div>
+  );
+}
+
+/** A training session: fifteen rounds at the treble 20 written in, and then what it says about the level. */
+function TrainingPlay({ career, commit, onHub }: { career: Career; commit: (c: Career) => void; onHub: () => void }) {
+  const [rounds, setRounds] = useState<number[]>([]);
+  const [done, setDone] = useState<ReturnType<typeof sessionFrom> | null>(null);
+  const submit = (score: number) => {
+    const next = [...rounds, score];
+    if (next.length >= DRILL_ROUNDS) {
+      const now = new Date().toISOString();
+      setDone(sessionFrom(career, next, now));
+      commit(trainCareer(career, next, now));
+    }
+    setRounds(next);
+  };
+  if (done) {
+    const move = done.after - done.before;
+    return (
+      <div className="animate-screen-enter screen">
+        <div className="screen-inner">
+          <ScreenTop title="Trening" onBack={onHub} backLabel="Hjem" />
+          <Card className="mb-4 text-center">
+            <p className="section-label mb-1">SNITT PER RUNDE</p>
+            <p className="num" style={{ fontSize: "var(--text-num)", color: "var(--color-cream)" }}>
+              {oneDecimal(done.average)}
+            </p>
+            <p style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>Det tilsvarer MED {oneDecimal(done.measured)} mm</p>
+          </Card>
+          <Card className="mb-4 text-center">
+            <p className="section-label mb-1">NIVÅET DITT</p>
+            <p className="num tabular" style={{ fontSize: "var(--text-num)", color: "var(--color-gold-strong)" }}>
+              {oneDecimal(done.before)} → {oneDecimal(done.after)} mm
+            </p>
+            <p style={{ color: "var(--color-text-2)", fontSize: "var(--text-body)" }}>
+              {Math.abs(move) < 0.05 ? "Uendret. Du kastet som nivået sier." : move < 0 ? "Du ble skarpere. Motstanderne blir litt sterkere." : "Du var litt unøyaktig i dag. Motstanderne blir litt svakere."} {levelLabel(done.after)}.
+            </p>
+          </Card>
+          <Button block variant="primary" size="lg" onClick={onHub}>
+            Ferdig
+          </Button>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="animate-screen-push screen">
+      <div className="screen-inner">
+        <ScreenTop title="Trebling 20" onBack={onHub} backLabel="Avbryt" />
+        <div className="mb-3" role="progressbar" aria-valuemin={0} aria-valuemax={DRILL_ROUNDS} aria-valuenow={rounds.length} aria-label="Runder kastet" style={{ height: "0.5rem", borderRadius: "var(--radius-pill)", background: "var(--color-cell)" }}>
+          <div style={{ width: `${(rounds.length / DRILL_ROUNDS) * 100}%`, height: "100%", borderRadius: "var(--radius-pill)", background: "var(--color-teal)", transition: "width var(--pull)" }} />
+        </div>
+        <ScoreKeypad
+          onSubmit={submit}
+          onUndo={() => setRounds((r) => r.slice(0, -1))}
+          canUndo={rounds.length > 0}
+          line={() => (
+            <span style={{ color: "var(--color-text-2)" }}>
+              Runde {rounds.length + 1} av {DRILL_ROUNDS} · tre piler mot trebling 20 · skriv summen
+            </span>
+          )}
+        />
       </div>
     </div>
   );

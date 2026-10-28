@@ -15,7 +15,7 @@ const latest = new Map<string, Career>();
 /** A career from before it had a look, or one whose event was of an older kind, is brought up to date rather than dropped. */
 function normalize(c: Career): Career {
   const old = c.active && !("cup" in c.active);
-  return { ...c, profile: c.profile ?? DEFAULT_PROFILE, worldTitles: c.worldTitles ?? 0, qualified: c.qualified ?? [], arena: { ...START_ARENA, ...(c.arena ?? {}) }, challenge: c.challenge ?? null, challenges: c.challenges ?? 0, active: old ? null : c.active };
+  return { ...c, profile: c.profile ?? DEFAULT_PROFILE, worldTitles: c.worldTitles ?? 0, qualified: c.qualified ?? [], training: c.training ?? [], arena: { ...START_ARENA, ...(c.arena ?? {}) }, challenge: c.challenge ?? null, challenges: c.challenges ?? 0, active: old ? null : c.active };
 }
 
 function readLocal(): Career[] {
