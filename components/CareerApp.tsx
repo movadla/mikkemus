@@ -195,14 +195,14 @@ function NewCareer({ taken, onBack, onCreate }: { taken: string[]; onBack: () =>
           <ScreenTop title="Utseende" onBack={() => setStep(1)} sub={<span style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>{record.name}</span>} />
           <Steps step={2} />
           <KitEditor label="SKJORTE" kit={kits.home} onChange={(kit) => setKits(record.name, { ...kits, home: kit })} name={record.name} />
-          <p className="section-label mb-2">DARTPILER</p>
-          <div className="space-y-2 mb-5" role="radiogroup" aria-label="Dartpiler">
+          <p className="section-label mb-2">PILER</p>
+          <div className="space-y-2 mb-5" role="radiogroup" aria-label="Piler">
             {DARTS.map((d) => (
               <Choice key={d.id} selected={darts === d.id} onPick={() => setDarts(d.id)} title={d.name} about={d.about} />
             ))}
           </div>
           <p className="mb-3" style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>
-            Neste er din første turnering: Lü-cupen på puben. Den er gratis.
+            Neste er din første turnering: Ly-cupen på puben. Den er gratis.
           </p>
           <Button block variant="primary" size="lg" onClick={() => onCreate(record.name, level, { home: "garage", darts })}>
             Start karrieren
@@ -233,7 +233,7 @@ function NewCareer({ taken, onBack, onCreate }: { taken: string[]; onBack: () =>
           </div>
         )}
         <p className="section-label mb-2">HVOR GOD ER DU</p>
-        <div className="space-y-2 mb-6" role="radiogroup" aria-label="Nivå">
+        <div className="space-y-2 mb-6" role="radiogroup" aria-label="Treffsikkerhet">
           {START_LEVELS.map((l) => (
             <Choice key={l.key} selected={level === l.key} onPick={() => setLevel(l.key)} title={l.name} about={l.about} />
           ))}

@@ -46,15 +46,15 @@ Hvert trinn bygger på det forrige, så alt som er lagt til blir stående.
 
 | Trinn | Navn | Pris | Endring |
 |---|---|---|---|
-| 2 | Rydd | $500 | the junk is cleared: the wire rack becomes a tidy bare metal shelving unit with a few neat boxes, the floor is swept, the cardboard and rug are gone, only the white cabinet and toolbox remain |
-| 3 | Fresh vegger | $1 000 | the walls are painted a deep dark green and covered in clean wall panels, the cork panel stays behind the board, a plain small rug on the floor, brighter even light |
-| 4 | Oche | $2 000 | a black dart mat with a warm wooden edge and a white throwing line is laid on the floor in front of the board, running toward the camera |
-| 5 | Belysning | $3 500 | a glowing warm LED ring light around the dartboard and small ceiling spotlights, warm golden mood, one or two small framed pictures on the walls |
+| 2 | Ryddet | $500 | the junk is cleared: the wire rack becomes a tidy bare metal shelving unit with a few neat boxes, the floor is swept, the cardboard and rug are gone, only the white cabinet and toolbox remain |
+| 3 | Nye vegger | $1 000 | the walls are painted a deep dark green and covered in clean wall panels, the cork panel stays behind the board, a plain small rug on the floor, brighter even light |
+| 4 | Kastelinje | $2 000 | a black dart mat with a warm wooden edge and a white throwing line is laid on the floor in front of the board, running toward the camera |
+| 5 | Lys | $3 500 | a glowing warm LED ring light around the dartboard and small ceiling spotlights, warm golden mood, one or two small framed pictures on the walls |
 | 6 | Skjerm | $5 000 | a wall-mounted TV on the left showing a generic scoreboard with only numbers and a dartboard graphic, and a small scoreboard sign on the right, wooden shelves and a desk below |
 | 7 | Utstyr | $7 500 | a wall shelf with dart gear (rows of darts and flights), a plant, the toolbox becomes a neat dark workbench |
 | 8 | Dekor | $10 000 | framed posters and a signed shirt in a frame on the walls, small trophies on a shelf, a warm lamp and more plants |
-| 9 | Pro setup | $15 000 | a wall of vertical wooden acoustic slats with warm light behind them around the board, premium details: brass, glass, a lit display shelf |
-| 10 | Ultimate | $25 000 | a small bar with two stools and a glass-door fridge on the right, a warm glowing crown-shaped neon sign above the board (symbol only, no letters), a black mat with a gold crown pattern |
+| 9 | Proffoppsett | $15 000 | a wall of vertical wooden acoustic slats with warm light behind them around the board, premium details: brass, glass, a lit display shelf |
+| 10 | Drømmerommet | $25 000 | a small bar with two stools and a glass-door fridge on the right, a warm glowing crown-shaped neon sign above the board (symbol only, no letters), a black mat with a gold crown pattern |
 
 Eksempel på full ledetekst for trinn 3 (limes inn sammen med bildet fra trinn 2):
 

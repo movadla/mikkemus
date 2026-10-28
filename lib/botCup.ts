@@ -22,7 +22,7 @@ export const CUP_TYPES: CupType[] = [
   { kind: "gs", name: "Grand Slam", trophy: "Grand Slam-pokalen", tagline: "Fire runder mot de beste", defaultSize: 16, sizes: [4, 8, 16, 32, 64] },
   { kind: "nm", name: "Norgesmesterskapet", trophy: "Norgesmesterpokalen", tagline: "Kampen om Norge", defaultSize: 8, sizes: [4, 8, 16, 32, 64] },
   // The one cup with a format of its own (lib/pilot.ts): sixteen play, four at a time, so there is one size. The rest are knockouts.
-  { kind: "lu", name: "Lü-cupen", trophy: "Lü-pokalen", tagline: "Fredagsturneringen på Lü", defaultSize: 8, sizes: [8], career: true },
+  { kind: "lu", name: "Ly-cupen", trophy: "Ly-pokalen", tagline: "Fredagsturneringen på Ly", defaultSize: 8, sizes: [8], career: true },
   { kind: "region", name: "Regionmesterskapet", trophy: "Regionpokalen", tagline: "Beste i regionen", defaultSize: 16, sizes: [16], career: true },
   { kind: "open", name: "Ly Pilotturnering", trophy: "Ly-pokalen", tagline: "Fire og fire, med en ny sjanse", defaultSize: 16, sizes: [16] },
 ];

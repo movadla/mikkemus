@@ -25,17 +25,17 @@ import { FOCUS_RING } from "./ui/focus";
 
 type View = "home" | "rooms" | "road" | "training" | "challenges";
 
-const TITLE: Record<Exclude<View, "home">, string> = { rooms: "Rom", road: "Veien", training: "Trening", challenges: "Utfordring" };
+const TITLE: Record<Exclude<View, "home">, string> = { rooms: "Rom", road: "Turneringer", training: "Trening", challenges: "Duell" };
 
 /** The one goal on the home screen: the star the player is working towards, a bar, and the points. */
 function GoalStrip({ career }: { career: Career }) {
   const g = rankProgress(career);
   if (!g) return null;
   return (
-    <div className="goal-strip tabular" role="progressbar" aria-label={`Veien til nivå ${g.next}`} aria-valuemin={0} aria-valuemax={g.need} aria-valuenow={g.points}>
-      <span className="inline-flex items-center gap-1" style={{ color: "var(--color-gold-strong)", fontWeight: 800 }}>
+    <div className="goal-strip tabular" role="progressbar" aria-label={`Neste rang: ${g.name}, ${g.points} av ${g.need} poeng`} aria-valuemin={0} aria-valuemax={g.need} aria-valuenow={g.points}>
+      <span className="inline-flex items-center gap-1 shrink-0" style={{ color: "var(--color-gold-strong)", fontWeight: 800 }}>
         <StarIcon className="w-4 h-4" />
-        {g.next}
+        {g.name}
       </span>
       <span className="flex-1" style={{ height: "0.4rem", borderRadius: "var(--radius-pill)", background: "var(--color-cell)", overflow: "hidden" }}>
         <span className="block" style={{ width: `${Math.max(3, g.progress * 100)}%`, height: "100%", borderRadius: "var(--radius-pill)", background: "var(--color-gold)", transition: "width var(--pull)" }} />
@@ -159,8 +159,8 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
             <div className="round4 rise-in" style={{ "--d": "0.32s" } as React.CSSProperties}>
               <RoundButton icon={<HomeIcon />} label="Rom" badge={roomBadge(career)} onClick={() => go("rooms")} />
               <RoundButton icon={<BullseyeIcon />} label="Trening" onClick={() => go("training")} />
-              <RoundButton icon={<BoltIcon />} label="Utfordring" onClick={() => go("challenges")} />
-              <RoundButton icon={<RoadIcon />} label="Veien" badge={roadDot} onClick={() => go("road")} />
+              <RoundButton icon={<BoltIcon />} label="Duell" onClick={() => go("challenges")} />
+              <RoundButton icon={<RoadIcon />} label="Turneringer" badge={roadDot} onClick={() => go("road")} />
             </div>
           </div>
         </div>
@@ -202,39 +202,47 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
                     ))}
                   </ul>
                 )}
-                <PlayButton label={next ? "KJØP" : "FULLT"} sub={next ? (buyWhy ?? dollars(next.price)) : "Rommet er ferdig"} disabled={!!buyWhy} onClick={buy} />
+                <PlayButton label={next ? "KJØP" : "FERDIG"} sub={next ? (buyWhy ?? dollars(next.price)) : "Drømmerommet er på plass"} disabled={!!buyWhy} onClick={buy} />
               </div>
             </>
           )}
 
           {view === "road" && (
             <>
-              <ol className="career-road" aria-label="Veien til VM">
-                {[...LADDER].reverse().map((tier) => {
+              <ul className="space-y-2" aria-label="Turneringer">
+                {LADDER.map((tier) => {
                   const locked = !isUnlocked(career, tier);
                   const here = career.active?.tier === tier.id;
+                  const qualified = !locked && !!tier.qualify;
                   const colour = cupColor(tier.kind);
+                  const state = here ? "pågår" : locked ? "låst" : qualified ? "kvalifisert" : "åpen";
                   return (
-                    <li key={tier.id} className="career-road-node" data-state={locked ? "locked" : "open"}>
-                      <button type="button" onClick={() => setPicked(tier.id)} aria-pressed={selected.id === tier.id} className={`road-row road-row-glass tactile ${selected.id === tier.id ? "road-row-on" : ""} ${FOCUS_RING}`} style={{ "--cup": colour } as React.CSSProperties}>
-                        <span className="career-road-dot" style={{ borderColor: locked ? "var(--color-border)" : colour, color: locked ? "var(--color-muted)" : colour, boxShadow: here ? `0 0 0 5px color-mix(in srgb, ${colour} 25%, transparent)` : "none" }} aria-hidden>
+                    <li key={tier.id}>
+                      <button type="button" onClick={() => setPicked(tier.id)} aria-pressed={selected.id === tier.id} className={`tourney-card tactile ${selected.id === tier.id ? "tourney-card-on" : ""} ${FOCUS_RING}`} style={{ "--cup": colour } as React.CSSProperties}>
+                        <span className="tourney-emblem" style={{ borderColor: locked ? "var(--color-border)" : colour, color: locked ? "var(--color-muted)" : colour }} aria-hidden>
                           {locked ? <LockIcon className="w-5 h-5" /> : <CupEmblem kind={tier.kind} className="w-6 h-6" />}
                         </span>
-                        <b className="font-display flex-1 min-w-0 truncate" style={{ fontSize: "var(--text-title)", color: locked ? "var(--color-text-2)" : "var(--color-cream)" }}>
-                          {tier.short}
-                        </b>
-                        <span className="tabular" style={{ color: locked ? "var(--color-muted)" : "var(--color-gold-strong)", fontWeight: 800 }}>
+                        <span className="min-w-0 text-left">
+                          <b className="font-display block" style={{ fontSize: "var(--text-body)", color: locked ? "var(--color-text-2)" : "var(--color-cream)" }}>
+                            {tier.name}
+                          </b>
+                          <span className="block" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)", lineHeight: 1.3 }}>
+                            {tier.qualify ?? "Åpen for alle"} · {tier.fee === 0 ? "gratis" : dollars(tier.fee)} · {tier.size} spillere
+                          </span>
+                        </span>
+                        <span className="tabular text-right grid gap-1 justify-items-end" style={{ color: locked ? "var(--color-muted)" : "var(--color-gold-strong)", fontWeight: 800 }}>
                           {dollars(tier.prizes.winner ?? 0)}
+                          <span className={`tourney-state tourney-state-${state}`}>{state}</span>
                         </span>
                       </button>
                     </li>
                   );
                 })}
-              </ol>
-              <div className="mt-auto">
+              </ul>
+              <div className="mt-auto sticky-play">
                 <PlayButton
                   label="SPILL"
-                  sub={selState === "active" ? "Fortsett" : selState === "locked" ? selected.qualify : selState === "short" ? selWhy ?? undefined : selected.fee === 0 ? "gratis" : dollars(selected.fee)}
+                  sub={selState === "active" ? "Fortsett" : selState === "locked" ? selected.qualify : selState === "short" ? selWhy ?? undefined : `${selected.name} · ${selected.fee === 0 ? "gratis" : dollars(selected.fee)}`}
                   disabled={selState === "locked" || selState === "short"}
                   onClick={() => {
                     uiFeedback("click");
@@ -253,22 +261,22 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
             <>
               <div className="flex-1" />
               <div className="room-tile room-tile-wide" style={{ display: "grid", justifyItems: "center", gap: "0.15rem", padding: "1rem" }}>
-                <span className="section-label">NIVÅ</span>
+                <span className="section-label">TREFFSIKKERHET</span>
                 <b className="font-display" style={{ fontSize: "var(--text-num)", color: "var(--color-cream)" }}>
                   {levelLabel(career.skillMed)}
                 </b>
                 <span className="tabular" style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>
-                  {oneDecimal(career.skillMed)} mm{career.training[0] ? ` · sist ${oneDecimal(career.training[0].average)}` : ""}
+                  avvik {oneDecimal(career.skillMed)} mm{career.training[0] ? ` · sist snitt ${oneDecimal(career.training[0].average)}` : ""}
                 </span>
               </div>
-              <PlayButton label="START" sub={`${DRILL_ROUNDS} runder · trebling 20`} onClick={onTrain} />
+              <PlayButton label="START" sub={`${DRILL_ROUNDS} runder · trippel 20`} onClick={onTrain} />
             </>
           )}
 
           {view === "challenges" && (
             <>
               <div className="flex-1" />
-              <ul className="space-y-2" aria-label="Utfordringer">
+              <ul className="space-y-2" aria-label="Duell">
                 {(Object.keys(GAMES) as GameId[]).map((game) => {
                   const shut = !!career.active || !!career.challenge;
                   return (

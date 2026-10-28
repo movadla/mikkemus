@@ -208,7 +208,7 @@ export function KnockoutOverview({
     <div className="animate-screen-push screen cup-lamp" style={{ "--cup": cupColor(tournament.cup?.kind) } as React.CSSProperties}>
       {confirm === "cancel" && (
         <ConfirmDialog
-          message={career ? `Gi opp turneringen? ${career.cost > 0 ? `Innskuddet på ${dollars(career.cost)} er tapt` : "Du får ingenting"}, og kampene som er spilt teller ikke.` : "Slette turneringen?"}
+          message={career ? (career.cost > 0 ? `Gi opp? Du mister innskuddet på ${dollars(career.cost)}.` : "Gi opp turneringen? Kampene som er spilt teller ikke.") : "Slette turneringen?"}
           buttons={[
             { label: career ? "Spill videre" : "Behold", onClick: () => setConfirm(null), background: "var(--color-green)" },
             { label: career ? "Gi opp" : cancelingTournament ? "Sletter …" : "Slett", onClick: cancelingTournament ? () => {} : onCancelTournament, background: "var(--color-red)" },

@@ -42,7 +42,7 @@ async function toCareer(page: Page, withCareer = true) {
 
 const saved = (page: Page) => page.evaluate(() => JSON.parse(localStorage.getItem("mikke-mus-career:lars") ?? "null"));
 const play = (page: Page, name: RegExp | string) => page.getByRole("button", { name });
-const place = (page: Page, name: "Rom" | "Trening" | "Utfordring" | "Veien") => page.getByRole("button", { name: new RegExp(`^${name}`) });
+const place = (page: Page, name: "Rom" | "Trening" | "Duell" | "Turneringer") => page.getByRole("button", { name: new RegExp(`^${name}`) });
 
 test.describe("karriere", () => {
   test.skip(!PIN, "E2E_PIN is not set");
@@ -59,36 +59,43 @@ test.describe("karriere", () => {
     await expect(page.locator(".room-backdrop-img")).toHaveAttribute("src", /room-01.jpg/);
     const hud = page.getByRole("group", { name: "Status" });
     await expect(hud.getByText("$300")).toBeVisible();
-    await expect(hud.getByLabel("Nivå 1, Pubspiller")).toBeVisible();
-    // One goal: the way to the next level.
-    await expect(page.getByRole("progressbar", { name: "Veien til nivå 2" })).toBeVisible();
+    // One star, not two: the goal says which rank it counts towards, and the rank is written under the name.
+    await expect(hud.getByLabel(/^Nivå/)).toHaveCount(0);
+    await expect(page.getByRole("progressbar", { name: "Neste rang: Regionspiller, 0 av 10 poeng" })).toBeVisible();
+    await expect(page.getByText("Pubspiller", { exact: true })).toBeVisible();
     // The one big button leads to the biggest step that can be entered, with the price as a small line.
     await expect(play(page, "SPILL Region · $200")).toBeVisible();
     // Four round buttons. The room has no dot: the first step costs $500 and there is $300.
-    for (const name of ["Rom", "Trening", "Utfordring", "Veien"] as const) await expect(place(page, name)).toBeVisible();
+    for (const name of ["Rom", "Trening", "Duell", "Turneringer"] as const) await expect(place(page, name)).toBeVisible();
     await expect(page.getByRole("button", { name: "Rom, nytt" })).toHaveCount(0);
     // Nothing else: no lists, no explanations, no second row of tabs.
     await expect(page.getByRole("navigation", { name: "Karriere" })).toHaveCount(0);
     await expect(page.getByText(/Velkommen til rommet/)).toHaveCount(0);
   });
 
-  test("veien: alle turneringer med premie, de låste sier hva som kreves, og Lü-cupen spilles til trekning og omlasting", async ({ page }) => {
+  test("turneringer: alle med krav, pris og premie, de låste sier hva som kreves, og Ly-cupen spilles til trekning og omlasting", async ({ page }) => {
     await toCareer(page);
     await page.getByRole("button", { name: /Lars/ }).click();
-    await place(page, "Veien").click();
-    const road = page.getByRole("list", { name: "Veien til VM" });
-    for (const name of ["VM", "Slam", "NM", "Region", "Lü"]) await expect(road.getByRole("button", { name: new RegExp(`^${name}`) })).toBeVisible();
-    await expect(road.getByRole("button", { name: /^VM/ })).toContainText("$150");
-    // A locked step says what it takes in the button, and the button is shut.
-    await road.getByRole("button", { name: /^NM/ }).click();
-    await expect(play(page, /^SPILL Kom blant de fire beste i Regionmesterskapet/)).toBeDisabled();
-    await road.getByRole("button", { name: /^Lü/ }).click();
-    await play(page, "SPILL gratis").click();
+    await place(page, "Turneringer").click();
+    const list = page.getByRole("list", { name: "Turneringer" });
+    for (const name of ["Ly-cupen", "Regionmesterskapet", "Norgesmesterskapet", "Grand Slam", "VM i dart"]) await expect(list.getByRole("button", { name: new RegExp("^" + name) })).toBeVisible();
+    // What it takes, what it costs, who plays, and the first prize.
+    await expect(list.getByRole("button", { name: /^Ly-cupen/ })).toContainText("Åpen for alle · gratis · 8 spillere");
+    await expect(list.getByRole("button", { name: /^Ly-cupen/ })).toContainText("åpen");
+    await expect(list.getByRole("button", { name: /^Norgesmesterskapet/ })).toContainText("Krever topp 4 i Regionmesterskapet");
+    await expect(list.getByRole("button", { name: /^Norgesmesterskapet/ })).toContainText("låst");
+    await expect(list.getByRole("button", { name: /^VM i dart/ })).toContainText("Krever topp 2 i Grand Slam · $10");
+    await expect(list.getByRole("button", { name: /^VM i dart/ })).toContainText("$150");
+    // A locked one says what it takes in the button, and the button is shut.
+    await list.getByRole("button", { name: /^Norgesmesterskapet/ }).click();
+    await expect(play(page, /^SPILL Krever topp 4 i Regionmesterskapet/)).toBeDisabled();
+    await list.getByRole("button", { name: /^Ly-cupen/ }).click();
+    await play(page, "SPILL Ly-cupen · gratis").click();
     // The scene of the pub, then the draw of the tournaments, with the career's field in it.
-    await expect(page.getByRole("img", { name: /Puben Lü/ })).toBeVisible();
+    await expect(page.getByRole("img", { name: /Puben Ly/ })).toBeVisible();
     await play(page, "TREKK").click();
     // The pairs are cards that turn over, the player's own marked, and the draw is not set up in the career.
-    await expect(page.getByText("Lü-pokalen").first()).toBeVisible();
+    await expect(page.getByText("Ly-pokalen").first()).toBeVisible();
     await expect(page.getByLabel("Trekningen").getByText("DU")).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("Seedet", { exact: true })).toHaveCount(0);
     await expect(page.getByText("Endre", { exact: true })).toHaveCount(0);
@@ -121,8 +128,8 @@ test.describe("karriere", () => {
   test("utfordring: velg spillet, se innsatsen, spill, og gi opp uten å tape noe", async ({ page }) => {
     await toCareer(page);
     await page.getByRole("button", { name: /Lars/ }).click();
-    await place(page, "Utfordring").click();
-    await page.getByRole("list", { name: "Utfordringer" }).getByRole("button", { name: /^501/ }).click();
+    await place(page, "Duell").click();
+    await page.getByRole("list", { name: "Duell" }).getByRole("button", { name: /^501/ }).click();
     // The two of them and the stake, and one button.
     await expect(page.getByText("$150", { exact: true })).toBeVisible();
     await play(page, "SPILL").click();
@@ -149,17 +156,17 @@ test.describe("karriere", () => {
     await play(page, "KJØP $500").click();
     await expect.poll(async () => (await saved(page)).room).toBe(1);
     expect((await saved(page)).money).toBe(100);
-    await expect(page.getByRole("img", { name: "Rommet ditt, trinn 2: Rydd" })).toBeVisible();
+    await expect(page.getByRole("img", { name: "Rommet ditt, trinn 2: Ryddet" })).toBeVisible();
     // The next step costs $1 000: too much, so the button is shut and says what is missing.
-    await expect(play(page, /^KJØP Du mangler/)).toBeDisabled();
+    await expect(play(page, /^KJØP Mangler/)).toBeDisabled();
   });
 
   test("rommet er ferdig på det siste trinnet", async ({ page }) => {
     await seed(page, { ...CAREER, room: 9, money: 100000 });
     await page.getByRole("button", { name: /Lars/ }).click();
     await place(page, "Rom").click();
-    await expect(page.getByRole("img", { name: "Rommet ditt, trinn 10: Ultimate" })).toBeVisible();
-    await expect(play(page, /^FULLT/)).toBeDisabled();
+    await expect(page.getByRole("img", { name: "Rommet ditt, trinn 10: Drømmerommet" })).toBeVisible();
+    await expect(play(page, /^FERDIG/)).toBeDisabled();
   });
 
   test("trening: femten runder flytter nivået, og det blir lagret", async ({ page }) => {
@@ -174,7 +181,7 @@ test.describe("karriere", () => {
       await keys.getByRole("button", { name: "4", exact: true }).click();
       await keys.getByRole("button", { name: "5", exact: true }).click();
     }
-    await expect(page.getByText("SNITT", { exact: true })).toBeVisible();
+    await expect(page.getByText("SNITT PER RUNDE")).toBeVisible();
     const s = await saved(page);
     expect(s.skillMed).toBeLessThan(37);
     expect(s.skillMed).toBeGreaterThanOrEqual(34);
@@ -213,7 +220,7 @@ test.describe("karriere", () => {
     };
     await page.waitForTimeout(1500);
     await check();
-    for (const tab of ["Veien", "Rom", "Trening", "Utfordring"] as const) {
+    for (const tab of ["Turneringer", "Rom", "Trening", "Duell"] as const) {
       await place(page, tab).click();
       await page.waitForTimeout(700);
       await check();

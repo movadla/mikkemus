@@ -46,7 +46,7 @@ export function CareerProfile({ career }: { career: Career }) {
             <span>{career.points} poeng</span>
             <span>{next.name} ved {next.min}</span>
           </div>
-          <div className="mt-1" role="progressbar" aria-label={`Veien til ${next.name}`} aria-valuemin={0} aria-valuemax={next.min} aria-valuenow={career.points} style={{ height: "0.45rem", borderRadius: "var(--radius-pill)", background: "var(--color-cell)", overflow: "hidden" }}>
+          <div className="mt-1" role="progressbar" aria-label={`Neste rang: ${next.name}`} aria-valuemin={0} aria-valuemax={next.min} aria-valuenow={career.points} style={{ height: "0.45rem", borderRadius: "var(--radius-pill)", background: "var(--color-cell)", overflow: "hidden" }}>
             <div style={{ width: `${Math.min(100, (career.points / next.min) * 100)}%`, height: "100%", background: "var(--color-gold)" }} />
           </div>
         </div>
@@ -54,10 +54,10 @@ export function CareerProfile({ career }: { career: Career }) {
       <div className="grid grid-cols-3 gap-2">
         <Stat label="Turneringer" value={String(career.played)} />
         <Stat label="Titler" value={String(career.titles)} />
-        <Stat label="Nivå" value={levelLabel(career.skillMed)} />
+        <Stat label="Treffsikkerhet" value={levelLabel(career.skillMed)} />
       </div>
       <p style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
-        Rom: {STAGES[career.room].name} · {darts} dart · MED {oneDecimal(career.skillMed)} mm · saldo {dollars(career.money)}
+        Rom: {STAGES[career.room].name} · {darts.toLowerCase()} piler · avvik {oneDecimal(career.skillMed)} mm · saldo {dollars(career.money)}
       </p>
       {career.history.length > 0 && (
         <section aria-label="Siste">
@@ -78,7 +78,7 @@ export function CareerProfile({ career }: { career: Career }) {
       <section aria-label="Pokaler">
         <p className="section-label mb-2">POKALER</p>
         {career.trophies.length === 0 ? (
-          <p style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>Ingen ennå. Den første kan komme allerede i Lü-cupen.</p>
+          <p style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>Ingen pokaler ennå</p>
         ) : (
           <ul className="space-y-1">
             {career.trophies.map((t) => (

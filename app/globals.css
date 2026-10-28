@@ -5390,3 +5390,71 @@ html[data-fx="full"] .hs-last {
 .room-picture-img {
   max-width: none;
 }
+
+/* A tournament as a card: the emblem, the name with where it stands, what it takes and costs, and the first prize. */
+.tourney-card {
+  display: grid;
+  grid-template-columns: 2.6rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.65rem 0.8rem;
+  border-radius: var(--radius-m);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-surface) 94%, white), var(--color-surface));
+  border: 1px solid var(--color-border);
+}
+.room-over .tourney-card {
+  background: color-mix(in srgb, var(--color-surface) 62%, transparent);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+.tourney-card-on {
+  border-color: var(--cup);
+  box-shadow: 0 0 0 1px var(--cup), 0 10px 24px -12px var(--cup);
+}
+.tourney-emblem {
+  display: grid;
+  place-items: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  background: var(--color-bg);
+}
+.tourney-state {
+  padding: 0.05rem 0.5rem;
+  border-radius: var(--radius-pill);
+  font-size: var(--text-micro);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+}
+.tourney-state-åpen {
+  color: var(--color-teal);
+  background: color-mix(in srgb, var(--color-teal) 14%, transparent);
+  border-color: color-mix(in srgb, var(--color-teal) 40%, transparent);
+}
+.tourney-state-kvalifisert {
+  color: var(--color-green);
+  background: color-mix(in srgb, var(--color-green) 14%, transparent);
+  border-color: color-mix(in srgb, var(--color-green) 40%, transparent);
+}
+.tourney-state-pågår {
+  color: var(--color-gold-strong);
+  background: color-mix(in srgb, var(--color-gold) 14%, transparent);
+  border-color: color-mix(in srgb, var(--color-gold) 40%, transparent);
+}
+.tourney-state-låst {
+  color: var(--color-muted);
+  background: color-mix(in srgb, white 6%, transparent);
+  border-color: var(--color-border);
+}
+
+/* The main button of a long screen stays at the foot of it, with a fade behind it, so it is there however far the list goes. */
+.sticky-play {
+  position: sticky;
+  bottom: 0;
+  padding-block: 0.5rem calc(0.5rem + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(to bottom, transparent, color-mix(in srgb, #050807 70%, transparent) 40%);
+}

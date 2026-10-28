@@ -45,3 +45,13 @@ describe("a career from before the room had steps", () => {
     expect(normalizeCareer(huge as never).room).toBe(9);
   });
 });
+
+describe("a career from the time the pub was called Lü", () => {
+  it("reads the old name as the new: in the history, and in a cup that is going", () => {
+    const old = { ...mk("Lars", "2026-10-01T10:00:00.000Z"), history: [{ at: "2026-10-01T10:00:00.000Z", event: "Lü-cupen", place: "winner", prize: 500, cost: 0, points: 10 }] } as unknown as Record<string, unknown>;
+    delete old.trophies;
+    const c = normalizeCareer(old as never);
+    expect(c.history[0].event).toBe("Ly-cupen");
+    expect(c.trophies).toEqual([{ tier: "lu", at: "2026-10-01T10:00:00.000Z", prize: 500 }]);
+  });
+});

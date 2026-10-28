@@ -2,10 +2,8 @@
 
 import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { dollars, type Career } from "@/lib/career";
-import { rankLevel, rankOf } from "@/lib/careerGoals";
 import { ArrowLeftIcon, CoinIcon, TrophyIcon } from "./icons";
 import { FOCUS_RING } from "./ui/focus";
-import { StarIcon } from "./careerIcons";
 import { CountUp } from "./ui/CountUp";
 
 const subscribeOnline = (cb: () => void) => {
@@ -31,7 +29,7 @@ function SaveDot({ savedAt }: { savedAt: string }) {
   const fresh = now - Date.parse(savedAt) < 3500;
   if (!fresh && online) return null;
   return (
-    <span role="status" className="inline-flex items-center gap-1" aria-label={online ? "Lagret" : "Ingen nett: lagret på telefonen"} style={{ fontSize: "var(--text-micro)", color: "var(--color-muted)" }}>
+    <span role="status" className="inline-flex items-center gap-1" aria-label={online ? "Lagret" : "Offline: lagret på telefonen"} style={{ fontSize: "var(--text-micro)", color: "var(--color-muted)" }}>
       <span aria-hidden style={{ width: "0.5rem", height: "0.5rem", borderRadius: "50%", background: online ? "var(--color-green)" : "var(--color-gold)" }} />
       {!online && "Offline"}
     </span>
@@ -94,10 +92,6 @@ export function CareerHud({ career, end, onBack, title }: { career: Career; end?
           {career.trophies.length}
         </span>
       )}
-      <span className="inline-flex items-center gap-1.5 tabular" style={{ ...chip, color: "var(--color-teal)" }} title={rankOf(career)} aria-label={`Nivå ${rankLevel(career)}, ${rankOf(career)}`}>
-        <StarIcon className="w-5 h-5" />
-        {rankLevel(career)}
-      </span>
       {end}
     </div>
   );

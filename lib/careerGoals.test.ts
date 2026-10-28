@@ -37,14 +37,14 @@ describe("goals", () => {
     const g = goalsOf({ ...fresh(), money: 100 }).find((x) => x.id === "tournament")!;
     expect(g.title).toBe("Regionmesterskapet");
     expect(g.progress).toBeCloseTo(0.5, 5);
-    expect(g.line).toMatch(/^Du mangler \$100/);
+    expect(g.line).toBe("Mangler $100");
   });
 
   it("moves on to a step that needs a qualification once the money is there", () => {
     const g = goalsOf({ ...fresh(), money: 5000 }).find((x) => x.id === "tournament")!;
     expect(g.title).toBe("Norgesmesterskapet");
     expect(g.progress).toBeNull();
-    expect(g.line).toBe("Kom blant de fire beste i Regionmesterskapet");
+    expect(g.line).toBe("Krever topp 4 i Regionmesterskapet");
   });
 
   it("measures the rank in points between the title the player has and the next", () => {
@@ -55,8 +55,8 @@ describe("goals", () => {
 
   it("points at the next step of the room, and says when it can be bought", () => {
     const g = goalsOf({ ...fresh(), money: 300 }).find((x) => x.id === "room")!;
-    expect(g.title).toBe("Rydd");
-    expect(g.line).toMatch(/^Du mangler \$200$/);
+    expect(g.title).toBe("Ryddet");
+    expect(g.line).toBe("Mangler $200");
     expect(g.progress).toBeCloseTo(0.6, 5);
     const rich = goalsOf({ ...fresh(), money: 1000 }).find((x) => x.id === "room")!;
     expect(rich.line).toBe("Du har råd til den nå");
@@ -77,7 +77,7 @@ describe("the level and the dot", () => {
   });
 
   it("measures the way to the next level, and stops at the top", () => {
-    expect(rankProgress({ ...fresh(), points: 25 })).toMatchObject({ next: 3, need: 40, points: 25 });
+    expect(rankProgress({ ...fresh(), points: 25 })).toMatchObject({ next: 3, name: "Landslagsspiller", need: 40, points: 25 });
     expect(rankProgress({ ...fresh(), points: 25 })!.progress).toBeCloseTo(0.5, 5);
     expect(rankProgress({ ...fresh(), worldTitles: 1 })).toBeNull();
   });

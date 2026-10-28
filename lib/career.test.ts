@@ -165,7 +165,7 @@ describe("signing up", () => {
     expect(c.money).toBe(0);
     expect(c.active).toMatchObject({ cost: 0, tournament: null, result: null, tier: "lu" });
     expect(c.active!.entrants).toHaveLength(8);
-    expect(c.active!.cup).toMatchObject({ kind: "lu", name: "Lü-cupen", career: true });
+    expect(c.active!.cup).toMatchObject({ kind: "lu", name: "Ly-cupen", career: true });
     expect(startEvent(c, "lu", 2)).toBe(c);
   });
 
@@ -175,13 +175,13 @@ describe("signing up", () => {
     expect(c.active).toMatchObject({ cost: 200, tier: "region" });
     expect(c.active!.entrants).toHaveLength(16);
     const poor = { ...fresh(), money: 150 };
-    expect(whyNot(poor, TIERS.region)).toBe("Du mangler $50 i inngang");
+    expect(whyNot(poor, TIERS.region)).toBe("Mangler $50");
     expect(startEvent(poor, "region", 1)).toBe(poor);
   });
 
   it("will not take a second event while one is going", () => {
     const c = startEvent(fresh(), "lu", 1);
-    expect(whyNot(c, TIERS.region)).toBe("Du har en turnering som pågår");
+    expect(whyNot(c, TIERS.region)).toBe("Fullfør turneringen først");
   });
 
   it("opens the cup from the draw, a knockout with the cup in it", () => {
@@ -238,7 +238,7 @@ describe("paying out", () => {
     expect(c.active!.result).toMatchObject({ place: "winner", prize: 500, points: 10 });
     expect(c.money).toBe(START_MONEY + 500);
     expect(c.titles).toBe(1);
-    expect(c.history[0]).toMatchObject({ event: "Lü-cupen", place: "winner" });
+    expect(c.history[0]).toMatchObject({ event: "Ly-cupen", place: "winner" });
   });
 
   it("pays $300 for second and $200 for the semifinal at the pub", () => {
@@ -395,12 +395,12 @@ describe("the room", () => {
 
   it("will not sell what there is no money for, and nothing past the last step", () => {
     const poor = { ...fresh(), money: 400 };
-    expect(whyNotBuy(poor)).toMatch(/^Du mangler \$100$/);
+    expect(whyNotBuy(poor)).toBe("Mangler $100");
     expect(buyStage(poor)).toBe(poor);
     let c = rich(1000000);
     for (let i = 0; i < 12; i++) c = buyStage(c);
     expect(c.room).toBe(9);
-    expect(whyNotBuy(c)).toBe("Fullt");
+    expect(whyNotBuy(c)).toBe("Ferdig");
     expect(nextStage(c)).toBeNull();
     expect(buyStage(c)).toBe(c);
   });

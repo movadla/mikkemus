@@ -20,7 +20,7 @@ function Patron({ x, y, s = 1 }: { x: number; y: number; s?: number }) {
  */
 export function PubScene() {
   return (
-    <svg viewBox="0 0 480 300" role="img" aria-label="Puben Lü en kveld" className="w-full block" style={{ borderRadius: "var(--radius-l)", background: C.skyTop }}>
+    <svg viewBox="0 0 480 300" role="img" aria-label="Puben Ly en kveld" className="w-full block" style={{ borderRadius: "var(--radius-l)", background: C.skyTop }}>
       <defs>
         <linearGradient id="pub-sky" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor={C.skyTop} />
@@ -84,7 +84,7 @@ export function PubScene() {
       <rect x="255" y="196" width="4" height="12" rx="2" fill={C.brass} />
       <rect x="190" y="98" width="100" height="32" rx="4" fill={C.signBoard} stroke={C.signRim} strokeWidth="2" />
       <text x="240" y="119" textAnchor="middle" className="font-display" fontSize="20" fill={C.signText} letterSpacing="4">
-        LÜ
+        LY
       </text>
       {/* Three darts on the blade sign */}
       <g stroke={C.arrow} strokeWidth="2" strokeLinecap="round">
@@ -113,7 +113,7 @@ export function PubScene() {
       <g transform="translate(300 262)">
         <path d="M0 34L10 0L38 0L48 34Z" fill={C.chalkBoard} stroke={C.signRim} strokeWidth="2" />
         <text x="24" y="14" textAnchor="middle" fontSize="7" fontWeight="700" fill={C.chalkText}>
-          LÜ-CUP
+          LY-CUP
         </text>
         <text x="24" y="25" textAnchor="middle" fontSize="6" fill={C.chalkText} opacity=".85">
           i kveld

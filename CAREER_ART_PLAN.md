@@ -1,6 +1,6 @@
 # Bildeplan for karrieren
 
-Mål: bilder som ser ut som et ekte spill (hjemmearenaen, Lü, spilleren), med samme utseende i alle, der en oppgradering bare endrer det som er kjøpt. Dette er ikke første prioritet: karrieren bygges først med enkle tegninger (se `CAREER_PLAN.md`), og bildene byttes inn etterpå uten å endre koden rundt. Beslutninger som må tas før noe lages, står nederst.
+Mål: bilder som ser ut som et ekte spill (hjemmearenaen, Ly, spilleren), med samme utseende i alle, der en oppgradering bare endrer det som er kjøpt. Dette er ikke første prioritet: karrieren bygges først med enkle tegninger (se `CAREER_PLAN.md`), og bildene byttes inn etterpå uten å endre koden rundt. Beslutninger som må tas før noe lages, står nederst.
 
 ## Hvordan alle bildene får samme utseende
 
@@ -17,7 +17,7 @@ Minimum for å se om løkken fungerer: **8 hele rom**.
 |---|---|
 | Starten, trinn 1 og 2 for hver av de tre stedene (garasjen, kjelleren, loftet) | 6 |
 | Felles trinn 3 og 4 (Klubbrommet og Arenaen), som alle kommer til | 2 |
-| Pub-fasaden (Lü, kvelds-gate) og Lü innvendig | 2 |
+| Pub-fasaden (Ly, kvelds-gate) og Ly innvendig | 2 |
 
 Utvidelse (lagdelt): for hvert rom seks ting (vegg, gulv, dartbrett, lys, pynt, publikum) i tre oppgraderingstrinn, som egne lag: 18 lag per rom. Det er mer, men gir et kjøp som synes i bildet med en gang. Start med det minste og utvid dit det føles best.
 
@@ -54,7 +54,7 @@ Draktene er tegnet i koden i dag og kan velges fritt. Bildet av spilleren er ros
 1. Stilen: stilisert 3D (som en mobilspill-kjeller) eller mer realistisk?
 2. Verktøy: Midjourney, GPT-image eller Flux. Sjekk vilkårene for kommersiell bruk (betalt plan) før appen blir offentlig.
 3. Er garasje, kjeller og loft alle med i første versjon, eller bare garasjen?
-4. Skal pub-fasaden og Lü innvendig være bilder, eller beholdes tegningen i koden?
+4. Skal pub-fasaden og Ly innvendig være bilder, eller beholdes tegningen i koden?
 
 ## Rekkefølge
 
@@ -64,7 +64,7 @@ Draktene er tegnet i koden i dag og kan velges fritt. Bildet av spilleren er ros
 
 ## Slik brukes bildene nå (2026-10-28)
 
-Rommet er ti trinn, ett bilde per trinn, og bildet er bakgrunn for hjem, Rom, Veien, Trening og Utfordring. Bildene ligger i `public/career/room-01.jpg` til `room-10.jpg` (trinn 1 til 10: Start, Rydd, Fresh vegger, Oche, Belysning, Skjerm, Utstyr, Dekor, Pro setup, Ultimate). Trinnene, navnene og prisene står i `lib/career.ts` (`STAGES`).
+Rommet er ti trinn, ett bilde per trinn, og bildet er bakgrunn for hjem, Rom, Veien, Trening og Utfordring. Bildene ligger i `public/career/room-01.jpg` til `room-10.jpg` (trinn 1 til 10: Start, Ryddet, Nye vegger, Kastelinje, Lys, Skjerm, Utstyr, Dekor, Proffoppsett, Drømmerommet). Trinnene, navnene og prisene står i `lib/career.ts` (`STAGES`).
 
 De ti bildene som ligger der nå er klippet ut av et rutenett og er bare 300 × 360 px, så de er grumsete på en stor skjerm. De er et utkast. For å bytte dem ut: lag nye filer med **samme navn** og legg dem i `public/career/`. Ingenting annet må endres.
 

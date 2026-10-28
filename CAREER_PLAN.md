@@ -6,7 +6,7 @@ Mål: du spiller alene mot boter gjennom en karriere fra pub-ligaen til VM-final
 
 - **Spilleren kaster for ekte.** Poengene skrives inn som i 301/501. Penger kan derfor ikke gjøre selve kastet bedre. Utstyret gjør motstanderne litt svakere og arenaen finere; ferdighetene dine er dine egne.
 - **Vanskelighetsgraden er relativ.** Motstanderne settes ut fra nivået ditt (målt MED i mm, lavere er bedre), ikke fra faste tall. Da kan alle nå toppen, uansett hvor gode de er. Hvert trinn på stigen legger en fast faktor på toppen, og hver VM-tittel legger på litt til («tittelbelastning»).
-- **Kort per turnering.** Karrieren spilles med Mikke Mus-spillet, ikke 501. En kamp tar 7–10 minutter, og Lü-cupen er 8 spillere og tre kamper, ca. en halv time. 501, Lava og Highstriker er bonusspill mellom turneringene (se Faser). Større turneringer er opptil en time. Man kan alltid pause og fortsette senere.
+- **Kort per turnering.** Karrieren spilles med Mikke Mus-spillet, ikke 501. En kamp tar 7–10 minutter, og Ly-cupen er 8 spillere og tre kamper, ca. en halv time. 501, Lava og Highstriker er bonusspill mellom turneringene (se Faser). Større turneringer er opptil en time. Man kan alltid pause og fortsette senere.
 - **Flere kvelder totalt.** En karriere strekker seg over mange turneringer og sesonger.
 - **Simulering.** Kampene du ikke spiller selv, simuleres av turneringenes egen simulering (`lib/botSim.ts`). Hver turnering er en vanlig cup (`lib/knockout.ts`), så trekning, bracket, bots og mester-skjermen er de som finnes fra før.
 
@@ -16,7 +16,7 @@ Mål: du spiller alene mot boter gjennom en karriere fra pub-ligaen til VM-final
 
 | Trinn | Faktor (over 1 = svakere enn deg) |
 |---|---|
-| Lü-cupen (pub) | 1,2 |
+| Ly-cupen (pub) | 1,2 |
 | Regionale cuper | 1,12 |
 | Nasjonal cup | 1,00 |
 | Q-School / tourkort | 0,92 |
@@ -35,7 +35,7 @@ Man starter i en garasje, en kjeller eller et loft (valgt ved oppstart), og kan 
 
 ## Penger
 
-Inn: premiepenger og sponsorer. Ut: inngangsavgifter, reise (høyere trinn) og utstyr/arena. Pengene er dollar ($), så ingen tar dem for ekte penger. Startsaldo $300. Lü-cupen koster $50, vinneren får $400, finalisten $150. Har du mindre enn inngangen, slipper du inn på kreditt, så en karriere kan aldri stoppe opp.
+Inn: premiepenger og sponsorer. Ut: inngangsavgifter, reise (høyere trinn) og utstyr/arena. Pengene er dollar ($), så ingen tar dem for ekte penger. Startsaldo $300. Ly-cupen koster $50, vinneren får $400, finalisten $150. Har du mindre enn inngangen, slipper du inn på kreditt, så en karriere kan aldri stoppe opp.
 
 ## Lagring og tilgang
 
@@ -44,7 +44,7 @@ Inn: premiepenger og sponsorer. Ut: inngangsavgifter, reise (høyere trinn) og u
 
 ## Faser
 
-1. **Spillbar løkke på Lü (bygget)**: karrieremeny, pub-bilde, saldo i dollar, Lü-cupen som en vanlig Mikke Mus-cup med 8 spillere, inngangsavgift og premie, rankingpoeng, lagring og pause, og utseende ved oppstart (skjorte, darts, startsted).
+1. **Spillbar løkke på Ly (bygget)**: karrieremeny, pub-bilde, saldo i dollar, Ly-cupen som en vanlig Mikke Mus-cup med 8 spillere, inngangsavgift og premie, rankingpoeng, lagring og pause, og utseende ved oppstart (skjorte, darts, startsted).
 1b. **Bonusspill mellom turneringene**: 501, Lava og Highstriker mot bots eller alene, med litt penger å vinne.
 2. **Hjemmearena og butikk**: seks ting × fire trinn, animasjon når penger kommer inn og brukes.
 3. **Sesong og stige**: kalender, pub-sesong, ranking, opprykk, nivåjustering etter faktisk kasting, flere trinn av felt.
@@ -64,12 +64,12 @@ Hjemmet (garasje, kjeller eller loft) er alltid bakgrunnen; derfra velger man tr
 
 | Trinn | Spillere | Inngang | Vinner | Faktor | Hvordan man kommer inn |
 |---|---|---|---|---|---|
-| Lü-cupen | 8 | gratis | $500 (2.: $300, semi: $200) | 1,2 | Åpen |
+| Ly-cupen | 8 | gratis | $500 (2.: $300, semi: $200) | 1,2 | Åpen |
 | Regionmesterskapet | 16 | $200 | $2 500 | 1,18 | Åpen, bare penger |
 | Norgesmesterskapet | 16 | $750 | $8 000 | 1,14 | Topp fire i Regionmesterskapet |
 | Grand Slam | 16 | $2 500 | $25 000 | 1,12 | Vinn Norgesmesterskapet |
 | VM | 32 | $10 000 | $150 000 | 1,22 | Første eller andre i Grand Slam |
 
-En kvalifisering gjelder én påmelding. Hver VM-tittel gjør VM-feltet 4 % skarpere (opp til 30 %). Faktorene er satt fra simulering (spilleren som bot, nivå «dyktig»): omtrent 33 % tittelsjanse i Lü, 25 % regionalt, 20 % NM og Grand Slam, 13 % i VM. De må justeres etter ekte spilling.
+En kvalifisering gjelder én påmelding. Hver VM-tittel gjør VM-feltet 4 % skarpere (opp til 30 %). Faktorene er satt fra simulering (spilleren som bot, nivå «dyktig»): omtrent 33 % tittelsjanse i Ly, 25 % regionalt, 20 % NM og Grand Slam, 13 % i VM. De må justeres etter ekte spilling.
 
 Hver turnering har egen åpningsscene (`components/EventScenes.tsx`, `EventIntro.tsx`), finalen har en scene (`FinalIntro.tsx`), og seieren en seremoni med pokal og spilleren i fokus (Result i `CareerApp.tsx`). Utfordringer (501, Lava, Highstriker) velges fra hjemmet og gir innsatsen til vinneren; tapet koster ingenting.

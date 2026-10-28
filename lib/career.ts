@@ -56,12 +56,12 @@ export const TIERS: Record<TierId, Tier> = {
   lu: {
     id: "lu",
     kind: "lu",
-    name: "Lü-cupen",
-    short: "Lü",
-    trophy: "Lü-pokalen",
-    venue: "Lü",
+    name: "Ly-cupen",
+    short: "Ly",
+    trophy: "Ly-pokalen",
+    venue: "Ly",
     stage: "Fredagskveld på puben",
-    tagline: "Fredagsturneringen på Lü",
+    tagline: "Fredagsturneringen på Ly",
     scale: 1,
     size: 8,
     fee: 0,
@@ -104,7 +104,7 @@ export const TIERS: Record<TierId, Tier> = {
     points: { winner: 60, final: 36, semi: 20, quarter: 10, r16: 3 },
     factor: 1.14,
     minutes: 60,
-    qualify: "Kom blant de fire beste i Regionmesterskapet",
+    qualify: "Krever topp 4 i Regionmesterskapet",
     opens: { tier: "gs", places: ["winner"] },
   },
   gs: {
@@ -123,7 +123,7 @@ export const TIERS: Record<TierId, Tier> = {
     points: { winner: 120, final: 70, semi: 40, quarter: 20, r16: 8 },
     factor: 1.12,
     minutes: 60,
-    qualify: "Vinn Norgesmesterskapet",
+    qualify: "Krever seier i Norgesmesterskapet",
     opens: { tier: "vm", places: ["winner", "final"] },
   },
   vm: {
@@ -142,7 +142,7 @@ export const TIERS: Record<TierId, Tier> = {
     points: { winner: 400, final: 240, semi: 140, quarter: 70, r16: 30, r32: 8 },
     factor: 1.22,
     minutes: 90,
-    qualify: "Bli nummer én eller to i Grand Slam",
+    qualify: "Krever topp 2 i Grand Slam",
   },
 };
 
@@ -162,7 +162,7 @@ export const PLACE_LABEL: Record<Place, string> = {
 export const START_LEVELS: { key: string; name: string; med: number; about: string }[] = [
   { key: "nybegynner", name: "Nybegynner", med: 55, about: "Treffer mest brettet" },
   { key: "klubb", name: "Klubbspiller", med: 45, about: "Treffer ofte der du sikter" },
-  { key: "dyktig", name: "Dyktig", med: 37, about: "Holder seg stort sett i trebling og dobbel" },
+  { key: "dyktig", name: "Dyktig", med: 37, about: "Treffer ofte trippel og dobbel" },
   { key: "sterk", name: "Sterk", med: 30, about: "Treffer det du sikter på det meste av tiden" },
 ];
 
@@ -206,7 +206,7 @@ export type ActiveEvent = {
 export type HistoryEntry = { at: string; event: string; place?: Place; prize: number; cost: number; points: number; /** A challenge, not a cup: the game, and whether it was won. */ game?: string; won?: boolean };
 
 /** A training session: what the player threw, what it says about their level, and how the level moved. */
-export type TrainingSession = { at: string; /** The average of a round of three darts at the treble 20. */ average: number; /** The level the average points to, as a MED in mm. */ measured: number; before: number; after: number };
+export type TrainingSession = { at: string; /** The average of a round of three darts at the triple 20. */ average: number; /** The level the average points to, as a MED in mm. */ measured: number; before: number; after: number };
 
 /** A cup the player has won: kept for the shelf at home (the history only holds the last thirty events). */
 export type Trophy = { tier: TierId; at: string; prize: number };
@@ -256,7 +256,7 @@ export function newCareer(player: string, startLevel: string, now: string, profi
 /** The money, as the career writes it: dollars, so nobody takes it for real money. */
 export const dollars = (n: number) => `${n < 0 ? "−" : ""}$${Math.abs(n).toLocaleString("nb-NO")}`;
 
-/** The regulars of Lü: the names the pub's field is drawn from. */
+/** The regulars of Ly: the names the pub's field is drawn from. */
 export const REGULARS = ["Roger", "Tone", "Svein-Arne", "Kenneth", "Bjørn", "Mia", "Åge", "Ragnhild", "Terje", "Lise", "Odd", "Siri", "Freddy", "Gunnhild", "Truls", "Hege", "Rolf", "Kjartan", "Unni", "Øyvind"];
 
 /** The names of the bigger events: a first name and a surname, put together by the draw so no two in a field are alike. */
@@ -306,14 +306,14 @@ export function cupFor(career: Career, tier: Tier, seed: number): CupConfig {
 /** What it costs to get in. */
 export const entryCost = (_career: Career, tier: Tier) => tier.fee;
 
-/** Lü and the regional championship are open to anyone with the money; the rest are entered by qualifying. */
+/** Ly and the regional championship are open to anyone with the money; the rest are entered by qualifying. */
 export const isUnlocked = (career: Career, tier: Tier) => !tier.qualify || career.qualified.includes(tier.id);
 
 /** Why the player cannot sign up for this step, or null when they can. */
 export function whyNot(career: Career, tier: Tier): string | null {
-  if (career.active) return "Du har en turnering som pågår";
+  if (career.active) return "Fullfør turneringen først";
   if (!isUnlocked(career, tier)) return tier.qualify ?? "Må kvalifiseres";
-  if (career.money < tier.fee) return `Du mangler ${dollars(tier.fee - career.money)} i inngang`;
+  if (career.money < tier.fee) return `Mangler ${dollars(tier.fee - career.money)}`;
   return null;
 }
 
@@ -447,7 +447,7 @@ export function settleChallenge(career: Career, won: boolean, now: string): Care
   const c = career.challenge;
   if (!c || c.won !== null) return career;
   const prize = won ? c.stake : 0;
-  const entry: HistoryEntry = { at: now, event: `Utfordring: ${GAMES[c.game].name} mot ${c.opponent.name}`, prize, cost: 0, points: 0, game: c.game, won };
+  const entry: HistoryEntry = { at: now, event: `Duell: ${GAMES[c.game].name} mot ${c.opponent.name}`, prize, cost: 0, points: 0, game: c.game, won };
   return { ...career, money: career.money + prize, history: [entry, ...career.history].slice(0, 30), challenge: { ...c, won } };
 }
 
@@ -468,15 +468,15 @@ export type RoomStage = { name: string; /** What it costs to get here from the s
 
 export const STAGES: RoomStage[] = [
   { name: "Start", price: 0, items: [] },
-  { name: "Rydd", price: 500, items: ["Rydding", "Enkel vegg"] },
-  { name: "Fresh vegger", price: 1000, items: ["Maling", "Veggplater"] },
-  { name: "Oche", price: 2000, items: ["Oche", "Dartmatte"] },
-  { name: "Belysning", price: 3500, items: ["Lysring", "Spotlights"] },
-  { name: "Skjerm", price: 5000, items: ["Skjerm", "Scoreboard"] },
+  { name: "Ryddet", price: 500, items: ["Rydding", "Enkle vegger"] },
+  { name: "Nye vegger", price: 1000, items: ["Maling", "Veggpaneler"] },
+  { name: "Kastelinje", price: 2000, items: ["Kastelinje", "Dartmatte"] },
+  { name: "Lys", price: 3500, items: ["Lysring", "Spotlys"] },
+  { name: "Skjerm", price: 5000, items: ["Skjerm", "Poengtavle"] },
   { name: "Utstyr", price: 7500, items: ["Hylle", "Dartutstyr"] },
   { name: "Dekor", price: 10000, items: ["Bilder", "Dekor"] },
-  { name: "Pro setup", price: 15000, items: ["Akustikk", "Premium detaljer"] },
-  { name: "Ultimate", price: 25000, items: ["Bar", "Kjøleskap", "Next level"] },
+  { name: "Proffoppsett", price: 15000, items: ["Akustikk", "Premiumdetaljer"] },
+  { name: "Drømmerommet", price: 25000, items: ["Bar", "Kjøleskap", "Alt du kan ønske"] },
 ];
 
 /** The last step of the room. */
@@ -494,8 +494,8 @@ export const nextStage = (career: Career): RoomStage | null => STAGES[career.roo
 /** Why the next step cannot be bought now, or null when it can. */
 export function whyNotBuy(career: Career): string | null {
   const next = nextStage(career);
-  if (!next) return "Fullt";
-  if (career.money < next.price) return `Du mangler ${dollars(next.price - career.money)}`;
+  if (!next) return "Ferdig";
+  if (career.money < next.price) return `Mangler ${dollars(next.price - career.money)}`;
   return null;
 }
 

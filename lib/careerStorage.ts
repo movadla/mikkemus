@@ -26,10 +26,25 @@ const REMOTE_DELAY_MS = 1200;
 const wait = new Map<string, ReturnType<typeof setTimeout>>();
 const latest = new Map<string, Career>();
 
+/** The pub was called Lü for a while and is called Ly: a name saved under the old one is read as the new. */
+const ly = (text: string | undefined) => text?.replace(/Lü/g, "Ly").replace(/^Utfordring:/, "Duell:");
+
+/** A cup that was saved with the old name of the pub, under its new one. */
+function renamed(a: Career["active"]): Career["active"] {
+  if (!a || !("cup" in a)) return a;
+  const t = a.tournament;
+  return {
+    ...a,
+    cup: { ...a.cup, name: ly(a.cup.name) ?? a.cup.name, trophy: ly(a.cup.trophy) ?? a.cup.trophy },
+    tournament: t ? { ...t, name: ly(t.name) ?? t.name, cup: t.cup ? { ...t.cup, name: ly(t.cup.name) ?? t.cup.name, trophy: ly(t.cup.trophy) ?? t.cup.trophy } : t.cup } : t,
+  };
+}
+
 /** A career from before it had a look, or one whose event was of an older kind, is brought up to date rather than dropped. */
-function normalize(c: Career): Career {
+function normalize(career: Career): Career {
+  const c = { ...career, history: (career.history ?? []).map((h) => ({ ...h, event: ly(h.event) ?? h.event })) };
   const old = c.active && !("cup" in c.active);
-  return { ...c, profile: c.profile ?? DEFAULT_PROFILE, worldTitles: c.worldTitles ?? 0, qualified: c.qualified ?? [], trophies: c.trophies ?? trophiesFromHistory(c), training: c.training ?? [], room: typeof c.room === "number" ? c.room : roomFromArena((c as { arena?: Record<string, number> }).arena), challenge: c.challenge ?? null, challenges: c.challenges ?? 0, active: old ? null : c.active };
+  return { ...c, profile: c.profile ?? DEFAULT_PROFILE, worldTitles: c.worldTitles ?? 0, qualified: c.qualified ?? [], trophies: c.trophies ?? trophiesFromHistory(c), training: c.training ?? [], room: typeof c.room === "number" ? c.room : roomFromArena((c as { arena?: Record<string, number> }).arena), challenge: c.challenge ?? null, challenges: c.challenges ?? 0, active: old ? null : renamed(c.active) };
 }
 
 function readLocal(): Career[] {

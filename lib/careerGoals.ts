@@ -49,7 +49,7 @@ function tournamentGoal(career: Career): Goal | null {
   const step = LADDER.find((t) => !career.active && isGap(career, t));
   if (!step) return null;
   if (isUnlocked(career, step)) {
-    return { id: "tournament", title: step.name, line: `Du mangler ${dollars(step.fee - career.money)} i inngang`, progress: clamp01(career.money / step.fee), note: `${dollars(career.money)} av ${dollars(step.fee)}` };
+    return { id: "tournament", title: step.name, line: `Mangler ${dollars(step.fee - career.money)}`, progress: clamp01(career.money / step.fee), note: `${dollars(career.money)} av ${dollars(step.fee)}` };
   }
   return { id: "tournament", title: step.name, line: step.qualify ?? "Må kvalifiseres", progress: null };
 }
@@ -71,7 +71,7 @@ function rankGoal(career: Career): Goal | null {
 function roomGoal(career: Career): Goal | null {
   const next = nextStage(career);
   if (!next) return null;
-  return { id: "room", title: next.name, line: career.money >= next.price ? "Du har råd til den nå" : `Du mangler ${dollars(next.price - career.money)}`, progress: clamp01(career.money / next.price), note: `${dollars(Math.min(career.money, next.price))} av ${dollars(next.price)}` };
+  return { id: "room", title: next.name, line: career.money >= next.price ? "Du har råd til den nå" : `Mangler ${dollars(next.price - career.money)}`, progress: clamp01(career.money / next.price), note: `${dollars(Math.min(career.money, next.price))} av ${dollars(next.price)}` };
 }
 
 /** The goals to show, in the order they are most likely to be reached. */
@@ -91,11 +91,11 @@ export function rankLevel(career: Career): number {
 }
 
 /** How far the player is to the next rank, 0 to 1, for the bar on the home screen; null at the top. */
-export function rankProgress(career: Career): { next: number; progress: number; points: number; need: number } | null {
+export function rankProgress(career: Career): { next: number; /** The name of the rank it counts towards. */ name: string; progress: number; points: number; need: number } | null {
   const next = nextRank(career);
   if (!next) return null;
   const from = [...RANKS].reverse().find((r) => career.points >= r.min)?.min ?? 0;
-  return { next: rankLevel(career) + 1, progress: clamp01((career.points - from) / (next.min - from)), points: career.points, need: next.min };
+  return { next: rankLevel(career) + 1, name: next.name, progress: clamp01((career.points - from) / (next.min - from)), points: career.points, need: next.min };
 }
 
 /** Whether there is something new to buy for the room that the player can afford: the red dot on the room button. */

@@ -15,7 +15,7 @@ describe("the main button of the home screen", () => {
   it("says SPILL for a new player, with the free pub under it", () => {
     const c = { ...fresh(), money: 100 };
     expect(heroFor(c)).toMatchObject({ kind: "enter" });
-    expect(heroButton(heroFor(c))).toEqual({ label: "SPILL", sub: "Lü · gratis" });
+    expect(heroButton(heroFor(c))).toEqual({ label: "SPILL", sub: "Ly · gratis" });
   });
 
   it("goes to the biggest step the player can enter: the regional championship once there is money for it", () => {
@@ -32,7 +32,7 @@ describe("the main button of the home screen", () => {
   });
 
   it("says TREKK when the draw is not made", () => {
-    expect(heroButton(heroFor(startEvent(fresh(), "lu", 3)))).toEqual({ label: "TREKK", sub: "Lü" });
+    expect(heroButton(heroFor(startEvent(fresh(), "lu", 3)))).toEqual({ label: "TREKK", sub: "Ly" });
   });
 
   it("says HENT with the prize when the cup is over", () => {

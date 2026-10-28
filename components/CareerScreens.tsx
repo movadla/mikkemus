@@ -88,7 +88,7 @@ function ChallengeFlow({ career, commit, onHub }: { career: Career; commit: (c: 
       <div className="animate-screen-enter screen">
         <div className="screen-inner flex flex-col" style={{ minHeight: "calc(100dvh - 2rem)", gap: "1.25rem" }}>
           <div className="flex items-center gap-3">
-            <BackArrow onClick={giveUp} label="Si nei" />
+            <BackArrow onClick={giveUp} label="Avslå" />
             <h1 className="font-display" style={{ fontSize: "var(--text-num)", color: "var(--color-cream)", lineHeight: 1 }}>
               {c.game === "501" ? "501" : c.game === "lava" ? "Lava" : "Highstriker"}
             </h1>
@@ -223,12 +223,12 @@ export function Result({ career, a, onDone }: { career: Career; a: ActiveEvent; 
             </p>
           ) : (
             <p className="font-display tabular" style={{ fontSize: "var(--text-num)", color: "var(--color-text-2)" }}>
-              +{r.points} poeng
+              +{r.points} rangpoeng
             </p>
           )}
         </div>
         {opened && <UnlockBanner label="NY TURNERING" name={opened.short} colour={cupColor(opened.kind)} />}
-        {newRank && <UnlockBanner label="NYTT NIVÅ" name={newRank} colour="var(--color-gold)" />}
+        {newRank && <UnlockBanner label="NY RANG" name={newRank} colour="var(--color-gold)" />}
         {r.prize > 0 && <CoinBurst />}
         <PlayButton label={r.prize > 0 ? "HENT" : "OK"} tone={r.prize > 0 ? "gold" : "teal"} onClick={onDone} />
       </div>
@@ -262,12 +262,12 @@ function TrainingFlow({ career, commit, onHub }: { career: Career; commit: (c: C
       <div className="animate-screen-enter screen">
         <div className="screen-inner flex flex-col" style={{ minHeight: "calc(100dvh - 2rem)", gap: "1.25rem" }}>
           <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center">
-            <p className="section-label">SNITT</p>
+            <p className="section-label">SNITT PER RUNDE</p>
             <p className="font-display tabular" style={{ fontSize: "clamp(2.6rem, 16vw, 4rem)", color: "var(--color-cream)", lineHeight: 1 }}>
               {oneDecimal(done.average)}
             </p>
             <p className="tabular" style={{ fontSize: "var(--text-title)", color: done.after < done.before ? "var(--color-green)" : done.after > done.before ? "var(--color-text-2)" : "var(--color-muted)", fontWeight: 700 }}>
-              {oneDecimal(done.before)} → {oneDecimal(done.after)} mm
+              avvik {oneDecimal(done.before)} → {oneDecimal(done.after)} mm
             </p>
             <p style={{ color: "var(--color-muted)" }}>{levelLabel(done.after)}</p>
           </div>
@@ -282,7 +282,7 @@ function TrainingFlow({ career, commit, onHub }: { career: Career; commit: (c: C
         <div className="flex items-center gap-3">
           <BackArrow onClick={onHub} />
           <h1 className="font-display flex-1" style={{ fontSize: "var(--text-num)", color: "var(--color-cream)", lineHeight: 1 }}>
-            T20
+            Trippel 20
           </h1>
           <span className="tabular" style={{ fontSize: "var(--text-title)", color: "var(--color-text-2)", fontWeight: 700 }}>
             {Math.min(rounds.length + 1, DRILL_ROUNDS)}/{DRILL_ROUNDS}
