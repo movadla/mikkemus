@@ -171,7 +171,7 @@ test.describe("karriere", () => {
     await expect(page.getByRole("button", { name: /Nytt i rommet: Maling og veggpaneler/ })).toBeVisible();
     await place(page, "Rom").click();
     // The next step costs $2 000: too much, so the button is shut and says what is missing.
-    await expect(play(page, /^KJØP Mangler/)).toBeDisabled();
+    await expect(play(page, /^KJØP .*2.000 · Mangler/)).toBeDisabled();
   });
 
   test("rommet er ferdig på det siste trinnet", async ({ page }) => {

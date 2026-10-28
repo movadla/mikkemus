@@ -344,7 +344,7 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
                     </ul>
                   </div>
                 )}
-                <PlayButton label={next ? "KJØP" : "FERDIG"} sub={next ? (buyWhy ?? dollars(next.price)) : "Drømmerommet er på plass"} disabled={!!buyWhy} onClick={buy} />
+                <PlayButton label={next ? "KJØP" : "FERDIG"} sub={next ? (buyWhy ? `${dollars(next.price)} · ${buyWhy}` : dollars(next.price)) : "Drømmerommet er på plass"} disabled={!!buyWhy} onClick={buy} />
               </div>
             </div>
           </div>
