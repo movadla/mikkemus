@@ -185,7 +185,7 @@ export const DARTS: { id: DartsId; name: string; about: string }[] = [
 
 export type Profile = { home: HomeId; darts: DartsId };
 
-export const START_MONEY = 100;
+export const START_MONEY = 2000;
 
 export type EventResult = { place: Place; prize: number; cost: number; points: number };
 
