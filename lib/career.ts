@@ -218,6 +218,8 @@ export type Career = {
   active: ActiveEvent | null;
   /** The steps the player has qualified for, each for one entry. */
   qualified: TierId[];
+  /** What has been bought for the home arena: the step of each thing, 0 (as it was when the career began) to 3. */
+  arena: Arena;
   /** A challenge that is waiting, or has been played and not yet taken in. */
   challenge: Challenge | null;
   /** How many challenges there have been, so each is a new one. */
@@ -230,7 +232,7 @@ export const DEFAULT_PROFILE: Profile = { home: "garage", darts: "middels" };
 
 export function newCareer(player: string, startLevel: string, now: string, profile: Profile = DEFAULT_PROFILE): Career {
   const level = START_LEVELS.find((l) => l.key === startLevel) ?? START_LEVELS[2];
-  return { v: 1, id: careerId(player), player, createdAt: now, savedAt: now, profile, startLevel: level.key, skillMed: level.med, money: START_MONEY, points: 0, titles: 0, worldTitles: 0, played: 0, history: [], active: null, qualified: [], challenge: null, challenges: 0 };
+  return { v: 1, id: careerId(player), player, createdAt: now, savedAt: now, profile, startLevel: level.key, skillMed: level.med, money: START_MONEY, points: 0, titles: 0, worldTitles: 0, played: 0, history: [], active: null, qualified: [], arena: { ...START_ARENA }, challenge: null, challenges: 0 };
 }
 
 /** The money, as the career writes it: dollars, so nobody takes it for real money. */
@@ -256,7 +258,8 @@ export function fieldNames(tier: Tier, player: string, seed: number, count: numb
 
 /** The factor of a step of the ladder for this player: the world championship gets sharper with every title. */
 export function factorFor(career: Career, tier: Tier): number {
-  return tier.id === "vm" ? tier.factor * Math.max(0.7, 0.96 ** career.worldTitles) : tier.factor;
+  const own = tier.id === "vm" ? tier.factor * Math.max(0.7, 0.96 ** career.worldTitles) : tier.factor;
+  return own * arenaBonus(career);
 }
 
 /** The bots' skill on the level scale (1 sharpest to 8 weakest) for a player of this level at this step of the ladder, before each bot's own spread. */
@@ -409,7 +412,7 @@ export function stakeFor(career: Career, game: GameId): number {
 export function newChallenge(career: Career, game: GameId, seed: number): Challenge {
   const names = fieldNames(topStep(career), career.player, seed, 4);
   const name = names[Math.floor(unit(`${seed}|who`) * names.length)] ?? "Roger";
-  const med = career.skillMed * CHALLENGE_FACTOR * (0.9 + unit(`${seed}|skill`) * 0.2);
+  const med = career.skillMed * CHALLENGE_FACTOR * arenaBonus(career) * (0.9 + unit(`${seed}|skill`) * 0.2);
   const skill = Math.min(8, Math.max(1, levelOfMed(med)));
   return { id: `${career.id}-c${seed}`, game, opponent: { name, skill }, stake: stakeFor(career, game), won: null };
 }
@@ -434,3 +437,54 @@ export const closeChallenge = (career: Career): Career => (career.challenge && c
 
 /** Turns a challenge down. */
 export const declineChallenge = (career: Career): Career => (career.challenge && career.challenge.won === null ? { ...career, challenge: null } : career);
+
+/* ---------------------------------------------------------------------------------------------------------------------------------
+ * The home arena: six things to buy, each in three steps over what the place had to begin with. It is where the money goes. It does not make
+ * the throw better (the player throws for real), but a better room is a better evening: every step makes the opponents a little weaker.
+ * ------------------------------------------------------------------------------------------------------------------------------- */
+
+export type SlotId = "wall" | "floor" | "board" | "light" | "decor" | "crowd";
+
+export type Slot = { id: SlotId; name: string; /** What each of the four steps is called, the first being what there was. */ steps: [string, string, string, string]; /** What it costs to get to step 1, 2 and 3. */ prices: [number, number, number] };
+
+export const SLOTS: Slot[] = [
+  { id: "wall", name: "Vegg", steps: ["Slitt vegg", "Malt vegg", "Trepanel", "Arenavegg med storskjerm"], prices: [500, 2500, 15000] },
+  { id: "floor", name: "Gulv", steps: ["Gammelt gulv", "Laminat", "Teppe og kastelinje", "Scene med lys i kanten"], prices: [300, 1800, 10000] },
+  { id: "board", name: "Dartbrett", steps: ["Billig brett på planke", "Sisalbrett i skap", "Turneringsbrett med ring", "Proffbrett med lysring"], prices: [400, 2200, 9000] },
+  { id: "light", name: "Lys", steps: ["Naken pære", "Spotlight", "Lysring og to spotter", "Lysrigg med stråler"], prices: [300, 1600, 13000] },
+  { id: "decor", name: "Pynt", steps: ["Pappeske og bøtte", "Krittavle og plakat", "Pokalhylle og neonskilt", "Pokalskap og bannere"], prices: [200, 1300, 7500] },
+  { id: "crowd", name: "Publikum", steps: ["Ingen", "En venn", "Fem ved baren", "Fullt hus"], prices: [150, 1100, 8000] },
+];
+
+export type Arena = Record<SlotId, number>;
+export const START_ARENA: Arena = { wall: 0, floor: 0, board: 0, light: 0, decor: 0, crowd: 0 };
+
+/** How much weaker each step makes the opponents (their MED is that much higher). Everything bought is 18 steps: 14 %. */
+const STEP_BONUS = 0.008;
+
+export const arenaSteps = (career: Career) => SLOTS.reduce((s, sl) => s + (career.arena[sl.id] ?? 0), 0);
+
+/** The factor the arena puts on the opponents' MED: 1 with nothing bought, a little over with everything. */
+export const arenaBonus = (career: Career) => 1 + STEP_BONUS * arenaSteps(career);
+
+/** What the next step of a thing costs, or null when it is as good as it gets. */
+export function nextPrice(career: Career, id: SlotId): number | null {
+  const slot = SLOTS.find((s) => s.id === id);
+  const step = career.arena[id] ?? 0;
+  return slot && step < 3 ? slot.prices[step] : null;
+}
+
+/** Why a thing cannot be bought now, or null when it can. */
+export function whyNotBuy(career: Career, id: SlotId): string | null {
+  const price = nextPrice(career, id);
+  if (price === null) return "Fullt utbygd";
+  if (career.money < price) return `Du mangler ${dollars(price - career.money)}`;
+  return null;
+}
+
+/** Buys the next step of a thing: the money goes and the room gets better. */
+export function buyUpgrade(career: Career, id: SlotId): Career {
+  if (whyNotBuy(career, id)) return career;
+  const price = nextPrice(career, id)!;
+  return { ...career, money: career.money - price, arena: { ...career.arena, [id]: (career.arena[id] ?? 0) + 1 } };
+}

@@ -68,6 +68,23 @@ export const HOME = {
   boardRed: "#c8302b",
   boardGreen: "#1f8f4e",
   wire: "#1a1a1a",
+  painted: "#566b80",
+  panel: "#6c4a2c",
+  panelLine: "#4e3320",
+  arenaWall: "#11141f",
+  led: "#5ff0ff",
+  laminate: "#8b6a45",
+  laminateLine: "#6d5233",
+  carpet: "#7a1f2b",
+  carpetLine: "#a53345",
+  stage: "#1a1d2a",
+  gold: "#e8c36a",
+  neon: "#ff5fa8",
+  chalk: "#1f2e29",
+  glass: "#9fc4d8",
+  figure: "#241a1a",
+  banner: "#a13030",
+  crowdDark: "#07080e",
 };
 
 /** The stages of the bigger events of the career, one palette each: the regional hall, the national arena, Grand Slam and the world championship. */

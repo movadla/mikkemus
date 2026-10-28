@@ -95,4 +95,17 @@ test.describe("karriere", () => {
     expect(saved.money).toBe(300);
     expect(saved.challenge).toBeNull();
   });
+
+  test("hjemmearena: kjøp gulv, pengene går, og rommet er bygget om", async ({ page }) => {
+    await toCareer(page);
+    await page.getByRole("button", { name: /Lars/ }).click();
+    await page.getByRole("button", { name: /Hjemmearena/ }).click();
+    // The floor costs $300; the wall at $500 is too much for the $300 there is.
+    await expect(page.getByText("Du mangler $200")).toBeVisible();
+    await page.getByRole("button", { name: "Kjøp for $300" }).first().click();
+    await expect.poll(async () => (await page.evaluate(() => JSON.parse(localStorage.getItem("mikke-mus-career:lars") ?? "null"))).arena.floor).toBe(1);
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("mikke-mus-career:lars") ?? "null"));
+    expect(saved.money).toBe(0);
+    await expect(page.getByText("Motstanderne er 0,8 % svakere")).toBeVisible();
+  });
 });

@@ -2,6 +2,12 @@ import { describe, expect, it } from "vitest";
 import { levelOfMed } from "./botLevels";
 import {
   GAMES,
+  SLOTS,
+  arenaBonus,
+  arenaSteps,
+  buyUpgrade,
+  nextPrice,
+  whyNotBuy,
   LADDER,
   START_MONEY,
   TIERS,
@@ -353,5 +359,56 @@ describe("challenges", () => {
 
   it("does not need to be won to carry on: no career can be stuck", () => {
     expect(whyNot({ ...fresh(), money: 0 }, TIERS.lu)).toBeNull();
+  });
+});
+
+describe("the home arena", () => {
+  it("starts with nothing bought and no effect on the opponents", () => {
+    const c = fresh();
+    expect(c.arena).toEqual({ wall: 0, floor: 0, board: 0, light: 0, decor: 0, crowd: 0 });
+    expect(arenaSteps(c)).toBe(0);
+    expect(arenaBonus(c)).toBe(1);
+  });
+
+  it("sells each thing in three steps, dearer each time", () => {
+    for (const slot of SLOTS) {
+      expect(slot.steps).toHaveLength(4);
+      expect(slot.prices[1]).toBeGreaterThan(slot.prices[0]);
+      expect(slot.prices[2]).toBeGreaterThan(slot.prices[1]);
+    }
+  });
+
+  it("takes the money and lifts the step", () => {
+    const c = buyUpgrade(rich(1000), "light");
+    expect(c.money).toBe(1000 - SLOTS.find((s) => s.id === "light")!.prices[0]);
+    expect(c.arena.light).toBe(1);
+    expect(nextPrice(c, "light")).toBe(SLOTS.find((s) => s.id === "light")!.prices[1]);
+  });
+
+  it("will not sell what there is no money for, and nothing past the third step", () => {
+    const poor = { ...fresh(), money: 10 };
+    expect(whyNotBuy(poor, "wall")).toMatch(/^Du mangler/);
+    expect(buyUpgrade(poor, "wall")).toBe(poor);
+    let c = rich(1000000);
+    for (let i = 0; i < 3; i++) c = buyUpgrade(c, "crowd");
+    expect(c.arena.crowd).toBe(3);
+    expect(whyNotBuy(c, "crowd")).toBe("Fullt utbygd");
+    expect(nextPrice(c, "crowd")).toBeNull();
+    expect(buyUpgrade(c, "crowd")).toBe(c);
+  });
+
+  it("makes the opponents weaker, a little for each step, and 14 % when everything is bought", () => {
+    let c = rich(1000000);
+    const before = arenaBonus(c);
+    c = buyUpgrade(c, "board");
+    expect(arenaBonus(c)).toBeGreaterThan(before);
+    for (const slot of SLOTS) for (let i = 0; i < 3; i++) c = buyUpgrade(c, slot.id);
+    expect(arenaSteps(c)).toBe(18);
+    expect(arenaBonus(c)).toBeCloseTo(1.144, 3);
+    const mean = (cc: Career) => {
+      const bots = fieldFor(cc, TIERS.region, 9).filter((e) => e.isBot);
+      return bots.reduce((s, b) => s + b.skill!, 0) / bots.length;
+    };
+    expect(mean(c)).toBeGreaterThan(mean(rich(1000000)));
   });
 });

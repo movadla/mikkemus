@@ -6,6 +6,13 @@ import {
   DARTS,
   GAMES,
   HOMES,
+  SLOTS,
+  arenaBonus,
+  arenaSteps,
+  buyUpgrade,
+  nextPrice,
+  whyNotBuy,
+  type SlotId,
   LADDER,
   PLACE_LABEL,
   START_LEVELS,
@@ -242,7 +249,7 @@ function NewCareer({ taken, onBack, onCreate }: { taken: string[]; onBack: () =>
   );
 }
 
-type View = "home" | "tournaments" | "challenges";
+type View = "home" | "tournaments" | "challenges" | "arena";
 
 /** A row of the status: the money, the points, the titles. */
 function Status({ career }: { career: Career }) {
@@ -281,12 +288,14 @@ function Door({ title, about, onClick, disabled }: { title: string; about: strin
 function Hub({ career, onBack, onPlay, onChallenge, commit, onDelete }: { career: Career; onBack: () => void; onPlay: () => void; onChallenge: () => void; commit: (c: Career) => void; onDelete: () => void }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [view, setView] = useState<View>("home");
+  // The thing just bought flashes in the picture for a moment.
+  const [pop, setPop] = useState<SlotId | null>(null);
   const roster = useRoster();
   const record = roster.find((r) => r.name === career.player);
   const active = career.active;
   const challenge = career.challenge;
 
-  const title = view === "tournaments" ? "Turneringer" : view === "challenges" ? "Utfordringer" : "Karriere";
+  const title = view === "tournaments" ? "Turneringer" : view === "challenges" ? "Utfordringer" : view === "arena" ? "Hjemmearena" : "Karriere";
   return (
     <div className="animate-screen-push screen">
       {confirmDelete && (
@@ -311,7 +320,7 @@ function Hub({ career, onBack, onPlay, onChallenge, commit, onDelete }: { career
           }
         />
         <div className="mb-4">
-          <HomeScene home={career.profile.home} compact={view !== "home"} />
+          <HomeScene home={career.profile.home} arena={career.arena} pop={pop} compact={view !== "home" && view !== "arena"} />
         </div>
         <Status career={career} />
 
@@ -330,6 +339,7 @@ function Hub({ career, onBack, onPlay, onChallenge, commit, onDelete }: { career
             )}
             <div className="space-y-2 mb-4" aria-label="Hva vil du gjøre">
               <Door title="Trening" about="Kommer snart: tren hjemme og bli skarpere" disabled />
+              <Door title="Hjemmearena" about={arenaSteps(career) === 0 ? "Bygg opp rommet: lys, brett, pynt og publikum" : `${arenaSteps(career)} av 18 trinn kjøpt`} onClick={() => setView("arena")} />
               <Door title="Turneringer" about={`${LADDER.length} å velge mellom, fra Lü til VM`} onClick={() => setView("tournaments")} />
               <Door title="Utfordringer" about="501, Lava og Highstriker om penger" onClick={() => setView("challenges")} />
             </div>
@@ -371,6 +381,64 @@ function Hub({ career, onBack, onPlay, onChallenge, commit, onDelete }: { career
               />
             ))}
           </ul>
+        )}
+
+        {view === "arena" && (
+          <>
+            <p className="mb-3" style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>
+              {arenaSteps(career) === 0 ? "Et bedre rom gjør motstanderne litt svakere. Det er fortsatt du som kaster." : `Motstanderne er ${((arenaBonus(career) - 1) * 100).toFixed(1).replace(".", ",")} % svakere på grunn av rommet.`}
+            </p>
+            <ul className="space-y-3 mb-6" aria-label="Hjemmearena">
+              {SLOTS.map((slot) => {
+                const step = career.arena[slot.id];
+                const price = nextPrice(career, slot.id);
+                const why = whyNotBuy(career, slot.id);
+                return (
+                  <li key={slot.id}>
+                    <Card>
+                      <div className="flex items-baseline justify-between gap-3 mb-1">
+                        <h2 className="font-display" style={{ fontSize: "var(--text-title)", color: "var(--color-cream)" }}>
+                          {slot.name}
+                        </h2>
+                        <span className="tabular" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
+                          {step} av 3
+                        </span>
+                      </div>
+                      <p style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>{slot.steps[step]}</p>
+                      {price === null ? (
+                        <p className="mt-2" style={{ color: "var(--color-gold-strong)", fontSize: "var(--text-small)" }}>
+                          Fullt utbygd
+                        </p>
+                      ) : (
+                        <>
+                          <p className="mt-2 mb-3" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
+                            Neste: {slot.steps[step + 1]}
+                          </p>
+                          <Button
+                            block
+                            variant="primary"
+                            disabled={!!why}
+                            onClick={() => {
+                              commit(buyUpgrade(career, slot.id));
+                              setPop(slot.id);
+                              setTimeout(() => setPop(null), 1500);
+                            }}
+                          >
+                            Kjøp for {dollars(price)}
+                          </Button>
+                          {why && (
+                            <p className="mt-2" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
+                              {why}
+                            </p>
+                          )}
+                        </>
+                      )}
+                    </Card>
+                  </li>
+                );
+              })}
+            </ul>
+          </>
         )}
 
         {view === "challenges" && (

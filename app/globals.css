@@ -4459,3 +4459,29 @@ html[data-fx="full"] .hs-last {
     opacity: 0.4;
   }
 }
+
+/* What was just bought for the home arena flashes in the picture. */
+.arena-pop {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: arena-pop 1.4s ease-out;
+}
+@keyframes arena-pop {
+  0% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  25% {
+    transform: scale(1.06);
+    filter: brightness(2.2) drop-shadow(0 0 10px var(--color-gold));
+  }
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .arena-pop {
+    animation: none;
+  }
+}
