@@ -7099,3 +7099,88 @@ button.play-btn:disabled::after {
   -webkit-mask-image: linear-gradient(to bottom, #000 62%, transparent 100%);
   mask-image: linear-gradient(to bottom, #000 62%, transparent 100%);
 }
+
+/* New career: the players in two even columns, and the levels as rows with a meter that rises with the level. */
+.player-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+.player-tile {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+  min-height: var(--control-lg);
+  padding: 0.35rem 0.8rem 0.35rem 0.45rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-cream);
+  text-align: left;
+}
+.player-tile[aria-checked="true"] {
+  border-color: var(--color-teal);
+  background: var(--teal-soft);
+}
+.player-tile-add {
+  border: 1.5px dashed var(--color-teal);
+  color: var(--color-teal);
+}
+.player-tile-plus {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  flex: none;
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+.level-list {
+  display: grid;
+  gap: 0.4rem;
+}
+.level-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: var(--control-lg);
+  padding: 0.4rem 1rem;
+  border-radius: var(--radius-m);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-cream);
+  text-align: left;
+}
+.level-row[aria-checked="true"] {
+  border-color: var(--color-teal);
+  background: var(--teal-soft);
+}
+.level-name {
+  font-weight: 700;
+}
+.level-meter {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.25rem;
+  height: 1.3rem;
+}
+.level-meter i {
+  display: block;
+  width: 0.5rem;
+  height: var(--h);
+  border-radius: 2px;
+  background: var(--color-cell);
+}
+.level-meter i.on {
+  background: var(--color-teal);
+}
+.level-row[aria-checked="true"] .level-meter i.on {
+  background: var(--color-gold);
+}
+.level-about {
+  min-height: 1.3em;
+  color: var(--color-muted);
+  font-size: var(--text-small);
+}

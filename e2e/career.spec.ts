@@ -47,9 +47,26 @@ const place = (page: Page, name: "Rom" | "Trening" | "Duell" | "Turneringer") =>
 test.describe("karriere", () => {
   test.skip(!PIN, "E2E_PIN is not set");
 
-  test("uten spillere i listen vises en veiledning", async ({ page }) => {
+  test("ny karriere: legg til en spiller der, velg nivå og karakter, og start med 2 000 dollar", async ({ page }) => {
     await toCareer(page, false);
-    await expect(page.getByText("Legg til en spiller under Spillere først.")).toBeVisible();
+    // No players yet: the list has only the tile for a new one, and the career cannot go on.
+    await expect(page.getByRole("radio", { name: "Ny spiller" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Neste" })).toBeDisabled();
+    await page.getByRole("button", { name: "Ny spiller" }).click();
+    await page.getByPlaceholder("Spillernavn").fill("Lars");
+    await page.getByRole("button", { name: "Legg til" }).click();
+    await expect(page.getByRole("radio", { name: /Lars/ })).toBeChecked();
+    // The levels are rows with a meter, and the line under says what the chosen one means.
+    await expect(page.getByRole("radio", { name: "Dyktig" })).toBeChecked();
+    await page.getByRole("radio", { name: "Sterk" }).click();
+    await expect(page.getByText("Treffer det du sikter på")).toBeVisible();
+    await page.getByRole("button", { name: "Neste" }).click();
+    await expect(page.getByRole("radiogroup", { name: "Karakter" })).toBeVisible();
+    await expect(page.getByText("SKJORTE")).toHaveCount(0);
+    await page.getByRole("button", { name: "Start karrieren" }).click();
+    await expect.poll(async () => (await saved(page))?.profile?.character).toBe("c03");
+    expect((await saved(page)).money).toBe(2000);
+    expect((await saved(page)).startLevel).toBe("sterk");
   });
 
   test("hjemmet: rommet, saldo og nivå, ett mål, én stor knapp og fire runde", async ({ page }) => {

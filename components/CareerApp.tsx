@@ -17,7 +17,9 @@ import {
   type HomeId,
 } from "@/lib/career";
 import { deleteCareer, loadCareers, mergeCareers, readLocalCareers, saveCareer } from "@/lib/careerStorage";
-import { useRoster } from "@/lib/storage";
+import { ensurePlayer, useRoster } from "@/lib/storage";
+import { sameName } from "@/lib/people";
+import { TextField } from "./ui/TextField";
 import { applyTheme } from "@/lib/theme";
 import { levelOfMed } from "@/lib/botLevels";
 import { rankLevel } from "@/lib/careerGoals";
@@ -189,6 +191,24 @@ function NewCareer({ taken, onBack, onCreate }: { taken: string[]; onBack: () =>
   const [level, setLevel] = useState("dyktig");
   const [darts, setDarts] = useState<DartsId>("middels");
   const [character, setCharacter] = useState(DEFAULT_CHARACTER);
+  // A new player typed in here: the career is for someone, and that someone may not be in the list yet.
+  const [adding, setAdding] = useState(false);
+  const [nameInput, setNameInput] = useState("");
+  const [nameError, setNameError] = useState("");
+  const addPlayer = () => {
+    const name = nameInput.trim();
+    if (!name) return;
+    const known = roster.find((r) => r.kind !== "team" && sameName(r.name, name));
+    if (known && taken.includes(careerId(known.name))) {
+      setNameError(`${known.name} har allerede en karriere`);
+      return;
+    }
+    const record = known ?? ensurePlayer(name);
+    setPlayer(record.name);
+    setAdding(false);
+    setNameInput("");
+    setNameError("");
+  };
   const record = roster.find((r) => r.name === player);
 
   if (step === 2 && record) {
@@ -234,26 +254,59 @@ function NewCareer({ taken, onBack, onCreate }: { taken: string[]; onBack: () =>
         <ScreenTop title="Ny karriere" onBack={onBack} />
         <Steps step={1} />
         <p className="section-label mb-2">HVEM SPILLER</p>
-        {people.length === 0 ? (
-          <p className="mb-4" style={{ color: "var(--color-muted)" }}>
-            Legg til en spiller under Spillere først.
-          </p>
-        ) : (
-          <div className="flex flex-wrap gap-2 mb-5" role="radiogroup" aria-label="Spiller">
-            {people.map((p) => (
-              <button key={p.name} type="button" role="radio" aria-checked={player === p.name} onClick={() => setPlayer(p.name)} className={`tactile flex items-center gap-2 ${FOCUS_RING}`} style={{ padding: "0.35rem 0.75rem 0.35rem 0.4rem", borderRadius: "var(--radius-pill)", border: `1px solid ${player === p.name ? "var(--color-teal)" : "var(--color-border)"}`, background: player === p.name ? "var(--teal-soft)" : "var(--color-surface)", minHeight: "var(--control)" }}>
-                <Avatar name={p.name} photo={p.photo} size="s" />
-                {p.name}
-              </button>
-            ))}
+        <div className="player-grid mb-3" role="radiogroup" aria-label="Spiller">
+          {people.map((p) => (
+            <button key={p.name} type="button" role="radio" aria-checked={player === p.name} onClick={() => setPlayer(p.name)} className={`player-tile tactile ${FOCUS_RING}`}>
+              <Avatar name={p.name} photo={p.photo} size="s" />
+              <span className="truncate">{p.name}</span>
+            </button>
+          ))}
+          <button type="button" onClick={() => setAdding((a) => !a)} aria-expanded={adding} className={`player-tile player-tile-add tactile ${FOCUS_RING}`}>
+            <span aria-hidden className="player-tile-plus">
+              +
+            </span>
+            <span className="truncate">Ny spiller</span>
+          </button>
+        </div>
+        {adding && (
+          <div className="flex gap-2 mb-4">
+            <div className="flex-1 min-w-0">
+              <TextField
+                autoFocus
+                hideLabel
+                value={nameInput}
+                onChange={(v) => {
+                  setNameInput(v);
+                  setNameError("");
+                }}
+                onEnter={addPlayer}
+                placeholder="Spillernavn"
+                label="Spillernavn"
+                maxLength={24}
+                error={nameError}
+              />
+            </div>
+            <Button variant="primary" onClick={addPlayer} disabled={!nameInput.trim()}>
+              Legg til
+            </Button>
           </div>
         )}
-        <p className="section-label mb-2">HVOR GOD ER DU</p>
-        <div className="space-y-2 mb-6" role="radiogroup" aria-label="Treffsikkerhet">
-          {START_LEVELS.map((l) => (
-            <Choice key={l.key} selected={level === l.key} onPick={() => setLevel(l.key)} title={l.name} about={l.about} />
+        <p className="section-label mb-2 mt-4">HVOR GOD ER DU</p>
+        <div className="level-list mb-2" role="radiogroup" aria-label="Treffsikkerhet">
+          {START_LEVELS.map((l, i) => (
+            <button key={l.key} type="button" role="radio" aria-checked={level === l.key} onClick={() => setLevel(l.key)} className={`level-row tactile ${FOCUS_RING}`}>
+              <span className="level-name">{l.name}</span>
+              <span className="level-meter" aria-hidden>
+                {START_LEVELS.map((_, j) => (
+                  <i key={j} className={j <= i ? "on" : ""} style={{ "--h": `${0.55 + j * 0.3}rem` } as React.CSSProperties} />
+                ))}
+              </span>
+            </button>
           ))}
         </div>
+        <p className="level-about mb-6" aria-live="polite">
+          {START_LEVELS.find((l) => l.key === level)?.about}
+        </p>
         <Button block variant="primary" size="lg" disabled={!player} onClick={() => setStep(2)}>
           Neste
         </Button>
