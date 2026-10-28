@@ -19,6 +19,7 @@ const poses = (id: string, which: Pose[]): Partial<Record<Pose, string>> => Obje
 export const CHARACTERS: Character[] = [
   { id: "c03", name: "Skjegg og tatoveringer", tint: "#e8553a", poses: poses("c03", ["noytral", "jubel", "skuffet", "kast"]) },
   { id: "c02", name: "Skallen", tint: "#4cc24a", poses: poses("c02", ["noytral", "jubel", "skuffet", "kast"]) },
+  { id: "c09", name: "Solbriller og caps", tint: "#2ec4b6", poses: poses("c09", ["noytral", "jubel", "skuffet", "kast"]) },
 ];
 
 export const DEFAULT_CHARACTER = CHARACTERS[0].id;
