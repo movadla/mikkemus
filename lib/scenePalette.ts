@@ -37,3 +37,45 @@ export const PUB = {
   chalkBoard: "#1d2b26",
   chalkText: "#f1efe8",
 };
+
+/** The home arena: the garage, the basement and the loft, in the dim light of a first step (see CAREER_ART_PLAN.md). */
+export const HOME = {
+  concrete: "#3c424b",
+  concreteDark: "#2b3037",
+  floor: "#23262c",
+  floorLine: "#30343c",
+  door: "#4a515c",
+  doorLine: "#363c46",
+  brickWall: "#4a3a33",
+  brickLine: "#352a25",
+  pipe: "#b87a4b",
+  pipeDark: "#7e4f2f",
+  cold: "#b8d4ff",
+  plank: "#5f4633",
+  plankLine: "#43301f",
+  roof: "#40301f",
+  roofBeam: "#2a1e12",
+  box: "#a47848",
+  boxDark: "#7b5630",
+  wood: "#7a5a3a",
+  bulb: "#ffe7a0",
+  bulbGlow: "#ffd47a",
+  dust: "#fff1c9",
+  moon: "#d6e4ff",
+  line: "#e8e2cf",
+  boardDark: "#15161a",
+  boardCream: "#ece3c2",
+  boardRed: "#c8302b",
+  boardGreen: "#1f8f4e",
+  wire: "#1a1a1a",
+};
+
+/** The stages of the bigger events of the career, one palette each: the regional hall, the national arena, Grand Slam and the world championship. */
+export const STAGE = {
+  region: { top: "#07262b", bottom: "#12474b", beam: "#7ff0e6", accent: "#3fb6b0", wall: "#0b3a40", crowd: "#05181b", floor: "#8a6a3c", floorLine: "#a98652", pennant: "#3fb6b0", pennantAlt: "#f1ecd2", stand: "#2a2a2e" },
+  nm: { top: "#260b0f", bottom: "#5c1a1d", beam: "#ffc2b4", accent: "#ee6b57", wall: "#3a1115", crowd: "#12060a", carpet: "#b3262b", carpetEdge: "#e8c36a", gold: "#e8c36a", flag: "#f4efe6", flagRed: "#d6322e", flagBlue: "#243f8f", podium: "#1b0a0d" },
+  gs: { top: "#150a2c", bottom: "#3b1d6e", beam: "#c79bff", laser: "#5ff0ff", accent: "#a47ae6", stage: "#1c1136", screen: "#0c0620", screenText: "#f4e9ff", smoke: "#8f6bd8", truss: "#2a1b4d", pit: "#07030f" },
+  vm: { top: "#080d2b", bottom: "#202c66", beam: "#fff1b8", accent: "#f2c75a", globe: "#2d5fb8", globeLine: "#8fb5f0", gold: "#f2c75a", crowd: "#050818", spark: "#fff7d6", spark2: "#7be0ea", spark3: "#ff8a6b", plinth: "#10163a", deep: "#04061a" },
+  /** The dark before a final. */
+  final: { top: "#07060c", bottom: "#1a1424", beam: "#f4f0e7" },
+};

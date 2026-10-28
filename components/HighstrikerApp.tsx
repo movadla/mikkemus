@@ -134,20 +134,23 @@ export function HighstrikerApp({ onExitToHome }: { onExitToHome: () => void }) {
   return <HighstrikerGameScreen game={game} setGame={setGame} botLevels={botLevels} photos={photos} onHome={onExitToHome} onNew={() => setGame(null)} />;
 }
 
-function HighstrikerGameScreen({
+export function HighstrikerGameScreen({
   game,
   setGame,
   botLevels,
   photos,
   onHome,
   onNew,
+  career,
 }: {
   game: HighstrikerGame;
   setGame: (g: HighstrikerGame) => void;
-  botLevels: Record<string, BotLevel>;
+  botLevels: Record<string, BotLevel | number>;
   photos: Map<string, string | null | undefined>;
   onHome: () => void;
   onNew: () => void;
+  /** A challenge of the career: the result is not kept with the statistics, the winner screen goes on, and leaving gives it up. */
+  career?: { onDone: () => void };
 }) {
   const [confirmExit, setConfirmExit] = useState(false);
   /** What is written on the keypad, so the tower can rise with it. */
@@ -167,7 +170,7 @@ function HighstrikerGameScreen({
   const lastLife = !winner && game.turns.length > 0 && upLives === 1;
   const isBot = (p: string) => botLevels[p] !== undefined;
   const botUp = !winner && isBot(up);
-  useRecordResult(winner, game.turns.length === 0, (id, at) => highstrikerResult(game, Object.keys(botLevels), id, at));
+  useRecordResult(career ? null : winner, game.turns.length === 0, (id, at) => highstrikerResult(game, Object.keys(botLevels), id, at));
 
   // A player on the last life is told so, once, when the turn comes to them.
   useEffect(() => {
@@ -249,18 +252,28 @@ function HighstrikerGameScreen({
             ))}
           </ul>
           <div className="space-y-2">
-            <Button block variant="primary" size="lg" onClick={() => setGame(newGame(game.lives, game.players))}>
-              Spill igjen
-            </Button>
+            {career ? (
+              <Button block variant="primary" size="lg" onClick={career.onDone}>
+                Fortsett
+              </Button>
+            ) : (
+              <Button block variant="primary" size="lg" onClick={() => setGame(newGame(game.lives, game.players))}>
+                Spill igjen
+              </Button>
+            )}
             <Button block onClick={() => setGame(undoRound(game))}>
               Angre siste runde
             </Button>
-            <Button block onClick={onNew}>
-              Ny kamp
-            </Button>
-            <Button block variant="ghost" onClick={onHome}>
-              Til forsiden
-            </Button>
+            {!career && (
+              <>
+                <Button block onClick={onNew}>
+                  Ny kamp
+                </Button>
+                <Button block variant="ghost" onClick={onHome}>
+                  Til forsiden
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -272,15 +285,15 @@ function HighstrikerGameScreen({
       {lastLife && fx.heat && <div className="hs-vignette" aria-hidden />}
       {confirmExit && (
         <ConfirmDialog
-          message="Avslutte kampen?"
+          message={career ? "Gi opp utfordringen?" : "Avslutte kampen?"}
           buttons={[
             { label: "Fortsett spill", onClick: () => setConfirmExit(false), background: "var(--color-green)" },
-            { label: "Avslutt kamp", onClick: onHome, background: "var(--color-red)" },
+            { label: career ? "Gi opp" : "Avslutt kamp", onClick: onHome, background: "var(--color-red)" },
           ]}
         />
       )}
       <div className="screen-inner">
-        <ScreenTop title="Highstriker" onBack={() => setConfirmExit(true)} backLabel="Avslutt kampen" />
+        <ScreenTop title="Highstriker" onBack={() => setConfirmExit(true)} backLabel={career ? "Gi opp" : "Avslutt kampen"} />
         <p key={`${up}-${game.turns.length}`} className="turn-banner" aria-hidden>
           {up} kaster
         </p>

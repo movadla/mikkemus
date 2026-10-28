@@ -12,7 +12,7 @@ import type { Participant, Tournament, TournamentMatch, TournamentMode } from ".
  * same every time, as the house does not either.
  */
 
-export type CupKind = "vm" | "em" | "gs" | "nm" | "open" | "lu";
+export type CupKind = "vm" | "em" | "gs" | "nm" | "open" | "lu" | "region";
 
 export type CupType = { kind: CupKind; name: string; trophy: string; tagline: string; defaultSize: number; /** The sizes it can be played at. */ sizes: number[]; /** Only played in the career (lib/career.ts), so it is not among the cups to pick. */ career?: boolean };
 
@@ -23,6 +23,7 @@ export const CUP_TYPES: CupType[] = [
   { kind: "nm", name: "Norgesmesterskapet", trophy: "Norgesmesterpokalen", tagline: "Kampen om Norge", defaultSize: 8, sizes: [4, 8, 16, 32, 64] },
   // The one cup with a format of its own (lib/pilot.ts): sixteen play, four at a time, so there is one size. The rest are knockouts.
   { kind: "lu", name: "Lü-cupen", trophy: "Lü-pokalen", tagline: "Fredagsturneringen på Lü", defaultSize: 8, sizes: [8], career: true },
+  { kind: "region", name: "Regionmesterskapet", trophy: "Regionpokalen", tagline: "Beste i regionen", defaultSize: 16, sizes: [16], career: true },
   { kind: "open", name: "Ly Pilotturnering", trophy: "Ly-pokalen", tagline: "Fire og fire, med en ny sjanse", defaultSize: 16, sizes: [16] },
 ];
 
@@ -46,6 +47,8 @@ export type CupConfig = {
   growth: boolean;
   /** Everything random in the cup comes from this, so the same cup is the same after a reload. */
   seed: number;
+  /** A cup of the career: the bots go down to level 8, so a beginner meets people who are worse than they are. */
+  career?: boolean;
 };
 
 /** The colour a cup is drawn in (a token, so it follows the theme); the everyday teal for a tournament that is not a cup. */
@@ -106,7 +109,7 @@ export function stageOffset(match: Pick<TournamentMatch, "round" | "bracketRound
 export function levelForMatch(cup: CupConfig, skill: number, match: Pick<TournamentMatch, "id" | "round" | "bracketRoundSize">, name: string): BotLevel {
   const stage = cup.growth ? stageOffset(match) : 0;
   const form = (unit(`${cup.seed}|form|${match.id}|${name}`) - 0.5) * 1.8;
-  const worst = cup.kind === "lu" ? WORST_CAREER : cup.kind === "open" ? WORST_PILOT : WORST;
+  const worst = cup.career || cup.kind === "lu" ? WORST_CAREER : cup.kind === "open" ? WORST_PILOT : WORST;
   return String(Math.round(Math.min(worst, Math.max(BEST, skill + stage + form)))) as BotLevel;
 }
 

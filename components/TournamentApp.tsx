@@ -32,6 +32,7 @@ import { BullOffScreen } from "./BullOffScreen";
 import { DrawScreen } from "./DrawScreen";
 import { PilotOverview } from "./PilotOverview";
 import { EliminatedScreen } from "./EliminatedScreen";
+import { FinalIntro } from "./FinalIntro";
 import { KnockoutOverview } from "./KnockoutOverview";
 import { MikkeMusApp } from "./MikkeMusApp";
 import { TournamentHistoryScreen } from "./TournamentHistoryScreen";
@@ -54,7 +55,7 @@ export type CareerHooks = {
   onAbandon: () => void;
 };
 
-type Screen = "loading" | "setup" | "draw" | "overview" | "match" | "bulloff" | "eliminated" | "champion" | "history";
+type Screen = "loading" | "setup" | "draw" | "overview" | "match" | "final" | "bulloff" | "eliminated" | "champion" | "history";
 
 /** Finds the tournament match a resumed single-match session belongs to, by matching its two
  *  player names — lets a mid-match refresh resume correctly without needing separate persisted
@@ -251,7 +252,8 @@ export function TournamentApp({ onExitToHome, career }: { onExitToHome: () => vo
     setJustPlayedId(null);
     setElsewhereIds([]);
     setCurrentMatch(match);
-    setScreen("match");
+    // The final of a career has a moment of its own before it is thrown.
+    setScreen(career && match.bracketRoundSize === 1 && !match.isBronzeMatch ? "final" : "match");
     // A final and a semi-final have their fanfare. Nothing speaks the names: no voice when a match starts.
     const level = getFxLevel();
     if (level !== "simple" && tournament && isPilot(tournament)) {
@@ -421,6 +423,10 @@ export function TournamentApp({ onExitToHome, career }: { onExitToHome: () => vo
 
   if (screen === "draw" && pendingMode && pendingParticipants) {
     return <DrawScreen seeded={seededOrder()} cup={pendingCup ?? undefined} summary={[pendingName || pendingCup?.name || "Turnering", String(pendingParticipants.length)].join(" · ")} onBack={() => (career ? onExitToHome() : setScreen("setup"))} onStart={createAndOpen} />;
+  }
+
+  if (screen === "final" && tournament && currentMatch) {
+    return <FinalIntro tournament={tournament} match={currentMatch} onStart={() => setScreen("match")} />;
   }
 
   if (screen === "match" && tournament && currentMatch && matchParticipants(currentMatch).length >= 2) {

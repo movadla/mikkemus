@@ -121,7 +121,7 @@ export function CountdownGameScreen({
   photos: Map<string, string | null | undefined>;
   onHome: () => void;
   onNew: () => void;
-  career?: { onDone: () => void };
+  career?: { onDone: () => void; /** A challenge, not a leg of a cup: leaving gives it up. */ giveUp?: boolean };
 }) {
   const [finishing, setFinishing] = useState<number | null>(null);
   const [notice, setNotice] = useState("");
@@ -300,10 +300,10 @@ export function CountdownGameScreen({
       )}
       {confirmExit && (
         <ConfirmDialog
-          message={career ? "Ta en pause? Kampen er lagret." : "Avslutte kampen?"}
+          message={career?.giveUp ? "Gi opp utfordringen?" : career ? "Ta en pause? Kampen er lagret." : "Avslutte kampen?"}
           buttons={[
             { label: "Fortsett spill", onClick: () => setConfirmExit(false), background: "var(--color-green)" },
-            { label: career ? "Pause" : "Avslutt kamp", onClick: onHome, background: career ? "var(--color-teal)" : "var(--color-red)" },
+            { label: career?.giveUp ? "Gi opp" : career ? "Pause" : "Avslutt kamp", onClick: onHome, background: career && !career.giveUp ? "var(--color-teal)" : "var(--color-red)" },
           ]}
         />
       )}
@@ -333,7 +333,7 @@ export function CountdownGameScreen({
         </Sheet>
       )}
       <div className="screen-inner">
-        <ScreenTop title={String(game.start)} onBack={() => setConfirmExit(true)} backLabel={career ? "Pause" : "Avslutt kampen"} />
+        <ScreenTop title={String(game.start)} onBack={() => setConfirmExit(true)} backLabel={career?.giveUp ? "Gi opp" : career ? "Pause" : "Avslutt kampen"} />
         <p key={`${up}-${game.turns.length}`} className="turn-banner" aria-hidden>
           {up} kaster
         </p>

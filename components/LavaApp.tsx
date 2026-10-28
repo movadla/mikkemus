@@ -118,20 +118,23 @@ export function LavaApp({ onExitToHome }: { onExitToHome: () => void }) {
   return <LavaGameScreen game={game} setGame={setGame} botLevels={botLevels} photos={photos} onHome={onExitToHome} onNew={() => setGame(null)} />;
 }
 
-function LavaGameScreen({
+export function LavaGameScreen({
   game,
   setGame,
   botLevels,
   photos,
   onHome,
   onNew,
+  career,
 }: {
   game: LavaGame;
   setGame: (g: LavaGame) => void;
-  botLevels: Record<string, BotLevel>;
+  botLevels: Record<string, BotLevel | number>;
   photos: Map<string, string | null | undefined>;
   onHome: () => void;
   onNew: () => void;
+  /** A challenge of the career: the result is not kept with the statistics, the winner screen goes on, and leaving gives it up. */
+  career?: { onDone: () => void };
 }) {
   const [confirmExit, setConfirmExit] = useState(false);
   /** The dart just thrown, while its effect plays: set when a dart goes in, cleared when one is taken back. */
@@ -142,7 +145,7 @@ function LavaGameScreen({
   const big = fx.heat;
   const isBot = (p: string) => botLevels[p] !== undefined;
   const botUp = !winner && isBot(up);
-  useRecordResult(winner, game.darts.length === 0, (id, at) => lavaResult(game, Object.keys(botLevels), id, at));
+  useRecordResult(career ? null : winner, game.darts.length === 0, (id, at) => lavaResult(game, Object.keys(botLevels), id, at));
   const rain = useMemo(() => (winner && fx.confetti ? generateConfettiRain(fx.bigConfetti ? 60 : 36) : []), [winner, fx.confetti, fx.bigConfetti]);
 
   useEffect(() => {
@@ -212,18 +215,28 @@ function LavaGameScreen({
             ))}
           </ul>
           <div className="space-y-2">
-            <Button block variant="primary" size="lg" onClick={() => setGame(newGame(game.lives, game.players))}>
-              Spill igjen
-            </Button>
+            {career ? (
+              <Button block variant="primary" size="lg" onClick={career.onDone}>
+                Fortsett
+              </Button>
+            ) : (
+              <Button block variant="primary" size="lg" onClick={() => setGame(newGame(game.lives, game.players))}>
+                Spill igjen
+              </Button>
+            )}
             <Button block onClick={undo}>
               Angre siste pil
             </Button>
-            <Button block onClick={onNew}>
-              Ny kamp
-            </Button>
-            <Button block variant="ghost" onClick={onHome}>
-              Til forsiden
-            </Button>
+            {!career && (
+              <>
+                <Button block onClick={onNew}>
+                  Ny kamp
+                </Button>
+                <Button block variant="ghost" onClick={onHome}>
+                  Til forsiden
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -239,15 +252,15 @@ function LavaGameScreen({
     <div className="animate-screen-enter screen">
       {confirmExit && (
         <ConfirmDialog
-          message="Avslutte kampen?"
+          message={career ? "Gi opp utfordringen?" : "Avslutte kampen?"}
           buttons={[
             { label: "Fortsett spill", onClick: () => setConfirmExit(false), background: "var(--color-green)" },
-            { label: "Avslutt kamp", onClick: onHome, background: "var(--color-red)" },
+            { label: career ? "Gi opp" : "Avslutt kamp", onClick: onHome, background: "var(--color-red)" },
           ]}
         />
       )}
       <div className="screen-inner">
-        <ScreenTop title="Lava" onBack={() => setConfirmExit(true)} backLabel="Avslutt kampen" />
+        <ScreenTop title="Lava" onBack={() => setConfirmExit(true)} backLabel={career ? "Gi opp" : "Avslutt kampen"} />
         <ul className="grid grid-cols-2 gap-2 mb-3" aria-label="Stilling">
           {game.players.map((p) => {
             const active = p === up;

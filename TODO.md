@@ -11,11 +11,12 @@ Kjør hver fil én gang. Uten dem virker appen som før, men det nye lagres bare
 
 ## Karrieremodus
 
-Er bygget: karrieren bak full kode, pub-bildet (Lü), Lü-cupen som er den vanlige Mikke Mus-turneringen med bots satt ut fra nivået ditt, penger i dollar, rankingpoeng, og utseende (skjorte, darts, startsted) ved oppstart.
+Er bygget: karrieren bak full kode, hjemmet (garasje, kjeller eller loft) som bakgrunn med valg mellom trening (kommer), turneringer og utfordringer, stigen Lü-cupen (gratis) → Regionmesterskapet (penger) → Norgesmesterskapet → Grand Slam → VM med kvalifisering, penger i dollar, rankingpoeng, utfordringer i 501, Lava og Highstriker, egen åpningsscene per turnering, scene før finalen og seremoni med pokal når man vinner.
 
-- [ ] **Bonusspill mellom turneringene:** 501, Lava og Highstriker mot bots eller alene, der man kan vinne litt penger. Gjenbruker spillene som finnes og bot-kastene.
+- [ ] **Treningen hjemme:** øvelser i arenaen som gjør at nivået ditt justeres.
 - [ ] **Hjemmearena og butikk:** seks ting i fire trinn (vegg, gulv, dartbrett, lys, pynt, publikum), animasjon når man kjøper. Utstyr kan gjøre motstanderne litt svakere. Kjøpe nytt sted (fra garasje/kjeller/loft til klubbrom og arena).
-- [ ] **Sesong og stige:** kalender, ranking, opprykk til regionale cuper, nasjonal cup, Q-School og tourkort, pro tour, VM. Hvert trinn har egen faktor for hvor sterke motstanderne er. En ny VM-tittel gjør feltet litt sterkere.
+- [ ] **Sesong og kalender:** turneringer på bestemte «uker», ranking som teller over tid, flere cuper per trinn.
+- [ ] **Balansen må justeres etter at du har spilt:** tallene (faktor, premier, inngang) er satt ut fra simulering med spilleren som en bot.
 - [ ] **Nivået justeres etter faktisk kasting**, ikke bare valget ved start.
 - [ ] **Sponsorer og utgifter.**
 - [ ] **Innlogging per karriere** før modusen åpnes for alle (i dag ligger den bak koden 9696, og alle med koden kan åpne alle karrierer).

@@ -57,3 +57,19 @@ Inn: premiepenger og sponsorer. Ut: inngangsavgifter, reise (høyere trinn) og u
 - **Spilletid** på de høyeste nivåene (sett og legs): kortere formater, pause/fortsett og simulering.
 - **Balanse** (for mye penger, for harde motstandere): hele sesonger simuleres i tester før tallene låses.
 - **Navn og varemerker**: generiske navn.
+
+## Stigen slik den er bygget (2026-10-28)
+
+Hjemmet (garasje, kjeller eller loft) er alltid bakgrunnen; derfra velger man trening (kommer), turneringer eller utfordringer.
+
+| Trinn | Spillere | Inngang | Vinner | Faktor | Hvordan man kommer inn |
+|---|---|---|---|---|---|
+| Lü-cupen | 8 | gratis | $500 (2.: $300, semi: $200) | 1,2 | Åpen |
+| Regionmesterskapet | 16 | $200 | $2 500 | 1,18 | Åpen, bare penger |
+| Norgesmesterskapet | 16 | $750 | $8 000 | 1,14 | Topp fire i Regionmesterskapet |
+| Grand Slam | 16 | $2 500 | $25 000 | 1,12 | Vinn Norgesmesterskapet |
+| VM | 32 | $10 000 | $150 000 | 1,22 | Første eller andre i Grand Slam |
+
+En kvalifisering gjelder én påmelding. Hver VM-tittel gjør VM-feltet 4 % skarpere (opp til 30 %). Faktorene er satt fra simulering (spilleren som bot, nivå «dyktig»): omtrent 33 % tittelsjanse i Lü, 25 % regionalt, 20 % NM og Grand Slam, 13 % i VM. De må justeres etter ekte spilling.
+
+Hver turnering har egen åpningsscene (`components/EventScenes.tsx`, `EventIntro.tsx`), finalen har en scene (`FinalIntro.tsx`), og seieren en seremoni med pokal og spilleren i fokus (Result i `CareerApp.tsx`). Utfordringer (501, Lava, Highstriker) velges fra hjemmet og gir innsatsen til vinneren; tapet koster ingenting.
