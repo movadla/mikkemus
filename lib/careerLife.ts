@@ -59,7 +59,7 @@ export type Sponsor = SponsorDeal & { left: number; misses: number; earned: numb
 export type Offer =
   | { kind: "invite"; invite: Invitation }
   | { kind: "challenge"; game: GameId; opponent: { name: string; skill: number }; stake: number; risk: number; tv?: Tv }
-  | { kind: "sponsor"; deal: SponsorDeal }
+  | { kind: "sponsor"; /** The deals on offer: one is signed. */ deals?: SponsorDeal[]; /** A career saved when each deal was a message of its own. */ deal?: SponsorDeal }
   | { kind: "info" };
 
 export type MessageState = "open" | "taken" | "declined" | "expired";
@@ -182,6 +182,12 @@ export function addNews(life: Life, kind: NewsKind, headline: string, text: stri
   const item: NewsItem = { id: `n${counter}`, week: life.week, kind, headline, text, ...(who ? { who } : {}) };
   return { ...life, counter, news: [item, ...life.news].slice(0, 40) };
 }
+
+/** The logo of a sponsor (public/career/sponsors/<name>.webp): "Café Trøffel" is cafe-troffel. */
+export const sponsorLogo = (name: string) => `/career/sponsors/${name.toLowerCase().replace(/ø/g, "o").replace(/å/g, "a").replace(/æ/g, "ae").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}.webp`;
+
+/** The deals a sponsor message holds, from a career of either kind. */
+export const dealsOf = (o: Extract<Offer, { kind: "sponsor" }>): SponsorDeal[] => o.deals ?? (o.deal ? [o.deal] : []);
 
 export function addMessage(life: Life, from: Sender, title: string, body: string, offer: Offer, until?: number): Life {
   const counter = life.counter + 1;

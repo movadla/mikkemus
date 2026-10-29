@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { GAMES, dollars, type Career } from "@/lib/career";
-import { lifeOf, isOpen, type Message } from "@/lib/careerLife";
+import { dealsOf, sponsorLogo, lifeOf, isOpen, type Message } from "@/lib/careerLife";
 import { answerMessage, markRead, whyNotAnswer } from "@/lib/careerWorld";
 import { newSeed } from "./careerFormat";
 import { Avatar } from "./ui/Avatar";
@@ -25,7 +25,6 @@ const STATE: Record<Exclude<Message["state"], "open">, string> = { taken: "Tatt 
 /** The buttons of an offer: the words say what a yes is. */
 const WORDS = {
   challenge: ["Ta den", "Ikke i kveld"],
-  sponsor: ["Skriv under", "Ikke nå"],
 } as const;
 
 /** What an invitation is, in chips: the number of players, the game, the price and the prize. */
@@ -51,8 +50,8 @@ export function CareerInbox({ career, commit, onChallenge, onRoad }: { career: C
     setOpen(next);
     if (next) commit(markRead(career, m.id));
   };
-  const answer = (m: Message, accept: boolean) => {
-    const next = answerMessage(career, m.id, accept, newSeed());
+  const answer = (m: Message, accept: boolean, pick = 0) => {
+    const next = answerMessage(career, m.id, accept, newSeed(), pick);
     if (next === career) return;
     commit(next);
     if (accept && m.offer.kind === "challenge") onChallenge();
@@ -64,7 +63,7 @@ export function CareerInbox({ career, commit, onChallenge, onRoad }: { career: C
         const left = m.until !== undefined ? m.until - life.week + 1 : null;
         const why = whyNotAnswer(career, m);
         const offer = m.offer;
-        const words = offer.kind === "challenge" || offer.kind === "sponsor" ? WORDS[offer.kind] : null;
+        const words = offer.kind === "challenge" ? WORDS.challenge : null;
         return (
           <li key={m.id} className={`msg ${!m.read ? "msg-unread" : ""} ${m.state !== "open" ? "msg-done" : ""}`}>
             <button type="button" className={`msg-head tactile ${FOCUS_RING}`} aria-expanded={open === m.id} onClick={() => toggle(m)}>
@@ -104,10 +103,33 @@ export function CareerInbox({ career, commit, onChallenge, onRoad }: { career: C
                   </ul>
                 )}
                 {offer.kind === "sponsor" && (
-                  <ul className="msg-chips" aria-label="Om avtalen">
-                    <li>{dollars(offer.deal.perEvent)} per turnering</li>
-                    <li>{offer.deal.events} uker</li>
+                  <ul className="msg-deals" aria-label="Avtalene">
+                    {dealsOf(offer).map((d, i) => (
+                      <li key={d.name}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={sponsorLogo(d.name)} alt="" className="sponsor-logo" width={44} height={44} draggable={false} />
+                        <span className="min-w-0 flex-1">
+                          <b className="block truncate">{d.name}</b>
+                          <small className="block">
+                            {dollars(d.perEvent)} · {d.events} turneringer
+                          </small>
+                        </span>
+                        {m.state === "open" && (
+                          <Button variant="primary" disabled={!!why} onClick={() => answer(m, true, i)}>
+                            Velg
+                          </Button>
+                        )}
+                      </li>
+                    ))}
                   </ul>
+                )}
+                {m.state === "open" && offer.kind === "sponsor" && (
+                  <>
+                    <div className="msg-actions">
+                      <Button onClick={() => answer(m, false)}>Ikke nå</Button>
+                    </div>
+                    {why && <p className="msg-why">{why}</p>}
+                  </>
                 )}
                 {m.state === "open" && offer.kind === "invite" && (
                   <div className="msg-actions">

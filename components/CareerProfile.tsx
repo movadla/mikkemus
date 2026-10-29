@@ -2,8 +2,9 @@
 
 import { DARTS, PLACE_LABEL, STAGES, START_LEVELS, TIERS, dollars, type Career } from "@/lib/career";
 import { nextRank, rankOf } from "@/lib/careerGoals";
-import { lifeOf, rivalOf, seasonOf, weekInSeason, WEEKS_PER_SEASON } from "@/lib/careerLife";
+import { lifeOf, rivalOf, seasonOf, sponsorLogo, weekInSeason, WEEKS_PER_SEASON } from "@/lib/careerLife";
 import { levelLabel } from "./careerFormat";
+import { Button } from "./ui/Button";
 import { PokalCard, RankBadge } from "./CareerTrophy";
 import { CharacterFace } from "./CharacterFigure";
 
@@ -23,7 +24,7 @@ function Stat({ label, value }: { label: string; value: string }) {
  * Who the player is in the career: the shirt and the face, the title the points have given and how far there is to the next, the numbers of
  * the career so far and the cups that have been won. Its own place on the home screen.
  */
-export function CareerProfile({ career }: { career: Career }) {
+export function CareerProfile({ career, onRank }: { career: Career; onRank?: () => void }) {
   const next = nextRank(career);
   const darts = DARTS.find((d) => d.id === career.profile.darts)?.name ?? "";
   const life = lifeOf(career);
@@ -53,6 +54,11 @@ export function CareerProfile({ career }: { career: Career }) {
             <div style={{ width: `${Math.min(100, (career.points / next.min) * 100)}%`, height: "100%", background: "var(--color-gold)" }} />
           </div>
         </div>
+      )}
+      {onRank && (
+        <Button block onClick={onRank}>
+          Se rangeringen
+        </Button>
       )}
       <div className="grid grid-cols-3 gap-2">
         <Stat label="Turneringer" value={String(career.played)} />
@@ -96,6 +102,8 @@ export function CareerProfile({ career }: { career: Career }) {
           <div className="pf-row">
             <dt>Sponsor</dt>
             <dd>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={sponsorLogo(life.sponsor.name)} alt="" className="sponsor-logo" width={44} height={44} draggable={false} />
               {life.sponsor.name}
               <small>{life.sponsor.left} turneringer igjen</small>
             </dd>

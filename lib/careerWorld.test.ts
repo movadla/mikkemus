@@ -204,7 +204,7 @@ describe("a sponsor", () => {
 
 describe("answering the inbox", () => {
   const challenge: Message = { id: "m5", week: 1, from: { name: "Roger", role: "Rival" }, title: "Roger vil ha revansje", body: "", read: false, state: "open", until: 3, offer: { kind: "challenge", game: "501", opponent: { name: "Roger", skill: 4 }, stake: 250, risk: 100 } };
-  const sponsor: Message = { id: "m6", week: 1, from: { name: "Hansens Rør", role: "Sponsor" }, title: "s", body: "", read: false, state: "open", until: 3, offer: { kind: "sponsor", deal: { name: "Hansens Rør", perEvent: 80, need: "quarter", events: 4 } } };
+  const sponsor: Message = { id: "m6", week: 1, from: { name: "Hansens Rør", role: "Sponsor" }, title: "s", body: "", read: false, state: "open", until: 3, offer: { kind: "sponsor", deals: [{ name: "Hansens Rør", perEvent: 80, need: "quarter", events: 4 }] } };
 
   it("takes a challenge to the table, with what the player risks, and plays it for the name", () => {
     const c = answerMessage(withLife(fresh(), { inbox: [challenge] }), "m5", true, 11);
@@ -319,17 +319,17 @@ describe("a long career", () => {
 });
 
 describe("the sponsors of a first title", () => {
-  it("come as three, the longer the deal the more it pays for each tournament, and signing one closes the others", () => {
+  it("come as one message with three deals, the longer the deal the more it pays for each tournament, and signing one closes it", () => {
     const c = leaveEvent({ ...finished(fresh(), "winner", 500, 10), titles: 1 });
     const open = lifeOf(c).inbox.filter((m) => m.state === "open" && m.offer.kind === "sponsor");
-    expect(open).toHaveLength(3);
-    const deals = open.map((m) => (m.offer as { deal: { name: string; perEvent: number; events: number } }).deal).sort((a, b) => a.events - b.events);
+    expect(open).toHaveLength(1);
+    const offer = open[0].offer as { deals: { name: string; perEvent: number; events: number }[] };
+    const deals = [...offer.deals].sort((a, b) => a.events - b.events);
     expect(deals.map((d) => d.events)).toEqual([3, 6, 10]);
     expect(deals[0].perEvent).toBeLessThan(deals[1].perEvent);
     expect(deals[1].perEvent).toBeLessThan(deals[2].perEvent);
     expect(new Set(deals.map((d) => d.name)).size).toBe(3);
-    const longest = open.find((m) => (m.offer as { deal: { events: number } }).deal.events === 10)!;
-    const signed = answerMessage(c, longest.id, true, 1);
+    const signed = answerMessage(c, open[0].id, true, 1, offer.deals.findIndex((d) => d.events === 10));
     expect(lifeOf(signed).sponsor?.left).toBe(10);
     expect(lifeOf(signed).inbox.filter((m) => m.state === "open" && m.offer.kind === "sponsor")).toHaveLength(0);
   });

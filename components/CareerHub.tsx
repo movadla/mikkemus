@@ -6,7 +6,7 @@ import { LADDER, ROOM_MAX, STAGES, buyStage, dollars, hubPicture, topStep, isUnl
 import { cupColor } from "@/lib/botCup";
 import { TROPHY } from "@/lib/scenePalette";
 import { foilVars, frameOf } from "@/lib/materials";
-import { rankOf, rankProgress, roomBadge } from "@/lib/careerGoals";
+import { rankOf, roomBadge } from "@/lib/careerGoals";
 import { heroButton, heroFor } from "@/lib/careerHero";
 import { careerSound, uiFeedback } from "@/lib/uiSound";
 import { levelLabel, newSeed, oneDecimal } from "./careerFormat";
@@ -26,7 +26,7 @@ import { gameOf } from "@/lib/careerGame";
 import { CareerProfile } from "./CareerProfile";
 import { markTipSeen, TipPointer, useTipSeen } from "./CareerTip";
 import { ConfirmDialog } from "./ConfirmDialog";
-import { MoreIcon, PersonIcon, TrophyIcon } from "./icons";
+import { MoreIcon, PersonIcon } from "./icons";
 import { PlayButton } from "./PlayButton";
 import { OverRoom } from "./RoomBackdrop";
 import { EVENT_PICTURES } from "./eventPictures";
@@ -38,7 +38,7 @@ import { FOCUS_RING } from "./ui/focus";
 
 type View = "home" | "rooms" | "road" | "profile" | "rank" | "inbox";
 
-const TITLE: Record<Exclude<View, "home">, string> = { rooms: "Rom", road: "Turneringer", profile: "Profil", rank: "Rangering", inbox: "Meldinger" };
+const TITLE: Record<Exclude<View, "home">, string> = { rooms: "Trening", road: "Turneringer", profile: "Profil", rank: "Rangering", inbox: "Meldinger" };
 
 /** Where the career is in its season: ten ticks, the weeks that are played filled in. */
 function SeasonStrip({ career }: { career: Career }) {
@@ -105,26 +105,6 @@ function TrophyShelf({ career }: { career: Career }) {
 }
 
 const ROOM_TITLE = { fontSize: "var(--text-num)", textTransform: "uppercase", letterSpacing: "0.04em", lineHeight: 1.05, color: "var(--color-cream)", textAlign: "center" } as const;
-
-/** The one goal on the home screen: the star the player is working towards, a bar, and the points. */
-function GoalStrip({ career }: { career: Career }) {
-  const g = rankProgress(career);
-  if (!g) return null;
-  return (
-    <div className="goal-strip goal-strip-badge tabular" role="progressbar" aria-label={`Neste rang: ${g.name}, ${g.points} av ${g.need} poeng`} aria-valuemin={0} aria-valuemax={g.need} aria-valuenow={g.points}>
-      <span className="inline-flex items-center gap-2 shrink-0" style={{ color: "var(--color-gold-strong)", fontWeight: 800 }}>
-        <RankBadge rank={g.name} />
-        {g.name}
-      </span>
-      <span className="flex-1" style={{ height: "0.4rem", borderRadius: "var(--radius-pill)", background: "var(--color-cell)", overflow: "hidden" }}>
-        <span className="block" style={{ width: `${Math.max(3, g.progress * 100)}%`, height: "100%", borderRadius: "var(--radius-pill)", background: "var(--color-gold)", transition: "width var(--pull)" }} />
-      </span>
-      <span style={{ color: "var(--color-text-2)", fontWeight: 700 }}>
-        {g.points}/{g.need}
-      </span>
-    </div>
-  );
-}
 
 /** The home of a career, made as simple as it goes: the room behind it, one big button, four round ones. Everything else is behind one of them. */
 export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDelete }: { career: Career; onBack: () => void; onPlay: () => void; onChallenge: () => void; onTrain: () => void; commit: (c: Career) => void; onDelete: () => void }) {
@@ -279,22 +259,11 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
     return (
       <OverRoom stage={career.room} src={hubPicture(topStep(career))} focus="50% 35%" clear>
         {news && <span className="room-news-ring" aria-hidden />}
-        <span className="char-home" aria-hidden>
-          <CharacterFigure id={career.profile.character} pose={hero.kind === "event" && hero.done ? "jubel" : "noytral"} glow />
-        </span>
         {launch && <span className="launch-iris" aria-hidden style={{ "--c": TROPHY[launch.id], "--ox": `${launch.x}px`, "--oy": `${launch.y}px` } as React.CSSProperties} />}
         <div className="animate-screen-push screen">
           {sheets}
           <div className="screen-inner career-home">
             <CareerHud career={career} end={menuButton} />
-            <div className="flex items-center gap-2">
-              <div className="flex-1 min-w-0">
-                <GoalStrip career={career} />
-              </div>
-              <button type="button" onClick={() => go("rank")} aria-label="Rangering" className={`tactile inline-flex items-center justify-center shrink-0 ${FOCUS_RING}`} style={{ width: "var(--control)", height: "var(--control)", borderRadius: "var(--radius-pill)", background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-gold-strong)" }}>
-                <TrophyIcon className="w-5 h-5" />
-              </button>
-            </div>
             <SeasonStrip career={career} />
             {news && (
               <button type="button" className="room-news" onClick={() => setNews(null)} aria-label={`Nytt i rommet: ${news}`}>
@@ -302,7 +271,11 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
                 Nytt i rommet: <b>{news}</b>
               </button>
             )}
-            <div className="flex-1" />
+            <div className="char-home-area">
+              <span className="char-home" aria-hidden>
+                <CharacterFigure id={career.profile.character} pose={hero.kind === "event" && hero.done ? "jubel" : "noytral"} glow />
+              </span>
+            </div>
             <div className="room-text char-home-text rise-in" style={{ "--d": "0.1s" } as React.CSSProperties}>
               <p className="font-display" style={{ fontSize: "var(--text-num)", lineHeight: 1.05, color: "var(--color-cream)" }}>
                 {career.player}
@@ -318,7 +291,7 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
               <PlayButton label={button.label} sub={button.sub} tone={hero.kind === "event" && hero.done ? "gold" : hero.kind === "challenge" && hero.done && hero.challenge.won ? "gold" : "teal"} onClick={press} />
             </div>
             <div className="round4 rise-in" style={{ "--d": "0.32s" } as React.CSSProperties}>
-              <RoundButton icon={<HomeIcon />} label="Rom" badge={roomBadge(career)} onClick={() => go("rooms")} />
+              <RoundButton icon={<HomeIcon />} label="Trening" badge={roomBadge(career)} onClick={() => go("rooms")} />
               <RoundButton icon={<PersonIcon />} label="Profil" onClick={() => go("profile")} />
               <RoundButton icon={<RoadIcon />} label="Turneringer" badge={roadDot} onClick={() => go("road")} />
               <RoundButton icon={<MailIcon />} label="Meldinger" badge={inboxCount(lifeOf(career)) > 0 || unseenNews(lifeOf(career)) > 0} onClick={() => go("inbox")} />
@@ -394,7 +367,7 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
                 )}
                 <div className="room-tile room-tile-wide" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.75rem", padding: "0.6rem 0.9rem" }}>
                   <span className="min-w-0">
-                    <span className="section-label block">TRENING</span>
+                    <span className="section-label block">TREFFSIKKERHET</span>
                     <b className="font-display" style={{ fontSize: "var(--text-title)", color: "var(--color-cream)" }}>
                       {levelLabel(career.skillMed)}
                     </b>
@@ -424,7 +397,7 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
           {view === "rank" && <RankingList career={career} />}
           {view === "inbox" && <CareerInbox career={career} commit={commit} onChallenge={onChallenge} onRoad={() => setView("road")} />}
           {view === "inbox" && <CareerNews career={career} />}
-          {view === "profile" && <CareerProfile career={career} />}
+          {view === "profile" && <CareerProfile career={career} onRank={() => go("rank")} />}
 
           {view === "road" && (
             <>

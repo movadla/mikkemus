@@ -14,7 +14,7 @@ import {
   type Career, type Challenge, type GameId, type Place, type Tier, type TierId,
 } from "./career";
 import {
-  BOSSES, REP_MAX, addMessage, addNews, WEEKS_PER_SEASON, lifeOf, lyPool, placeMeets, rivalOf, seasonOf, weekInSeason,
+  BOSSES, REP_MAX, addMessage, addNews, dealsOf, WEEKS_PER_SEASON, lifeOf, lyPool, placeMeets, rivalOf, seasonOf, weekInSeason,
   type Invitation, type Life, type TeamCup, type Message, type Offer, type Rookie, type Sender, type SeasonResult, type SponsorDeal,
 } from "./careerLife";
 
@@ -307,10 +307,10 @@ export function dealsFor(career: Career, seed: string): SponsorDeal[] {
   ].map((d, i) => ({ name: SPONSORS[(start + i * 3) % SPONSORS.length], perEvent: Math.round((base * d.factor) / 10) * 10, need, events: d.events }));
 }
 
-/** The three offers go out at once, to be answered in three weeks: one of them can be taken. */
+/** The three deals go out as one message, to be answered in three weeks: one of them can be taken. */
 function offerSponsors(career: Career, life: Life, week: number): Life {
-  const need = (d: SponsorDeal) => (d.need === "quarter" ? "Til kvartfinalen." : "Til semifinalen.");
-  return dealsFor(career, `${career.id}|${week}`).reduceRight((l, deal) => addMessage(l, { name: deal.name, role: "Sponsor" }, deal.name, need(deal), { kind: "sponsor", deal }, week + 3), life);
+  const deals = dealsFor(career, `${career.id}|${week}`);
+  return addMessage(life, { name: "Tre firmaer", role: "Sponsor" }, "Sponsorer vil ha deg", deals[0].need === "quarter" ? "De betaler hver gang du kommer til kvartfinalen." : "De betaler hver gang du kommer til semifinalen.", { kind: "sponsor", deals }, week + 3);
 }
 
 /** Now and then a sponsor turns up on its own, once the player has played a little and has a name. */
@@ -511,7 +511,7 @@ export function markNewsSeen(career: Career): Career {
 }
 
 /** Says yes or no to an offer. A yes to an invitation signs the player up (the fee is paid, the field is made); a yes to a challenge puts it on the table; a yes to a sponsor signs the deal. */
-export function answerMessage(career: Career, id: string, accept: boolean, seed: number): Career {
+export function answerMessage(career: Career, id: string, accept: boolean, seed: number, pick = 0): Career {
   const life = lifeOf(career);
   const m = life.inbox.find((x) => x.id === id);
   if (!m || m.state !== "open" || m.offer.kind === "info") return career;
@@ -531,8 +531,10 @@ export function answerMessage(career: Career, id: string, accept: boolean, seed:
     const challenge: Challenge = { id: `${career.id}-c${seed}`, game: o.game, opponent: o.opponent, stake: o.stake, won: null, risk: o.risk, from: id, ...(o.tv ? { tv: o.tv } : {}) };
     return withLife({ ...career, challenge, challenges: career.challenges + 1 }, patch(life, id, { state: "taken", read: true }));
   }
-  // One deal at a time: the other offers are closed.
-  const closed: Life = { ...life, inbox: life.inbox.map((x) => (x.id === id ? { ...x, state: "taken" as const, read: true } : x.state === "open" && x.offer.kind === "sponsor" ? { ...x, state: "declined" as const } : x)) };
-  return withLife(career, { ...closed, sponsor: { ...o.deal, left: o.deal.events, misses: 0, earned: 0 } });
+  // One deal at a time: the one picked is signed, and the message is closed.
+  const deal = dealsOf(o)[pick];
+  if (!deal) return career;
+  const closed: Life = { ...life, inbox: life.inbox.map((x) => (x.id === id || (x.state === "open" && x.offer.kind === "sponsor") ? { ...x, state: x.id === id ? ("taken" as const) : ("declined" as const), read: true } : x)) };
+  return withLife(career, { ...closed, sponsor: { ...deal, left: deal.events, misses: 0, earned: 0 } });
 }
 
