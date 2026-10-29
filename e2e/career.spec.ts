@@ -52,7 +52,7 @@ test.describe("karriere", () => {
   test("første karriere: en historie med tre bilder som kan hoppes over, og som bare vises én gang", async ({ page }) => {
     await seed(page, null, true);
     await expect(page.getByText("Det begynte ved et kjøkkenbord")).toBeVisible();
-    await page.getByRole("button", { name: "Neste" }).click();
+    await page.getByRole("button", { name: "Neste", exact: true }).click();
     await expect(page.getByText("En kveld tok du bagen")).toBeVisible();
     await page.getByRole("button", { name: "Hopp over" }).click();
     await expect(page.getByRole("button", { name: "Ny spiller" })).toBeVisible();
@@ -65,7 +65,7 @@ test.describe("karriere", () => {
     await toCareer(page, false);
     // No players yet: the list has only the tile for a new one, and the career cannot go on.
     await expect(page.getByRole("radio", { name: "Ny spiller" })).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "Neste" })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Neste", exact: true })).toBeDisabled();
     await page.getByRole("button", { name: "Ny spiller" }).click();
     await page.getByPlaceholder("Spillernavn").fill("Lars");
     await page.getByRole("button", { name: "Legg til" }).click();
@@ -74,12 +74,16 @@ test.describe("karriere", () => {
     await expect(page.getByRole("radio", { name: "Dyktig" })).toBeChecked();
     await page.getByRole("radio", { name: "Sterk" }).click();
     await expect(page.getByText("Treffer det du sikter på")).toBeVisible();
-    await page.getByRole("button", { name: "Neste" }).click();
+    await page.getByRole("button", { name: "Neste", exact: true }).click();
     await expect(page.getByRole("radiogroup", { name: "Karakter" })).toBeVisible();
     await expect(page.getByText("SKJORTE")).toHaveCount(0);
     // Three short steps, one thing on each: who, the character, and the game with the darts.
     await expect(page.getByRole("radiogroup", { name: "Spill" })).toHaveCount(0);
-    await page.getByRole("button", { name: "Neste" }).click();
+    await page.getByRole("button", { name: "Neste", exact: true }).click();
+    // The game and the darts start as they are most likely wanted, in one line; changing them is one tap.
+    await expect(page.getByText("Mikke Mus · Steel tip")).toBeVisible();
+    await expect(page.getByText("Ly-cupen", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Endre" }).click();
     await expect(page.getByRole("radiogroup", { name: "Spill" })).toBeVisible();
     // Darts are a soft tip or a steel tip, each with its picture; steel is the start.
     await expect(page.getByRole("radio", { name: /Steel tip/ })).toBeChecked();
@@ -387,20 +391,21 @@ test.describe("karriere", () => {
     await expect(play(page, /^SPILL/)).toBeVisible();
   });
 
-  test("trening: øvelser med nivå, en trefføvelse som bestås, og taket rommet setter", async ({ page }) => {
-    await seed(page, { ...CAREER, drills: { tre20: { level: 20, passes: 19, tries: 19 } } });
+  test("trening: øvelser med nivå, en dagens øvelse, låste øvelser, en trefføvelse som bestås, og taket rommet setter", async ({ page }) => {
+    await seed(page, { ...CAREER, room: 3, drills: { tre20: { level: 40, passes: 39, tries: 39 } } });
     await page.getByRole("button", { name: /Lars/ }).click();
     await place(page, "Trening").click();
-    // The list: each drill with its goal and level, and what the room allows.
-    await expect(page.getByText(/NIVÅ OPP TIL 20 I DETTE ROMMET/)).toBeVisible();
-    await expect(page.getByRole("list", { name: "Øvelser" }).getByText("Nivå 20")).toBeVisible();
+    // The list: the drill of the day on top, each drill with its goal and level, and what the room allows.
+    await expect(page.getByText(/NIVÅ OPP TIL 40 I DETTE ROMMET/)).toBeVisible();
+    await expect(page.getByText("DAGENS ØVELSE")).toBeVisible();
+    await expect(page.getByRole("list", { name: "Alle øvelser" }).getByText("Nivå 40")).toBeVisible();
     await page.getByRole("button", { name: "Tren Tre 20 på tre piler" }).click();
-    // At level 20 there are eight attempts; three on the first passes it, but the room stops the level at twenty.
-    await expect(page.getByText("FORSØK 1 AV 8")).toBeVisible();
+    // At level 40 there are six attempts; three on the first passes it, but the room stops the level at forty.
+    await expect(page.getByText("FORSØK 1 AV 6")).toBeVisible();
     await page.getByRole("button", { name: "3 treff" }).click();
     await expect(page.getByText("Bestått")).toBeVisible();
-    await expect(page.getByText(/Rommet tillater nivå 20/)).toBeVisible();
-    await expect.poll(async () => (await saved(page)).drills.tre20).toEqual({ level: 20, passes: 20, tries: 20 });
+    await expect(page.getByText(/Rommet tillater nivå 40/)).toBeVisible();
+    await expect.poll(async () => (await saved(page)).drills.tre20.passes).toBe(40);
     await play(page, "OK").click();
     // Bull on nine darts at level 1: none in three attempts is not passed.
     await place(page, "Trening").click();
@@ -408,6 +413,77 @@ test.describe("karriere", () => {
     for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "0 treff" }).click();
     await expect(page.getByText("Ikke denne gangen")).toBeVisible();
     await expect.poll(async () => (await saved(page)).drills.bull9).toEqual({ level: 1, passes: 0, tries: 1 });
+  });
+
+  test("trening: en øvelse som ikke er åpnet i rommet, er låst og sier hvor den åpnes", async ({ page }) => {
+    await toCareer(page);
+    await page.getByRole("button", { name: /Lars/ }).click();
+    await place(page, "Trening").click();
+    await expect(page.getByText(/Åpnes i /)).toBeVisible();
+    await expect(page.getByRole("button", { name: "Tren Bull på ni piler" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Tren Trippel 20" })).toBeVisible();
+  });
+
+  test("profil: tre faner, og pokalskapet åpnes fra et merke på hjemmet", async ({ page }) => {
+    const trophies = [{ tier: "lu", at: "2026-10-20T20:00:00Z", prize: 100 }, { tier: "lu", at: "2026-10-05T20:00:00Z", prize: 100 }];
+    await seed(page, { ...CAREER, trophies, life: { ...LIFE, inbox: [] } });
+    await page.getByRole("button", { name: /Lars/ }).click();
+    // Only a chip with the number of cups; no shelf of locked ones above the big button.
+    await expect(page.getByRole("img", { name: /Pokalhylle/ })).toHaveCount(0);
+    await page.getByRole("button", { name: "Pokalskapet, 2 pokaler" }).click();
+    await expect(page.getByRole("tab", { name: "Pokaler" })).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByRole("group", { name: /^Pokalskapet: 1 av 5/ })).toBeVisible();
+    await page.getByRole("tab", { name: "Sesonger" }).click();
+    await expect(page.getByRole("tabpanel", { name: "Sesonger" })).toBeVisible();
+    await page.getByRole("tab", { name: "Oversikt" }).click();
+    await expect(page.getByRole("progressbar", { name: /^Neste rang/ })).toBeVisible();
+  });
+
+  test("rangoppgang: en ny rang får sitt eget skjermbilde, og bare én gang", async ({ page }) => {
+    await seed(page, { ...CAREER, points: 12, life: { ...LIFE, inbox: [], rankSeen: "Pubspiller" } });
+    await page.getByRole("button", { name: /Lars/ }).click();
+    await expect(page.getByText("NY RANG")).toBeVisible();
+    await expect(page.getByText("Regionspiller", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "FORTSETT" }).click();
+    await expect(page.getByText("NY RANG")).toHaveCount(0);
+    await expect.poll(async () => (await saved(page)).life.rankSeen).toBe("Regionspiller");
+    await page.reload();
+    await page.getByRole("button", { name: "Karriere" }).click();
+    await page.getByRole("button", { name: /Lars/ }).click();
+    await expect(page.getByText("NY RANG")).toHaveCount(0);
+  });
+
+  test("sesongoppsummering: tabellen med plasseringen din og hvor mange plasser du gikk opp", async ({ page }) => {
+    const seasons = [
+      { season: 2, rank: 2, points: 31, prize: 150, winner: "Haakon", table: [{ name: "Haakon", pts: 33 }, { name: "Lars", pts: 31 }, { name: "Marcus", pts: 28 }, { name: "Roger", pts: 24 }, { name: "Dan", pts: 18 }] },
+      { season: 1, rank: 4, points: 21, prize: 0, winner: "Haakon" },
+    ];
+    await seed(page, { ...CAREER, life: { ...LIFE, inbox: [], recapSeen: 1, seasons } });
+    await page.getByRole("button", { name: /Lars/ }).click();
+    await expect(page.getByText("Nr. 2")).toBeVisible();
+    await expect(page.getByRole("list", { name: "Sesongtabellen" }).getByText("Marcus")).toBeVisible();
+    await expect(page.getByText("Du gikk opp 2 plasser fra sesong 1")).toBeVisible();
+  });
+
+  test("åpning: feltet med favorittene og hvor du står", async ({ page }) => {
+    await toCareer(page);
+    await page.getByRole("button", { name: /Lars/ }).click();
+    await play(page, /^SPILL/).click();
+    await expect(page.getByRole("list", { name: "Om turneringen" })).toBeVisible();
+    await expect(page.getByLabel("Feltet").getByText(/Du er nr\. \d av 8 etter styrke/)).toBeVisible();
+  });
+
+  test("sesongen: stripen på hjemmet åpner tabellen, finalen og det som utløper", async ({ page }) => {
+    await seed(page, { ...CAREER, life: { ...LIFE, world: { ...LIFE.world, pts: { Haakon: 22, Marcus: 15 } }, seasonPts: 18 } });
+    await page.getByRole("button", { name: /Lars/ }).click();
+    await page.getByRole("button", { name: /^Sesongen:/ }).click();
+    await expect(page.getByText("FINALEN")).toBeVisible();
+    await expect(page.getByText(/^Om \d+ uker?$/)).toBeVisible();
+    const table = page.getByRole("list", { name: "Sesongtabellen nå" });
+    await expect(table.getByText("Haakon")).toBeVisible();
+    await expect(table.getByText("Lars (deg)")).toBeVisible();
+    await expect(page.getByText("UTLØPER SNART")).toBeVisible();
+    await expect(page.getByText("Ly-sprinten")).toBeVisible();
   });
 
   test("menyen: slett karrieren ligger bak de tre prikkene, og slett sier hva det koster", async ({ page }) => {

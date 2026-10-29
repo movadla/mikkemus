@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   DARTS,
   START_LEVELS,
@@ -26,12 +26,18 @@ import { sameName } from "@/lib/people";
 import { TextField } from "./ui/TextField";
 import { applyTheme } from "@/lib/theme";
 import { levelOfMed } from "@/lib/botLevels";
-import { rankLevel } from "@/lib/careerGoals";
+import { rankLevel, rankOf } from "@/lib/careerGoals";
+import { hubPicture, topStep } from "@/lib/career";
+import { lifeOf, seasonOf, weekInSeason } from "@/lib/careerLife";
 import { CoinIcon } from "./icons";
 import { StarIcon } from "./careerIcons";
 import { Hub } from "./CareerHub";
 import { ChallengePlay, Result, TrainingPlay } from "./CareerScreens";
 import { EventIntro } from "./EventIntro";
+import { OpponentPortrait, TeamPortrait } from "./OpponentCard";
+import { medOfLevel } from "@/lib/opponentStats";
+import { opponentOf } from "@/lib/opponents";
+import type { Participant } from "@/lib/tournament";
 import { picturesFor } from "./eventPictures";
 import { OverRoom } from "./RoomBackdrop";
 import { CharacterFace, CharacterFigure } from "./CharacterFigure";
@@ -49,7 +55,17 @@ import { FOCUS_RING } from "./ui/focus";
  * cup, played with the Mikke Mus game, so the draw, the bracket and the champion are the ones of the tournaments. The career is saved after
  * every result, so an event can be left and picked up again, on this phone or another.
  */
-export function CareerApp({ onExitToHome }: { onExitToHome: () => void }) {
+/** The career is a night in an arena whatever the rest of the app is set to: a dark curtain lifts as it opens, so the change of light looks meant. */
+export function CareerApp(props: { onExitToHome: () => void }) {
+  return (
+    <>
+      <CareerAppInner {...props} />
+      <span className="career-curtain" aria-hidden />
+    </>
+  );
+}
+
+function CareerAppInner({ onExitToHome }: { onExitToHome: () => void }) {
   // A game of evenings keeps to its night look whatever the rest of the app is set to, and gives the page back when it is left.
   useEffect(() => {
     applyTheme("dark");
@@ -117,10 +133,18 @@ export function CareerApp({ onExitToHome }: { onExitToHome: () => void }) {
           <ul className="space-y-2 mb-4" aria-label="Karrierer">
             {careers.map((c) => (
               <li key={c.id}>
-                <button type="button" onClick={() => setId(c.id)} className={`tactile w-full flex items-center gap-3 text-left ${FOCUS_RING}`} style={{ padding: "0.6rem 0.75rem", borderRadius: "var(--radius-m)", background: "var(--color-surface)", border: "1px solid var(--color-border)", minHeight: "var(--control-lg)" }}>
-                  <CharacterFace id={c.profile.character} px={44} />
-                  <span className="flex-1 min-w-0">
-                    <span className="block truncate font-semibold">{c.player}</span>
+                <button type="button" onClick={() => setId(c.id)} className={`slot tactile ${FOCUS_RING}`}>
+                  <span className="slot-scene" aria-hidden>
+                    {/* eslint-disable-next-line @next/next/no-img-element -- the hall the career is at, from public/career */}
+                    <img src={hubPicture(topStep(c))} alt="" draggable={false} />
+                    <span className="slot-char">
+                      <CharacterFigure id={c.profile.character} />
+                    </span>
+                  </span>
+                  <span className="slot-body">
+                    <span className="block truncate font-display" style={{ fontSize: "var(--text-num)", color: "var(--color-cream)", lineHeight: 1.1 }}>
+                      {c.player}
+                    </span>
                     <span className="flex items-center gap-3 tabular" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
                       <span className="inline-flex items-center gap-1" style={{ color: "var(--color-gold-strong)", fontWeight: 700 }}>
                         <CoinIcon className="w-4 h-4" />
@@ -131,6 +155,9 @@ export function CareerApp({ onExitToHome }: { onExitToHome: () => void }) {
                         {rankLevel(c)}
                       </span>
                       <span>{gameName(gameOf(c.profile).game)}</span>
+                    </span>
+                    <span className="block" style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>
+                      {rankOf(c)} · sesong {seasonOf(lifeOf(c).week)}, uke {weekInSeason(lifeOf(c).week)}
                     </span>
                   </span>
                 </button>
@@ -209,7 +236,18 @@ function StoryIntro({ onDone }: { onDone: () => void }) {
 }
 
 /** Two steps: who and how good, then the look and the start (the shirt, the darts, the place). */
-function NewCareer({ taken, onBack, onCreate }: { taken: string[]; onBack: () => void; onCreate: (player: string, level: string, profile: { home: HomeId; darts: DartsId; character: string; game: CareerGame; doubleOut: boolean }) => void }) {
+type NewCareerProps = { taken: string[]; onBack: () => void; onCreate: (player: string, level: string, profile: { home: HomeId; darts: DartsId; character: string; game: CareerGame; doubleOut: boolean }) => void };
+
+/** The setup happens where the career begins: the pub Ly, dimmed behind the steps. */
+function NewCareer(props: NewCareerProps) {
+  return (
+    <OverRoom stage={0} src="/career/hub-lu.jpg" dim={66} blur={2}>
+      <NewCareerSteps {...props} />
+    </OverRoom>
+  );
+}
+
+function NewCareerSteps({ taken, onBack, onCreate }: NewCareerProps) {
   const roster = useRoster();
   const people = roster.filter((r) => r.kind !== "team" && !taken.includes(careerId(r.name)));
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -224,7 +262,15 @@ function NewCareer({ taken, onBack, onCreate }: { taken: string[]; onBack: () =>
   const [level, setLevel] = useState("dyktig");
   const [darts, setDarts] = useState<DartsId>("steel");
   const [character, setCharacter] = useState(DEFAULT_CHARACTER);
+  // A swipe over the figure (or an arrow) moves to the next character, round the ring.
+  const swipeFrom = useRef<number | null>(null);
+  const stepCharacter = (d: number) => {
+    const i = CHARACTERS.findIndex((c) => c.id === character);
+    setCharacter(CHARACTERS[(i + d + CHARACTERS.length) % CHARACTERS.length].id);
+  };
   const [gameSettings, setGameSettings] = useState<{ game: CareerGame; doubleOut: boolean }>({ game: "mm", doubleOut: true });
+  // The game and the darts start as they are most likely wanted; changing them is one tap away, not three cards in the way.
+  const [changing, setChanging] = useState(false);
   // A new player typed in here: the career is for someone, and that someone may not be in the list yet.
   const [adding, setAdding] = useState(false);
   const [nameInput, setNameInput] = useState("");
@@ -260,28 +306,48 @@ function NewCareer({ taken, onBack, onCreate }: { taken: string[]; onBack: () =>
 
   if (step === 3 && record) {
     return (
-      <div className="animate-screen-push screen has-sticky-action career-skin">
+      <div className="animate-screen-push screen has-sticky-action career-skin wizard">
         <div className="screen-inner">
           <ScreenTop title="Spill og piler" onBack={() => setStep(2)} sub={<span style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>{record.name}</span>} />
           <Steps step={3} />
-          <p className="section-label mb-2">SPILL</p>
-          <div className="mb-5">
-            <GameChoice {...gameSettings} onChange={setGameSettings} />
+          {changing ? (
+            <>
+            <p className="section-label mb-2">SPILL</p>
+            <div className="mb-5">
+              <GameChoice {...gameSettings} onChange={setGameSettings} />
+            </div>
+            <p className="section-label mb-2">PILER</p>
+            <div className="dart-pick mb-5" role="radiogroup" aria-label="Piler">
+              {DARTS.map((d) => (
+                <button key={d.id} type="button" role="radio" aria-checked={darts === d.id} onClick={() => setDarts(d.id)} className={`dart-card tactile ${FOCUS_RING}`}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={d.picture} alt="" className="dart-card-img" draggable={false} />
+                  <span className="level-name">{d.name}</span>
+                  <span className="game-about">{d.about}</span>
+                </button>
+              ))}
+            </div>
+            </>
+          ) : (
+            <div className="card-plain mb-3" style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.8rem 0.9rem", borderRadius: "var(--radius-m)", background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
+              <div className="min-w-0 flex-1">
+                <p className="section-label">DU SPILLER</p>
+                <p style={{ color: "var(--color-cream)", fontWeight: 700 }}>
+                  {gameName(gameSettings.game)} · {DARTS.find((d) => d.id === darts)?.name}
+                </p>
+              </div>
+              <Button onClick={() => setChanging(true)}>Endre</Button>
+            </div>
+          )}
+          <div className="mb-3 rise-in" style={{ padding: "0.8rem 0.9rem", borderRadius: "var(--radius-m)", background: "var(--color-surface)", border: "1px solid var(--color-gold)" }}>
+            <p className="section-label" style={{ color: "var(--color-gold-strong)" }}>
+              FØRSTE TURNERING
+            </p>
+            <p className="font-display" style={{ fontSize: "var(--text-num)", color: "var(--color-cream)", lineHeight: 1.1 }}>
+              Ly-cupen
+            </p>
+            <p style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>Fredagskveld på puben · Gratis</p>
           </div>
-          <p className="section-label mb-2">PILER</p>
-          <div className="dart-pick mb-5" role="radiogroup" aria-label="Piler">
-            {DARTS.map((d) => (
-              <button key={d.id} type="button" role="radio" aria-checked={darts === d.id} onClick={() => setDarts(d.id)} className={`dart-card tactile ${FOCUS_RING}`}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={d.picture} alt="" className="dart-card-img" draggable={false} />
-                <span className="level-name">{d.name}</span>
-                <span className="game-about">{d.about}</span>
-              </button>
-            ))}
-          </div>
-          <p className="mb-3" style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>
-            Neste er din første turnering: Ly-cupen på puben. Den er gratis.
-          </p>
           <Button block variant="primary" size="lg" onClick={() => onCreate(record.name, level, { home: "garage", darts, character, ...gameSettings })}>
             Start karrieren
           </Button>
@@ -292,14 +358,29 @@ function NewCareer({ taken, onBack, onCreate }: { taken: string[]; onBack: () =>
 
   if (step === 2 && record) {
     return (
-      <div className="animate-screen-push screen has-sticky-action career-skin">
+      <div className="animate-screen-push screen has-sticky-action career-skin wizard">
         <div className="screen-inner">
           <ScreenTop title="Karakter" onBack={() => setStep(1)} sub={<span style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>{record.name}</span>} />
           <Steps step={2} />
           <p className="section-label mb-2">KARAKTER</p>
           <div className="char-pick mb-5" role="radiogroup" aria-label="Karakter" style={{ "--tint": characterOf(character).tint } as React.CSSProperties}>
-            <div className="char-pick-stage">
-              <CharacterFigure id={character} glow />
+            <div
+              className="char-pick-stage"
+              onPointerDown={(e) => (swipeFrom.current = e.clientX)}
+              onPointerUp={(e) => {
+                if (swipeFrom.current === null) return;
+                const dx = e.clientX - swipeFrom.current;
+                swipeFrom.current = null;
+                if (Math.abs(dx) > 40) stepCharacter(dx < 0 ? 1 : -1);
+              }}
+            >
+              <button type="button" aria-label="Forrige karakter" className={`char-arrow char-arrow-l tactile ${FOCUS_RING}`} onClick={() => stepCharacter(-1)}>
+                ‹
+              </button>
+              <CharacterFigure key={character} id={character} glow />
+              <button type="button" aria-label="Neste karakter" className={`char-arrow char-arrow-r tactile ${FOCUS_RING}`} onClick={() => stepCharacter(1)}>
+                ›
+              </button>
             </div>
             <div className="char-pick-row">
               {CHARACTERS.map((c) => (
@@ -319,9 +400,12 @@ function NewCareer({ taken, onBack, onCreate }: { taken: string[]; onBack: () =>
   }
 
   return (
-    <div className="animate-screen-push screen has-sticky-action career-skin">
+    <div className="animate-screen-push screen has-sticky-action career-skin wizard">
       <div className="screen-inner">
         <ScreenTop title="Ny karriere" onBack={onBack} />
+        <p className="section-label mb-2" style={{ color: "var(--color-gold-strong)" }}>
+          DIN FØRSTE KVELD PÅ LY
+        </p>
         <Steps step={1} />
         <p className="section-label mb-2">HVEM SPILLER</p>
         <div className="player-grid mb-3" role="radiogroup" aria-label="Spiller">
@@ -385,6 +469,33 @@ function NewCareer({ taken, onBack, onCreate }: { taken: string[]; onBack: () =>
   );
 }
 
+/** Who is in the field, before the draw: the three strongest by name and face, and where the player stands among them, with the rival flagged. */
+function FieldPreview({ career, field }: { career: Career; field: Participant[] }) {
+  const strength = (p: Participant) => (p.members ? p.members.reduce((s, m) => s + medOfLevel(m.skill ?? 4), 0) / p.members.length : p.name === career.player ? career.skillMed : opponentOf(p.name).med);
+  const others = field.filter((p) => (p.members ? !p.members.some((m) => m.name === career.player) : p.name !== career.player));
+  const mine = field.find((p) => (p.members ? p.members.some((m) => m.name === career.player) : p.name === career.player));
+  if (others.length === 0) return null;
+  const me = mine ? (p: Participant) => strength(p) : () => career.skillMed;
+  const myStrength = mine ? me(mine) : career.skillMed;
+  const standing = 1 + others.filter((p) => strength(p) < myStrength).length;
+  const top = [...others].sort((x, y) => strength(x) - strength(y)).slice(0, 3);
+  const rival = rivalOf(career).name;
+  const hasRival = others.some((p) => p.name === rival);
+  return (
+    <div className="ev-field" aria-label="Feltet">
+      <ul className="ev-field-faces">
+        {top.map((p) => (
+          <li key={p.name}>{p.members ? <TeamPortrait members={p.members.map((m) => m.name)} label={p.name} /> : <OpponentPortrait name={p.name} />}</li>
+        ))}
+      </ul>
+      <p>
+        Du er <b>nr. {standing}</b> av {field.length} etter styrke
+        {hasRival && <span className="ev-field-rival">Rival: {rival}</span>}
+      </p>
+    </div>
+  );
+}
+
 function Play({ career, commit, onHub }: { career: Career; commit: (c: Career) => void; onHub: () => void }) {
   const a = career.active!;
   // A cup of teams: the player's side is the team, and each team is drawn with the faces of its two.
@@ -413,6 +524,8 @@ function Play({ career, commit, onHub }: { career: Career; commit: (c: Career) =
         player={career.player}
         character={career.profile.character}
         onDone={() => setIntro(false)}
+        extra={<FieldPreview career={career} field={a.entrants} />}
+        partner={team?.mine.partner}
         {...(team
           ? {
               plates: [["Lag", String(tier.size)], ["Innskudd", tier.fee === 0 ? "Gratis" : dollars(tier.fee)], ["Til vinneren", dollars(tier.prizes.winner ?? 0)]] as [string, string][],

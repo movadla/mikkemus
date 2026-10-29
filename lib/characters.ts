@@ -27,6 +27,14 @@ export const DEFAULT_CHARACTER = CHARACTERS[0].id;
 /** The character with this id, or the first one when the id is unknown (a career from before there were characters, or one saved by a newer app). */
 export const characterOf = (id: string | undefined | null): Character => CHARACTERS.find((c) => c.id === id) ?? CHARACTERS[0];
 
+/**
+ * Where a sponsor's patch sits on the shirt of a pose, as a share of the picture (from the left and from the top, and its width). Only the poses
+ * that have been measured are listed: a pose without a place shows no patch.
+ */
+export const PATCH: Record<string, Partial<Record<Pose, { x: number; y: number; w: number }>>> = {
+  c03: { noytral: { x: 63, y: 66, w: 15 } },
+};
+
 /** The picture of a pose, or the neutral one when the character has none. */
 export const poseSrc = (character: Character, pose: Pose): string => character.poses[pose] ?? character.poses.noytral ?? "";
 

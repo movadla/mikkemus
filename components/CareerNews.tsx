@@ -29,28 +29,34 @@ export function CareerNews({ career }: { career: Career }) {
   const rows: ({ head: string } | NewsItem)[] = [];
   let last = -1;
   for (const n of life.news) {
-    if (n.week !== last) rows.push({ head: `Sesong ${seasonOf(n.week)} · uke ${weekInSeason(n.week)} av ${WEEKS_PER_SEASON}` });
+    if (n.week !== last)
+      rows.push({
+        head: `Sesong ${seasonOf(n.week)} · uke ${weekInSeason(n.week)} av ${WEEKS_PER_SEASON}`,
+      });
     last = n.week;
     rows.push(n);
   }
   if (rows.length === 0) return <p style={{ color: "var(--color-muted)" }}>Ingen nyheter ennå. Spill en turnering, så skjer det noe.</p>;
   return (
-    <ol className="feed" aria-label="Nyheter">
-      {rows.map((r, i) =>
-        "head" in r ? (
-          <li key={`h-${i}`} className="feed-head section-label">
-            {r.head}
-          </li>
-        ) : (
-          <li key={r.id} className={`feed-item ${unseen(r) ? "feed-new" : ""}`}>
-            <button type="button" className={`feed-row tactile ${FOCUS_RING}`} aria-expanded={open === r.id} onClick={() => setOpen(open === r.id ? null : r.id)}>
-              <Face career={career} who={r.who} />
-              <b className="min-w-0 text-left">{r.headline}</b>
-            </button>
-            {open === r.id && <p className="feed-text">{r.text}</p>}
-          </li>
-        ),
-      )}
-    </ol>
+    <>
+      <p className="section-label feed-title">HENDELSER</p>
+      <ol className="feed" aria-label="Nyheter">
+        {rows.map((r, i) =>
+          "head" in r ? (
+            <li key={`h-${i}`} className="feed-head section-label">
+              {r.head}
+            </li>
+          ) : (
+            <li key={r.id} className={`feed-item ${unseen(r) ? "feed-new" : ""}`}>
+              <button type="button" className={`feed-row tactile ${FOCUS_RING}`} aria-expanded={open === r.id} onClick={() => setOpen(open === r.id ? null : r.id)}>
+                <Face career={career} who={r.who} />
+                <b className="min-w-0 text-left">{r.headline}</b>
+              </button>
+              {open === r.id && <p className="feed-text">{r.text}</p>}
+            </li>
+          ),
+        )}
+      </ol>
+    </>
   );
 }

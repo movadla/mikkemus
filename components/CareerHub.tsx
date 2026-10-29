@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { DRILLS, drillLevel, goalLine, levelCap, type DrillId } from "@/lib/drills";
+import { DRILLS, UNLOCK_ROOM, levelCap, type DrillId } from "@/lib/drills";
+import { DrillList } from "./DrillList";
 import { LADDER, ROOM_MAX, STAGES, buyStage, dollars, hubPicture, topStep, isUnlocked, nextStage, startEvent, whyNot, whyNotBuy, type Career, type Tier } from "@/lib/career";
 import { cupColor } from "@/lib/botCup";
 import { TROPHY } from "@/lib/scenePalette";
@@ -9,12 +10,15 @@ import { foilVars, frameOf } from "@/lib/materials";
 import { rankOf, roomBadge } from "@/lib/careerGoals";
 import { heroButton, heroFor } from "@/lib/careerHero";
 import { careerSound, uiFeedback } from "@/lib/uiSound";
-import { levelLabel, newSeed } from "./careerFormat";
-import { HomeIcon, LockIcon, MailIcon, RoadIcon, StarIcon } from "./careerIcons";
+import { newSeed } from "./careerFormat";
+import { HomeIcon, MailIcon, RoadIcon, StarIcon } from "./careerIcons";
 import { CareerInbox } from "./CareerInbox";
 import { CareerInvites } from "./CareerInvites";
-import { SeasonRecap } from "./CareerScreens";
+import { SeasonScreen } from "./SeasonScreen";
+import { RankUp, SeasonRecap } from "./CareerScreens";
 import { CareerNews } from "./CareerNews";
+import { Avatar } from "./ui/Avatar";
+import { rivalOf, sponsorLogo } from "@/lib/careerLife";
 import { inboxCount, isOpen, lifeOf, seasonOf, unseenNews, weekInSeason, WEEKS_PER_SEASON } from "@/lib/careerLife";
 import { markNewsSeen } from "@/lib/careerWorld";
 import { CareerHud } from "./CareerHud";
@@ -23,10 +27,10 @@ import { CharacterFigure } from "./CharacterFigure";
 import { RankingList } from "./RankingList";
 import { GameChoice } from "./GameChoice";
 import { gameOf } from "@/lib/careerGame";
-import { CareerProfile } from "./CareerProfile";
+import { CareerProfile, type ProfileTab } from "./CareerProfile";
 import { markTipSeen, TipPointer, useTipSeen } from "./CareerTip";
 import { ConfirmDialog } from "./ConfirmDialog";
-import { MoreIcon, PersonIcon } from "./icons";
+import { MoreIcon, PersonIcon, TrophyIcon } from "./icons";
 import { PlayButton } from "./PlayButton";
 import { OverRoom } from "./RoomBackdrop";
 import { EVENT_PICTURES } from "./eventPictures";
@@ -36,16 +40,16 @@ import { Button } from "./ui/Button";
 import { Sheet } from "./ui/Sheet";
 import { FOCUS_RING } from "./ui/focus";
 
-type View = "home" | "rooms" | "road" | "profile" | "rank" | "inbox";
+type View = "home" | "rooms" | "road" | "profile" | "rank" | "inbox" | "season";
 
-const TITLE: Record<Exclude<View, "home">, string> = { rooms: "Trening", road: "Turneringer", profile: "Profil", rank: "Rangering", inbox: "Meldinger" };
+const TITLE: Record<Exclude<View, "home">, string> = { rooms: "Trening", road: "Turneringer", profile: "Profil", rank: "Rangering", inbox: "Meldinger", season: "Sesongen" };
 
 /** Where the career is in its season: ten ticks, the weeks that are played filled in. */
-function SeasonStrip({ career }: { career: Career }) {
+function SeasonStrip({ career, onOpen }: { career: Career; onOpen: () => void }) {
   const life = lifeOf(career);
   const week = weekInSeason(life.week);
   return (
-    <div className="season-strip tabular" role="img" aria-label={`Sesong ${seasonOf(life.week)}, uke ${week} av ${WEEKS_PER_SEASON}`}>
+    <button type="button" className={`season-strip tabular tactile ${FOCUS_RING}`} aria-label={`Sesongen: sesong ${seasonOf(life.week)}, uke ${week} av ${WEEKS_PER_SEASON}`} onClick={onOpen}>
       <span>
         Sesong {seasonOf(life.week)} · uke {week}
       </span>
@@ -54,7 +58,7 @@ function SeasonStrip({ career }: { career: Career }) {
           <i key={i} className={i < week - 1 ? "on" : i === week - 1 ? "now" : ""} />
         ))}
       </span>
-    </div>
+    </button>
   );
 }
 
@@ -75,41 +79,13 @@ const listText = (items: string[]) => {
   return words.length > 1 ? `${words.slice(0, -1).join(", ")} og ${words[words.length - 1]}` : words[0] ?? "";
 };
 
-/** The cups of the career on a glass shelf with light over it: the ones that are won in metal, the rest as dark silhouettes with a lock. */
-function TrophyShelf({ career }: { career: Career }) {
-  const slots = LADDER.map((t) => ({ tier: t, n: career.trophies.filter((x) => x.tier === t.id && !x.name).length }));
-  const have = slots.filter((s) => s.n > 0).length;
-  return (
-    <div className="shelf3d" role="img" aria-label={`Pokalhylle: ${have} av ${slots.length} pokaler`}>
-      <span className="shelf3d-light" aria-hidden />
-      <div className="shelf3d-items">
-        {slots.map(({ tier, n }) => (
-          <div key={tier.id} className="shelf3d-slot">
-            {n > 0 ? (
-              <TrophyArt kind={tier.id} bare />
-            ) : (
-              <>
-                <span className="t3d-locked block">
-                  <TrophyArt kind={tier.id} bare />
-                </span>
-                <LockIcon className="shelf3d-lock" />
-              </>
-            )}
-            {n > 1 && <span className="shelf3d-count">×{n}</span>}
-          </div>
-        ))}
-      </div>
-      <div className="shelf3d-board" aria-hidden />
-    </div>
-  );
-}
-
 const ROOM_TITLE = { fontSize: "var(--text-num)", textTransform: "uppercase", letterSpacing: "0.04em", lineHeight: 1.05, color: "var(--color-cream)", textAlign: "center" } as const;
 
 /** The home of a career, made as simple as it goes: the room behind it, one big button, four round ones. Everything else is behind one of them. */
 export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDelete }: { career: Career; onBack: () => void; onPlay: () => void; onChallenge: () => void; onTrain: (id: DrillId) => void; commit: (c: Career) => void; onDelete: () => void }) {
   const [view, setView] = useState<View>("home");
   const [menu, setMenu] = useState(false);
+  const [profileTab, setProfileTab] = useState<ProfileTab>("oversikt");
   const [settings, setSettings] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   // A room that has just changed: the step it came from (kept so it can be compared), the buy that is playing, and the way it is played.
@@ -132,6 +108,13 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
   // The step of the road that is picked (the one that is going, or the one the main button leads to).
   const hero = heroFor(career);
   const [picked, setPicked] = useState<Tier["id"] | null>(null);
+  // The rank is remembered, so a new one gets its moment (a career from before it was kept starts at the rank it has).
+  const rankNow = rankOf(career);
+  const rankSeen = lifeOf(career).rankSeen;
+  useEffect(() => {
+    if (rankSeen === undefined) commit({ ...career, life: { ...lifeOf(career), rankSeen: rankNow } });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only to fill in what is missing
+  }, [rankSeen]);
   const playTip = useTipSeen("play");
   const go = (v: View) => {
     uiFeedback("pick");
@@ -198,6 +181,23 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
     </button>
   );
 
+  // The cups won, as a chip: it opens the cabinet on the profile. Nothing is shown before there is a cup.
+  const trophyChip =
+    career.trophies.length > 0 ? (
+      <button
+        type="button"
+        aria-label={`Pokalskapet, ${career.trophies.length} pokaler`}
+        onClick={() => {
+          setProfileTab("pokaler");
+          go("profile");
+        }}
+        className={`trophy-chip tactile ${FOCUS_RING}`}
+      >
+        <TrophyIcon className="w-4 h-4" />
+        <b>×{career.trophies.length}</b>
+      </button>
+    ) : null;
+
   const sheets = (
     <>
       {menu && (
@@ -255,19 +255,45 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
     return <SeasonRecap career={career} onDone={() => commit({ ...career, life: { ...life, recapSeen: life.seasons[0].season } })} />;
   }
 
+  if (rankSeen !== undefined && rankSeen !== rankNow) {
+    return <RankUp career={career} onDone={() => commit({ ...career, life: { ...lifeOf(career), rankSeen: rankNow } })} />;
+  }
+
   if (view === "home") {
     return (
       <OverRoom stage={career.room} src={hubPicture(topStep(career))} focus="50% 35%" clear>
         {news && <span className="room-news-ring" aria-hidden />}
         <span className="char-home" aria-hidden>
-          <CharacterFigure id={career.profile.character} pose={hero.kind === "event" && hero.done ? "jubel" : "noytral"} glow />
+          <CharacterFigure id={career.profile.character} pose={hero.kind === "event" && hero.done ? "jubel" : "noytral"} glow patch={lifeOf(career).sponsor ? sponsorLogo(lifeOf(career).sponsor!.name) : undefined} />
         </span>
         {launch && <span className="launch-iris" aria-hidden style={{ "--c": TROPHY[launch.id], "--ox": `${launch.x}px`, "--oy": `${launch.y}px` } as React.CSSProperties} />}
         <div className="animate-screen-push screen">
           {sheets}
           <div className="screen-inner career-home">
-            <CareerHud career={career} end={menuButton} />
-            <SeasonStrip career={career} />
+            <CareerHud career={career} end={<span className="inline-flex items-center gap-2">{trophyChip}{menuButton}</span>} />
+            <SeasonStrip career={career} onOpen={() => go("season")} />
+            {career.played >= 1 && (
+              <button
+                type="button"
+                className={`rival-chip tactile ${FOCUS_RING}`}
+                aria-label={`Rival: ${rivalOf(career).name}${career.rivals?.[rivalOf(career).name] ? `, ${career.rivals[rivalOf(career).name].w} mot ${career.rivals[rivalOf(career).name].l}` : ""}`}
+                onClick={() => {
+                  setProfileTab("oversikt");
+                  go("profile");
+                }}
+              >
+                <Avatar name={rivalOf(career).name} bot px={28} />
+                <span>
+                  <small>RIVAL</small>
+                  <b>{rivalOf(career).name}</b>
+                </span>
+                {career.rivals?.[rivalOf(career).name] && (
+                  <span className="tabular rival-score">
+                    {career.rivals[rivalOf(career).name].w}–{career.rivals[rivalOf(career).name].l}
+                  </span>
+                )}
+              </button>
+            )}
             {news && (
               <button type="button" className="room-news" onClick={() => setNews(null)} aria-label={`Nytt i rommet: ${news}`}>
                 <StarIcon className="w-4 h-4" />
@@ -283,7 +309,6 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
                 <RankBadge rank={rankOf(career)} />
                 {rankOf(career)}
               </p>
-              {career.trophies.length > 0 && <TrophyShelf career={career} />}
             </div>
             <div className="relative rise-in" style={{ "--d": "0.2s" } as React.CSSProperties}>
               {!playTip && <TipPointer id="play" label="Trykk her" />}
@@ -291,7 +316,14 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
             </div>
             <div className="round4 rise-in" style={{ "--d": "0.32s" } as React.CSSProperties}>
               <RoundButton icon={<HomeIcon />} label="Trening" badge={roomBadge(career)} onClick={() => go("rooms")} />
-              <RoundButton icon={<PersonIcon />} label="Profil" onClick={() => go("profile")} />
+              <RoundButton
+                icon={<PersonIcon />}
+                label="Profil"
+                onClick={() => {
+                  setProfileTab("oversikt");
+                  go("profile");
+                }}
+              />
               <RoundButton icon={<RoadIcon />} label="Turneringer" badge={roadDot} onClick={() => go("road")} />
               <RoundButton icon={<MailIcon />} label="Meldinger" badge={inboxCount(lifeOf(career)) > 0 || unseenNews(lifeOf(career)) > 0} onClick={() => go("inbox")} />
             </div>
@@ -317,7 +349,7 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
             {sheets}
             <div className="screen-inner flex flex-col gap-3" style={{ minHeight: "calc(100dvh - 2rem)" }}>
               <CareerHud career={career} onBack={leaveRooms} title={TITLE.rooms} />
-              <div className="flex-1" />
+              <div className="flex-1" style={{ minHeight: "28dvh" }} />
               <div className="flex flex-col items-center gap-2">
                 <PlaceChip room={career.room} />
                 <div className="room-title-swap w-full">
@@ -364,29 +396,18 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
                     </ul>
                   </div>
                 )}
+                {next && !compare && (
+                  <ul className="flex gap-2 justify-center flex-wrap" aria-label="Låser opp">
+                    <li className="stage-chip stage-chip-unlock">Nivå opp til {levelCap(career.room + 1)}</li>
+                    {DRILLS.filter((d) => UNLOCK_ROOM[d.id] === career.room + 1).map((d) => (
+                      <li key={d.id} className="stage-chip stage-chip-unlock">
+                        Åpner {d.name}
+                      </li>
+                    ))}
+                  </ul>
+                )}
                 {!compare && (
-                  <div className="room-tile room-tile-wide drills">
-                    <p className="section-label">
-                      TRENING · NIVÅ OPP TIL {levelCap(career.room)} I DETTE ROMMET
-                    </p>
-                    <p className="drills-skill">
-                      Treffsikkerhet <b>{levelLabel(career.skillMed)}</b>
-                    </p>
-                    <ul aria-label="Øvelser">
-                      {DRILLS.map((d) => (
-                        <li key={d.id}>
-                          <span className="min-w-0">
-                            <b className="block truncate">{d.name}</b>
-                            <small className="block truncate">{goalLine(d.id, drillLevel(career, d.id))}</small>
-                          </span>
-                          <span className="tabular drills-level">Nivå {drillLevel(career, d.id)}</span>
-                          <Button label={`Tren ${d.name}`} onClick={() => onTrain(d.id)}>
-                            Tren
-                          </Button>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+                  <DrillList career={career} onTrain={onTrain} today={new Date().toISOString().slice(0, 10)} />
                 )}
                 <PlayButton label={next ? "KJØP" : "FERDIG"} sub={next ? (buyWhy ? `${dollars(next.price)} · ${buyWhy}` : dollars(next.price)) : "Drømmerommet er på plass"} disabled={!!buyWhy} onClick={buy} />
               </div>
@@ -408,7 +429,8 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
           {view === "rank" && <RankingList career={career} />}
           {view === "inbox" && <CareerInbox career={career} commit={commit} onChallenge={onChallenge} onRoad={() => setView("road")} />}
           {view === "inbox" && <CareerNews career={career} />}
-          {view === "profile" && <CareerProfile career={career} onRank={() => go("rank")} />}
+          {view === "season" && <SeasonScreen career={career} />}
+          {view === "profile" && <CareerProfile key={profileTab} career={career} tab={profileTab} onRank={() => go("rank")} />}
 
           {view === "road" && (
             <>

@@ -27,15 +27,16 @@ export function CareerInvites({ career, commit, onPlay }: { career: Career; comm
           if (accept) onPlay();
         };
         return (
-          <li key={m.id} className="msg">
+          <li key={m.id} className="msg msg-invite">
             <div className="msg-head">
               <span className="msg-kind" data-tone="gold" aria-hidden>
                 <TrophyIcon className="w-5 h-5" />
               </span>
               <span className="min-w-0 text-left">
+                <small className="msg-ribbon">INVITASJON</small>
                 <b className="block truncate">{m.title}</b>
                 <small className="block truncate">
-                  Invitasjon · {m.from.name}
+                  {m.from.name}
                   {left !== null && <span className="msg-time"> · {left <= 1 ? "siste uke" : `${left} uker igjen`}</span>}
                 </small>
               </span>

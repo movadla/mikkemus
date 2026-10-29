@@ -338,7 +338,7 @@ function endSeason(career: Career, life: Life, week: number): { life: Life; priz
   const rank = standings.findIndex((s) => s.name === career.player) + 1;
   const winner = standings[0];
   const prize = seasonPrize(rank, career);
-  const result: SeasonResult = { season, rank, points: life.seasonPts, prize, winner: winner.name };
+  const result: SeasonResult = { season, rank, points: life.seasonPts, prize, winner: winner.name, table: standings.slice(0, 5).map((s) => ({ name: s.name, pts: s.pts })) };
   let next: Life = { ...life, seasons: [result, ...life.seasons].slice(0, 20) };
   // The ranks of the last season, kept for the arrows, before the players change.
   const snap: Record<string, number> = {};

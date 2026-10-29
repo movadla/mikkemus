@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { newCareer, type Career } from "./career";
-import { DRILLS, LEVEL_MAX, applyDrill, drillLevel, goalLine, goalOf, levelCap, passed, type DrillId } from "./drills";
+import { DAILY_REWARD, DRILLS, LEVEL_MAX, applyDrill, dailyDrill, dailyOf, drillLevel, goalLine, goalOf, isDrillOpen, levelCap, passed, type DrillId } from "./drills";
 
 const AT = "2026-10-28T20:00:00.000Z";
 const fresh = (): Career => newCareer("Lars", "dyktig", AT);
@@ -70,5 +70,60 @@ describe("a drill that is thrown", () => {
     const bulls = applyDrill(fresh(), { id: "bull9", level: 1, scores: [3] }, AT);
     expect(bulls.skillMed).toBe(fresh().skillMed);
     expect(bulls.training).toHaveLength(0);
+  });
+});
+
+describe("the drills the room opens", () => {
+  it("opens the treble 20 from the start and the others as the room is built", () => {
+    expect(isDrillOpen({ ...fresh(), room: 0 }, "t20")).toBe(true);
+    expect(isDrillOpen({ ...fresh(), room: 0 }, "tre20")).toBe(false);
+    expect(isDrillOpen({ ...fresh(), room: 1 }, "tre20")).toBe(true);
+    expect(isDrillOpen({ ...fresh(), room: 2 }, "bull9")).toBe(false);
+    expect(isDrillOpen({ ...fresh(), room: 3 }, "bull9")).toBe(true);
+  });
+});
+
+describe("the drill of the day", () => {
+  const c = (): Career => ({ ...fresh(), room: 3 });
+  const pass = (career: Career, day: string) => {
+    const id = dailyDrill(career, day);
+    const g = goalOf(id, drillLevel(career, id));
+    const scores = g.kind === "score" ? Array(g.rounds).fill(g.average + 1) : Array(g.attempts).fill(g.need);
+    return applyDrill(career, { id, level: drillLevel(career, id), scores }, `${day}T12:00:00.000Z`);
+  };
+
+  it("is one of the open drills, and the same all day", () => {
+    const id = dailyDrill(c(), "2026-10-29");
+    expect(DRILLS.filter((d) => isDrillOpen(c(), d.id)).map((d) => d.id)).toContain(id);
+    expect(dailyDrill(c(), "2026-10-29")).toBe(id);
+    expect(dailyDrill({ ...fresh(), room: 0 }, "2026-10-29")).toBe("t20");
+  });
+
+  it("pays once when it is passed, and starts a streak", () => {
+    const first = pass(c(), "2026-10-29");
+    expect(first.money).toBe(c().money + DAILY_REWARD);
+    expect(dailyOf(first, "2026-10-29")).toMatchObject({ done: true, streak: 1 });
+    // Passed again the same day: nothing more.
+    const again = pass(first, "2026-10-29");
+    expect(again.money).toBe(first.money);
+  });
+
+  it("keeps the streak over consecutive days, and loses it when a day is missed", () => {
+    let k = pass(c(), "2026-10-29");
+    k = pass(k, "2026-10-30");
+    expect(dailyOf(k, "2026-10-30").streak).toBe(2);
+    expect(dailyOf(k, "2026-10-31")).toMatchObject({ done: false, streak: 2 });
+    expect(dailyOf(k, "2026-11-02").streak).toBe(0);
+    const later = pass(k, "2026-11-02");
+    expect(dailyOf(later, "2026-11-02").streak).toBe(1);
+  });
+
+  it("does not pay for another drill than the one of the day", () => {
+    const k = c();
+    const other = DRILLS.find((d) => d.id !== dailyDrill(k, "2026-10-29"))!;
+    const g = goalOf(other.id, 1);
+    const scores = g.kind === "score" ? Array(g.rounds).fill(g.average + 1) : Array(g.attempts).fill(g.need);
+    const after = applyDrill(k, { id: other.id, level: 1, scores }, "2026-10-29T12:00:00.000Z");
+    expect(after.money).toBe(k.money);
   });
 });

@@ -96,7 +96,6 @@ export function CompareRows({ me, opponent, med }: { me: Me; opponent: string; m
   const team = !!me.members;
   const rows: Row[] = [
     ...(team ? [] : [{ label: "Verdensrang", mine: mine.world, theirs: theirs.world, better: "low" as const, format: (n: number) => `#${n}` }]),
-    ...(!team && theirs.norway !== null && mine.norway !== null ? [{ label: "Norgesrang", mine: mine.norway, theirs: theirs.norway, better: "low" as const, format: (n: number) => `#${n}` }] : []),
     ...a.map((s, i) => ({ label: s.label, mine: s.value, theirs: b[i].value, better: s.better, format: s.suffix ? (n: number) => `${n}${s.suffix}` : undefined })),
   ];
   return (
@@ -131,12 +130,10 @@ export function ChanceMeter({ me, med }: { me: Me; med: number }) {
   const p = winChance(me.med, med);
   return (
     <div className="chance" role="img" aria-label={`Din sjanse: ${p} prosent`}>
-      <span className="chance-n">
-        {p} %<small>DIN SJANSE</small>
+      <span className="chance-ring" style={{ "--p": `${p}%` } as CSSProperties}>
+        <span className="chance-n">{p} %</span>
       </span>
-      <span className="chance-bar">
-        <i style={{ width: `${p}%` }} />
-      </span>
+      <small className="chance-cap">DIN SJANSE</small>
     </div>
   );
 }

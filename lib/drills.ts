@@ -29,6 +29,12 @@ export const DRILLS: Drill[] = [
   { id: "bull9", name: "Bull på ni piler", kind: "hits", target: "bull", darts: 9 },
 ];
 
+/** The step of the room a drill is opened at: the treble 20 from the start, the others as the room is built. */
+export const UNLOCK_ROOM: Record<DrillId, number> = { t20: 0, tre20: 1, bull9: 3 };
+
+/** Whether the room has opened a drill. */
+export const isDrillOpen = (career: Career, id: DrillId) => career.room >= UNLOCK_ROOM[id];
+
 export const drillOf = (id: DrillId): Drill => DRILLS.find((d) => d.id === id) ?? DRILLS[0];
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
@@ -72,6 +78,27 @@ export function passed(r: DrillResult): boolean {
   return r.scores.slice(0, g.attempts).some((hits) => hits >= g.need);
 }
 
+/** The reward for the drill of the day. */
+export const DAILY_REWARD = 50;
+
+const hashOf = (s: string) => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
+
+/** The drill of a day: one of those the room has opened, the same for the whole day. */
+export function dailyDrill(career: Career, day: string): DrillId {
+  const open = DRILLS.filter((d) => isDrillOpen(career, d.id));
+  return open[hashOf(`${career.id}|${day}`) % open.length].id;
+}
+
+/** The day before a day, as a date. */
+const dayBefore = (day: string) => new Date(Date.parse(`${day}T12:00:00Z`) - 86_400_000).toISOString().slice(0, 10);
+
+/** What the daily drill is today: which one, whether it is done, and the streak the player is on (a streak lives until a day is missed). */
+export function dailyOf(career: Career, day: string): { id: DrillId; done: boolean; streak: number } {
+  const d = career.daily;
+  const alive = d && (d.last === day || d.last === dayBefore(day)) ? d.streak : 0;
+  return { id: dailyDrill(career, day), done: d?.last === day, streak: alive };
+}
+
 /** A drill has been thrown: it counts as a try, a pass takes it a level up (as far as the room allows), and the treble 20 also moves the level of the career. */
 export function applyDrill(career: Career, r: DrillResult, now: string): Career {
   const d = drillOf(r.id);
@@ -79,5 +106,10 @@ export function applyDrill(career: Career, r: DrillResult, now: string): Career 
   const ok = passed(r);
   const level = ok ? Math.max(was.level, Math.min(levelCap(career.room), LEVEL_MAX, r.level + 1)) : was.level;
   const base = d.kind === "score" ? trainCareer(career, r.scores, now) : career;
-  return { ...base, drills: { ...(base.drills ?? {}), [r.id]: { level, passes: was.passes + (ok ? 1 : 0), tries: was.tries + 1 } } };
+  const next = { ...base, drills: { ...(base.drills ?? {}), [r.id]: { level, passes: was.passes + (ok ? 1 : 0), tries: was.tries + 1 } } };
+  // The drill of the day, passed for the first time that day: a streak day, and the reward.
+  const day = now.slice(0, 10);
+  const today = dailyOf(career, day);
+  if (ok && !today.done && today.id === r.id) return { ...next, money: next.money + DAILY_REWARD, daily: { day, done: true, streak: today.streak + 1, last: day } };
+  return next;
 }

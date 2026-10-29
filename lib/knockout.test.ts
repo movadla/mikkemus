@@ -204,10 +204,10 @@ describe("the route of one entrant", () => {
 
 describe("placeholderShort", () => {
   it("kortner ned plassene i treet", () => {
-    expect(placeholderShort("Vinner Semifinale 2")).toBe("V S2");
-    expect(placeholderShort("Taper Semifinale 1")).toBe("T S1");
-    expect(placeholderShort("Vinner Kvartfinale 3")).toBe("V K3");
-    expect(placeholderShort("Vinner Runde av 16 3")).toBe("V R16 3");
+    expect(placeholderShort("Vinner Semifinale 2")).toBe("Vinner S2");
+    expect(placeholderShort("Taper Semifinale 1")).toBe("Taper S1");
+    expect(placeholderShort("Vinner Kvartfinale 3")).toBe("Vinner K3");
+    expect(placeholderShort("Vinner Runde av 16 3")).toBe("Vinner R16 3");
     expect(placeholderShort("Frist plass")).toBe("Frist plass");
   });
 });

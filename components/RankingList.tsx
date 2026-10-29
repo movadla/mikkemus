@@ -31,6 +31,8 @@ export function RankingList({ career }: { career: Career }) {
   const at = rows.findIndex((r) => r.me);
   const from = Math.max(0, Math.min(rows.length - 9, at - 4));
   const shown = rows.slice(from, from + 9);
+  const stat = first(0);
+  const ahead = at > 0 ? rows[at - 1] : null;
   return (
     <div className="space-y-3">
       <div className="seg-tabs" role="tablist" aria-label="Liste">
@@ -40,6 +42,10 @@ export function RankingList({ career }: { career: Career }) {
           </button>
         ))}
       </div>
+      <p className="rank-head" aria-hidden>
+        <span>PLASS</span>
+        <span>{stat.label.toUpperCase()}</span>
+      </p>
       <ol className="space-y-2" aria-label={tab === "world" ? "Verdensrangering" : "Norgesrangering"}>
         {shown.map((r) => (
           <li key={r.name} className={`rank-row ${r.me ? "rank-row-me" : ""}`} aria-current={r.me ? "true" : undefined}>
@@ -61,11 +67,19 @@ export function RankingList({ career }: { career: Career }) {
             </span>
             <span className="rank-avg tabular">
               {r.figure}
-              <small>{first(0).short.toLowerCase()}</small>
+              {stat.suffix ?? ""}
             </span>
           </li>
         ))}
       </ol>
+      <div className="rank-you" role="status">
+        <span className="rank-no tabular">{tab === "world" ? me.world : norwayRankOf(me.world)}</span>
+        <CharacterFace id={career.profile.character} px={32} />
+        <span className="min-w-0">
+          <b className="block truncate">Du er nr. {tab === "world" ? me.world : norwayRankOf(me.world)}</b>
+          <small>{ahead ? `Neste foran deg: ${ahead.name}` : "Du leder listen"}</small>
+        </span>
+      </div>
     </div>
   );
 }

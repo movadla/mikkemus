@@ -88,7 +88,7 @@ export function ThemePreview({ choice }: { choice: ThemeChoice }) {
         <ThemeTile theme={choice} label={choice === "dark" ? "Mørk" : "Dag"} />
       )}
       <p className="theme-preview-note" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
-        {choice === "auto" ? `Følger telefonen. Nå: ${now === "dark" ? "Mørk" : "Dag"}.` : choice === "dark" ? "Mørk, som kampene er laget for." : "Dag, for lyse rom."}
+        {choice === "auto" ? `Følger telefonen. Nå: ${now === "dark" ? "Mørk" : "Dag"}.` : choice === "dark" ? "Mørk, som kampene er laget for." : "Dag, for lyse rom."} Karrieren er alltid mørk, som en arena.
       </p>
     </div>
   );

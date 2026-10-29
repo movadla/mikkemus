@@ -116,6 +116,11 @@ describe("a week goes by", () => {
     expect(l.seasons).toHaveLength(1);
     expect(l.seasons[0].season).toBe(1);
     expect(l.seasons[0].prize).toBe(c.money);
+    // The best five of the table are kept for the recap, in order, with the player in it when they are among them.
+    const table = l.seasons[0].table!;
+    expect(table).toHaveLength(5);
+    expect(table.map((r) => r.pts)).toEqual([...table.map((r) => r.pts)].sort((a, b) => b - a));
+    expect(table.some((r) => r.name === c.player)).toBe(l.seasons[0].rank <= 5);
     expect(l.seasonPts).toBe(0);
     expect(Object.keys(l.world.snap).length).toBeGreaterThan(30);
     expect(l.news.some((n) => n.kind === "season")).toBe(true);

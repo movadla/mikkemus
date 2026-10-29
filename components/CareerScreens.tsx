@@ -2,11 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { cupColor } from "@/lib/botCup";
-import { GAMES, REVENGE_BONUS, TIERS, challengeTier, closeChallenge, eventTier, declineChallenge, dollars, settleChallenge, type ActiveEvent, type Career, type Challenge } from "@/lib/career";
+import { GAMES, PLACE_LABEL, REVENGE_BONUS, TIERS, challengeTier, closeChallenge, eventTier, declineChallenge, dollars, settleChallenge, type ActiveEvent, type Career, type Challenge } from "@/lib/career";
 import { matchParticipants } from "@/lib/tournament";
 import { sponsorOutcome } from "@/lib/careerWorld";
 import { lifeOf } from "@/lib/careerLife";
-import { rankOf, rankProgress } from "@/lib/careerGoals";
+import { nextRank, rankOf, rankProgress } from "@/lib/careerGoals";
 import { winnerOf as countdownWinner, newGame as newCountdown } from "@/lib/countdown";
 import { playFanfare } from "@/lib/fanfare";
 import { fxFlags, useFxLevel } from "@/lib/fxLevel";
@@ -15,21 +15,21 @@ import { winnerOf as highstrikerWinner, newGame as newHighstriker } from "@/lib/
 import { DEFAULT_LIVES, newGame as newLava, stateOf as lavaState } from "@/lib/lava";
 import { useRoster } from "@/lib/storage";
 import { DRILL_ROUNDS, sessionFrom } from "@/lib/training";
-import { applyDrill, drillLevel, drillOf, goalLine, goalOf, levelCap, passed, type DrillId, type HitsDrill } from "@/lib/drills";
+import { applyDrill, dailyOf, drillLevel, drillOf, goalLine, goalOf, levelCap, passed, type DrillId, type HitsDrill } from "@/lib/drills";
 import { careerSound } from "@/lib/uiSound";
 import { levelLabel, oneDecimal } from "./careerFormat";
 import { CoinBurst } from "./CoinBurst";
 import { CountdownGameScreen } from "./CountdownApp";
 import { HighstrikerGameScreen } from "./HighstrikerApp";
 import { ArrowLeftIcon, BoltIcon, CoinIcon, TrophyIcon } from "./icons";
-import { StarIcon } from "./careerIcons";
 import { LavaGameScreen } from "./LavaApp";
 import { PlayButton } from "./PlayButton";
 import { OverRoom } from "./RoomBackdrop";
 import { ScoreKeypad } from "./ScoreKeypad";
 import { Trophy } from "./Trophy";
-import { TrophyArt } from "./CareerTrophy";
-import { CharacterFigure } from "./CharacterFigure";
+import { RankBadge, TrophyArt } from "./CareerTrophy";
+import { CharacterFace, CharacterFigure } from "./CharacterFigure";
+import { OpponentPortrait } from "./OpponentCard";
 import { EventIntro } from "./EventIntro";
 import { picturesFor } from "./eventPictures";
 import { CareerFaceContext } from "./ui/Avatar";
@@ -121,7 +121,8 @@ function ChallengeFlow({ career, commit, onHub }: { career: Career; commit: (c: 
         player={career.player}
         character={career.profile.character}
         label="SPILL"
-        plates={[["Mot", opponent], [tv ? "Honorar" : "Spill", tv ? dollars(tv.honorarium) : GAMES[c.game].name], ["Til vinneren", dollars(c.stake)]]}
+        extra={tv ? <FaceOff career={career} opponent={opponent} /> : undefined}
+        plates={tv ? [["Honorar", dollars(tv.honorarium)], ["Til vinneren", dollars(c.stake)]] : [["Mot", opponent], ["Spill", GAMES[c.game].name], ["Til vinneren", dollars(c.stake)]]}
         line={
           <>
             <b>{career.player}</b> mot <b>{opponent}</b>.
@@ -241,9 +242,80 @@ export function SeasonRecap({ career, onDone }: { career: Career; onDone: () => 
               <CountUp value={s.prize} format={(n) => `+${dollars(n)}`} />
             </p>
           )}
+          {s.table && s.table.length > 0 && (
+            <ol className="season-table" aria-label="Sesongtabellen">
+              {s.table.map((r, i) => (
+                <li key={r.name} className={r.name === career.player ? "me" : ""}>
+                  <span>{i + 1}</span>
+                  <b className="truncate">{r.name}</b>
+                  <span className="tabular">{r.pts}</span>
+                </li>
+              ))}
+              {s.rank > s.table.length && (
+                <li className="me">
+                  <span>{s.rank}</span>
+                  <b className="truncate">{career.player}</b>
+                  <span className="tabular">{s.points}</span>
+                </li>
+              )}
+            </ol>
+          )}
+          {(() => {
+            const before = lifeOf(career).seasons[1];
+            if (!before || before.rank === s.rank) return null;
+            const d = before.rank - s.rank;
+            return <p style={{ color: d > 0 ? "var(--color-green)" : "var(--color-muted)", fontWeight: 700 }}>{d > 0 ? `Du gikk opp ${d} ${d === 1 ? "plass" : "plasser"} fra sesong ${before.season}` : `Du falt ${-d} ${-d === 1 ? "plass" : "plasser"} fra sesong ${before.season}`}</p>;
+          })()}
         </div>
         {s.prize > 0 && <CoinBurst />}
         <PlayButton label="NY SESONG" tone={best ? "gold" : "teal"} onClick={onDone} />
+      </div>
+    </div>
+  );
+}
+
+/** The two who play a show, face to face, under the plates of its opening. */
+function FaceOff({ career, opponent }: { career: Career; opponent: string }) {
+  return (
+    <div className="ev-faceoff" aria-label={`${career.player} mot ${opponent}`}>
+      <CharacterFace id={career.profile.character} pose="kast" px={60} />
+      <span className="font-display" style={{ color: "var(--color-gold-strong)", fontSize: "var(--text-num)" }}>
+        VS
+      </span>
+      <span style={{ width: 60 }}>
+        <OpponentPortrait name={opponent} />
+      </span>
+    </div>
+  );
+}
+
+/** A new rank, once: the badge large, the name, and how far the next one is. */
+export function RankUp({ career, onDone }: { career: Career; onDone: () => void }) {
+  const fx = fxFlags(useFxLevel());
+  const rank = rankOf(career);
+  const next = nextRank(career);
+  useEffect(() => {
+    if (fx.confetti) playFanfare();
+    careerSound("cheer");
+    haptics.win();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, when the screen comes up
+  }, []);
+  return (
+    <div className="animate-screen-enter screen cup-lamp relative overflow-hidden" style={{ "--cup": "var(--color-gold)" } as React.CSSProperties}>
+      <div className="screen-inner relative z-10 flex flex-col" style={{ minHeight: "calc(100dvh - 2rem)", gap: "1rem" }}>
+        <div className="flex-1 flex flex-col items-center justify-center text-center gap-4">
+          <p className="cer-kicker">NY RANG</p>
+          <span className="rankup-badge">
+            <RankBadge rank={rank} />
+          </span>
+          <p className="font-display" style={{ fontSize: "clamp(2rem, 11vw, 3rem)", color: "var(--color-gold)", lineHeight: 1.05 }}>
+            {rank}
+          </p>
+          <p style={{ color: "var(--color-text-2)" }}>
+            {career.points} poeng{next ? ` · ${next.name} ved ${next.min}` : ""}
+          </p>
+        </div>
+        <PlayButton label="FORTSETT" tone="gold" onClick={onDone} />
       </div>
     </div>
   );
@@ -336,9 +408,6 @@ export function Result({ career, a, onDone }: { career: Career; a: ActiveEvent; 
   const won = r.place === "winner";
   const sponsor = sponsorOutcome(career);
   const opened = tier.opens && tier.opens.places.includes(r.place) ? TIERS[tier.opens.tier] : null;
-  // The title the points have just given, when it is a new one.
-  const before = rankOf({ ...career, points: career.points - r.points, worldTitles: career.worldTitles - (won && tier.id === "vm" && !a.invite ? 1 : 0) });
-  const newRank = rankOf(career) !== before ? rankOf(career) : null;
   const fx = fxFlags(useFxLevel());
   // The one who knocked the player out, and how many times they have now: a rival has the better of them twice and more, and a win over them pays more.
   const team = a.invite?.team;
@@ -348,6 +417,14 @@ export function Result({ career, a, onDone }: { career: Career; a: ActiveEvent; 
     return m ? matchParticipants(m).find((n) => n !== career.player) ?? null : null;
   })();
   const rec = knockedOutBy ? career.rivals?.[knockedOutBy] : undefined;
+  // The road of the night: whom the player beat, round by round (a team cup is not told this way).
+  const beaten = team
+    ? []
+    : (a.tournament?.matches ?? [])
+        .filter((x) => !x.isBronzeMatch && !x.isBye && x.winner === career.player && matchParticipants(x).includes(career.player))
+        .sort((x, y) => (y.bracketRoundSize ?? 0) - (x.bracketRoundSize ?? 0))
+        .map((x) => matchParticipants(x).find((n) => n !== career.player))
+        .filter((n): n is string => !!n);
   const rivalLine = !won && knockedOutBy && rec && rec.l >= 2 && rec.l > rec.w ? `${knockedOutBy} har slått deg ${rec.l} ganger. En seier over ham neste gang gir ${dollars(REVENGE_BONUS)} ekstra.` : null;
   // The sounds of the moment: a win is a fanfare and a cheer, whatever place it is a pay-out for is a touch.
   useEffect(() => {
@@ -362,6 +439,9 @@ export function Result({ career, a, onDone }: { career: Career; a: ActiveEvent; 
     <div className="animate-screen-enter screen cup-lamp relative overflow-hidden" style={{ "--cup": won ? "var(--color-gold)" : cupColor(tier.kind) } as React.CSSProperties}>
       <div className="screen-inner relative z-10 flex flex-col" style={{ minHeight: "calc(100dvh - 2rem)", gap: "1rem" }}>
         <div className="flex-1 flex flex-col items-center justify-center text-center gap-4">
+          <p className="cer-kicker">
+            {won ? "VINNER" : PLACE_LABEL[r.place].toUpperCase()} · {tier.name.toUpperCase()}
+          </p>
           {won ? (
             <Ceremony tier={tier} player={team ? `${career.player} og ${team.mine.partner}` : career.player} prize={r.prize} confetti={fx.confetti} character={career.profile.character} />
           ) : (
@@ -378,6 +458,13 @@ export function Result({ career, a, onDone }: { career: Career; a: ActiveEvent; 
               +{r.points} rangpoeng
             </p>
           )}
+          {beaten.length > 0 && (
+            <ul className="road-chips" aria-label="Veien dit">
+              {beaten.map((n, i) => (
+                <li key={`${n}-${i}`}>Slo {n}</li>
+              ))}
+            </ul>
+          )}
           <NextGoal career={career} />
         </div>
         <NewCard
@@ -386,7 +473,6 @@ export function Result({ career, a, onDone }: { career: Career; a: ActiveEvent; 
             ...(rivalLine && knockedOutBy && rec ? [{ icon: <BoltIcon className="w-5 h-5" />, tone: "red", title: `${knockedOutBy} har slått deg ${rec.l} ganger`, text: `En seier neste gang gir ${dollars(REVENGE_BONUS)} ekstra` }] : []),
             ...(sponsor ? [{ icon: <CoinIcon className="w-5 h-5" />, tone: sponsor.met ? "gold" : "muted", title: sponsor.met ? `${sponsor.name} betaler ${dollars(sponsor.pay)}` : `${sponsor.name} betaler ikke denne gangen`, text: sponsor.met ? undefined : `Ville ha deg blant de ${sponsor.need === "quarter" ? "åtte" : "fire"} beste` }] : []),
             ...(opened ? [{ icon: <TrophyIcon className="w-5 h-5" />, tone: "teal", title: `Ny turnering: ${opened.short}`, sound: true }] : []),
-            ...(newRank ? [{ icon: <StarIcon className="w-5 h-5" />, tone: "gold", title: `Ny rang: ${newRank}`, sound: true }] : []),
           ]}
         />
         {r.prize > 0 && <CoinBurst />}
@@ -406,7 +492,7 @@ export function TrainingPlay(props: { career: Career; commit: (c: Career) => voi
 }
 
 /** What a drill that has been thrown says: passed or not, and the level it is at now, with a word when the room is what holds it back. */
-function DrillDone({ career, before, after, ok, onHub }: { career: Career; before: number; after: number; ok: boolean; onHub: () => void }) {
+function DrillDone({ career, before, after, ok, onHub, bonus = 0, streak = 0 }: { career: Career; before: number; after: number; ok: boolean; onHub: () => void; /** What the drill of the day paid, when it was this one. */ bonus?: number; streak?: number }) {
   const held = ok && after === before && before >= levelCap(career.room);
   return (
     <>
@@ -416,6 +502,11 @@ function DrillDone({ career, before, after, ok, onHub }: { career: Career; befor
       <p className="tabular" style={{ fontSize: "var(--text-title)", color: "var(--color-text-2)", fontWeight: 700 }}>
         Nivå {before === after ? after : `${before} → ${after}`}
       </p>
+      {bonus > 0 && (
+        <p className="tabular" style={{ color: "var(--color-gold-strong)", fontWeight: 800, fontSize: "var(--text-title)" }}>
+          Dagens øvelse: +{dollars(bonus)} · {streak} {streak === 1 ? "dag" : "dager"} på rad
+        </p>
+      )}
       {held && <p style={{ color: "var(--color-muted)" }}>Rommet tillater nivå {levelCap(career.room)}. Bygg ut rommet for å komme videre.</p>}
       <PlayButton label="OK" onClick={onHub} />
     </>
@@ -428,7 +519,7 @@ function HitsFlow({ career, commit, onHub, drill }: { career: Career; commit: (c
   const level = drillLevel(career, drill);
   const g = goalOf(drill, level);
   const [tries, setTries] = useState<number[]>([]);
-  const [done, setDone] = useState<{ before: number; after: number; ok: boolean } | null>(null);
+  const [done, setDone] = useState<{ before: number; after: number; ok: boolean; bonus: number; streak: number } | null>(null);
   if (g.kind !== "hits") return null;
   const pick = (hits: number) => {
     const next = [...tries, hits];
@@ -437,7 +528,7 @@ function HitsFlow({ career, commit, onHub, drill }: { career: Career; commit: (c
       const result = { id: drill, level, scores: next };
       const after = applyDrill(career, result, new Date().toISOString());
       commit(after);
-      setDone({ before: level, after: drillLevel(after, drill), ok: passed(result) });
+      setDone({ before: level, after: drillLevel(after, drill), ok: passed(result), bonus: after.money - career.money, streak: dailyOf(after, new Date().toISOString().slice(0, 10)).streak });
     }
   };
   if (done) {
@@ -486,14 +577,14 @@ function HitsFlow({ career, commit, onHub, drill }: { career: Career; commit: (c
 function TrainingFlow({ career, commit, onHub }: { career: Career; commit: (c: Career) => void; onHub: () => void }) {
   const level = drillLevel(career, "t20");
   const [rounds, setRounds] = useState<number[]>([]);
-  const [done, setDone] = useState<(ReturnType<typeof sessionFrom> & { ok: boolean; after20: number }) | null>(null);
+  const [done, setDone] = useState<(ReturnType<typeof sessionFrom> & { ok: boolean; after20: number; bonus: number; streak: number }) | null>(null);
   const submit = (score: number) => {
     const next = [...rounds, score];
     if (next.length >= DRILL_ROUNDS) {
       const now = new Date().toISOString();
       const result = { id: "t20" as const, level, scores: next };
       const applied = applyDrill(career, result, now);
-      setDone({ ...sessionFrom(career, next, now), ok: passed(result), after20: drillLevel(applied, "t20") });
+      setDone({ ...sessionFrom(career, next, now), ok: passed(result), after20: drillLevel(applied, "t20"), bonus: applied.money - career.money, streak: dailyOf(applied, now.slice(0, 10)).streak });
       commit(applied);
     }
     setRounds(next);
@@ -511,7 +602,7 @@ function TrainingFlow({ career, commit, onHub }: { career: Career; commit: (c: C
               avvik {oneDecimal(done.before)} → {oneDecimal(done.after)} mm
             </p>
             <p style={{ color: "var(--color-muted)" }}>{levelLabel(done.after)}</p>
-            <DrillDone career={career} before={level} after={done.after20} ok={done.ok} onHub={onHub} />
+            <DrillDone career={career} before={level} after={done.after20} ok={done.ok} bonus={done.bonus} streak={done.streak} onHub={onHub} />
           </div>
         </div>
       </div>

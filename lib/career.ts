@@ -254,6 +254,8 @@ export type Career = {
   training: TrainingSession[];
   /** How far each drill of the training room has come (lib/drills.ts). Absent on a career from before there were any. */
   drills?: Record<string, { level: number; passes: number; tries: number }>;
+  /** The drill of the day and the streak of days it has been passed (lib/drills.ts). Absent on a career from before there was one. */
+  daily?: { day: string; done: boolean; streak: number; last?: string };
   /** How far the room has come: its step, 0 (as it was when the career began) to 9. */
   room: number;
   /** A challenge that is waiting, or has been played and not yet taken in. */

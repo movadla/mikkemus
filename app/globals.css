@@ -4887,11 +4887,10 @@ html[data-fx="full"] .hs-last {
 .tip-pointer {
   position: absolute;
   z-index: 5;
-  left: 50%;
+  right: 1.1rem;
   bottom: calc(100% + 0.3rem);
-  transform: translateX(-50%);
   display: grid;
-  justify-items: center;
+  justify-items: end;
   gap: 0.1rem;
   pointer-events: none;
   animation: tip-bob 1.2s ease-in-out infinite;
@@ -4906,6 +4905,7 @@ html[data-fx="full"] .hs-last {
   white-space: nowrap;
 }
 .tip-pointer i {
+  margin-right: 1.2rem;
   width: 0;
   height: 0;
   border-left: 0.45rem solid transparent;
@@ -4914,7 +4914,7 @@ html[data-fx="full"] .hs-last {
 }
 @keyframes tip-bob {
   50% {
-    transform: translate(-50%, -6px);
+    transform: translateY(-6px);
   }
 }
 /* The one goal: a star, a bar and a number. */
@@ -6083,6 +6083,9 @@ html[data-fx="full"] .hs-last {
   }
 }
 .ev-kick {
+  position: relative;
+  z-index: 2;
+  margin-bottom: 0.5rem;
   text-shadow: 0 1px 8px rgba(0, 0, 0, 0.9);
   font-size: var(--text-small);
   font-weight: 800;
@@ -7983,8 +7986,133 @@ button.play-btn:disabled::after {
 .drills { display: grid; gap: 0.5rem; padding: 0.7rem 0.8rem; }
 .drills ul { display: grid; gap: 0.5rem; }
 .drills li { display: flex; align-items: center; gap: 0.6rem; }
-.drills li > span:first-child { flex: 1; }
 .drills small { color: var(--color-text-2); font-size: var(--text-small); }
 .drills-skill { color: var(--color-text-2); font-size: var(--text-small); }
 .drills-skill b { color: var(--color-cream); }
 .drills-level { color: var(--color-gold-strong); font-weight: 800; white-space: nowrap; }
+
+/* The setup steps lie over the pub picture: the screen keeps its type, but not its flat background. */
+.career-skin.wizard { background: none; }
+
+/* The recap's table, and the badge of a new rank. */
+.season-table { display: grid; gap: 0.3rem; width: min(20rem, 100%); padding: 0; margin: 0; list-style: none; }
+.season-table li { display: grid; grid-template-columns: 1.5rem 1fr auto; gap: 0.5rem; align-items: center; padding: 0.35rem 0.6rem; border-radius: var(--radius-s); background: var(--color-surface); border: 1px solid var(--color-border); font-size: var(--text-small); text-align: left; }
+.season-table li.me { border-color: var(--color-gold); color: var(--color-gold-strong); }
+.rankup-badge .rank-badge { width: 7.5rem; height: 8.8rem; display: block; filter: drop-shadow(0 0 28px color-mix(in srgb, var(--color-gold) 55%, transparent)); }
+.rankup-badge .rank-badge svg { width: 100%; height: 100%; }
+
+/* The profile: the face in a ring that fills towards the next title, three tabs, and the cabinet. */
+.pf-ring { --p: 0%; display: inline-grid; place-items: center; width: 5.2rem; height: 5.2rem; border-radius: 50%; flex-shrink: 0; background: conic-gradient(var(--color-gold) var(--p), var(--color-cell) 0); padding: 0.28rem; }
+.pf-ring > * { border-radius: 50%; background: var(--color-bg); }
+.pf-tabs { display: flex; gap: 0.35rem; padding: 0.25rem; border-radius: var(--radius-pill); background: var(--color-surface); border: 1px solid var(--color-border); }
+.pf-tab { flex: 1; padding: 0.45rem 0.4rem; border-radius: var(--radius-pill); font-weight: 700; font-size: var(--text-small); color: var(--color-text-2); background: transparent; border: 0; }
+.pf-tab[aria-selected="true"] { background: var(--color-teal); color: #04201f; }
+.pf-sponsor { display: flex; align-items: center; justify-content: flex-end; gap: 0.6rem; text-align: right; }
+.pf-sponsor small { display: block; }
+.trophy-chip { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0 0.7rem; height: var(--control); border-radius: var(--radius-pill); background: var(--color-surface); border: 1px solid var(--color-border); color: var(--color-gold-strong); }
+.cabinet { display: grid; gap: 0.2rem; }
+.cabinet-shelf { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.4rem; padding: 0.7rem 0.3rem 0.35rem; border-bottom: 0.4rem solid color-mix(in srgb, var(--color-gold) 30%, var(--color-cell)); background: linear-gradient(transparent, color-mix(in srgb, var(--color-gold) 7%, transparent)); text-align: center; }
+.cabinet-slot { position: relative; display: grid; justify-items: center; gap: 0.1rem; min-width: 0; }
+.cabinet-slot > span { width: 3.6rem; height: 4.4rem; display: block; }
+.cabinet-slot small { font-size: 0.68rem; color: var(--color-cream); font-weight: 700; line-height: 1.15; }
+.cabinet-slot .cabinet-note { color: var(--color-muted); font-weight: 500; }
+.cabinet-slot-empty small { color: var(--color-muted); }
+.cabinet-lock { position: absolute; top: 1.4rem; width: 1rem; height: 1rem; color: var(--color-muted); }
+
+/* The field under the plates of an opening: three faces and where the player stands. */
+.ev-field { display: grid; gap: 0.4rem; justify-items: center; margin-top: 0.7rem; }
+.ev-field-faces { display: flex; gap: 0.5rem; padding: 0; margin: 0; list-style: none; }
+.ev-field-faces > li { width: 3.4rem; }
+.ev-field p { color: var(--color-cream); font-size: var(--text-small); text-align: center; }
+.ev-field-rival { display: inline-block; margin-left: 0.5rem; padding: 0.05rem 0.5rem; border-radius: var(--radius-pill); border: 1px solid var(--color-red); color: var(--color-red); font-weight: 700; }
+
+/* The title keeps a dark halo, so lights in the picture behind never run through it; and a show shows its two players face to face. */
+.ev-title { text-shadow: 0 2px 16px rgba(0, 0, 0, 0.85); }
+.ev-faceoff { display: flex; align-items: center; justify-content: center; gap: 0.9rem; margin-top: 0.4rem; }
+
+/* A dark curtain that lifts when the career opens. */
+.career-curtain { position: fixed; inset: 0; z-index: 90; pointer-events: none; background: #0c110e; animation: curtain-up 0.5s 0.05s ease-out forwards; }
+@keyframes curtain-up { to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .career-curtain { display: none; } }
+
+/* Drill cards: a glyph, a goal, a meter from 1 to 100 with the room's ceiling marked, and the drill of the day on top. */
+.drill-daily { display: flex; align-items: center; gap: 0.6rem; padding: 0.55rem 0.65rem; border-radius: var(--radius-m); border: 1px solid var(--color-gold); background: color-mix(in srgb, var(--color-gold) 10%, var(--color-surface)); }
+.drill-daily-done { border-color: var(--color-border); background: var(--color-surface); opacity: 0.8; }
+.drill-flame { font-size: 1.4rem; line-height: 1; width: 2rem; text-align: center; }
+.drill-kicker { color: var(--color-gold-strong); font-weight: 800; letter-spacing: 0.06em; }
+.drills li { align-items: flex-start; }
+.drill-glyph { width: 2.2rem; height: 2.2rem; border-radius: var(--radius-s); display: grid; place-items: center; font-weight: 800; font-size: 0.8rem; color: #04201f; flex-shrink: 0; }
+.drill-locked .drill-glyph { opacity: 0.6; }
+.drill-meter { display: block; position: relative; height: 0.4rem; margin-top: 0.3rem; border-radius: var(--radius-pill); background: repeating-linear-gradient(45deg, var(--color-cell) 0 3px, color-mix(in srgb, var(--color-cell) 60%, transparent) 3px 6px); overflow: hidden; }
+.drill-meter i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, var(--color-teal), var(--color-green)); border-radius: var(--radius-pill); }
+.drill-meter em { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--color-gold-strong); }
+
+/* What the next step of the room opens: gold chips under what it adds to the room. */
+.stage-chip-unlock { border-color: var(--color-gold); color: var(--color-gold-strong); }
+
+/* The rival on the home screen: a face and the score between the two. */
+.rival-chip { align-self: flex-start; display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0.7rem 0.25rem 0.3rem; border-radius: var(--radius-pill); background: color-mix(in srgb, var(--color-red) 14%, var(--color-surface)); border: 1px solid color-mix(in srgb, var(--color-red) 55%, var(--color-border)); color: var(--color-cream); text-align: left; }
+.rival-chip small { display: block; font-size: 0.6rem; letter-spacing: 0.12em; font-weight: 800; color: var(--color-red); line-height: 1; }
+.rival-chip b { display: block; font-size: var(--text-small); line-height: 1.15; }
+.rival-score { font-weight: 800; color: var(--color-gold-strong); }
+
+/* The ranking: a header over the columns, and the player's own place pinned to the bottom. */
+.rank-head { display: flex; justify-content: space-between; padding: 0 0.7rem; font-size: 0.65rem; letter-spacing: 0.1em; font-weight: 800; color: var(--color-muted); }
+.rank-you { position: sticky; bottom: 0.5rem; display: flex; align-items: center; gap: 0.7rem; padding: 0.6rem 0.8rem; border-radius: var(--radius-m); background: color-mix(in srgb, var(--color-gold) 16%, var(--color-bg)); border: 1px solid var(--color-gold); color: var(--color-cream); }
+.rank-you small { display: block; color: var(--color-text-2); font-size: var(--text-small); }
+
+/* An invitation is an event: a gold card with a ribbon word, and the time that is left. */
+.msg-invite { border-color: var(--color-gold); background: linear-gradient(135deg, color-mix(in srgb, var(--color-gold) 16%, var(--color-surface)), var(--color-surface) 70%); box-shadow: 0 0 22px color-mix(in srgb, var(--color-gold) 16%, transparent); }
+.msg-ribbon { display: block; color: var(--color-gold-strong); font-weight: 800; letter-spacing: 0.14em; font-size: 0.62rem; }
+
+/* The two of a team cup side by side in the opening. */
+.ev-pair { display: inline-flex; align-items: center; }
+.ev-pair > * + * { margin-left: -0.6rem; }
+
+/* The chance as a ring: the share that is yours is drawn in gold. */
+.chance-ring { --p: 50%; display: inline-grid; place-items: center; width: 4.6rem; height: 4.6rem; border-radius: 50%; background: conic-gradient(var(--color-gold) var(--p), var(--color-cell) 0); position: relative; }
+.chance-ring::before { content: ""; position: absolute; inset: 0.32rem; border-radius: 50%; background: var(--color-bg); }
+.chance-ring .chance-n { position: relative; font-size: var(--text-title); }
+.chance-cap { font-size: var(--text-micro); letter-spacing: 0.12em; color: var(--color-text-2); font-weight: 700; }
+
+/* The road of a night: whom the player beat, as small chips. */
+.road-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; justify-content: center; padding: 0; margin: 0; list-style: none; }
+.road-chips li { padding: 0.15rem 0.65rem; border-radius: var(--radius-pill); background: var(--color-surface); border: 1px solid var(--color-border); font-size: var(--text-small); color: var(--color-text-2); font-weight: 700; }
+
+/* Messages: headings for what waits and what is over; the news as a timeline with a dot for each event. */
+.msgs-head { list-style: none; margin-top: 0.4rem; color: var(--color-gold-strong); }
+.feed-title { margin-top: 0.6rem; color: var(--color-gold-strong); }
+.feed { position: relative; padding-left: 1.1rem; }
+.feed::before { content: ""; position: absolute; left: 0.35rem; top: 0.4rem; bottom: 0.4rem; width: 2px; background: var(--color-border); }
+.feed-item { position: relative; }
+.feed-item::before { content: ""; position: absolute; left: -0.95rem; top: 1.15rem; width: 0.55rem; height: 0.55rem; border-radius: 50%; background: var(--color-teal); box-shadow: 0 0 0 3px var(--color-bg); }
+.feed-item.feed-new::before { background: var(--color-gold-strong); }
+
+/* A career in the list, like a save file: the hall it is at with the character in it, and where it stands. */
+.slot { display: grid; width: 100%; padding: 0; overflow: hidden; text-align: left; border-radius: var(--radius-m); background: var(--color-surface); border: 1px solid var(--color-border); }
+.slot-scene { position: relative; display: block; height: 6.2rem; overflow: hidden; }
+.slot-scene img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 30%; filter: brightness(0.85); }
+.slot-char { position: absolute; right: 0.5rem; bottom: -1.6rem; height: 7.6rem; }
+.slot-char .char-figure { height: 100%; aspect-ratio: 2 / 3; }
+.slot-body { display: grid; gap: 0.15rem; padding: 0.6rem 0.8rem 0.7rem; }
+
+/* The character stage: swipe, or press an arrow. */
+.char-pick-stage { position: relative; touch-action: pan-y; }
+.char-arrow { position: absolute; top: 50%; transform: translateY(-50%); z-index: 2; width: 2.4rem; height: 2.4rem; border-radius: 50%; border: 1px solid var(--color-border); background: color-mix(in srgb, var(--color-bg) 70%, transparent); color: var(--color-cream); font-size: 1.5rem; line-height: 1; }
+.char-arrow-l { left: 0.3rem; }
+.char-arrow-r { right: 0.3rem; }
+
+/* The sponsor's patch on the shirt: a small tile that sits where the pose has a place for it. */
+.char-figure { position: relative; }
+.char-patch { position: absolute; aspect-ratio: 1; object-fit: cover; border-radius: 12%; transform: translate(-50%, -50%) rotate(-3deg); box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.55); }
+
+/* The season screen: the weeks as a wide strip, the finale as a card, and the near-term list. */
+button.season-strip { border: 1px solid var(--color-border); text-align: left; }
+.season-ticks-big { display: flex; gap: 0.3rem; }
+.season-ticks-big i { flex: 1; height: 0.6rem; border-radius: var(--radius-pill); background: var(--color-cell); display: block; }
+.season-ticks-big i.on { background: var(--color-teal); }
+.season-ticks-big i.now { background: var(--color-gold-strong); }
+.season-finale { padding: 0.8rem 0.9rem; border-radius: var(--radius-m); border: 1px solid var(--color-gold); background: color-mix(in srgb, var(--color-gold) 10%, var(--color-surface)); display: grid; gap: 0.2rem; }
+.season-next { display: grid; gap: 0.4rem; padding: 0; margin: 0; list-style: none; }
+.season-next li { display: flex; justify-content: space-between; gap: 0.6rem; padding: 0.5rem 0.7rem; border-radius: var(--radius-s); background: var(--color-surface); border: 1px solid var(--color-border); }
+.season-next small { color: var(--color-gold-strong); font-weight: 700; white-space: nowrap; }

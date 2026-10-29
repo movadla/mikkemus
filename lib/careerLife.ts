@@ -90,7 +90,7 @@ export type Rookie = { name: string; med: number; age: number; since: number };
  */
 export type World = { drift: Record<string, number>; retired: string[]; rookies: Rookie[]; pts: Record<string, number>; snap: Record<string, number> };
 
-export type SeasonResult = { season: number; rank: number; points: number; prize: number; winner: string };
+export type SeasonResult = { season: number; rank: number; points: number; prize: number; winner: string; /** The best five of the table, for the recap. Absent on a season from before it was kept. */ table?: { name: string; pts: number }[] };
 
 export type Life = {
   /** The week of the career, from 1. */
@@ -107,6 +107,8 @@ export type Life = {
   seasons: SeasonResult[];
   /** The last season whose recap the player has seen. */
   recapSeen?: number;
+  /** The rank the player last saw (the rank-up screen shows when the rank is another one). Absent on a career from before it was kept. */
+  rankSeen?: string;
   /** Counts what is made (news, messages), so each has a name of its own. */
   counter: number;
 };

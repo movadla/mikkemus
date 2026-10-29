@@ -6,6 +6,7 @@ import { PUB, STAGE, TROPHY } from "@/lib/scenePalette";
 import { TIER_LOOK, foilVars } from "@/lib/materials";
 import { TrophyArt } from "./CareerTrophy";
 import { CharacterFace } from "./CharacterFigure";
+import { Avatar } from "./ui/Avatar";
 import { picturesFor } from "./eventPictures";
 import { EventScene } from "./EventScenes";
 import { PlayButton } from "./PlayButton";
@@ -41,7 +42,7 @@ const CONFETTI = ["var(--color-cream)", "var(--color-gold-strong)", "var(--color
  * Grand Slam adds lasers and the world championship fireworks and the hardest blow. A tap anywhere takes it to the end at once, and the
  * button is there from the first second, so nothing here is needed to play.
  */
-export function EventIntro({ tier, player, character, onDone, label = "TREKK", line, plates, onBack }: { tier: Tier; player: string; /** The id of the player's character (lib/characters.ts). */ character?: string; onDone: () => void; /** The words on the button (the draw, for a tournament). */ label?: string; /** What stands by the player: who they play, and what comes next. */ line?: React.ReactNode; /** The three plates, when it is not a tournament of many (who plays, what it costs, what it pays). */ plates?: [string, string][]; /** A way out, for what can be turned down. */ onBack?: () => void }) {
+export function EventIntro({ tier, player, character, onDone, label = "TREKK", line, plates, onBack, extra, partner }: { tier: Tier; player: string; /** The id of the player's character (lib/characters.ts). */ character?: string; onDone: () => void; /** The words on the button (the draw, for a tournament). */ label?: string; /** What stands by the player: who they play, and what comes next. */ line?: React.ReactNode; /** The three plates, when it is not a tournament of many (who plays, what it costs, what it pays). */ plates?: [string, string][]; /** A way out, for what can be turned down. */ onBack?: () => void; /** The field of the event (who is in it, and where the player stands), between the plates and the player. */ extra?: React.ReactNode; /** The partner of a team cup, who stands beside the player. */ partner?: string }) {
   // The crowd of the place swells as the scene comes up: the murmur of the pub, a hall filling, an arena roaring.
   useEffect(() => {
     careerSound(tier.scale <= 1 ? "crowd-1" : tier.scale <= 3 ? "crowd-2" : "crowd-3");
@@ -113,14 +114,18 @@ export function EventIntro({ tier, player, character, onDone, label = "TREKK", l
         </h1>
         <ul className="ev-plates" aria-label="Om turneringen">
           {(plates ?? [["Spillere", String(tier.size)], ["Innskudd", tier.fee === 0 ? "Gratis" : dollars(tier.fee)], ["Til vinneren", dollars(tier.prizes.winner ?? 0)]]).map(([k, v], i) => (
-            <li key={k} className={`ev-plate ${i === 2 ? "ev-plate-prize" : ""}`} style={{ "--i": `${i * 0.12}s`, "--fx": i % 2 ? "60px" : "-60px" } as React.CSSProperties}>
+            <li key={k} className={`ev-plate ${i === (plates?.length ?? 3) - 1 ? "ev-plate-prize" : ""}`} style={{ "--i": `${i * 0.12}s`, "--fx": i % 2 ? "60px" : "-60px" } as React.CSSProperties}>
               <small>{k}</small>
               <b>{v}</b>
             </li>
           ))}
         </ul>
+        {extra}
         <p className="ev-you">
-          <CharacterFace id={character} pose="kast" px={64} />
+          <span className="ev-pair">
+            <CharacterFace id={character} pose="kast" px={64} />
+            {partner && <Avatar name={partner} bot px={64} />}
+          </span>
           <span>
             {line ?? (
               <>
