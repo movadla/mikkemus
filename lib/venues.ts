@@ -24,15 +24,15 @@ export type Venue = {
 };
 
 export const VENUES: Venue[] = [
-  { id: "lu", name: "Ly-puben", line: "Fredagskveld på puben", tier: "lu" },
-  { id: "region", name: "Regionhallen", line: "Hallen i regionen", tier: "region" },
-  { id: "nm", name: "Nasjonalarenaen", line: "Kampen om Norge", tier: "nm" },
-  { id: "gs", name: "Grand Slam-hallen", line: "Civic Hall om kvelden", tier: "gs" },
-  { id: "vm", name: "VM-arenaen", line: "Hele verden ser på", tier: "vm" },
-  { id: "wc", name: "World Cup-arenaen", line: "Nasjonene møtes", tier: "vm", key: "wc" },
-  { id: "tv", name: "TV-studioet", line: "Lys, kameraer og røyk", tier: "gs", key: "tv" },
-  { id: "trondheim", name: "Trondheim", line: "Domkirken i solnedgang", tier: "region", key: "trondheim" },
-  { id: "stavanger", name: "Stavanger", line: "Fargerike trehus", tier: "nm", key: "stavanger" },
+  { id: "lu", name: "Ly", line: "Fredagskveld på puben", tier: "lu" },
+  { id: "region", name: "Rompuben Moss", line: "Hallen i regionen", tier: "region" },
+  { id: "nm", name: "Quality Sarpsborg", line: "Kampen om Norge", tier: "nm" },
+  { id: "gs", name: "Civic Hall", line: "Civic Hall om kvelden", tier: "gs" },
+  { id: "vm", name: "Ally Pally", line: "Hele verden ser på", tier: "vm" },
+  { id: "wc", name: "Eissporthalle", line: "Nasjonene møtes", tier: "vm", key: "wc" },
+  { id: "tv", name: "TV-studio", line: "Lys, kameraer og røyk", tier: "gs", key: "tv" },
+  { id: "trondheim", name: "Nidarosdomen", line: "Domkirken i solnedgang", tier: "region", key: "trondheim" },
+  { id: "stavanger", name: "Fargegata", line: "Fargerike trehus", tier: "nm", key: "stavanger" },
 ];
 
 export const venueOf = (id: VenueId): Venue => VENUES.find((v) => v.id === id) ?? VENUES[0];

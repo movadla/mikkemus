@@ -20,11 +20,11 @@ test.describe("sted for turneringen", () => {
     await addPlayers(page, ["Lars", "Vadla", "Moen", "Hans"]);
     const places = page.getByRole("radiogroup", { name: "Sted" });
     // Four players fit a pub; another place can be picked.
-    await expect(places.getByRole("radio", { name: /Ly-puben/ })).toBeChecked();
-    await places.getByRole("radio", { name: /Regionhallen/ }).click();
+    await expect(places.getByRole("radio", { name: /^Ly/ })).toBeChecked();
+    await places.getByRole("radio", { name: /Rompuben Moss/ }).click();
     await page.getByRole("button", { name: "Neste", exact: true }).click();
     // The opening: the name of the place and the trophy, then on to the draw.
-    await expect(page.getByRole("list", { name: "Om turneringen" }).getByText("Regionhallen")).toBeVisible();
+    await expect(page.getByRole("list", { name: "Om turneringen" }).getByText("Rompuben Moss")).toBeVisible();
     await expect(page.getByLabel("Feltet")).toBeVisible();
     await page.getByRole("button", { name: "TREKK" }).waitFor({ timeout: 10_000 });
     const check = async () => {
@@ -42,13 +42,13 @@ test.describe("sted for turneringen", () => {
     await expect.poll(async () => page.evaluate(() => Object.values(JSON.parse(localStorage.getItem("mikke-mus-venues") ?? "{}")))).toContain("region");
   });
 
-  test("mot boter: EM spilles i Grand Slam-hallen, og favorittene har portrett", async ({ page }) => {
+  test("mot boter: EM spilles i Civic Hall, og favorittene har portrett", async ({ page }) => {
     await openApp(page, "dark");
     await page.getByRole("button", { name: "Turnering" }).first().click();
     await addPlayers(page, ["Lars", "Vadla"]);
     await page.getByRole("radio", { name: /Mot boter/ }).click();
     await page.getByRole("radio", { name: /EM i dart/ }).click();
-    await expect(page.getByRole("radiogroup", { name: "Sted" }).getByRole("radio", { name: /Grand Slam-hallen/ })).toBeChecked();
+    await expect(page.getByRole("radiogroup", { name: "Sted" }).getByRole("radio", { name: /Civic Hall/ })).toBeChecked();
     await page.getByRole("button", { name: "Neste", exact: true }).click();
     await expect(page.getByRole("heading", { name: "EM i dart" })).toBeVisible();
     await page.getByRole("button", { name: "TREKK" }).click({ timeout: 10_000 });
