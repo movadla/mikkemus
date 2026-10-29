@@ -66,8 +66,8 @@ function playOut(c: Career, wins: number): Career {
 
 describe("newCareer", () => {
   it("starts with the money, the level and the place asked for", () => {
-    const c = newCareer("Lars", "sterk", AT, { home: "loft", darts: "tunge" });
-    expect(c).toMatchObject({ id: "lars", player: "Lars", skillMed: 30, money: START_MONEY, points: 0, titles: 0, active: null, qualified: [], challenge: null, profile: { home: "loft", darts: "tunge" } });
+    const c = newCareer("Lars", "sterk", AT, { home: "loft", darts: "soft" });
+    expect(c).toMatchObject({ id: "lars", player: "Lars", skillMed: 30, money: START_MONEY, points: 0, titles: 0, active: null, qualified: [], challenge: null, profile: { home: "loft", darts: "soft" } });
   });
 });
 

@@ -9,6 +9,7 @@
  * here is plain data in and out: a career can be saved as it is, paused anywhere and picked up again. See CAREER_PLAN.md.
  */
 import { levelOfMed } from "./botLevels";
+import { lifeOf, lyPool, welcomeLife, REP_MAX, type Invitation, type Life } from "./careerLife";
 import { INTERNATIONALS, LY_REGULARS } from "./opponents";
 import { countdownOf, gameOf, type CareerGame } from "./careerGame";
 import { unit, type CupConfig, type CupKind } from "./botCup";
@@ -177,13 +178,15 @@ export const HOMES: { id: HomeId; name: string; about: string }[] = [
   { id: "loft", name: "Loftet", about: "Skrå tak, støv og et vindu" },
 ];
 
-/** The darts the player starts with: a weight, which is a matter of feel. For now it only shows; better darts are for sale later. */
-export type DartsId = "lette" | "middels" | "tunge";
-export const DARTS: { id: DartsId; name: string; about: string }[] = [
-  { id: "lette", name: "Lette", about: "18 g, fort ut av hånden" },
-  { id: "middels", name: "Middels", about: "22 g, den vanlige" },
-  { id: "tunge", name: "Tunge", about: "26 g, tunge å stoppe" },
+/** The darts the player starts with: soft tip (plastic, for an electronic board) or steel tip. For now it only shows; better darts are for sale later. */
+export type DartsId = "soft" | "steel";
+export const DARTS: { id: DartsId; name: string; about: string; picture: string }[] = [
+  { id: "soft", name: "Soft tip", about: "Plastspiss, til elektronisk skive", picture: "/career/darts/soft.webp" },
+  { id: "steel", name: "Steel tip", about: "Stålspiss, til en skive av sisal", picture: "/career/darts/steel.webp" },
 ];
+
+/** A career from before the choice of tip had a weight (lette, middels, tunge), which says nothing about the tip: it gets steel. */
+export const dartsOf = (id: string | undefined): DartsId => (id === "soft" ? "soft" : "steel");
 
 export type Profile = { home: HomeId; darts: DartsId; /** The game the career is played in (lib/careerGame.ts), and whether 501 and 301 need a double to finish. Absent on a career from before there was a choice: Mikke Mus, with a double. */ game?: CareerGame; doubleOut?: boolean; /** The character the player is in the career (lib/characters.ts). Absent on a career from before there were any. */ character?: string };
 
@@ -209,7 +212,12 @@ export type ActiveEvent = {
   /** The cup itself, once the draw is made. */
   tournament: Tournament | null;
   result: EventResult | null;
+  /** Set when the event is an invitation, not a step of the ladder: it is then the whole of the event (its name, its price, its prizes). */
+  invite?: Invitation;
 };
+
+/** The event as a tournament: the invitation it is, or the step of the ladder. */
+export const eventTier = (a: Pick<ActiveEvent, "tier" | "invite">): Tier => a.invite ?? TIERS[a.tier];
 
 export type HistoryEntry = { at: string; event: string; place?: Place; prize: number; cost: number; points: number; /** A challenge, not a cup: the game, and whether it was won. */ game?: string; won?: boolean };
 
@@ -252,15 +260,17 @@ export type Career = {
   challenges: number;
   /** The record against each opponent met, by name. Absent on a career from before there were any. */
   rivals?: Record<string, Rival>;
+  /** What goes on around the tournaments: weeks, news, messages, a sponsor. Absent on a career from before it. */
+  life?: Life;
 };
 
 export const careerId = (player: string) => player.trim().toLowerCase();
 
-export const DEFAULT_PROFILE: Profile = { home: "garage", darts: "middels", character: "c03" };
+export const DEFAULT_PROFILE: Profile = { home: "garage", darts: "steel", character: "c03" };
 
 export function newCareer(player: string, startLevel: string, now: string, profile: Profile = DEFAULT_PROFILE): Career {
   const level = START_LEVELS.find((l) => l.key === startLevel) ?? START_LEVELS[2];
-  return { v: 1, id: careerId(player), player, createdAt: now, savedAt: now, profile, startLevel: level.key, skillMed: level.med, money: START_MONEY, points: 0, titles: 0, worldTitles: 0, played: 0, history: [], active: null, qualified: [], trophies: [], training: [], room: START_ROOM, challenge: null, challenges: 0 };
+  return { v: 1, id: careerId(player), player, createdAt: now, savedAt: now, profile, startLevel: level.key, skillMed: level.med, money: START_MONEY, points: 0, titles: 0, worldTitles: 0, played: 0, history: [], active: null, qualified: [], trophies: [], training: [], room: START_ROOM, challenge: null, challenges: 0, life: welcomeLife(player) };
 }
 
 /** The money, as the career writes it: dollars, so nobody takes it for real money. */
@@ -276,14 +286,15 @@ const LAST = ["Berg", "Holm", "Dahl", "Lund", "Strand", "Vik", "Moe", "Brandt", 
 const byLuck = <T>(items: T[], key: (t: T) => string, seed: string): T[] => [...items].sort((x, y) => unit(`${seed}|${key(x)}`) - unit(`${seed}|${key(y)}`));
 
 /** `count` names for a field, none of them the player's: the regulars at the pub, full names everywhere else. */
-export function fieldNames(tier: Tier, player: string, seed: number, count: number): string[] {
+export function fieldNames(tier: Tier, player: string, seed: number, count: number, world?: Life["world"]): string[] {
   const own = player.trim().toLowerCase();
-  if (tier.id === "lu") return byLuck(REGULARS.filter((n) => n.toLowerCase() !== own), (n) => n, `${seed}|names`).slice(0, count);
+  const retired = world?.retired ?? [];
+  if (tier.id === "lu") return byLuck((world ? lyPool({ world } as Life) : REGULARS).filter((n) => n.toLowerCase() !== own), (n) => n, `${seed}|names`).slice(0, count);
   const firsts = byLuck(FIRST, (n) => n, `${seed}|first`);
   const lasts = byLuck(LAST, (n) => n, `${seed}|last`);
   // The international players with a face of their own come back in the bigger events; the rest of the field is made up.
   const made = firsts.map((f, i) => `${f} ${lasts[i]}`);
-  const known = byLuck(INTERNATIONALS.map((n) => n.name), (n) => n, `${seed}|intl`);
+  const known = byLuck(INTERNATIONALS.map((n) => n.name).filter((n) => !retired.includes(n)), (n) => n, `${seed}|intl`);
   const surnames = new Set(known.map((n) => n.split(" ")[1]));
   return [...known, ...made.filter((n) => !surnames.has(n.split(" ")[1]))].filter((n) => !n.toLowerCase().startsWith(`${own} `) && n.toLowerCase() !== own).slice(0, count);
 }
@@ -301,7 +312,7 @@ export function fieldCentre(career: Career, tier: Tier): number {
 
 /** The field: the player and the rest, strongest first (the player where their own level puts them). Each bot has a skill of its own around the centre. */
 export function fieldFor(career: Career, tier: Tier, seed: number): Participant[] {
-  const names = fieldNames(tier, career.player, seed, tier.size - 1);
+  const names = fieldNames(tier, career.player, seed, tier.size - 1, lifeOf(career).world);
   const factor = factorFor(career, tier);
   const bots = names.map((name) => {
     const med = career.skillMed * factor * (0.88 + unit(`${seed}|skill|${name}`) * 0.24);
@@ -313,8 +324,8 @@ export function fieldFor(career: Career, tier: Tier, seed: number): Participant[
   return order.sort((a, b) => a.strength - b.strength).map((x) => x.p);
 }
 
-export function cupFor(career: Career, tier: Tier, seed: number): CupConfig {
-  const countdown = countdownOf(gameOf(career.profile));
+export function cupFor(career: Career, tier: Tier | Invitation, seed: number): CupConfig {
+  const countdown = ("countdown" in tier ? tier.countdown : undefined) ?? countdownOf(gameOf(career.profile));
   return { kind: tier.kind, name: tier.name, trophy: tier.trophy, level: String(Math.round(Math.min(8, Math.max(1, fieldCentre(career, tier))))) as CupConfig["level"], growth: true, seed, career: true, ...(countdown ? { countdown } : {}) };
 }
 
@@ -341,13 +352,13 @@ export function topStep(career: Career): Tier {
 export const prizePool = (tier: Tier) => Object.values(tier.prizes).reduce((s, n) => s + (n ?? 0), 0);
 
 /** Signs up for an event: the fee is paid and the field is made. The draw comes next, and with it the cup. */
-export function startEvent(career: Career, tierId: TierId, seed: number): Career {
-  const tier = TIERS[tierId];
+export function startEvent(career: Career, tierId: TierId, seed: number, invite?: Invitation): Career {
+  const tier = invite ?? TIERS[tierId];
   if (whyNot(career, tier)) return career;
   const cost = entryCost(career, tier);
-  const active: ActiveEvent = { id: `${career.id}-${seed}`, tier: tierId, seed, cost, entrants: fieldFor(career, tier, seed), cup: cupFor(career, tier, seed), tournament: null, result: null };
-  // The qualification is for this one entry.
-  return { ...career, money: career.money - cost, qualified: career.qualified.filter((q) => q !== tierId), active };
+  const active: ActiveEvent = { id: `${career.id}-${seed}`, tier: tierId, seed, cost, entrants: fieldFor(career, tier, seed), cup: cupFor(career, tier, seed), tournament: null, result: null, ...(invite ? { invite } : {}) };
+  // The qualification is for this one entry (an invitation uses none).
+  return { ...career, money: career.money - cost, qualified: invite ? career.qualified : career.qualified.filter((q) => q !== tierId), active };
 }
 
 /** The draw is made: the cup is opened, in the order the draw gave. */
@@ -378,7 +389,7 @@ export function finishEvent(career: Career, now: string): Career {
   const a = career.active;
   if (!a?.tournament || a.result) return career;
   const t = a.tournament.status === "done" ? a.tournament : playElsewhere(a.tournament).tournament;
-  const tier = TIERS[a.tier];
+  const tier = eventTier(a);
   const place = placeIn(t, career.player);
   // The matches the player played, for the record against each opponent; a win over one who had the better of them is worth a bonus.
   const rivals: Record<string, Rival> = { ...(career.rivals ?? {}) };
@@ -403,8 +414,8 @@ export function finishEvent(career: Career, now: string): Career {
     money: career.money + result.prize,
     points: career.points + result.points,
     titles: career.titles + (won ? 1 : 0),
-    trophies: won ? [{ tier: a.tier, at: now, prize: result.prize }, ...career.trophies] : career.trophies,
-    worldTitles: career.worldTitles + (won && tier.id === "vm" ? 1 : 0),
+    trophies: won && !a.invite ? [{ tier: a.tier, at: now, prize: result.prize }, ...career.trophies] : career.trophies,
+    worldTitles: career.worldTitles + (won && tier.id === "vm" && !a.invite ? 1 : 0),
     played: career.played + 1,
     history: [entry, ...career.history].slice(0, 30),
     rivals,
@@ -447,6 +458,10 @@ export type Challenge = {
   stake: number;
   /** Set when the game is over. */
   won: boolean | null;
+  /** What the player pays when they lose (a challenge that was not asked for; the ones they pick cost nothing). */
+  risk?: number;
+  /** The message it came from, when someone asked for it. */
+  from?: string;
 };
 
 /** What a challenge is worth for a player at this point of the ladder: a quarter of the first prize of the biggest step they can enter, with a floor. */
@@ -475,16 +490,26 @@ export function offerChallenge(career: Career, game: GameId, seed: number): Care
 export function settleChallenge(career: Career, won: boolean, now: string): Career {
   const c = career.challenge;
   if (!c || c.won !== null) return career;
-  const prize = won ? c.stake : 0;
+  const lost = won ? 0 : Math.min(career.money, c.risk ?? 0);
+  const prize = won ? c.stake : -lost;
   const entry: HistoryEntry = { at: now, event: `Duell: ${GAMES[c.game].name} mot ${c.opponent.name}`, prize, cost: 0, points: 0, game: c.game, won };
-  return { ...career, money: career.money + prize, history: [entry, ...career.history].slice(0, 30), challenge: { ...c, won } };
+  // Playing what someone asked for is good for the name.
+  const life = c.from ? lifeOf(career) : null;
+  return { ...career, money: career.money + prize, history: [entry, ...career.history].slice(0, 30), challenge: { ...c, won }, ...(life ? { life: { ...life, reputation: Math.min(REP_MAX, life.reputation + 1) } } : {}) };
 }
 
 /** Takes the finished challenge off the table. */
 export const closeChallenge = (career: Career): Career => (career.challenge && career.challenge.won !== null ? { ...career, challenge: null } : career);
 
 /** Turns a challenge down. */
-export const declineChallenge = (career: Career): Career => (career.challenge && career.challenge.won === null ? { ...career, challenge: null } : career);
+export function declineChallenge(career: Career): Career {
+  const c = career.challenge;
+  if (!c || c.won !== null) return career;
+  // Turning down what someone asked for costs some of the name.
+  if (!c.from) return { ...career, challenge: null };
+  const life = lifeOf(career);
+  return { ...career, challenge: null, life: { ...life, reputation: Math.max(0, life.reputation - 1), inbox: life.inbox.map((m) => (m.id === c.from ? { ...m, state: "declined" as const } : m)) } };
+}
 
 /* ---------------------------------------------------------------------------------------------------------------------------------
  * The room: one place in ten steps, from a garage full of junk to a room fit for a champion. It is where the money goes, and it is the picture

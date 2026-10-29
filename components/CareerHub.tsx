@@ -10,7 +10,11 @@ import { rankOf, rankProgress, roomBadge } from "@/lib/careerGoals";
 import { heroButton, heroFor } from "@/lib/careerHero";
 import { careerSound, uiFeedback } from "@/lib/uiSound";
 import { levelLabel, newSeed, oneDecimal } from "./careerFormat";
-import { HomeIcon, LockIcon, RoadIcon, StarIcon } from "./careerIcons";
+import { HomeIcon, LockIcon, MailIcon, NewsIcon, RoadIcon, StarIcon } from "./careerIcons";
+import { CareerInbox } from "./CareerInbox";
+import { CareerNews } from "./CareerNews";
+import { inboxCount, lifeOf, seasonOf, unseenNews, weekInSeason, WEEKS_PER_SEASON } from "@/lib/careerLife";
+import { markNewsSeen } from "@/lib/careerWorld";
 import { CareerHud } from "./CareerHud";
 import { RankBadge, TrophyArt } from "./CareerTrophy";
 import { CharacterFigure } from "./CharacterFigure";
@@ -30,9 +34,27 @@ import { Button } from "./ui/Button";
 import { Sheet } from "./ui/Sheet";
 import { FOCUS_RING } from "./ui/focus";
 
-type View = "home" | "rooms" | "road" | "training" | "challenges" | "rank";
+type View = "home" | "rooms" | "road" | "training" | "challenges" | "rank" | "news" | "inbox";
 
-const TITLE: Record<Exclude<View, "home">, string> = { rooms: "Rom", road: "Turneringer", training: "Trening", challenges: "Duell", rank: "Rangering" };
+const TITLE: Record<Exclude<View, "home">, string> = { rooms: "Rom", road: "Turneringer", training: "Trening", challenges: "Duell", rank: "Rangering", news: "Nyheter", inbox: "Meldinger" };
+
+/** Where the career is in its season: ten ticks, the weeks that are played filled in. */
+function SeasonStrip({ career }: { career: Career }) {
+  const life = lifeOf(career);
+  const week = weekInSeason(life.week);
+  return (
+    <div className="season-strip tabular" role="img" aria-label={`Sesong ${seasonOf(life.week)}, uke ${week} av ${WEEKS_PER_SEASON}`}>
+      <span>
+        Sesong {seasonOf(life.week)} · uke {week}
+      </span>
+      <span className="season-ticks" aria-hidden>
+        {Array.from({ length: WEEKS_PER_SEASON }, (_, i) => (
+          <i key={i} className={i < week - 1 ? "on" : i === week - 1 ? "now" : ""} />
+        ))}
+      </span>
+    </div>
+  );
+}
 
 /** Where the player is: the room is a place with a name and a step, so the picture behind everything reads as theirs. */
 function PlaceChip({ room }: { room: number }) {
@@ -135,6 +157,11 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
   const go = (v: View) => {
     uiFeedback("pick");
     setView(v);
+  };
+  // The news are seen when the paper is closed, so the new ones stay marked while they are read.
+  const leaveNews = () => {
+    commit(markNewsSeen(career));
+    setView("home");
   };
   /** Start an event: its colour spreads from the button that was pressed, and then the scene opens. Without motion it opens at once. */
   const enter = (tier: Tier["id"], from: HTMLElement) => {
@@ -277,6 +304,7 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
               </button>
             </div>
             <PlaceChip room={career.room} />
+            <SeasonStrip career={career} />
             {news && (
               <button type="button" className="room-news" onClick={() => setNews(null)} aria-label={`Nytt i rommet: ${news}`}>
                 <StarIcon className="w-4 h-4" />
@@ -297,6 +325,18 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
             <div className="relative rise-in" style={{ "--d": "0.2s" } as React.CSSProperties}>
               {!playTip && <TipPointer id="play" label="Trykk her" />}
               <PlayButton label={button.label} sub={button.sub} tone={hero.kind === "event" && hero.done ? "gold" : hero.kind === "challenge" && hero.done && hero.challenge.won ? "gold" : "teal"} onClick={press} />
+            </div>
+            <div className="home-pills rise-in" style={{ "--d": "0.27s" } as React.CSSProperties}>
+              <button type="button" className={`home-pill tactile ${FOCUS_RING}`} onClick={() => go("news")}>
+                <NewsIcon className="w-4 h-4" />
+                Nyheter
+                {unseenNews(lifeOf(career)) > 0 && <b className="home-pill-count">{unseenNews(lifeOf(career))}</b>}
+              </button>
+              <button type="button" className={`home-pill tactile ${FOCUS_RING}`} onClick={() => go("inbox")}>
+                <MailIcon className="w-4 h-4" />
+                Meldinger
+                {inboxCount(lifeOf(career)) > 0 && <b className="home-pill-count">{inboxCount(lifeOf(career))}</b>}
+              </button>
             </div>
             <div className="round4 rise-in" style={{ "--d": "0.32s" } as React.CSSProperties}>
               <RoundButton icon={<HomeIcon />} label="Rom" badge={roomBadge(career)} onClick={() => go("rooms")} />
@@ -388,9 +428,11 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
       <div className="animate-screen-push screen" style={{ paddingBottom: "1rem" }}>
         {sheets}
         <div className="screen-inner flex flex-col gap-3" style={{ minHeight: "calc(100dvh - 2rem)" }}>
-          <CareerHud career={career} onBack={() => setView("home")} title={TITLE[view]} />
+          <CareerHud career={career} onBack={view === "news" ? leaveNews : () => setView("home")} title={TITLE[view]} />
 
           {view === "rank" && <RankingList career={career} />}
+          {view === "news" && <CareerNews career={career} />}
+          {view === "inbox" && <CareerInbox career={career} commit={commit} onPlay={onPlay} onChallenge={onChallenge} />}
 
           {view === "road" && (
             <>

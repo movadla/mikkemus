@@ -148,6 +148,6 @@ describe("a cup played as 501", () => {
     expect(cupFor(base, TIERS.lu, 1).countdown).toBeUndefined();
     expect(cupFor({ ...base, profile: { ...base.profile, game: "501", doubleOut: false } }, TIERS.lu, 1).countdown).toEqual({ start: 501, doubleOut: false });
     expect(cupFor({ ...base, profile: { ...base.profile, game: "301" } }, TIERS.lu, 1).countdown).toEqual({ start: 301, doubleOut: true });
-    expect(normalizeCareer({ ...base, profile: { home: "garage", darts: "middels" } } as never).profile).toMatchObject({ game: "mm", doubleOut: true });
+    expect(normalizeCareer({ ...base, profile: { home: "garage", darts: "middels" } } as never).profile).toMatchObject({ game: "mm", doubleOut: true, darts: "steel" });
   });
 });

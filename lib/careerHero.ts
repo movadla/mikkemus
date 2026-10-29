@@ -5,7 +5,7 @@
  */
 import { nextToThrow } from "./botSim";
 import { bracketRoundLabel, matchParticipants, type Tournament } from "./tournament";
-import { GAMES, LADDER, TIERS, dollars, whyNot, type Career, type Challenge, type Tier } from "./career";
+import { GAMES, LADDER, TIERS, dollars, eventTier, whyNot, type Career, type Challenge, type Tier } from "./career";
 
 export type Hero =
   | { kind: "event"; tier: Tier; /** The round of the next match, or null when there is none for the player. */ round: string | null; opponent: string | null; drawn: boolean; done: boolean; prize: number }
@@ -15,7 +15,7 @@ export type Hero =
 export function heroFor(career: Career): Hero {
   const a = career.active;
   if (a) {
-    const tier = TIERS[a.tier];
+    const tier = eventTier(a);
     if (a.result) return { kind: "event", tier, round: null, opponent: null, drawn: true, done: true, prize: a.result.prize };
     const next = a.tournament ? botSimNext(a.tournament, career.player) : null;
     return { kind: "event", tier, round: next?.round ?? null, opponent: next?.opponent ?? null, drawn: !!a.tournament, done: false, prize: 0 };

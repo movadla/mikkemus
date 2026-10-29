@@ -109,3 +109,24 @@ export function RoadIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+/** A letter: the inbox. */
+export function MailIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <rect x="3" y="5.5" width="18" height="13" rx="2" />
+      <path d="m3.5 7 8.5 6 8.5-6" />
+    </svg>
+  );
+}
+
+/** A newspaper: the news. */
+export function NewsIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M5 4.5h11v15H6.5A1.5 1.5 0 0 1 5 18z" />
+      <path d="M16 8.5h3v9a2 2 0 0 1-2 2" />
+      <path d="M8 8h5M8 11.5h5M8 15h3" />
+    </svg>
+  );
+}

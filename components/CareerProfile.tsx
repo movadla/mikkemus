@@ -2,6 +2,7 @@
 
 import { DARTS, PLACE_LABEL, STAGES, TIERS, dollars, type Career } from "@/lib/career";
 import { nextRank, rankOf } from "@/lib/careerGoals";
+import { lifeOf, seasonOf, weekInSeason, WEEKS_PER_SEASON } from "@/lib/careerLife";
 import { levelLabel, oneDecimal } from "./careerFormat";
 import { PokalCard, RankBadge } from "./CareerTrophy";
 import { CharacterFace } from "./CharacterFigure";
@@ -25,6 +26,7 @@ function Stat({ label, value }: { label: string; value: string }) {
 export function CareerProfile({ career }: { career: Career }) {
   const next = nextRank(career);
   const darts = DARTS.find((d) => d.id === career.profile.darts)?.name ?? "";
+  const life = lifeOf(career);
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-4">
@@ -58,6 +60,28 @@ export function CareerProfile({ career }: { career: Career }) {
       <p style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
         Rom: {STAGES[career.room].name} · {darts.toLowerCase()} piler · avvik {oneDecimal(career.skillMed)} mm · saldo {dollars(career.money)}
       </p>
+      <p style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
+        Sesong {seasonOf(life.week)}, uke {weekInSeason(life.week)} av {WEEKS_PER_SEASON} · {life.seasonPts} sesongpoeng · rykte {life.reputation} av 10
+        {life.sponsor && ` · sponsor ${life.sponsor.name}, ${life.sponsor.left} igjen`}
+      </p>
+      {life.seasons.length > 0 && (
+        <section aria-label="Sesonger">
+          <p className="section-label mb-2">SESONGER</p>
+          <ul className="space-y-1">
+            {life.seasons.slice(0, 5).map((s) => (
+              <li key={s.season} className="flex items-baseline justify-between gap-3" style={{ fontSize: "var(--text-small)", color: "var(--color-text-2)" }}>
+                <span className="truncate">
+                  Sesong {s.season} · nr. {s.rank}
+                  {s.rank === 1 ? " · årets spiller" : ` · vinner ${s.winner}`}
+                </span>
+                <span className="tabular shrink-0" style={{ color: "var(--color-muted)" }}>
+                  {s.prize > 0 ? `+${dollars(s.prize)}` : "ingen premie"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       {career.history.length > 0 && (
         <section aria-label="Siste">
           <p className="section-label mb-2">SISTE</p>

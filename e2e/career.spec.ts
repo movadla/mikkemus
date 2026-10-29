@@ -9,7 +9,7 @@ const CAREER = {
   player: "Lars",
   createdAt: "2026-10-28T10:00:00Z",
   savedAt: "2026-10-28T10:00:00Z",
-  profile: { home: "garage", darts: "middels" },
+  profile: { home: "garage", darts: "steel" },
   startLevel: "dyktig",
   skillMed: 37,
   money: 300,
@@ -63,8 +63,14 @@ test.describe("karriere", () => {
     await page.getByRole("button", { name: "Neste" }).click();
     await expect(page.getByRole("radiogroup", { name: "Karakter" })).toBeVisible();
     await expect(page.getByText("SKJORTE")).toHaveCount(0);
+    // Darts are a soft tip or a steel tip, each with its picture; steel is the start.
+    await expect(page.getByRole("radio", { name: /Steel tip/ })).toBeChecked();
+    await page.getByRole("radio", { name: /Soft tip/ }).click();
+    await page.getByRole("radio", { name: /Soft tip/ }).scrollIntoViewIfNeeded();
+    await page.screenshot({ path: "test-results/darts-pick.png" });
     await page.getByRole("button", { name: "Start karrieren" }).click();
     await expect.poll(async () => (await saved(page))?.profile?.character).toBe("c03");
+    expect((await saved(page)).profile.darts).toBe("soft");
     expect((await saved(page)).money).toBe(2000);
     expect((await saved(page)).startLevel).toBe("sterk");
   });
@@ -96,6 +102,67 @@ test.describe("karriere", () => {
     // The match is 501, a leg to nothing.
     await play(page, "KAST").click();
     await expect(page.getByText("501").first()).toBeVisible();
+  });
+
+  const INVITE = { id: "lu", kind: "lu", name: "Ly-sprinten", short: "Ly", trophy: "Ly-sprinten-pokalen", venue: "Ly", stage: "Invitasjon · Ly", tagline: "En kort kveld i 301", scale: 1, size: 8, fee: 0, prizes: { winner: 400, final: 250, semi: 150 }, points: { winner: 5, final: 3, semi: 2, quarter: 1 }, factor: 1.2, minutes: 30, key: "ly-sprint", city: "Ly", reason: "Puben setter opp en kort kveld i 301.", countdown: { start: 301, doubleOut: false } };
+  const MSG = (id: string, title: string, offer: object, extra: object = {}) => ({ id, week: 3, from: { name: "Roger", role: "Rival" }, title, body: "Tekst", read: false, state: "open", until: 5, offer, ...extra });
+  const LIFE = {
+    week: 3,
+    seasonPts: 0,
+    reputation: 5,
+    newsSeen: 0,
+    sponsor: null,
+    seasons: [],
+    counter: 6,
+    world: { drift: {}, retired: [], rookies: [], pts: {}, snap: {} },
+    news: [
+      { id: "n5", week: 2, kind: "cup", headline: "Haakon vant Ly-cupen", text: "Slo Marcus i finalen.", who: "Haakon" },
+      { id: "n4", week: 1, kind: "world", headline: "Lars er ny på Ly", text: "Fredagscupen venter." },
+    ],
+    inbox: [
+      MSG("m6", "Ly-sprinten", { kind: "invite", invite: INVITE }),
+      MSG("m3", "Roger vil ha revansje", { kind: "challenge", game: "501", opponent: { name: "Roger", skill: 4 }, stake: 250, risk: 100 }),
+    ],
+  };
+
+  test("meldinger og nyheter: merker på hjemmet, en invitasjon som tas imot, og en utfordring som sies nei til koster rykte", async ({ page }) => {
+    await seed(page, { ...CAREER, life: LIFE });
+    await page.getByRole("button", { name: /Lars/ }).click();
+    await expect(page.getByText("Sesong 1 · uke 3")).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Nyheter/ })).toContainText("2");
+    await expect(page.getByRole("button", { name: /^Meldinger/ })).toContainText("2");
+    // The news: the new ones are marked until the paper is closed.
+    await page.getByRole("button", { name: /^Nyheter/ }).click();
+    await expect(page.getByText("Haakon vant Ly-cupen")).toBeVisible();
+    await page.getByRole("button", { name: "Tilbake" }).click();
+    await expect(page.getByRole("button", { name: /^Nyheter/ })).not.toContainText("2");
+    // The inbox: say no to the challenge, and the name pays for it.
+    await page.getByRole("button", { name: /^Meldinger/ }).click();
+    await page.getByRole("button", { name: /Roger vil ha revansje/ }).click();
+    await expect(page.getByText("Taper $100")).toBeVisible();
+    await page.getByRole("button", { name: "Ikke i kveld" }).click();
+    await expect.poll(async () => (await saved(page)).life.reputation).toBe(4);
+    // The invitation: yes signs up for it, as its own tournament.
+    await page.getByRole("button", { name: /Ly-sprinten/ }).first().click();
+    await expect(page.getByText("301 uten dobbel").or(page.getByText("8 spillere"))).toBeVisible();
+    await page.getByRole("button", { name: "Ta imot" }).click();
+    await expect.poll(async () => (await saved(page)).active?.invite?.name).toBe("Ly-sprinten");
+    expect((await saved(page)).active.cup.countdown).toEqual({ start: 301, doubleOut: false });
+  });
+
+  test("etter en turnering: uken går, nyheten om deg er skrevet, og sesongen teller", async ({ page }) => {
+    const active = { id: "lars-1", tier: "lu", seed: 1, cost: 0, entrants: [], cup: { kind: "lu", name: "Ly-cupen", trophy: "Ly-pokalen", level: "4", growth: true, seed: 1, career: true }, tournament: null, result: { place: "semi", prize: 200, cost: 0, points: 3 } };
+    await seed(page, { ...CAREER, active });
+    await page.getByRole("button", { name: /Lars/ }).click();
+    await page.getByRole("button", { name: /^HENT/ }).click();
+    await page.getByRole("button", { name: /^HENT/ }).click();
+    await expect.poll(async () => (await saved(page)).life?.week).toBe(2);
+    const c = await saved(page);
+    // The prize is paid when the cup is finished, which the seeded result has already been through.
+    expect(c.money).toBe(300);
+    expect(c.life.seasonPts).toBe(3);
+    expect(c.life.news.some((n: { kind: string; headline: string }) => n.kind === "you" && n.headline.includes("tapte semifinalen"))).toBe(true);
+    await expect(page.getByText("Sesong 1 · uke 2")).toBeVisible();
   });
 
   test("hjemmet: rommet, saldo og nivå, ett mål, én stor knapp og fire runde", async ({ page }) => {

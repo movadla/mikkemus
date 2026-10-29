@@ -86,7 +86,7 @@ const NAMED = [...LY_REGULARS, ...INTERNATIONALS, ...LEVEL_BOTS];
 
 /** Everyone with a name and a face, once each (the level bots Dave, ChrisBell and Kjetil are in the Ly group already). */
 export const EVERYONE: Opponent[] = [...LY_REGULARS, ...INTERNATIONALS, ...LEVEL_BOTS.filter((b) => !LY_REGULARS.some((r) => r.face === b.face))];
-const squash = (n: string) => n.toLowerCase().replace(/s+/g, "");
+const squash = (n: string) => n.toLowerCase().replace(/\s+/g, "");
 
 /** A country from a surname, for the generated names of the big events. */
 const NAT_OF_LAST: Record<string, string> = {

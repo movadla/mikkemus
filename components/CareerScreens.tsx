@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { cupColor } from "@/lib/botCup";
-import { REVENGE_BONUS, TIERS, closeChallenge, declineChallenge, dollars, settleChallenge, type ActiveEvent, type Career, type Challenge } from "@/lib/career";
+import { REVENGE_BONUS, TIERS, closeChallenge, eventTier, declineChallenge, dollars, settleChallenge, type ActiveEvent, type Career, type Challenge } from "@/lib/career";
 import { matchParticipants } from "@/lib/tournament";
+import { sponsorOutcome } from "@/lib/careerWorld";
 import { rankOf } from "@/lib/careerGoals";
 import { winnerOf as countdownWinner, newGame as newCountdown } from "@/lib/countdown";
 import { playFanfare } from "@/lib/fanfare";
@@ -116,6 +117,11 @@ function ChallengeFlow({ career, commit, onHub }: { career: Career; commit: (c: 
               </div>
             </div>
             <Amount value={c.stake} big />
+            {!!c.risk && (
+              <p style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>
+                Taper du, mister du {dollars(Math.min(career.money, c.risk))}. Å gi opp teller som tap.
+              </p>
+            )}
           </div>
           <PlayButton label="SPILL" onClick={() => setPlaying(true)} />
         </div>
@@ -149,7 +155,7 @@ function ChallengeResult({ career, c, onDone }: { career: Career; c: Challenge; 
             </p>
           ) : (
             <p className="font-display" style={{ fontSize: "var(--text-num)", color: "var(--color-text-2)" }}>
-              Tapt
+              Tapt{c.risk ? ` · −${dollars(c.risk)}` : ""}
             </p>
           )}
         </div>
@@ -223,11 +229,12 @@ function Ceremony({ tier, player, prize, confetti, character }: { tier: (typeof 
  */
 export function Result({ career, a, onDone }: { career: Career; a: ActiveEvent; onDone: () => void }) {
   const r = a.result!;
-  const tier = TIERS[a.tier];
+  const tier = eventTier(a);
   const won = r.place === "winner";
+  const sponsor = sponsorOutcome(career);
   const opened = tier.opens && tier.opens.places.includes(r.place) ? TIERS[tier.opens.tier] : null;
   // The title the points have just given, when it is a new one.
-  const before = rankOf({ ...career, points: career.points - r.points, worldTitles: career.worldTitles - (won && tier.id === "vm" ? 1 : 0) });
+  const before = rankOf({ ...career, points: career.points - r.points, worldTitles: career.worldTitles - (won && tier.id === "vm" && !a.invite ? 1 : 0) });
   const newRank = rankOf(career) !== before ? rankOf(career) : null;
   const fx = fxFlags(useFxLevel());
   // The one who knocked the player out, and how many times they have now: a rival has the better of them twice and more, and a win over them pays more.
@@ -280,6 +287,11 @@ export function Result({ career, a, onDone }: { career: Career; a: ActiveEvent; 
         {rivalLine && (
           <p className="text-center" role="status" style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>
             {rivalLine}
+          </p>
+        )}
+        {sponsor && (
+          <p className="text-center" role="status" style={{ color: sponsor.met ? "var(--color-gold)" : "var(--color-text-2)", fontSize: "var(--text-small)" }}>
+            {sponsor.met ? `${sponsor.name} betaler ${dollars(sponsor.pay)}` : `${sponsor.name} ville ha deg blant de ${sponsor.need === "quarter" ? "åtte" : "fire"} beste`}
           </p>
         )}
         {opened && <UnlockBanner label="NY TURNERING" name={opened.short} colour={cupColor(opened.kind)} />}

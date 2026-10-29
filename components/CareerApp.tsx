@@ -4,11 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import {
   DARTS,
   START_LEVELS,
-  TIERS,
-  abandonEvent,
   careerId,
-  closeEvent,
   dollars,
+  eventTier,
   finishEvent,
   newCareer,
   setTournament,
@@ -16,6 +14,7 @@ import {
   type DartsId,
   type HomeId,
 } from "@/lib/career";
+import { leaveAbandoned, leaveEvent } from "@/lib/careerWorld";
 import { deleteCareer, loadCareers, mergeCareers, readLocalCareers, saveCareer } from "@/lib/careerStorage";
 import { ensurePlayer, useRoster } from "@/lib/storage";
 import { gameOf, type CareerGame } from "@/lib/careerGame";
@@ -155,18 +154,6 @@ export function CareerApp({ onExitToHome }: { onExitToHome: () => void }) {
   return <Hub career={career} onBack={() => setId(null)} onPlay={() => setScreen("play")} onChallenge={() => setScreen("challenge")} onTrain={() => setScreen("training")} commit={commit} onDelete={() => remove(career)} />;
 }
 
-/** A card to pick one of a few things: the name, and one line about it. */
-function Choice({ selected, onPick, title, about }: { selected: boolean; onPick: () => void; title: string; about: string }) {
-  return (
-    <button type="button" role="radio" aria-checked={selected} onClick={onPick} className={`tactile w-full text-left ${FOCUS_RING}`} style={{ padding: "0.6rem 0.8rem", borderRadius: "var(--radius-m)", border: `1px solid ${selected ? "var(--color-teal)" : "var(--color-border)"}`, background: selected ? "var(--teal-soft)" : "var(--color-surface)", minHeight: "var(--control-lg)" }}>
-      <span className="block font-semibold">{title}</span>
-      <span className="block" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>
-        {about}
-      </span>
-    </button>
-  );
-}
-
 /** The three steps of a start: who, what they look like, and the first tournament (which is the pub's, and free). */
 function Steps({ step }: { step: 1 | 2 }) {
   const items = ["Hvem er du", "Karakter", "Første turnering"];
@@ -191,7 +178,7 @@ function NewCareer({ taken, onBack, onCreate }: { taken: string[]; onBack: () =>
   const [step, setStep] = useState<1 | 2>(1);
   const [player, setPlayer] = useState<string | null>(null);
   const [level, setLevel] = useState("dyktig");
-  const [darts, setDarts] = useState<DartsId>("middels");
+  const [darts, setDarts] = useState<DartsId>("steel");
   const [character, setCharacter] = useState(DEFAULT_CHARACTER);
   const [gameSettings, setGameSettings] = useState<{ game: CareerGame; doubleOut: boolean }>({ game: "mm", doubleOut: true });
   // A new player typed in here: the career is for someone, and that someone may not be in the list yet.
@@ -239,9 +226,14 @@ function NewCareer({ taken, onBack, onCreate }: { taken: string[]; onBack: () =>
             <GameChoice {...gameSettings} onChange={setGameSettings} />
           </div>
           <p className="section-label mb-2">PILER</p>
-          <div className="space-y-2 mb-5" role="radiogroup" aria-label="Piler">
+          <div className="dart-pick mb-5" role="radiogroup" aria-label="Piler">
             {DARTS.map((d) => (
-              <Choice key={d.id} selected={darts === d.id} onPick={() => setDarts(d.id)} title={d.name} about={d.about} />
+              <button key={d.id} type="button" role="radio" aria-checked={darts === d.id} onClick={() => setDarts(d.id)} className={`dart-card tactile ${FOCUS_RING}`}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={d.picture} alt="" className="dart-card-img" draggable={false} />
+                <span className="level-name">{d.name}</span>
+                <span className="game-about">{d.about}</span>
+              </button>
             ))}
           </div>
           <p className="mb-3" style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>
@@ -332,13 +324,13 @@ function Play({ career, commit, onHub }: { career: Career; commit: (c: Career) =
         career={career}
         a={a}
         onDone={() => {
-          commit(closeEvent(career));
+          commit(leaveEvent(career));
           onHub();
         }}
       />
     );
   }
-  if (intro) return <EventIntro tier={TIERS[a.tier]} player={career.player} character={career.profile.character} onDone={() => setIntro(false)} />;
+  if (intro) return <EventIntro tier={eventTier(a)} player={career.player} character={career.profile.character} onDone={() => setIntro(false)} />;
   const tournament = (
     <TournamentApp
       onExitToHome={onHub}
@@ -350,10 +342,10 @@ function Play({ career, commit, onHub }: { career: Career; commit: (c: Career) =
         onDone: () => commit(finishEvent(career, new Date().toISOString())),
         cost: a.cost,
         level: levelOfMed(career.skillMed),
-        me: { name: career.player, med: career.skillMed, points: career.points, character: career.profile.character, rivals: career.rivals, settings: gameOf(career.profile) },
-        prizes: TIERS[a.tier].prizes,
+        me: { name: career.player, med: career.skillMed, points: career.points, character: career.profile.character, rivals: career.rivals, settings: a.cup.countdown ? { game: String(a.cup.countdown.start) as CareerGame, doubleOut: a.cup.countdown.doubleOut } : gameOf(career.profile) },
+        prizes: eventTier(a).prizes,
         onAbandon: () => {
-          commit(abandonEvent(career));
+          commit(leaveAbandoned(career));
           onHub();
         },
       }}
