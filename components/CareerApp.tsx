@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   DARTS,
   START_LEVELS,
@@ -8,16 +8,18 @@ import {
   dollars,
   eventTier,
   finishEvent,
+  sideOf,
   newCareer,
   setTournament,
   type Career,
   type DartsId,
   type HomeId,
 } from "@/lib/career";
-import { leaveAbandoned, leaveEvent } from "@/lib/careerWorld";
+import { botMed, leaveAbandoned, leaveEvent } from "@/lib/careerWorld";
+import { rivalOf } from "@/lib/careerLife";
 import { deleteCareer, loadCareers, mergeCareers, readLocalCareers, saveCareer } from "@/lib/careerStorage";
 import { ensurePlayer, useRoster } from "@/lib/storage";
-import { gameOf, type CareerGame } from "@/lib/careerGame";
+import { gameName, gameOf, type CareerGame } from "@/lib/careerGame";
 import { GameChoice } from "./GameChoice";
 import { sameName } from "@/lib/people";
 import { TextField } from "./ui/TextField";
@@ -35,7 +37,7 @@ import { CharacterFace, CharacterFigure } from "./CharacterFigure";
 import { CHARACTERS, DEFAULT_CHARACTER, characterOf } from "@/lib/characters";
 import { ScreenTop } from "./ScreenTop";
 import { TournamentApp } from "./TournamentApp";
-import { Avatar } from "./ui/Avatar";
+import { Avatar, CareerFaceContext, TeamsContext } from "./ui/Avatar";
 import { Button } from "./ui/Button";
 import { SkeletonRows } from "./ui/Skeleton";
 import { FOCUS_RING } from "./ui/focus";
@@ -52,13 +54,11 @@ export function CareerApp({ onExitToHome }: { onExitToHome: () => void }) {
     applyTheme("dark");
     return () => applyTheme();
   }, []);
-  const roster = useRoster();
   const [careers, setCareers] = // What is on the device is there at once (the career is only ever opened by a tap, so this never runs on the server).
   useState<Career[] | null>(() => (typeof window === "undefined" ? null : readLocalCareers()));
   const [id, setId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [screen, setScreen] = useState<"hub" | "play" | "challenge" | "training">("hub");
-  const photos = useMemo(() => new Map(roster.map((r) => [r.name, r.photo])), [roster]);
 
   useEffect(() => {
     let live = true;
@@ -116,7 +116,7 @@ export function CareerApp({ onExitToHome }: { onExitToHome: () => void }) {
             {careers.map((c) => (
               <li key={c.id}>
                 <button type="button" onClick={() => setId(c.id)} className={`tactile w-full flex items-center gap-3 text-left ${FOCUS_RING}`} style={{ padding: "0.6rem 0.75rem", borderRadius: "var(--radius-m)", background: "var(--color-surface)", border: "1px solid var(--color-border)", minHeight: "var(--control-lg)" }}>
-                  <Avatar name={c.player} photo={photos.get(c.player)} size="m" />
+                  <CharacterFace id={c.profile.character} px={44} />
                   <span className="flex-1 min-w-0">
                     <span className="block truncate font-semibold">{c.player}</span>
                     <span className="flex items-center gap-3 tabular" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
@@ -128,6 +128,7 @@ export function CareerApp({ onExitToHome }: { onExitToHome: () => void }) {
                         <StarIcon className="w-4 h-4" />
                         {rankLevel(c)}
                       </span>
+                      <span>{gameName(gameOf(c.profile).game)}</span>
                     </span>
                   </span>
                 </button>
@@ -316,6 +317,10 @@ function NewCareer({ taken, onBack, onCreate }: { taken: string[]; onBack: () =>
 
 function Play({ career, commit, onHub }: { career: Career; commit: (c: Career) => void; onHub: () => void }) {
   const a = career.active!;
+  // A cup of teams: the player's side is the team, and each team is drawn with the faces of its two.
+  const team = a.invite?.team;
+  const side = sideOf(a, career.player);
+  const teams = Object.fromEntries(a.entrants.filter((p) => p.members).map((p) => [p.name, p.members!.map((m) => m.name)]));
   // The scene before the draw is only for an event that has just been entered, not one that is picked up again.
   const [intro, setIntro] = useState(!a.tournament && !a.result);
   if (a.result) {
@@ -330,7 +335,29 @@ function Play({ career, commit, onHub }: { career: Career; commit: (c: Career) =
       />
     );
   }
-  if (intro) return <EventIntro tier={eventTier(a)} player={career.player} character={career.profile.character} onDone={() => setIntro(false)} />;
+  if (intro) {
+    const tier = eventTier(a);
+    return (
+      <EventIntro
+        tier={tier}
+        player={career.player}
+        character={career.profile.character}
+        onDone={() => setIntro(false)}
+        {...(team
+          ? {
+              plates: [["Lag", String(tier.size)], ["Innskudd", tier.fee === 0 ? "Gratis" : dollars(tier.fee)], ["Til vinneren", dollars(tier.prizes.winner ?? 0)]] as [string, string][],
+              line: (
+                <>
+                  <b>{career.player}</b> og <b>{team.mine.partner}</b> er med.
+                  <br />
+                  Trekningen starter nå.
+                </>
+              ),
+            }
+          : {})}
+      />
+    );
+  }
   const tournament = (
     <TournamentApp
       onExitToHome={onHub}
@@ -342,7 +369,7 @@ function Play({ career, commit, onHub }: { career: Career; commit: (c: Career) =
         onDone: () => commit(finishEvent(career, new Date().toISOString())),
         cost: a.cost,
         level: levelOfMed(career.skillMed),
-        me: { name: career.player, med: career.skillMed, points: career.points, character: career.profile.character, rivals: career.rivals, settings: a.cup.countdown ? { game: String(a.cup.countdown.start) as CareerGame, doubleOut: a.cup.countdown.doubleOut } : gameOf(career.profile) },
+        me: { name: side, med: team ? (career.skillMed + botMed(career, team.mine.partner)) / 2 : career.skillMed, points: career.points, character: career.profile.character, ...(team ? { members: [career.player, team.mine.partner] } : { rival: rivalOf(career), rivals: career.rivals }), settings: a.cup.countdown ? { game: String(a.cup.countdown.start) as CareerGame, doubleOut: a.cup.countdown.doubleOut } : gameOf(career.profile) },
         prizes: eventTier(a).prizes,
         onAbandon: () => {
           commit(leaveAbandoned(career));
@@ -353,12 +380,18 @@ function Play({ career, commit, onHub }: { career: Career; commit: (c: Career) =
   );
   // An event with a picture is played inside it: the bar of Ly, the hall of the world championship, behind the draw and the matches.
   const inside = EVENT_PICTURES[a.tier];
-  return inside ? (
-    <OverRoom stage={career.room} src={inside.inside} focus={inside.insideFocus} clear>
-      {tournament}
-    </OverRoom>
-  ) : (
-    tournament
+  return (
+    <CareerFaceContext.Provider value={{ name: career.player, character: career.profile.character }}>
+      <TeamsContext.Provider value={teams}>
+        {inside ? (
+          <OverRoom stage={career.room} src={inside.inside} focus={inside.insideFocus} clear>
+            {tournament}
+          </OverRoom>
+        ) : (
+          tournament
+        )}
+      </TeamsContext.Provider>
+    </CareerFaceContext.Provider>
   );
 }
 

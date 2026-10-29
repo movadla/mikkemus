@@ -55,15 +55,23 @@ function simulateCountdown(t: Tournament, match: TournamentMatch): SimulatedResu
   const cd = t.cup?.countdown;
   const [a, b] = [match.participantA, match.participantB];
   if (!cd || !a || !b) return null;
-  const { botLevels } = botSetupForMatch(t, match);
+  const { botLevels, teamRosters } = botSetupForMatch(t, match);
   const level = (n: string) => botLevels[n] ?? t.participants.find((p) => p.name === n)?.botLevel ?? "4";
   const left: Record<string, number> = { [a]: cd.start, [b]: cd.start };
   const darts: Record<string, number> = { [a]: 0, [b]: 0 };
+  // A team has one score, and its members throw a round each in turn: how sharp the round is depends on whose turn it is.
+  const rounds: Record<string, number> = { [a]: 0, [b]: 0 };
+  const skillOf = (side: string): number => {
+    const roster = teamRosters[side];
+    if (!roster || roster.length === 0) return Number(level(side));
+    return Number(roster[rounds[side] % roster.length].botLevel ?? 4);
+  };
   // Whoever throws first is drawn from the cup's seed, so the same cup is the same after a reload.
   let turn = unit(`${t.cup?.seed ?? 0}|sim|${match.id}|first`) < 0.5 ? a : b;
   let winner = "";
   for (let guard = 0; guard < 600 && !winner; guard++) {
-    const r = botCountdownRound(left[turn], cd.doubleOut, Number(level(turn)));
+    const r = botCountdownRound(left[turn], cd.doubleOut, skillOf(turn));
+    rounds[turn] += 1;
     darts[turn] += r.darts;
     if (!r.bust) left[turn] -= r.scored;
     if (!r.bust && left[turn] === 0) winner = turn;
@@ -72,7 +80,13 @@ function simulateCountdown(t: Tournament, match: TournamentMatch): SimulatedResu
   // A leg that never ends (two hopeless players on a double) goes to the one with the fewer points left.
   if (!winner) winner = left[a] <= left[b] ? a : b;
   const loser = winner === a ? b : a;
-  const chanceA = winChance(medOfLevel(Number(level(a))), medOfLevel(Number(level(b)))) / 100;
+  // A team is as sharp as its members together.
+  const medOfSide = (side: string) => {
+    const roster = teamRosters[side];
+    if (!roster || roster.length === 0) return medOfLevel(Number(level(side)));
+    return roster.reduce((s, m) => s + medOfLevel(Number(m.botLevel ?? 4)), 0) / roster.length;
+  };
+  const chanceA = winChance(medOfSide(a), medOfSide(b)) / 100;
   const make = (who: string): TurnAggregate => ({ hits: 0, misses: 0, darts: darts[who], hitsByStep: {}, missesByStep: {} });
   return { placements: [winner, loser], stats: { [winner]: make(winner), [loser]: make(loser) }, chanceA };
 }

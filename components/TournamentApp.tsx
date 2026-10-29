@@ -442,15 +442,22 @@ export function TournamentApp({ onExitToHome, career }: { onExitToHome: () => vo
   }
 
   if (screen === "draw" && pendingMode && pendingParticipants) {
-    return <DrawScreen seeded={seededOrder()} cup={pendingCup ?? undefined} summary={[pendingName || pendingCup?.name || "Turnering", String(pendingParticipants.length)].join(" · ")} onBack={() => (career ? onExitToHome() : setScreen("setup"))} onStart={createAndOpen} career={career ? { player: pendingParticipants.find((p) => !p.isBot)?.name ?? "", me: career.me } : undefined} />;
+    return <DrawScreen seeded={seededOrder()} cup={pendingCup ?? undefined} summary={[pendingName || pendingCup?.name || "Turnering", String(pendingParticipants.length)].join(" · ")} onBack={() => (career ? onExitToHome() : setScreen("setup"))} onStart={createAndOpen} career={career ? { player: pendingParticipants.find((p) => (p.members ? p.members.some((m) => !m.isBot) : !p.isBot))?.name ?? "", me: career.me } : undefined} />;
   }
 
   if (screen === "final" && tournament && currentMatch && career) {
     if (currentMatch.bracketRoundSize === 1 && !currentMatch.isBronzeMatch) return <FinalIntro tournament={tournament} match={currentMatch} prizes={career.prizes} onStart={() => setScreen("match")} onBack={() => setScreen("overview")} />;
-    const { botLevels } = botSetupForMatch(tournament, currentMatch);
+    const { botLevels, teamRosters } = botSetupForMatch(tournament, currentMatch);
     const names = matchParticipants(currentMatch);
-    const bot = names.find((n) => botLevels[n] !== undefined);
-    return <MatchIntro tournament={tournament} match={currentMatch} player={names.find((n) => n !== bot) ?? names[0]} me={career.me ?? { name: names.find((n) => n !== bot) ?? names[0], med: 37, points: 0 }} level={career.level} opponentLevel={bot ? Number(botLevels[bot]) : career.level} prizes={career.prizes} onStart={() => setScreen("match")} onBack={() => setScreen("overview")} />;
+    // The house's own side is the one with a person in it (a team has members); the other is the bot, or the team of bots.
+    const isHouse = (n: string) => {
+      const p = tournament.participants.find((x) => x.name === n);
+      return !!p && (p.members ? p.members.some((m) => !m.isBot) : !p.isBot);
+    };
+    const mine = names.find(isHouse) ?? names[0];
+    const other = names.find((n) => n !== mine) ?? names[1];
+    const levelOfSide = (n: string) => (teamRosters[n] ? teamRosters[n].reduce((s, m) => s + Number(m.botLevel ?? 4), 0) / teamRosters[n].length : botLevels[n] !== undefined ? Number(botLevels[n]) : career.level);
+    return <MatchIntro tournament={tournament} match={currentMatch} player={mine} me={career.me ?? { name: mine, med: 37, points: 0 }} level={career.level} opponentLevel={levelOfSide(other)} prizes={career.prizes} onStart={() => setScreen("match")} onBack={() => setScreen("overview")} />;
   }
 
   if (screen === "match" && tournament && currentMatch && matchParticipants(currentMatch).length >= 2) {
@@ -459,7 +466,7 @@ export function TournamentApp({ onExitToHome, career }: { onExitToHome: () => vo
     // A cup of the career played as 501 or 301: one leg to nothing, not a game of Mikke Mus.
     const countdown = tournament.cup?.countdown;
     if (countdown) {
-      return <CountdownMatch key={currentMatch.id} players={matchParticipants(currentMatch)} botLevels={botLevels} start={countdown.start} doubleOut={countdown.doubleOut} humanStart={countdown.humanStart} onDone={handleMatchComplete} onAbort={handleMatchAbort} />;
+      return <CountdownMatch key={currentMatch.id} players={matchParticipants(currentMatch)} botLevels={botLevels} teamRosters={teamRosters} start={countdown.start} doubleOut={countdown.doubleOut} humanStart={countdown.humanStart} onDone={handleMatchComplete} onAbort={handleMatchAbort} />;
     }
     return (
       <MikkeMusApp

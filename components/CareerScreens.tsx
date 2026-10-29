@@ -5,6 +5,7 @@ import { cupColor } from "@/lib/botCup";
 import { GAMES, REVENGE_BONUS, TIERS, challengeTier, closeChallenge, eventTier, declineChallenge, dollars, settleChallenge, type ActiveEvent, type Career, type Challenge } from "@/lib/career";
 import { matchParticipants } from "@/lib/tournament";
 import { sponsorOutcome } from "@/lib/careerWorld";
+import { lifeOf } from "@/lib/careerLife";
 import { rankOf } from "@/lib/careerGoals";
 import { winnerOf as countdownWinner, newGame as newCountdown } from "@/lib/countdown";
 import { playFanfare } from "@/lib/fanfare";
@@ -28,6 +29,8 @@ import { Trophy } from "./Trophy";
 import { TrophyArt } from "./CareerTrophy";
 import { CharacterFigure } from "./CharacterFigure";
 import { EventIntro } from "./EventIntro";
+import { EVENT_PICTURES } from "./eventPictures";
+import { CareerFaceContext } from "./ui/Avatar";
 import { poseFor } from "@/lib/characters";
 import { TIER_LOOK, foilVars } from "@/lib/materials";
 import { CountUp } from "./ui/CountUp";
@@ -44,10 +47,24 @@ function BackArrow({ onClick, label = "Tilbake" }: { onClick: () => void; label?
 
 /** A challenge: the two of them and the stake, then the game itself, then what it came to. */
 export function ChallengePlay(props: { career: Career; commit: (c: Career) => void; onHub: () => void }) {
+  // Played inside the place it is dressed as, like a tournament, and the player is their character.
+  const inside = EVENT_PICTURES[challengeTier(props.career.challenge!).id];
+  const over = props.career.challenge!.won !== null;
   return (
-    <OverRoom stage={props.career.room} dim={60} blur={5}>
-      <ChallengeFlow {...props} />
-    </OverRoom>
+    <CareerFaceContext.Provider value={{ name: props.career.player, character: props.career.profile.character }}>
+      {over ? (
+        // The result stands on its own, as the result of a tournament does.
+        <ChallengeFlow {...props} />
+      ) : inside ? (
+        <OverRoom stage={props.career.room} src={inside.inside} focus={inside.insideFocus} clear>
+          <ChallengeFlow {...props} />
+        </OverRoom>
+      ) : (
+        <OverRoom stage={props.career.room} dim={60} blur={5}>
+          <ChallengeFlow {...props} />
+        </OverRoom>
+      )}
+    </CareerFaceContext.Provider>
   );
 }
 
@@ -188,6 +205,46 @@ function ChallengeResult({ career, c, onDone }: { career: Career; c: Challenge; 
   );
 }
 
+/** The end of a season, once: where the player came, who won it, and what it paid. Like a result: the character, one number and one button. */
+export function SeasonRecap({ career, onDone }: { career: Career; onDone: () => void }) {
+  const s = lifeOf(career).seasons[0];
+  const fx = fxFlags(useFxLevel());
+  const best = s.rank === 1;
+  useEffect(() => {
+    if (best) {
+      if (fx.confetti) playFanfare();
+      careerSound("cheer");
+      haptics.win();
+    } else haptics.confirm();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, when the recap comes up
+  }, []);
+  return (
+    <div className="animate-screen-enter screen cup-lamp relative overflow-hidden" style={{ "--cup": best ? "var(--color-gold)" : "var(--color-teal)" } as React.CSSProperties}>
+      <div className="screen-inner relative z-10 flex flex-col" style={{ minHeight: "calc(100dvh - 2rem)", gap: "1rem" }}>
+        <div className="flex-1 flex flex-col items-center justify-center text-center gap-4">
+          <p className="cer-kicker">SESONG {s.season} ER OVER</p>
+          <div className={`char-result ${s.rank <= 3 ? "" : "char-result-low"}`}>
+            <CharacterFigure id={career.profile.character} pose={s.rank <= 3 ? "jubel" : "noytral"} glow={s.rank <= 3} />
+          </div>
+          <p className="font-display tabular" style={{ fontSize: "clamp(2.6rem, 16vw, 4rem)", color: best ? "var(--color-gold)" : "var(--color-cream)", lineHeight: 1 }}>
+            Nr. {s.rank}
+          </p>
+          <p style={{ color: "var(--color-text-2)" }}>
+            {best ? "Årets spiller" : `${s.winner} er årets spiller`} · {s.points} poeng
+          </p>
+          {s.prize > 0 && (
+            <p className="font-display tabular" style={{ fontSize: "var(--text-num)", color: "var(--color-gold)" }}>
+              <CountUp value={s.prize} format={(n) => `+${dollars(n)}`} />
+            </p>
+          )}
+        </div>
+        {s.prize > 0 && <CoinBurst />}
+        <PlayButton label="NY SESONG" tone={best ? "gold" : "teal"} onClick={onDone} />
+      </div>
+    </div>
+  );
+}
+
 /** The banner that comes up when a result opens the next step of the road, or gives a new level. */
 function UnlockBanner({ label, name, colour }: { label: string; name: string; colour: string }) {
   useEffect(() => {
@@ -260,7 +317,9 @@ export function Result({ career, a, onDone }: { career: Career; a: ActiveEvent; 
   const newRank = rankOf(career) !== before ? rankOf(career) : null;
   const fx = fxFlags(useFxLevel());
   // The one who knocked the player out, and how many times they have now: a rival has the better of them twice and more, and a win over them pays more.
+  const team = a.invite?.team;
   const knockedOutBy = (() => {
+    if (team) return null;
     const m = a.tournament?.matches.find((x) => !x.isBronzeMatch && x.winner && x.winner !== career.player && matchParticipants(x).includes(career.player));
     return m ? matchParticipants(m).find((n) => n !== career.player) ?? null : null;
   })();
@@ -280,7 +339,7 @@ export function Result({ career, a, onDone }: { career: Career; a: ActiveEvent; 
       <div className="screen-inner relative z-10 flex flex-col" style={{ minHeight: "calc(100dvh - 2rem)", gap: "1rem" }}>
         <div className="flex-1 flex flex-col items-center justify-center text-center gap-4">
           {won ? (
-            <Ceremony tier={tier} player={career.player} prize={r.prize} confetti={fx.confetti} character={career.profile.character} />
+            <Ceremony tier={tier} player={team ? `${career.player} og ${team.mine.partner}` : career.player} prize={r.prize} confetti={fx.confetti} character={career.profile.character} />
           ) : (
             <div className={`char-result ${r.prize > 0 ? "" : "char-result-low"}`}>
               <CharacterFigure id={career.profile.character} pose={poseFor(r)} glow={r.prize > 0} />

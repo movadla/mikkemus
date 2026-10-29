@@ -48,7 +48,7 @@ export function Side({ side, large, clean = false }: { side: PosterSide; large: 
           </span>
         ) : null}
         <Avatar name={side.name} photo={side.photo} size="l" bot={side.bot} />
-        <p className="font-display w-full truncate mt-1" style={{ color: "var(--color-cream)", fontSize: "var(--text-title)", lineHeight: 1.1 }}>
+        <p className="font-display w-full line-clamp-2 mt-1 break-words" style={{ color: "var(--color-cream)", fontSize: "var(--text-title)", lineHeight: 1.1 }}>
           {side.name}
         </p>
       </div>
@@ -58,7 +58,7 @@ export function Side({ side, large, clean = false }: { side: PosterSide; large: 
     <div className="match-side" style={{ "--pc": avatarAccent(side.name), padding: large ? "1.75rem 1rem" : "1rem 0.5rem" } as CSSProperties}>
       <Avatar name={side.name} photo={side.photo} size={large ? "xl" : "l"} bot={side.bot} />
       <p style={{ minHeight: large ? "2.5rem" : "1.75rem" }}>{side.seed ? <SeedBadge seed={side.seed} rating={side.rating} large={large} /> : null}</p>
-      <p className="font-display w-full truncate" style={{ color: "var(--color-cream)", fontSize: large ? "var(--text-num)" : "var(--text-title)", lineHeight: 1.1 }}>
+      <p className="font-display w-full line-clamp-2 break-words" style={{ color: "var(--color-cream)", fontSize: large ? "var(--text-num)" : "var(--text-title)", lineHeight: 1.1 }}>
         {side.name}
       </p>
       {side.bot && side.level && <LevelBars level={side.level} name={side.name} />}

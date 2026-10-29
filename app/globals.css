@@ -7767,3 +7767,127 @@ button.play-btn:disabled::after {
   justify-items: center;
   text-align: center;
 }
+
+/* The profile: a card of facts instead of lines of text */
+.pf-card {
+  display: grid;
+  border-radius: var(--radius-m);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+}
+.pf-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.6rem 0.9rem;
+  min-height: 2.6rem;
+}
+.pf-row + .pf-row {
+  border-top: 1px solid var(--color-border);
+}
+.pf-row dt {
+  color: var(--color-muted);
+  font-size: var(--text-small);
+}
+.pf-row dd {
+  display: grid;
+  justify-items: end;
+  margin: 0;
+  color: var(--color-cream);
+  font-weight: 700;
+  text-align: right;
+}
+.pf-row dd small {
+  color: var(--color-muted);
+  font-size: var(--text-micro);
+  font-weight: 500;
+}
+.pf-bar {
+  display: block;
+  width: 7rem;
+  height: 0.5rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-cell);
+  overflow: hidden;
+}
+.pf-bar i {
+  display: block;
+  height: 100%;
+  background: var(--color-teal);
+}
+.pf-list {
+  display: grid;
+  border-radius: var(--radius-m);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+}
+.pf-list > li {
+  padding: 0.55rem 0.9rem;
+}
+.pf-list > li + li {
+  border-top: 1px solid var(--color-border);
+}
+.home-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.team-faces {
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
+.team-half {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--color-cell);
+}
+.team-half + .team-half {
+  border-left: 2px solid var(--color-bg);
+}
+.team-half img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.opp-frame-team {
+  display: flex;
+}
+.opp-team-pic {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  position: relative;
+}
+.opp-team-pic + .opp-team-pic {
+  border-left: 2px solid var(--color-bg);
+}
+.opp-team-pic img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* A name in a card of the draw: the face stays, the name shortens with an ellipsis instead of running out of the card. */
+.draw-name {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  width: 100%;
+  min-width: 0;
+}
+.draw-nm {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.page-title-long {
+  font-size: clamp(1.15rem, 5.4vw, var(--text-page-title));
+}

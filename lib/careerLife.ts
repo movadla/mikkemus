@@ -20,6 +20,13 @@ export const PLACE_ORDER: Place[] = ["winner", "final", "semi", "quarter", "r16"
 /** Whether a place is as good as the one that is needed. */
 export const placeMeets = (place: Place, need: Place) => PLACE_ORDER.indexOf(place) <= PLACE_ORDER.indexOf(need);
 
+/** A cup of teams of two (the World Cup of Darts, a cup of pairs): who the player's team is, and the others. The sides are the teams, and a team has one score. */
+export type TeamCup = {
+  /** The player's side: its name (Norge, or the two names) and who throws with them. */
+  mine: { name: string; partner: string };
+  others: { name: string; members: [string, string] }[];
+};
+
 /** A tournament that is offered instead of one of the ladder: the look and the scale of one of its steps, with a name, a place, a price and a prize of its own. */
 export type Invitation = Tier & {
   /** Which of the kinds of invitation it is, so the same does not come twice in a row. */
@@ -33,6 +40,8 @@ export type Invitation = Tier & {
   honorarium?: number;
   /** The names that play, when they are fixed (the best of the season): without it the field is drawn. */
   field?: string[];
+  /** A cup of teams of two: the player and a partner against the others. The size is then the number of teams. */
+  team?: TeamCup;
 };
 
 /** A game made for television: a title, what it pays for being there, how many legs, and where each side starts (a head start for the one who starts lower). */
@@ -96,6 +105,8 @@ export type Life = {
   sponsor: Sponsor | null;
   world: World;
   seasons: SeasonResult[];
+  /** The last season whose recap the player has seen. */
+  recapSeen?: number;
   /** Counts what is made (news, messages), so each has a name of its own. */
   counter: number;
 };
@@ -163,4 +174,17 @@ export function mustPlay(career: { id: string; player: string; life?: Life }, ti
   const retired = career.life?.world.retired ?? [];
   const boss = BOSSES[tier as keyof typeof BOSSES];
   return [rivalOf(career).name, ...(boss && !retired.includes(boss) ? [boss] : [])];
+}
+
+/** A line of news, newest first. */
+export function addNews(life: Life, kind: NewsKind, headline: string, text: string, who?: string): Life {
+  const counter = life.counter + 1;
+  const item: NewsItem = { id: `n${counter}`, week: life.week, kind, headline, text, ...(who ? { who } : {}) };
+  return { ...life, counter, news: [item, ...life.news].slice(0, 40) };
+}
+
+export function addMessage(life: Life, from: Sender, title: string, body: string, offer: Offer, until?: number): Life {
+  const counter = life.counter + 1;
+  const m: Message = { id: `m${counter}`, week: life.week, from, title, body, read: false, state: "open", offer, ...(until ? { until } : {}) };
+  return { ...life, counter, inbox: [m, ...life.inbox].slice(0, 30) };
 }

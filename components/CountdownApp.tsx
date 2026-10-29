@@ -21,6 +21,7 @@ import {
   judge,
   lastRoundOf,
   leaderOf,
+  memberUp,
   newGame,
   playRound,
   playerUp,
@@ -139,7 +140,11 @@ export function CountdownGameScreen({
   const way = checkoutsOf(left, game.doubleOut, 1)[0] ?? null;
   const leader = leaderOf(game);
   const isBot = (p: string) => botLevels[p] !== undefined;
-  const botUp = !winner && isBot(up);
+  // A team throws one member at a time: it is the member who is a bot or not, and the member who is named.
+  const member = memberUp(game);
+  const who = member?.name ?? up;
+  const botUp = !winner && (member ? member.isBot : isBot(up));
+  const isBotThrower = (n: string) => isBot(n) || Object.values(game.rosters ?? {}).some((r) => r.some((m) => m.name === n && m.isBot));
   useRecordResult(career ? null : winner, game.turns.length === 0, (id, at) => countdownResult(game, Object.keys(botLevels), id, at));
   const rain = useMemo(() => (winner && fx.confetti ? generateConfettiRain(fx.bigConfetti ? 60 : 36) : []), [winner, fx.confetti, fx.bigConfetti]);
 
@@ -165,7 +170,7 @@ export function CountdownGameScreen({
     }
     haptics.confirm();
     setBotNote("");
-    setNotice(verdict === "bust" ? `${up}: over streken, runden teller ikke` : "");
+    setNotice(verdict === "bust" ? `${who}: over streken, runden teller ikke` : "");
     setFresh({ n: game.turns.length + 1, player: up, scored, bust: verdict === "bust" });
     if (verdict === "counts" && tierOf(scored) === "max" && fx.heat) {
       setSlam(game.turns.length + 1);
@@ -180,7 +185,7 @@ export function CountdownGameScreen({
     callOut(r.bust ? "Over" : String(r.scored));
     haptics.confirm();
     setNotice("");
-    setBotNote(r.bust ? `${up}: ${darts}, over streken` : r.finished ? `${up}: ${darts}, tar ut!` : `${up}: ${darts} = ${r.scored}`);
+    setBotNote(r.bust ? `${who}: ${darts}, over streken` : r.finished ? `${who}: ${darts}, tar ut!` : `${who}: ${darts} = ${r.scored}`);
     setFresh({ n: game.turns.length + 1, player: up, scored: r.scored, bust: r.bust });
     if (!r.bust && tierOf(r.scored) === "max" && fx.heat) {
       setSlam(game.turns.length + 1);
@@ -190,7 +195,7 @@ export function CountdownGameScreen({
   }
 
   // A bot throws its round after a pause that follows the bot speed in Innstillinger.
-  useBotTurn(botUp && finishing === null, game.turns.length, () => botDelayMs() * 2 + 300, () => playBot(botCountdownRound(left, game.doubleOut, botLevels[up])));
+  useBotTurn(botUp && finishing === null, game.turns.length, () => botDelayMs() * 2 + 300, () => playBot(botCountdownRound(left, game.doubleOut, member ? member.botLevel ?? 4 : botLevels[up])));
 
   function undo() {
     haptics.undo();
@@ -198,7 +203,7 @@ export function CountdownGameScreen({
     setBotNote("");
     setFresh(null);
     setSlam(null);
-    setGame(undoThroughBots(game, isBot));
+    setGame(undoThroughBots(game, isBotThrower));
   }
 
   const key = `tactile flex items-center justify-center font-display ${FOCUS_RING}`;
@@ -336,7 +341,7 @@ export function CountdownGameScreen({
       <div className="screen-inner">
         <ScreenTop title={String(game.start)} onBack={() => setConfirmExit(true)} backLabel={career?.giveUp ? "Gi opp" : career ? "Pause" : "Avslutt kampen"} />
         <p key={`${up}-${game.turns.length}`} className="turn-banner" aria-hidden>
-          {up} kaster
+          {who} kaster{member ? ` for ${up}` : ""}
         </p>
         <ul className="space-y-3 mb-4" aria-label="Stilling">
           {game.players.map((p) => {
@@ -390,7 +395,7 @@ export function CountdownGameScreen({
                     </div>
                   )}
                   <p className="truncate" style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>
-                    {avg !== null ? `Snitt ${oneDecimal(avg)}` : "Ikke kastet"}
+                    {game.rosters?.[p] && active ? `Nå: ${who}` : avg !== null ? `Snitt ${oneDecimal(avg)}` : "Ikke kastet"}
                     {last ? ` · siste ${last.bust ? "over" : last.scored}` : ""}
                     {tier !== "none" && <span className={`tier-chip tier-chip--${tier}`}>{TIER_LABEL[tier]}</span>}
                   </p>
@@ -416,9 +421,9 @@ export function CountdownGameScreen({
           onUndo={undo}
           canUndo={game.turns.length > 0}
           line={(typed) => {
-            if (botUp) return <span style={{ color: "var(--color-muted)" }}>{up} kaster …</span>;
+            if (botUp) return <span style={{ color: "var(--color-muted)" }}>{who} kaster …</span>;
             if (typed === "" && botNote && !notice) return <span style={{ color: "var(--color-text-2)" }}>{botNote}</span>;
-            if (typed === "") return <span style={{ color: notice ? "var(--color-red)" : "var(--color-muted)" }}>{notice || `${up} kaster · skriv hva runden ble`}</span>;
+            if (typed === "") return <span style={{ color: notice ? "var(--color-red)" : "var(--color-muted)" }}>{notice || `${who} kaster · skriv hva runden ble`}</span>;
             const n = Number(typed);
             const verdict = judge(left, n, game.doubleOut);
             if (verdict === "bust") return <span style={{ color: "var(--color-red)", fontWeight: 600 }}>{n} er over streken</span>;

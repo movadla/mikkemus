@@ -12,6 +12,7 @@ import { careerSound, uiFeedback } from "@/lib/uiSound";
 import { levelLabel, newSeed, oneDecimal } from "./careerFormat";
 import { HomeIcon, LockIcon, MailIcon, NewsIcon, RoadIcon, StarIcon } from "./careerIcons";
 import { CareerInbox } from "./CareerInbox";
+import { SeasonRecap } from "./CareerScreens";
 import { CareerNews } from "./CareerNews";
 import { inboxCount, lifeOf, seasonOf, unseenNews, weekInSeason, WEEKS_PER_SEASON } from "@/lib/careerLife";
 import { markNewsSeen } from "@/lib/careerWorld";
@@ -62,9 +63,7 @@ function PlaceChip({ room }: { room: number }) {
     <span className="place-chip">
       <HomeIcon className="w-4 h-4 shrink-0" />
       Garasjen din
-      <em>
-        · {STAGES[room].name} · {room + 1} av {ROOM_MAX + 1}
-      </em>
+      <em>· {STAGES[room].name}</em>
     </span>
   );
 }
@@ -77,7 +76,7 @@ const listText = (items: string[]) => {
 
 /** The cups of the career on a glass shelf with light over it: the ones that are won in metal, the rest as dark silhouettes with a lock. */
 function TrophyShelf({ career }: { career: Career }) {
-  const slots = LADDER.map((t) => ({ tier: t, n: career.trophies.filter((x) => x.tier === t.id).length }));
+  const slots = LADDER.map((t) => ({ tier: t, n: career.trophies.filter((x) => x.tier === t.id && !x.name).length }));
   const have = slots.filter((s) => s.n > 0).length;
   return (
     <div className="shelf3d" role="img" aria-label={`Pokalhylle: ${have} av ${slots.length} pokaler`}>
@@ -283,6 +282,12 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
     </>
   );
 
+  // A season that has just ended is shown once, before anything else.
+  const life = lifeOf(career);
+  if (life.seasons[0] && life.seasons[0].season > (life.recapSeen ?? 0)) {
+    return <SeasonRecap career={career} onDone={() => commit({ ...career, life: { ...life, recapSeen: life.seasons[0].season } })} />;
+  }
+
   if (view === "home") {
     return (
       <OverRoom stage={career.room} clear>
@@ -303,8 +308,10 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
                 <TrophyIcon className="w-5 h-5" />
               </button>
             </div>
-            <PlaceChip room={career.room} />
-            <SeasonStrip career={career} />
+            <div className="home-chips">
+              <PlaceChip room={career.room} />
+              <SeasonStrip career={career} />
+            </div>
             {news && (
               <button type="button" className="room-news" onClick={() => setNews(null)} aria-label={`Nytt i rommet: ${news}`}>
                 <StarIcon className="w-4 h-4" />

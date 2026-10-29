@@ -8,14 +8,14 @@
 import { levelOfMed } from "./botLevels";
 import { unit } from "./botCup";
 import { EVERYONE, LY_REGULARS, INTERNATIONALS, opponentOf, type Opponent } from "./opponents";
-import { winChance, norwayRankOf, playerWorldRank, worldRankOf } from "./opponentStats";
+import { winChance, norwayRankOf, playerWorldRank, worldRankFor } from "./opponentStats";
 import {
-  GAMES, LADDER, TIERS, closeEvent, abandonEvent, dollars, fieldNames, isUnlocked, newChallenge, startEvent, stakeFor, topStep, whyNot,
+  GAMES, LADDER, TIERS, sideOf, closeEvent, abandonEvent, dollars, fieldNames, isUnlocked, newChallenge, startEvent, stakeFor, topStep, whyNot,
   type Career, type Challenge, type GameId, type Place, type Tier, type TierId,
 } from "./career";
 import {
-  BOSSES, REP_MAX, WEEKS_PER_SEASON, lifeOf, placeMeets, rivalOf, seasonOf, weekInSeason,
-  type Invitation, type Life, type Message, type NewsItem, type NewsKind, type Offer, type Rookie, type Sender, type SeasonResult, type SponsorDeal,
+  BOSSES, REP_MAX, addMessage, addNews, WEEKS_PER_SEASON, lifeOf, lyPool, placeMeets, rivalOf, seasonOf, weekInSeason,
+  type Invitation, type Life, type TeamCup, type Message, type Offer, type Rookie, type Sender, type SeasonResult, type SponsorDeal,
 } from "./careerLife";
 
 const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n));
@@ -42,18 +42,6 @@ export function botMed(career: Career, name: string): number {
 export const norwayRank = (career: Career) => norwayRankOf(playerWorldRank(career.skillMed, career.points));
 
 /* ----------------------------------------------------------------- a small writer of news and messages */
-
-function addNews(life: Life, kind: NewsKind, headline: string, text: string, who?: string): Life {
-  const counter = life.counter + 1;
-  const item: NewsItem = { id: `n${counter}`, week: life.week, kind, headline, text, ...(who ? { who } : {}) };
-  return { ...life, counter, news: [item, ...life.news].slice(0, 40) };
-}
-
-function addMessage(life: Life, from: Sender, title: string, body: string, offer: Offer, until?: number): Life {
-  const counter = life.counter + 1;
-  const m: Message = { id: `m${counter}`, week: life.week, from, title, body, read: false, state: "open", offer, ...(until ? { until } : {}) };
-  return { ...life, counter, inbox: [m, ...life.inbox].slice(0, 30) };
-}
 
 const withLife = (career: Career, life: Life): Career => ({ ...career, life });
 
@@ -127,8 +115,34 @@ type Template = {
   from: Sender;
   tagline: string;
   need: (career: Career) => boolean;
-  reason: (career: Career) => string;
+  reason: (career: Career, team?: TeamCup) => string;
+  /** A cup of teams of two: who the player's team is, and the others. */
+  team?: (career: Career, life: Life, salt: string) => TeamCup;
 };
+
+/** The nations of the World Cup of Darts against Norway: two of the named players each. */
+const NATIONS: TeamCup["others"] = [
+  { name: "Nederland", members: ["Littler", "Cor Dekker"] },
+  { name: "Tyskland", members: ["Max Hartmann", "Jonas Keller"] },
+  { name: "Frankrike", members: ["Sofia Moreau", "Luca Dubois"] },
+  { name: "Italia", members: ["Stefano Rossi", "Matteo Bianchi"] },
+  { name: "England", members: ["Samuel Okafor", "Marcus Williams"] },
+  { name: "Japan", members: ["Mei Tanaka", "Kenji Sato"] },
+  { name: "Danmark", members: ["Jesper Holm", "Oskar Lund"] },
+];
+
+const firstName = (n: string) => n.split(" ")[0];
+
+/** The cup of pairs: the player and a regular of Ly who is not the rival, against seven pairs drawn from the people of the lists. */
+function pairCup(career: Career, life: Life, salt: string): TeamCup {
+  const rival = rivalOf({ ...career, life }).name;
+  const luck = (n: string, k: string) => unit(`${salt}|${k}|${n}`);
+  const ly = lyPool(life).filter((n) => n !== rival && n.toLowerCase() !== career.player.toLowerCase()).sort((a, b) => luck(a, "partner") - luck(b, "partner"));
+  const partner = ly[0];
+  const rest = [...ly.slice(1), ...INTERNATIONALS.map((o) => o.name).filter((n) => !life.world.retired.includes(n)), rival].sort((a, b) => luck(a, "pairs") - luck(b, "pairs")).slice(0, 14);
+  const others = Array.from({ length: 7 }, (_, i): TeamCup["others"][number] => ({ name: `${firstName(rest[i * 2])} og ${firstName(rest[i * 2 + 1])}`, members: [rest[i * 2], rest[i * 2 + 1]] }));
+  return { mine: { name: `${firstName(career.player)} og ${firstName(partner)}`, partner }, others };
+}
 
 const lockedStep = (career: Career): Tier | undefined => LADDER.find((t) => t.qualify && !isUnlocked(career, t));
 const reached = (career: Career, id: TierId) => LADDER.indexOf(topStep(career)) >= LADDER.findIndex((t) => t.id === id);
@@ -144,12 +158,15 @@ const TEMPLATES: Template[] = [
   { key: "eindhoven", name: "Eindhoven Open", city: "Eindhoven", base: "nm", fee: 0.6, prize: 0.8, countdown: { start: 501, doubleOut: true }, from: { name: "Eindhoven Darts", role: "Arrangør" }, tagline: "501 i Nederland", need: (c) => reached(c, "nm"), reason: (c) => `Invitert som nr. ${norwayRank(c)} i Norge.` },
   { key: "hamburg", name: "Hamburg Masters", city: "Hamburg", base: "nm", fee: 0.6, prize: 0.9, countdown: { start: 301, doubleOut: true }, from: { name: "Hamburg Darts", role: "Arrangør" }, tagline: "301 i Tyskland", need: (c) => reached(c, "region") && c.points >= 25, reason: (c) => `Invitert som nr. ${norwayRank(c)} i Norge.` },
   { key: "tv-kveld", name: "TV-kvelden", city: "TV-studio", base: "vm", fee: 0, prize: 0.2, size: 8, countdown: { start: 501, doubleOut: true }, honorarium: 0.05, gap: 10, from: { name: "TV-selskapet", role: "TV" }, tagline: "Åtte spillere i studio", need: (c) => (norwayRank(c) <= 8 || c.points >= 80) && c.points >= 40, reason: () => "Åtte spillere, én kveld, direkte. Honorar til alle." },
+  { key: "wc", name: "World Cup of Darts", city: "Verdensarenaen", base: "vm", fee: 0, prize: 0.3, size: 8, countdown: { start: 501, doubleOut: true }, gap: 20, from: { name: "Verdensforbundet", role: "Forbundet" }, tagline: "Norge mot verden, to og to", need: (c) => (reached(c, "gs") || norwayRank(c) <= 6) && c.points >= 60, reason: (c) => `Norge stiller lag. ${rivalOf(c).name} er makkeren din.`, team: (c, life) => ({ mine: { name: "Norge", partner: rivalOf({ ...c, life }).name }, others: NATIONS }) },
+  { key: "pair", name: "Parcupen", city: "Oslo", base: "region", fee: 0.5, prize: 1.2, size: 8, countdown: { start: 301, doubleOut: true }, gap: 8, from: { name: "Norges Dartsforbund", role: "Forbundet" }, tagline: "To og to, én poengsum", need: (c) => c.points >= 15, reason: (_c, team) => `Du spiller sammen med ${team?.mine.partner ?? "en makker"}.`, team: pairCup },
   { key: "norden", name: "Nordisk Invitasjonscup", city: "København", base: "gs", fee: 0.6, prize: 0.7, countdown: { start: 501, doubleOut: true }, from: { name: "Nordisk Dartsunion", role: "Arrangør" }, tagline: "De beste i Norden", need: (c) => reached(c, "gs"), reason: (c) => `Invitert som nr. ${norwayRank(c)} i Norge.` },
 ];
 
 /** A template as an invitation: the look and scale of its step, with its own name, city, price and prizes. */
-function inviteOf(t: Template, career: Career): Invitation {
+function inviteOf(t: Template, career: Career, life: Life, salt: string): Invitation {
   const base = TIERS[t.base];
+  const team = t.team?.(career, life, salt);
   const scaled = (src: Partial<Record<Place, number>>, f: number, min: number) => Object.fromEntries(Object.entries(src).map(([p, v]) => [p, Math.max(min, round50((v ?? 0) * f))])) as Partial<Record<Place, number>>;
   const next = t.wildcard ? lockedStep(career) : undefined;
   return {
@@ -169,8 +186,9 @@ function inviteOf(t: Template, career: Career): Invitation {
     points: Object.fromEntries(Object.entries(base.points).map(([p, v]) => [p, Math.max(1, Math.round((v ?? 0) / 2))])),
     qualify: undefined,
     opens: next ? { tier: next.id, places: ["winner", "final"] } : undefined,
-    reason: t.reason(career),
+    reason: t.reason(career, team),
     ...(t.countdown ? { countdown: t.countdown } : {}),
+    ...(team ? { team } : {}),
   };
 }
 
@@ -183,7 +201,7 @@ function maybeInvite(career: Career, life: Life, week: number): Life {
   const fits = TEMPLATES.filter((t) => sent(t.key) > (t.gap ?? 4) && t.need(career));
   const t = fits[Math.floor(unit(`${career.id}|${week}|invite-which`) * fits.length)];
   if (!t) return life;
-  const invite = inviteOf(t, career);
+  const invite = inviteOf(t, career, life, `${career.id}|${week}`);
   return addMessage(life, t.from, invite.name, invite.reason, { kind: "invite", invite }, week + 2);
 }
 
@@ -288,7 +306,7 @@ export function dealsFor(career: Career, seed: string): SponsorDeal[] {
 /** The three offers go out at once, to be answered in three weeks: one of them can be taken. */
 function offerSponsors(career: Career, life: Life, week: number): Life {
   const need = (d: SponsorDeal) => (d.need === "quarter" ? "Til kvartfinalen." : "Til semifinalen.");
-  return dealsFor(career, `${career.id}|${week}`).reduceRight((l, deal) => addMessage(l, { name: deal.name, role: "Sponsor" }, `${deal.name} vil sponse deg`, need(deal), { kind: "sponsor", deal }, week + 3), life);
+  return dealsFor(career, `${career.id}|${week}`).reduceRight((l, deal) => addMessage(l, { name: deal.name, role: "Sponsor" }, deal.name, need(deal), { kind: "sponsor", deal }, week + 3), life);
 }
 
 /** Now and then a sponsor turns up on its own, once the player has played a little and has a name. */
@@ -320,7 +338,7 @@ function endSeason(career: Career, life: Life, week: number): { life: Life; priz
   let next: Life = { ...life, seasons: [result, ...life.seasons].slice(0, 20) };
   // The ranks of the last season, kept for the arrows, before the players change.
   const snap: Record<string, number> = {};
-  for (const o of people) snap[o.name] = worldRankOf(o.med);
+  for (const o of people) snap[o.name] = worldRankFor(o.name, o.med);
   // Everyone's strength moves a little; the best of the season a touch sharper.
   const top = new Set(standings.slice(0, 3).map((s) => s.name));
   const drift = { ...life.world.drift };
@@ -428,7 +446,10 @@ export function leaveEvent(career: Career): Career {
     } else life = { ...life, sponsor: next };
   }
   // The news about the player.
-  life = addNews(life, "you", `${career.player} ${WENT[r.place]} ${tier.name}`, `${r.prize > 0 ? `+${dollars(r.prize)} · ` : ""}+${r.points} rangpoeng`, career.player);
+  // In a cup of teams the player's side is the team, and the partner is part of the story.
+  const side = sideOf(a, career.player);
+  const team = a.invite?.team;
+  life = addNews(life, "you", team ? `${side} ${WENT[r.place]} ${tier.name}` : `${career.player} ${WENT[r.place]} ${tier.name}`, `${team ? `Sammen med ${team.mine.partner}. ` : ""}${r.prize > 0 ? `+${dollars(r.prize)} · ` : ""}+${r.points} rangpoeng`, career.player);
   life = { ...life, seasonPts: life.seasonPts + r.points };
   if (r.place === "winner") {
     life = { ...life, reputation: Math.min(REP_MAX, life.reputation + 1) };
@@ -438,14 +459,14 @@ export function leaveEvent(career: Career): Career {
   if (r.place === "winner" && career.titles === 1 && !life.sponsor && openOf(life, "sponsor").length === 0) life = offerSponsors(career, life, life.week);
   // The rival writes after a tournament, and asks for the match back when they have the better of the two.
   const rival = rivalOf({ ...career, life }).name;
-  const m = a.tournament?.matches.find((x) => !x.isBronzeMatch && x.winner && x.winner !== career.player && [x.participantA, x.participantB].includes(career.player));
+  const m = team ? undefined : a.tournament?.matches.find((x) => !x.isBronzeMatch && x.winner && x.winner !== career.player && [x.participantA, x.participantB].includes(career.player));
   const by = m ? [m.participantA, m.participantB].find((n) => n && n !== career.player) ?? null : null;
   const rec = career.rivals?.[rival];
   let next = withLife({ ...career, money }, life);
   if (by === rival && rec && rec.l > rec.w && !next.challenge && openOf(life, "challenge").length === 0 && unit(`${career.id}|${life.week}|ask`) < 0.7) {
     next = withLife(next, challengeFrom(next, life, life.week, rival));
   } else if (unit(`${career.id}|${life.week}|line`) < 0.5) {
-    const line = r.place === "winner" ? "Bra spilt. Neste gang er det min tur." : by === rival ? "Det var meg som tok deg. Vi sees." : r.place === "final" ? "Så nærme. Jeg venter i neste finale." : "Jeg ser deg i neste turnering.";
+    const line = team?.mine.partner === rival ? (r.place === "winner" ? "Vi gjorde det. Sammen er vi best." : "Vi tar den neste gangen, du og jeg.") : r.place === "winner" ? "Bra spilt. Neste gang er det min tur." : by === rival ? "Det var meg som tok deg. Vi sees." : r.place === "final" ? "Så nærme. Jeg venter i neste finale." : "Jeg ser deg i neste turnering.";
     next = withLife(next, addMessage(life, { name: rival, role: "Rival" }, rival, line, { kind: "info" }));
   }
   return advanceWeek(closeEvent(next));

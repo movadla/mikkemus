@@ -7,7 +7,7 @@ import { bracketRoundLabel, matchParticipants, type Tournament, type TournamentM
 import { FlameIcon } from "./icons";
 import { SnowIcon } from "./careerIcons";
 import { TrophyArt } from "./CareerTrophy";
-import { ChanceMeter, CompareRows, MePortrait, OpponentPortrait, OpponentProfile, type Me } from "./OpponentCard";
+import { ChanceMeter, CompareRows, MePortrait, OpponentPortrait, OpponentProfile, TeamPortrait, type Me } from "./OpponentCard";
 import { PlayButton } from "./PlayButton";
 import { Sheet } from "./ui/Sheet";
 import { ArrowLeftIcon } from "./icons";
@@ -49,6 +49,8 @@ export function MatchIntro({ tournament, match, player, me, level, opponentLevel
   const foil = tier ? (foilVars(tier) as React.CSSProperties) : undefined;
   const form = formWord(level, opponentLevel);
   const med = medOfLevel(opponentLevel);
+  // A cup of teams: both sides are two faces, and the profile is of the two of them.
+  const theirs = tournament.participants.find((p) => p.name === opponent)?.members;
   return (
     <div className="animate-screen-enter screen cup-lamp" style={{ "--cup": colour } as React.CSSProperties}>
       <div className="screen-inner flex flex-col" style={{ minHeight: "calc(100dvh - 2rem)", gap: "0.9rem" }}>
@@ -67,8 +69,8 @@ export function MatchIntro({ tournament, match, player, me, level, opponentLevel
         </div>
         <div className="flex items-start justify-center gap-3 w-full text-center">
           <div className="final-left" style={{ flex: "1 1 0", minWidth: 0, maxWidth: "9.5rem" }}>
-            <MePortrait me={me} />
-            <p className={`font-display truncate mt-2 ${tier ? "foil foil-soft" : ""}`} data-t={player} style={{ color: "var(--color-cream)", fontSize: "var(--text-title)", ...foil }}>
+            {me.members ? <TeamPortrait members={me.members} me={{ name: me.members[0], character: me.character }} metal="gold" label={me.name} /> : <MePortrait me={me} />}
+            <p className={`font-display line-clamp-2 mt-2 ${tier ? "foil foil-soft" : ""}`} data-t={player} style={{ color: "var(--color-cream)", fontSize: "var(--text-title)", ...foil }}>
               {player}
             </p>
           </div>
@@ -76,9 +78,10 @@ export function MatchIntro({ tournament, match, player, me, level, opponentLevel
             VS
           </span>
           <div className="final-right" style={{ flex: "1 1 0", minWidth: 0, maxWidth: "9.5rem" }}>
-            <OpponentPortrait name={opponent} onClick={() => setProfile(true)} />
-            <p className="font-display truncate mt-2 inline-flex items-center justify-center gap-1 max-w-full" style={{ color: "var(--color-cream)", fontSize: "var(--text-title)" }}>
-              <span className="truncate">{opponent}</span>
+            {theirs ? <TeamPortrait members={theirs.map((m) => m.name)} label={`Se ${opponent}`} onClick={() => setProfile(true)} /> : <OpponentPortrait name={opponent} onClick={() => setProfile(true)} />}
+            <p className="font-display mt-2 inline-flex items-center justify-center gap-1 max-w-full" style={{ color: "var(--color-cream)", fontSize: "var(--text-title)" }}>
+              <span className="line-clamp-2">{opponent}</span>
+              {me.rival?.name === opponent && <span className="opp-chip opp-chip-gold" style={{ marginLeft: "0.25rem" }}>Rival</span>}
               {form === "hot" && (
                 <span role="img" aria-label="Varm i dag" style={{ color: "var(--color-red)" }}>
                   <FlameIcon className="w-5 h-5" />
@@ -106,7 +109,7 @@ export function MatchIntro({ tournament, match, player, me, level, opponentLevel
       </div>
       {profile && (
         <Sheet title={opponent} onClose={() => setProfile(false)}>
-          <OpponentProfile name={opponent} med={med} me={me} />
+          {theirs ? theirs.map((m) => <OpponentProfile key={m.name} name={m.name} med={medOfLevel(m.skill ?? Number(m.botLevel ?? 4))} me={{ ...me, members: undefined }} />) : <OpponentProfile name={opponent} med={med} me={me} />}
         </Sheet>
       )}
     </div>

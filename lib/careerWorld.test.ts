@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { START_MONEY, TIERS, declineChallenge, eventTier, newCareer, settleChallenge, startEvent, type Career, type Place } from "./career";
+import { START_MONEY, TIERS, declineChallenge, eventTier, finishEvent, newCareer, openCup, settleChallenge, startEvent, type Career, type Place } from "./career";
 import { WEEKS_PER_SEASON, inboxCount, lifeOf, lyPool, newLife, rivalOf, seasonOf, unseenNews, type Life, type Message } from "./careerLife";
 import { advanceWeek, answerMessage, botMed, leaveAbandoned, leaveEvent, markNewsSeen, markRead, peopleOf, playBracket, seasonPrize, sponsorOutcome, whyNotAnswer } from "./careerWorld";
 import { normalizeCareer } from "./careerStorage";
@@ -376,6 +376,11 @@ describe("the show on television", () => {
     expect(taken.challenge).toMatchObject({ risk: 0, from: m.id });
     expect(settleChallenge(taken, false, AT).money).toBe(cur.money + tv.honorarium);
     expect(settleChallenge(taken, true, AT).money).toBe(cur.money + tv.honorarium + taken.challenge!.stake);
+    // A win is news and a trophy of its own, a loss is news only.
+    const won = settleChallenge(taken, true, AT);
+    expect(lifeOf(won).news[0].headline).toContain(`slo ${taken.challenge!.opponent.name}`);
+    expect(won.trophies[0]).toMatchObject({ name: `${tv.title}-pokalen` });
+    expect(settleChallenge(taken, false, AT).trophies).toHaveLength(0);
     const no = answerMessage(cur, m.id, false, 5);
     expect(lifeOf(no).reputation).toBe(lifeOf(cur).reputation);
     expect(declineChallenge(taken).challenge).toBeNull();
@@ -425,5 +430,67 @@ describe("the rival", () => {
       expect(lifeOf(c).world.retired).not.toContain(rival);
     }
     for (const m of lifeOf(c).inbox) if (m.offer.kind === "challenge" && m.from.role === "Rival") expect(m.from.name).toBe(rival);
+  });
+});
+
+describe("a cup of teams", () => {
+  const strong = (): Career => ({ ...fresh(), points: 200, played: 30, money: 500_000, history: [{ at: AT, event: "Grand Slam", place: "winner", prize: 0, cost: 0, points: 0 }, { at: AT, event: "Norgesmesterskapet", place: "winner", prize: 0, cost: 0, points: 0 }] });
+  /** Plays weeks until an invitation of this kind comes, closing the others so they do not crowd it out. */
+  function invitationOf(key: string) {
+    let c = strong();
+    for (let i = 0; i < 400; i++) {
+      c = advanceWeek(c);
+      const l = lifeOf(c);
+      const m = l.inbox.find((x) => x.state === "open" && x.offer.kind === "invite" && x.offer.invite.key === key);
+      if (m && m.offer.kind === "invite") return { c, m, inv: m.offer.invite };
+      c = withLife(c, { inbox: l.inbox.map((x) => (x.state === "open" && x.offer.kind === "invite" ? { ...x, state: "expired" as const } : x)) });
+    }
+    throw new Error(`no ${key}`);
+  }
+
+  it("is the World Cup: Norway with the rival, against seven nations of two", () => {
+    const { c, inv } = invitationOf("wc");
+    expect(inv.team?.mine).toEqual({ name: "Norge", partner: rivalOf(c).name });
+    expect(inv.team?.others.map((o) => o.name)).toEqual(["Nederland", "Tyskland", "Frankrike", "Italia", "England", "Japan", "Danmark"]);
+    expect(inv.size).toBe(8);
+    expect(inv.countdown).toMatchObject({ start: 501, doubleOut: true });
+    expect(inv.fee).toBe(0);
+  });
+
+  it("is a cup of pairs: the player and a regular who is not the rival, against seven pairs, each person once", () => {
+    const { c, inv } = invitationOf("pair");
+    const team = inv.team!;
+    expect(team.mine.partner).not.toBe(rivalOf(c).name);
+    const people = [c.player, team.mine.partner, ...team.others.flatMap((o) => o.members)];
+    expect(new Set(people).size).toBe(people.length);
+    expect(team.others).toHaveLength(7);
+    expect(team.mine.name).toBe(`${c.player} og ${team.mine.partner}`);
+  });
+
+  it.each(["wc", "pair"])("makes %s a cup of eight teams, with the player's team in it, played as 501 or 301", (key) => {
+    const { c, m, inv } = invitationOf(key);
+    const started = answerMessage(c, m.id, true, 9);
+    const a = started.active!;
+    expect(a.entrants).toHaveLength(8);
+    const mine = a.entrants.find((p) => p.name === inv.team!.mine.name)!;
+    expect(mine.members!.map((x) => x.name)).toEqual([c.player, inv.team!.mine.partner]);
+    expect(mine.members![0].isBot).toBe(false);
+    expect(mine.members![1].isBot).toBe(true);
+    expect(a.entrants.every((p) => p.members?.length === 2)).toBe(true);
+    expect(a.cup.countdown).toEqual(inv.countdown);
+    const opened = openCup(started, a.entrants, AT);
+    expect(opened.active!.tournament!.mode).toBe("team");
+  });
+
+  it("is finished like any cup: a place for the team, a prize, and news about the team", () => {
+    const { c, m } = invitationOf("pair");
+    const opened = openCup(answerMessage(c, m.id, true, 9), answerMessage(c, m.id, true, 9).active!.entrants, AT);
+    const done = finishEvent(opened, AT);
+    const r = done.active!.result!;
+    expect(["winner", "final", "semi", "quarter"]).toContain(r.place);
+    const left = leaveEvent(done);
+    expect(lifeOf(left).news.some((n) => n.kind === "you" && n.headline.startsWith(opened.active!.invite!.team!.mine.name))).toBe(true);
+    // A cup of teams has no record against a person.
+    expect(left.rivals ?? {}).toEqual({});
   });
 });

@@ -20,6 +20,17 @@ export function winChance(mine: number, theirs: number): number {
 /** The world ranking of a skill: the sharpest are in the tens, an ordinary club player in the hundreds. A rank is never better than 1. */
 export const worldRankOf = (med: number) => Math.max(1, Math.round(40 * (med / 20) ** 2.2));
 
+/**
+ * The world rank of a named player: the rank their skill gives, nudged by a few places that follow from the name, so that two with the same
+ * strength do not share a place (the same name always gets the same nudge).
+ */
+export function worldRankFor(name: string, med: number): number {
+  let h = 2166136261;
+  for (let i = 0; i < name.length; i++) h = Math.imul(h ^ name.charCodeAt(i), 16777619);
+  const base = worldRankOf(med);
+  return base + Math.floor(((h >>> 0) / 4294967296) * Math.max(3, base * 0.08));
+}
+
 /** The Norwegian ranking, for a Norwegian: about one in eight of the world list. */
 export const norwayRankOf = (world: number) => Math.max(1, Math.round(world / 8));
 

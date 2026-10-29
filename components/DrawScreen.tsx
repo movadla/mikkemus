@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 import { firstRoundPairs, openDraw, swapEntrants } from "@/lib/knockout";
 import type { Participant } from "@/lib/tournament";
 import { ScreenTop } from "./ScreenTop";
@@ -18,7 +18,8 @@ import { medOfLevel } from "@/lib/opponentStats";
 import { opponentOf } from "@/lib/opponents";
 import { CharacterFace } from "./CharacterFigure";
 import { OpponentPortrait, OpponentProfile, ranksOf, type Me } from "./OpponentCard";
-import { Avatar } from "./ui/Avatar";
+import { Avatar, TeamsContext } from "./ui/Avatar";
+import { TeamPortrait } from "./OpponentCard";
 import { Sheet } from "./ui/Sheet";
 
 const FOCUS_RING =
@@ -122,8 +123,11 @@ export function DrawScreen({
   const colour = cupColor(cup?.kind);
   // The seeding follows the name in brackets, only in a seeded draw: «Lars (1)».
   // A small face by a name in the career: the player's own character, or the opponent's face (a tap opens who they are).
+  const teams = useContext(TeamsContext);
   const who = (name: string) =>
-    career && name === career.player ? (
+    teams[name] ? (
+      <Avatar name={name} px={26} />
+    ) : career && name === career.player ? (
       <CharacterFace id={career.me?.character} pose="noytral" px={26} />
     ) : (
       <span onClick={career?.me ? () => setProfileFor(name) : undefined} role={career?.me ? "button" : undefined} aria-label={career?.me ? `Se ${name}` : undefined} tabIndex={career?.me ? 0 : undefined} style={{ display: "inline-flex" }}>
@@ -236,17 +240,17 @@ export function DrawScreen({
             <p className="section-label mb-2">FAVORITTER</p>
             <div className="grid grid-cols-3 gap-2">
               {order
-                .filter((p) => p.isBot)
-                .map((p) => ({ p, med: opponentOf(p.name).med }))
+                .filter((p) => (p.members ? p.name !== career.player : p.isBot))
+                .map((p) => ({ p, med: p.members ? p.members.reduce((s, m) => s + medOfLevel(m.skill ?? 4), 0) / p.members.length : opponentOf(p.name).med }))
                 .sort((x, y) => x.med - y.med)
                 .slice(0, 3)
                 .map(({ p }) => (
                   <div key={p.name} className="text-center min-w-0">
-                    <OpponentPortrait name={p.name} onClick={() => setProfileFor(p.name)} />
+                    {p.members ? <TeamPortrait members={p.members.map((m) => m.name)} label={`Se ${p.name}`} onClick={() => setProfileFor(p.name)} /> : <OpponentPortrait name={p.name} onClick={() => setProfileFor(p.name)} />}
                     <span className="block truncate font-display mt-1" style={{ fontSize: "var(--text-small)", color: "var(--color-cream)" }}>
                       {p.name}
                     </span>
-                    <span className="opp-chip opp-chip-gold">#{ranksOf(p.name, opponentOf(p.name).nat, opponentOf(p.name).med).world}</span>
+                    {!p.members && <span className="opp-chip opp-chip-gold">#{ranksOf(p.name, opponentOf(p.name).nat, opponentOf(p.name).med).world}</span>}
                   </div>
                 ))}
             </div>
@@ -262,16 +266,20 @@ export function DrawScreen({
                   <div className="draw-card-back" aria-hidden />
                   <div className="draw-card-front">
                     {mine && <span className="draw-card-me">DU</span>}
-                    <span className="truncate w-full text-center inline-flex items-center justify-center gap-1.5" style={{ fontWeight: p.a === career.player ? 800 : 500 }}>
+                    <span className="draw-name" style={{ fontWeight: p.a === career.player ? 800 : 500 }}>
                       {p.a && who(p.a)}
-                      {p.a ?? "Walkover"}
-                      {seedNo(p.a ?? "") ? <span style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}> ({seedNo(p.a ?? "")})</span> : null}
+                      <span className="draw-nm">
+                        {p.a ?? "Walkover"}
+                        {seedNo(p.a ?? "") ? <span style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}> ({seedNo(p.a ?? "")})</span> : null}
+                      </span>
                     </span>
                     <span style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>mot</span>
-                    <span className="truncate w-full text-center inline-flex items-center justify-center gap-1.5" style={{ fontWeight: p.b === career.player ? 800 : 500 }}>
+                    <span className="draw-name" style={{ fontWeight: p.b === career.player ? 800 : 500 }}>
                       {p.b && who(p.b)}
-                      {p.b ?? "Walkover"}
-                      {seedNo(p.b ?? "") ? <span style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}> ({seedNo(p.b ?? "")})</span> : null}
+                      <span className="draw-nm">
+                        {p.b ?? "Walkover"}
+                        {seedNo(p.b ?? "") ? <span style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}> ({seedNo(p.b ?? "")})</span> : null}
+                      </span>
                     </span>
                   </div>
                 </div>
@@ -314,7 +322,11 @@ export function DrawScreen({
         )}
         {profileFor && career?.me && (
         <Sheet title={profileFor} onClose={() => setProfileFor(null)}>
-          <OpponentProfile name={profileFor} med={(() => { const p = seeded.find((x) => x.name === profileFor); return p?.isBot ? medOfLevel(p.skill ?? Number(p.botLevel ?? 4)) : career.me.med; })()} me={career.me} />
+          {seeded.find((x) => x.name === profileFor)?.members ? (
+            seeded.find((x) => x.name === profileFor)!.members!.map((m) => <OpponentProfile key={m.name} name={m.name} med={medOfLevel(m.skill ?? Number(m.botLevel ?? 4))} me={{ ...career.me!, members: undefined }} />)
+          ) : (
+            <OpponentProfile name={profileFor} med={(() => { const p = seeded.find((x) => x.name === profileFor); return p?.isBot ? medOfLevel(p.skill ?? Number(p.botLevel ?? 4)) : career.me.med; })()} me={career.me} />
+          )}
         </Sheet>
       )}
       <StickyAction onClick={() => onStart(order)} ready reason={null}>

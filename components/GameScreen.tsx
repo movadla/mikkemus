@@ -642,7 +642,7 @@ function DartEntry({
 }) {
   // The numbered rows are thrown at by their number; Dobbel and Trippel rows take any double or triple, so 20 stands for them.
   const bull = target === "BULL";
-  const number = /^d+$/.test(target) ? target : "20";
+  const number = /^\d+$/.test(target) ? target : "20";
   const choices: { label: string; sector: string }[] = bull
     ? [{ label: "Enkel", sector: "25" }, { label: "Dobbel", sector: "Bull" }, { label: "Bom", sector: "None" }]
     : [{ label: "Enkel", sector: `S${number}` }, { label: "Dobbel", sector: `D${number}` }, { label: "Trippel", sector: `T${number}` }, { label: "Bom", sector: "None" }];

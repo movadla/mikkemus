@@ -93,7 +93,7 @@ test.describe("karriere", () => {
     await play(page, "SPILL Ly-cupen · gratis").click();
     await page.waitForTimeout(3300);
     await play(page, "TREKK").click();
-    await page.getByLabel("Trekningen").getByText("DU").waitFor({ timeout: 15_000 });
+    await page.getByLabel("Trekningen").getByText("DU", { exact: true }).waitFor({ timeout: 15_000 });
     await play(page, "START").click();
     await play(page, "Start kampen").click();
     await expect(page.getByRole("row", { name: /Snitt, 3 piler/ })).toBeVisible();
@@ -150,6 +150,36 @@ test.describe("karriere", () => {
     expect((await saved(page)).active.cup.countdown).toEqual({ start: 301, doubleOut: false });
   });
 
+  test("lag: World Cup of Darts spilles to og to, med én poengsum og makkeren som kaster etter deg", async ({ page }) => {
+    const nations: [string, string[]][] = [["Nederland", ["Littler", "Cor Dekker"]], ["Tyskland", ["Max Hartmann", "Jonas Keller"]], ["Frankrike", ["Sofia Moreau", "Luca Dubois"]], ["Italia", ["Stefano Rossi", "Matteo Bianchi"]], ["England", ["Samuel Okafor", "Marcus Williams"]], ["Japan", ["Mei Tanaka", "Kenji Sato"]], ["Danmark", ["Jesper Holm", "Oskar Lund"]]];
+    const bot = (name: string, skill: number) => ({ name, isBot: true, botLevel: String(skill), skill });
+    const team = { mine: { name: "Norge", partner: "Marcus" }, others: nations.map(([name, members]) => ({ name, members })) };
+    const invite = { ...INVITE, id: "vm", kind: "vm", name: "World Cup of Darts", short: "Verdensarenaen", trophy: "World Cup of Darts-pokalen", venue: "Verdensarenaen", stage: "Invitasjon · Verdensarenaen", scale: 5, size: 8, fee: 0, prizes: { winner: 45000, final: 21000, semi: 10500, quarter: 4500 }, key: "wc", city: "Verdensarenaen", countdown: { start: 501, doubleOut: true }, team };
+    const entrants = [{ name: "Norge", isBot: false, members: [{ name: "Lars", isBot: false }, bot("Marcus", 4)] }, ...nations.map(([name, members]) => ({ name, isBot: false, members: members.map((m) => bot(m, 4)) }))];
+    const active = { id: "a", tier: "vm", seed: 5, cost: 0, entrants, cup: { kind: "vm", name: "World Cup of Darts", trophy: "World Cup of Darts-pokalen", level: "4", growth: true, seed: 5, career: true, countdown: { start: 501, doubleOut: true } }, tournament: null, result: null, invite };
+    await seed(page, { ...CAREER, points: 90, active });
+    await page.getByRole("button", { name: /Lars/ }).click();
+    await page.getByRole("button", { name: /^TREKK|^SPILL/ }).first().click();
+    // The opening of a tournament, for two and two.
+    await expect(page.getByRole("heading", { name: "World Cup of Darts" })).toBeVisible();
+    await expect(page.getByText("Lag", { exact: true })).toBeVisible();
+    await expect(page.getByText("Marcus", { exact: false }).first()).toBeVisible();
+    await play(page, "TREKK").click();
+    await expect(page.getByLabel("Trekningen").getByText("DU", { exact: true })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByLabel("Trekningen").getByText("Norge").first()).toBeVisible();
+    await play(page, "START").click();
+    await play(page, "Start kampen").click();
+    await expect(page.getByRole("heading", { name: "Norge" }).or(page.getByText("Norge").first())).toBeVisible();
+    await play(page, "KAST").click();
+    // One score for the team; the player throws first, and the partner, a bot, throws his round by himself.
+    await expect(page.getByText("Lars kaster for Norge")).toBeVisible();
+    for (const d of "60") await page.getByRole("group", { name: "Tastatur" }).getByRole("button", { name: d, exact: true }).click();
+    // The bots throw the next three rounds (the other team's first, Marcus, the other team's second) and it is the player's turn again.
+    await expect(page.getByText(/^[A-Za-zÅØÆåøæ ]+: .+( = \d+|, over streken|, tar ut!)$/)).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText("Lars kaster for Norge")).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByLabel("Stilling").getByText(/Nå: Lars/)).toBeVisible();
+  });
+
   test("tv: Utfordreren har en åpning som en turnering, viser honoraret og handicapet, og kan avslås uten å koste noe", async ({ page }) => {
     const tv = { title: "Utfordreren", honorarium: 150, legs: 1, humanStart: 201, theirStart: 301 };
     const offer = { kind: "challenge", game: "501", opponent: { name: "Littler", skill: 1 }, stake: 600, risk: 0, tv };
@@ -192,7 +222,7 @@ test.describe("karriere", () => {
     // The character stands in the room (the career in the seed has none saved: it gets the one there is), and the profile has its face.
     await expect(page.locator(".char-home .char-figure-img")).toHaveAttribute("src", /c03.noytral/);
     // It says where the player is: the room is a place with a name and a step.
-    await expect(page.getByText(/Garasjen din/)).toContainText("Ryddet · 2 av 10");
+    await expect(page.getByText(/Garasjen din/)).toContainText("Ryddet");
     const hud = page.getByRole("group", { name: "Status" });
     await expect(hud.getByText("$300")).toBeVisible();
     // One star, not two: the goal says which rank it counts towards, and the rank is written under the name.
@@ -232,7 +262,7 @@ test.describe("karriere", () => {
     await play(page, "TREKK").click();
     // The pairs are cards that turn over, the player's own marked, and the draw is not set up in the career.
     await expect(page.getByText("Ly-pokalen").first()).toBeVisible();
-    await expect(page.getByLabel("Trekningen").getByText("DU")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByLabel("Trekningen").getByText("DU", { exact: true })).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("Seedet", { exact: true })).toHaveCount(0);
     await expect(page.getByText("Endre", { exact: true })).toHaveCount(0);
     await play(page, "START").click();

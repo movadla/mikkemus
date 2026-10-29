@@ -1,9 +1,41 @@
 "use client";
 
-import { ViewTransition } from "react";
+import { createContext, useContext, ViewTransition } from "react";
+import { CharacterFace } from "../CharacterFigure";
 import { avatarAccent } from "@/lib/avatarAccent";
 import { useRoster } from "@/lib/storage";
 import { faceSrc, opponentOf } from "@/lib/opponents";
+import { characterOf, poseSrc } from "@/lib/characters";
+
+/**
+ * In the career the player is their character, not a letter: a game that is played inside it (a match of a cup, a duel) gives the name and the
+ * character here, and the face of that name is drawn as the character, wherever the game draws it.
+ */
+export const CareerFaceContext = createContext<{ name: string; character?: string } | null>(null);
+
+/**
+ * The teams of a tournament in the career, by name: a team is drawn with the faces of its members (the player's own as their character), wherever
+ * the app draws a face for that name.
+ */
+export const TeamsContext = createContext<Record<string, string[]>>({});
+
+/** Two faces in one circle, a half each: a team. */
+export function TeamFaces({ members, character, me }: { members: string[]; character?: string; me?: string }) {
+  return (
+    <span className="team-faces" aria-hidden>
+      {members.slice(0, 2).map((m) => {
+        const mine = m === me;
+        const c = characterOf(character);
+        return (
+          <span key={m} className="team-half" style={mine ? ({ background: c.tint } as React.CSSProperties) : undefined}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={mine ? poseSrc(c, "noytral") : faceSrc(opponentOf(m).face)} alt="" draggable={false} style={{ objectPosition: mine ? "50% 4%" : "50% 6%" }} />
+          </span>
+        );
+      })}
+    </span>
+  );
+}
 
 /** The five sizes of a face in the app, in pixels (any other size is a `px`). */
 export const AVATAR_SIZES = { xs: 24, s: 32, m: 44, l: 64, xl: 96, xxl: 120 } as const;
@@ -32,6 +64,10 @@ export function Avatar({
   bot?: boolean;
 }) {
   const px = pixels ?? AVATAR_SIZES[size];
+  const career = useContext(CareerFaceContext);
+  const teams = useContext(TeamsContext);
+  const team = !photo ? teams[name] : undefined;
+  const mine = !bot && !photo && !team && career?.name === name ? career : null;
   const accent = avatarAccent(name);
   const ring = state === "winner" ? "var(--color-gold)" : state === "active" ? "var(--color-teal)" : accent;
   const ringWidth = px >= 96 ? 4 : px >= 64 ? 3 : px >= 44 ? 2.5 : 2;
@@ -51,18 +87,22 @@ export function Avatar({
       <span
         className="relative w-full h-full rounded-full overflow-hidden flex items-center justify-center"
         style={{
-          background: photo || bot ? "var(--color-cell)" : `radial-gradient(circle at 30% 24%, color-mix(in srgb, ${accent} 40%, var(--color-surface)), color-mix(in srgb, ${accent} 12%, var(--color-surface)))`,
+          background: photo || bot || mine || team ? "var(--color-cell)" : `radial-gradient(circle at 30% 24%, color-mix(in srgb, ${accent} 40%, var(--color-surface)), color-mix(in srgb, ${accent} 12%, var(--color-surface)))`,
           color: "var(--color-cream)",
           fontSize: px * 0.4,
           fontFamily: "var(--font-display)",
         }}
       >
-        {bot ? (
+        {team ? (
+          <TeamFaces members={team} character={career?.character} me={career?.name} />
+        ) : bot ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={faceSrc(opponentOf(name.replace(/ (d+)$/, "")).face)} alt="" className="w-full h-full object-cover" style={{ objectPosition: "50% 4%" }} draggable={false} />
+          <img src={faceSrc(opponentOf(name.replace(/ (\d+)$/, "")).face)} alt="" className="w-full h-full object-cover" style={{ objectPosition: "50% 4%" }} draggable={false} />
         ) : photo ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={photo} alt="" className="w-full h-full object-cover" />
+        ) : mine ? (
+          <CharacterFace id={mine.character} px={Math.max(16, px - 2 * (ringWidth + gap))} />
         ) : (
           name.charAt(0).toUpperCase()
         )}

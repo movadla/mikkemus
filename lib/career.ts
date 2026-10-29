@@ -9,7 +9,7 @@
  * here is plain data in and out: a career can be saved as it is, paused anywhere and picked up again. See CAREER_PLAN.md.
  */
 import { levelOfMed } from "./botLevels";
-import { lifeOf, lyPool, mustPlay, rivalOf, welcomeLife, REP_MAX, type Invitation, type Life, type Tv } from "./careerLife";
+import { addNews, lifeOf, lyPool, mustPlay, rivalOf, welcomeLife, REP_MAX, type Invitation, type Life, type Tv } from "./careerLife";
 import { INTERNATIONALS, LY_REGULARS } from "./opponents";
 import { countdownOf, gameOf, type CareerGame } from "./careerGame";
 import { unit, type CupConfig, type CupKind } from "./botCup";
@@ -225,7 +225,7 @@ export type HistoryEntry = { at: string; event: string; place?: Place; prize: nu
 export type TrainingSession = { at: string; /** The average of a round of three darts at the triple 20. */ average: number; /** The level the average points to, as a MED in mm. */ measured: number; before: number; after: number };
 
 /** A cup the player has won: kept for the shelf at home (the history only holds the last thirty events). */
-export type Trophy = { tier: TierId; at: string; prize: number };
+export type Trophy = { tier: TierId; at: string; prize: number; /** A tournament of its own (an invitation, a show): its name, and the look of the step it is built on. The shelf of the ladder holds only the ones without. */ name?: string };
 
 export type Career = {
   v: 1;
@@ -312,6 +312,7 @@ export function fieldCentre(career: Career, tier: Tier): number {
 
 /** The field: the player and the rest, strongest first (the player where their own level puts them). Each bot has a skill of its own around the centre. */
 export function fieldFor(career: Career, tier: Tier | Invitation, seed: number): Participant[] {
+  if ("team" in tier && tier.team) return teamFieldFor(career, tier, tier.team, seed);
   const fixed = "field" in tier && tier.field ? tier.field.filter((n) => n !== career.player).slice(0, tier.size - 1) : null;
   const names = fixed ?? fieldNames(tier, career.player, seed, tier.size - 1, lifeOf(career).world);
   // The rival and the boss of the step are in the field every time, in place of the weakest names drawn (a field that is fixed is left as it is).
@@ -331,6 +332,28 @@ export function fieldFor(career: Career, tier: Tier | Invitation, seed: number):
   const order: { p: Participant; strength: number }[] = [{ p: { name: career.player, isBot: false }, strength: own }, ...bots.map((b) => ({ p: b as Participant, strength: b.skill }))];
   return order.sort((a, b) => a.strength - b.strength).map((x) => x.p);
 }
+
+/**
+ * The field of a cup of teams: the player's side (the player and a partner, who is the rival in the World Cup) and the others, each of two. A team is a
+ * side of its own with members, as in the tournaments of teams; each member has a skill of his or her own, the partner and the best of the others sharper.
+ */
+function teamFieldFor(career: Career, tier: Tier, team: NonNullable<Invitation["team"]>, seed: number): Participant[] {
+  const factor = factorFor(career, tier);
+  const rival = rivalOf(career).name;
+  const sharp: Record<string, number> = { Littler: 0.8, "Cor Dekker": 0.85 };
+  const member = (name: string): NonNullable<Participant["members"]>[number] => {
+    const edge = name === team.mine.partner ? (name === rival ? 0.85 : 0.95) : sharp[name] ?? 0.88 + unit(`${seed}|skill|${name}`) * 0.24;
+    const skill = Math.min(8, Math.max(1, levelOfMed(career.skillMed * factor * edge)));
+    return { name, isBot: true, botLevel: String(Math.round(skill)) as Participant["botLevel"], skill };
+  };
+  const mine: Participant = { name: team.mine.name, isBot: false, members: [{ name: career.player, isBot: false }, member(team.mine.partner)] };
+  const others = team.others.map((o): Participant => ({ name: o.name, isBot: false, members: o.members.map(member) }));
+  const strength = (p: Participant) => (p === mine ? (levelOfMed(career.skillMed) + (mine.members![1].skill ?? 4)) / 2 : (p.members ?? []).reduce((s, m) => s + (m.skill ?? 4), 0) / Math.max(1, p.members?.length ?? 1));
+  return [mine, ...others].sort((a, b) => strength(a) - strength(b));
+}
+
+/** The side the player plays for in an event: their own name, or the name of their team in a cup of teams. */
+export const sideOf = (a: Pick<ActiveEvent, "invite">, player: string): string => a.invite?.team?.mine.name ?? player;
 
 export function cupFor(career: Career, tier: Tier | Invitation, seed: number): CupConfig {
   const countdown = ("countdown" in tier ? tier.countdown : undefined) ?? countdownOf(gameOf(career.profile));
@@ -373,7 +396,7 @@ export function startEvent(career: Career, tierId: TierId, seed: number, invite?
 export function openCup(career: Career, order: Participant[], now: string): Career {
   const a = career.active;
   if (!a || a.tournament) return career;
-  const t = createKnockout("individual", order, a.id, now, "standard", a.cup);
+  const t = createKnockout(a.invite?.team ? "team" : "individual", order, a.id, now, "standard", a.cup);
   return { ...career, active: { ...a, tournament: { ...t, name: a.cup.name } } };
 }
 
@@ -398,12 +421,14 @@ export function finishEvent(career: Career, now: string): Career {
   if (!a?.tournament || a.result) return career;
   const t = a.tournament.status === "done" ? a.tournament : playElsewhere(a.tournament).tournament;
   const tier = eventTier(a);
-  const place = placeIn(t, career.player);
+  const side = sideOf(a, career.player);
+  const place = placeIn(t, side);
   // The matches the player played, for the record against each opponent; a win over one who had the better of them is worth a bonus.
   const rivals: Record<string, Rival> = { ...(career.rivals ?? {}) };
   const revenge: string[] = [];
   for (const m of t.matches) {
-    if (m.isBye || !m.winner || !matchParticipants(m).includes(career.player)) continue;
+    // A cup of teams has no record against a person: the sides are teams.
+    if (a.invite?.team || m.isBye || !m.winner || !matchParticipants(m).includes(career.player)) continue;
     const other = matchParticipants(m).find((n) => n !== career.player);
     if (!other) continue;
     const before = rivals[other] ?? { w: 0, l: 0, last: now, lastWon: false };
@@ -422,7 +447,7 @@ export function finishEvent(career: Career, now: string): Career {
     money: career.money + result.prize,
     points: career.points + result.points,
     titles: career.titles + (won ? 1 : 0),
-    trophies: won && !a.invite ? [{ tier: a.tier, at: now, prize: result.prize }, ...career.trophies] : career.trophies,
+    trophies: won ? [{ tier: a.tier, at: now, prize: result.prize, ...(a.invite ? { name: a.invite.trophy } : {}) }, ...career.trophies] : career.trophies,
     worldTitles: career.worldTitles + (won && tier.id === "vm" && !a.invite ? 1 : 0),
     played: career.played + 1,
     history: [entry, ...career.history].slice(0, 30),
@@ -500,13 +525,17 @@ export function offerChallenge(career: Career, game: GameId, seed: number): Care
 export function settleChallenge(career: Career, won: boolean, now: string): Career {
   const c = career.challenge;
   if (!c || c.won !== null) return career;
+  const trophy = won && c.tv ? [{ tier: challengeTier(c).id, at: now, prize: c.stake + c.tv.honorarium, name: `${c.tv.title}-pokalen` }] : [];
   const lost = won ? 0 : Math.min(career.money, c.risk ?? 0);
   // A show pays for being there, whatever the result.
   const prize = (won ? c.stake : -lost) + (c.tv?.honorarium ?? 0);
   const entry: HistoryEntry = { at: now, event: `Duell: ${GAMES[c.game].name} mot ${c.opponent.name}`, prize, cost: 0, points: 0, game: c.game, won };
-  // Playing what someone asked for is good for the name.
-  const life = c.from ? lifeOf(career) : null;
-  return { ...career, money: career.money + prize, history: [entry, ...career.history].slice(0, 30), challenge: { ...c, won }, ...(life ? { life: { ...life, reputation: Math.min(REP_MAX, life.reputation + 1) } } : {}) };
+  // Playing what someone asked for is good for the name, and a show or a match against the rival is news.
+  let life: Life | null = c.from ? lifeOf(career) : null;
+  if (life && (c.tv || c.opponent.name === rivalOf(career).name)) {
+    life = addNews(life, "you", won ? `${career.player} slo ${c.opponent.name}${c.tv ? ` i ${c.tv.title}` : ""}` : `${career.player} tapte mot ${c.opponent.name}${c.tv ? ` i ${c.tv.title}` : ""}`, won ? `+${dollars(prize)}` : lost > 0 ? `−${dollars(lost)}` : "", career.player);
+  }
+  return { ...career, money: career.money + prize, history: [entry, ...career.history].slice(0, 30), challenge: { ...c, won }, trophies: [...trophy, ...career.trophies], ...(life ? { life: { ...life, reputation: Math.min(REP_MAX, life.reputation + (c.from ? 1 : 0)) } } : {}) };
 }
 
 /**

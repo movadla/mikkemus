@@ -7,8 +7,14 @@ export type CountdownStart = 301 | 501;
 /** The most three darts can make. */
 export const MAX_ROUND = 180;
 
+/** A member of a team: who throws for it in turn, and for a bot how sharp (the level scale, 1 sharpest to 8). */
+export type CountdownMember = { name: string; isBot: boolean; botLevel?: number };
+
 export type CountdownTurn = {
+  /** The side that threw: a player, or a team (which has one score for all its members). */
   player: string;
+  /** For a team, the member who threw the round. */
+  by?: string;
   /** What the round made, as written in. */
   scored: number;
   /** Over the line (below nothing, or on 1 when the finish has to be a double): the round counts for nothing. */
@@ -25,12 +31,14 @@ export type CountdownGame = {
   turns: CountdownTurn[];
   /** A start of their own for some of the players (a handicap: the one who starts lower has the head start). The others start at `start`. */
   starts?: Record<string, number>;
+  /** The members of the sides that are teams. A team has one score; its members throw a round each, in turn, and the team is up as often as anyone. */
+  rosters?: Record<string, CountdownMember[]>;
 };
 
 export const DARTS_PER_ROUND = 3;
 
-export function newGame(start: CountdownStart, doubleOut: boolean, players: string[], starts?: Record<string, number>): CountdownGame {
-  return { start, doubleOut, players, turns: [], ...(starts ? { starts } : {}) };
+export function newGame(start: CountdownStart, doubleOut: boolean, players: string[], starts?: Record<string, number>, rosters?: Record<string, CountdownMember[]>): CountdownGame {
+  return { start, doubleOut, players, turns: [], ...(starts ? { starts } : {}), ...(rosters && Object.keys(rosters).length > 0 ? { rosters } : {}) };
 }
 
 /** Where a player starts: the start of the game, or their own when they have a handicap. */
@@ -54,11 +62,20 @@ export function judge(left: number, scored: number, doubleOut: boolean): "counts
   return "counts";
 }
 
+/** Who throws the round that is up: for a team the member whose turn it is (they take turns, a round each), otherwise null. */
+export function memberUp(g: CountdownGame): CountdownMember | null {
+  const side = playerUp(g);
+  const roster = g.rosters?.[side];
+  if (!roster || roster.length === 0) return null;
+  return roster[g.turns.filter((t) => t.player === side).length % roster.length];
+}
+
 /** The round that is written in. A round over the line is kept, and counts for nothing. */
 export function playRound(g: CountdownGame, scored: number, darts = DARTS_PER_ROUND): CountdownGame {
   const player = playerUp(g);
+  const by = memberUp(g)?.name;
   const verdict = judge(remainingOf(g, player), scored, g.doubleOut);
-  return { ...g, turns: [...g.turns, { player, scored, bust: verdict === "bust", darts: verdict === "bust" ? DARTS_PER_ROUND : darts }] };
+  return { ...g, turns: [...g.turns, { player, ...(by ? { by } : {}), scored, bust: verdict === "bust", darts: verdict === "bust" ? DARTS_PER_ROUND : darts }] };
 }
 
 /** Takes the last round back. */

@@ -5,7 +5,7 @@ import type { Career } from "@/lib/career";
 import { NATION } from "@/lib/opponents";
 import { lifeOf } from "@/lib/careerLife";
 import { peopleOf } from "@/lib/careerWorld";
-import { norwayRankOf, playerWorldRank, worldRankOf } from "@/lib/opponentStats";
+import { norwayRankOf, playerWorldRank, worldRankFor } from "@/lib/opponentStats";
 import { gameOf, statsFor } from "@/lib/careerGame";
 import { CharacterFace } from "./CharacterFigure";
 import { Avatar } from "./ui/Avatar";
@@ -24,7 +24,7 @@ export function RankingList({ career }: { career: Career }) {
   const me: Row = { name: career.player, nat: "NOR", world: playerWorldRank(career.skillMed, career.points), figure: first(career.skillMed).value, me: true };
   const snap = lifeOf(career).world.snap;
   const seen = Object.keys(snap).length > 0;
-  const rows: Row[] = [...peopleOf(career).map((o) => ({ name: o.name, nat: o.nat, world: worldRankOf(o.med), figure: first(o.med).value, me: false, moved: !seen ? undefined : snap[o.name] === undefined ? ("ny" as const) : snap[o.name] - worldRankOf(o.med) })), me].filter((r) => tab === "world" || r.nat === "NOR").sort((a, b) => a.world - b.world || (a.me ? -1 : 1));
+  const rows: Row[] = [...peopleOf(career).map((o) => ({ name: o.name, nat: o.nat, world: worldRankFor(o.name, o.med), figure: first(o.med).value, me: false, moved: !seen ? undefined : snap[o.name] === undefined ? ("ny" as const) : snap[o.name] - worldRankFor(o.name, o.med) })), me].filter((r) => tab === "world" || r.nat === "NOR").sort((a, b) => a.world - b.world || (a.me ? -1 : 1));
   const at = rows.findIndex((r) => r.me);
   const from = Math.max(0, Math.min(rows.length - 9, at - 4));
   const shown = rows.slice(from, from + 9);

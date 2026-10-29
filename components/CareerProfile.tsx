@@ -2,8 +2,8 @@
 
 import { DARTS, PLACE_LABEL, STAGES, TIERS, dollars, type Career } from "@/lib/career";
 import { nextRank, rankOf } from "@/lib/careerGoals";
-import { lifeOf, seasonOf, weekInSeason, WEEKS_PER_SEASON } from "@/lib/careerLife";
-import { levelLabel, oneDecimal } from "./careerFormat";
+import { lifeOf, rivalOf, seasonOf, weekInSeason, WEEKS_PER_SEASON } from "@/lib/careerLife";
+import { levelLabel } from "./careerFormat";
 import { PokalCard, RankBadge } from "./CareerTrophy";
 import { CharacterFace } from "./CharacterFigure";
 
@@ -27,6 +27,7 @@ export function CareerProfile({ career }: { career: Career }) {
   const next = nextRank(career);
   const darts = DARTS.find((d) => d.id === career.profile.darts)?.name ?? "";
   const life = lifeOf(career);
+  const rival = rivalOf(career);
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-4">
@@ -57,17 +58,52 @@ export function CareerProfile({ career }: { career: Career }) {
         <Stat label="Titler" value={String(career.titles)} />
         <Stat label="Treffsikkerhet" value={levelLabel(career.skillMed)} />
       </div>
-      <p style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
-        Rom: {STAGES[career.room].name} · {darts.toLowerCase()} piler · avvik {oneDecimal(career.skillMed)} mm · saldo {dollars(career.money)}
-      </p>
-      <p style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
-        Sesong {seasonOf(life.week)}, uke {weekInSeason(life.week)} av {WEEKS_PER_SEASON} · {life.seasonPts} sesongpoeng · rykte {life.reputation} av 10
-        {life.sponsor && ` · sponsor ${life.sponsor.name}, ${life.sponsor.left} igjen`}
-      </p>
+      <dl className="pf-card">
+        <div className="pf-row">
+          <dt>Sesong</dt>
+          <dd>
+            {seasonOf(life.week)} · uke {weekInSeason(life.week)} av {WEEKS_PER_SEASON}
+          </dd>
+        </div>
+        <div className="pf-row">
+          <dt>Rival</dt>
+          <dd>
+            {rival.name}
+            <small>
+              {rival.style} · {career.rivals?.[rival.name] ? `${career.rivals?.[rival.name].w}–${career.rivals?.[rival.name].l}` : "ikke møtt"}
+            </small>
+          </dd>
+        </div>
+        <div className="pf-row">
+          <dt>Rykte</dt>
+          <dd>
+            <span className="pf-bar" role="img" aria-label={`Rykte ${life.reputation} av 10`}>
+              <i style={{ width: `${life.reputation * 10}%` }} />
+            </span>
+          </dd>
+        </div>
+        {life.sponsor && (
+          <div className="pf-row">
+            <dt>Sponsor</dt>
+            <dd>
+              {life.sponsor.name}
+              <small>{life.sponsor.left} turneringer igjen</small>
+            </dd>
+          </div>
+        )}
+        <div className="pf-row">
+          <dt>Rom</dt>
+          <dd>{STAGES[career.room].name}</dd>
+        </div>
+        <div className="pf-row">
+          <dt>Piler</dt>
+          <dd>{darts}</dd>
+        </div>
+      </dl>
       {life.seasons.length > 0 && (
         <section aria-label="Sesonger">
           <p className="section-label mb-2">SESONGER</p>
-          <ul className="space-y-1">
+          <ul className="pf-list">
             {life.seasons.slice(0, 5).map((s) => (
               <li key={s.season} className="flex items-baseline justify-between gap-3" style={{ fontSize: "var(--text-small)", color: "var(--color-text-2)" }}>
                 <span className="truncate">
@@ -85,7 +121,7 @@ export function CareerProfile({ career }: { career: Career }) {
       {career.history.length > 0 && (
         <section aria-label="Siste">
           <p className="section-label mb-2">SISTE</p>
-          <ul className="space-y-1">
+          <ul className="pf-list">
             {career.history.slice(0, 6).map((h) => (
               <li key={h.at} className="flex items-baseline justify-between gap-3" style={{ fontSize: "var(--text-small)", color: "var(--color-text-2)" }}>
                 <span className="truncate">{h.place ? `${h.event} · ${PLACE_LABEL[h.place]}` : `${h.event} · ${h.won ? "vant" : "tapt"}`}</span>
@@ -106,7 +142,7 @@ export function CareerProfile({ career }: { career: Career }) {
           <ul className="grid grid-cols-2 gap-3">
             {career.trophies.map((t) => (
               <li key={t.at}>
-                <PokalCard kind={t.tier} name={TIERS[t.tier].trophy} date={t.at.slice(0, 10)} prize={dollars(t.prize)} />
+                <PokalCard kind={t.tier} name={t.name ?? TIERS[t.tier].trophy} date={t.at.slice(0, 10)} prize={dollars(t.prize)} />
               </li>
             ))}
           </ul>

@@ -34,7 +34,7 @@ export function heroButton(hero: Hero): { label: string; sub: string } {
   if (hero.kind === "challenge") {
     const c = hero.challenge;
     if (hero.done) return c.won ? { label: "HENT", sub: dollars(c.stake) } : { label: "OK", sub: GAMES[c.game].name };
-    return { label: "SPILL", sub: `${GAMES[c.game].name} · ${c.opponent.name}` };
+    return { label: "SPILL", sub: c.tv ? `${c.tv.title} · ${c.opponent.name}` : `${GAMES[c.game].name} · ${c.opponent.name}` };
   }
   if (hero.done) return hero.prize > 0 ? { label: "HENT", sub: dollars(hero.prize) } : { label: "OK", sub: hero.tier.short };
   if (!hero.drawn) return { label: "TREKK", sub: hero.tier.short };

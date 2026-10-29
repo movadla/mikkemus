@@ -34,7 +34,9 @@ export function ScreenTop({
   scolia?: { label: string; color: string } | null;
 }) {
   const label = backLabel.replace(/^←\s*/, "");
-  const backClass = `tactile inline-flex items-center justify-center shrink-0 ${FOCUS_RING}`;
+  // A long word (Regionmesterskapet) cannot be broken, so it is set a little smaller instead of being cut.
+  const longTitle = typeof title === "string" && title.split(" ").some((w) => w.length > 12);
+  const backClass =`tactile inline-flex items-center justify-center shrink-0 ${FOCUS_RING}`;
   const backStyle = { background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)", width: "var(--control)", height: "var(--control)", borderRadius: "var(--radius-m)" } as const;
   const rightSlot = right ?? (scolia ? <ScoliaDot summary={scolia} /> : null);
   return (
@@ -51,13 +53,13 @@ export function ScreenTop({
         ) : null}
         {sub ? (
           <div className="flex-1 min-w-0">
-            <h1 className="page-title line-clamp-2" style={{ lineHeight: 1.15 }}>
+            <h1 className={`page-title line-clamp-2 ${longTitle ? "page-title-long" : ""}`} style={{ lineHeight: 1.15 }}>
               {title}
             </h1>
             {sub}
           </div>
         ) : (
-          <h1 className="page-title flex-1 min-w-0 line-clamp-2" style={{ lineHeight: 1.15 }}>
+          <h1 className={`page-title flex-1 min-w-0 line-clamp-2 ${longTitle ? "page-title-long" : ""}`} style={{ lineHeight: 1.15 }}>
             {title}
           </h1>
         )}
