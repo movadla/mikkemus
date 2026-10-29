@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { Career } from "@/lib/career";
 import { NATION } from "@/lib/opponents";
-import { lifeOf } from "@/lib/careerLife";
+import { lifeOf, rivalOf, seasonOf } from "@/lib/careerLife";
 import { peopleOf } from "@/lib/careerWorld";
 import { norwayRankOf, playerWorldRank, worldRankFor } from "@/lib/opponentStats";
 import { gameOf, statsFor } from "@/lib/careerGame";
@@ -24,7 +24,10 @@ export function RankingList({ career }: { career: Career }) {
   const me: Row = { name: career.player, nat: "NOR", world: playerWorldRank(career.skillMed, career.points), figure: first(career.skillMed).value, me: true };
   const snap = lifeOf(career).world.snap;
   const seen = Object.keys(snap).length > 0;
-  const rows: Row[] = [...peopleOf(career).map((o) => ({ name: o.name, nat: o.nat, world: worldRankFor(o.name, o.med), figure: first(o.med).value, me: false, moved: !seen ? undefined : snap[o.name] === undefined ? ("ny" as const) : snap[o.name] - worldRankFor(o.name, o.med) })), me].filter((r) => tab === "world" || r.nat === "NOR").sort((a, b) => a.world - b.world || (a.me ? -1 : 1));
+  // Only someone who has really come in since is new; the rival is marked, so they are easy to find.
+  const rivalName = rivalOf(career).name;
+  const isNew = (name: string) => lifeOf(career).world.rookies.some((x) => x.name === name && x.since >= seasonOf(lifeOf(career).week));
+  const rows: Row[] = [...peopleOf(career).map((o) => ({ name: o.name, nat: o.nat, world: worldRankFor(o.name, o.med), figure: first(o.med).value, me: false, moved: !seen ? undefined : isNew(o.name) ? ("ny" as const) : snap[o.name] === undefined ? undefined : snap[o.name] - worldRankFor(o.name, o.med) })), me].filter((r) => tab === "world" || r.nat === "NOR").sort((a, b) => a.world - b.world || (a.me ? -1 : 1));
   const at = rows.findIndex((r) => r.me);
   const from = Math.max(0, Math.min(rows.length - 9, at - 4));
   const shown = rows.slice(from, from + 9);
@@ -46,6 +49,7 @@ export function RankingList({ career }: { career: Career }) {
               <b className="block truncate">{r.me ? `${r.name} (deg)` : r.name}</b>
               <small>
                 {NATION[r.nat] ?? r.nat}
+                {r.name === rivalName && <em className="rank-move rank-move-new"> · din rival</em>}
                 {r.moved === "ny" && <em className="rank-move rank-move-new"> · ny</em>}
                 {typeof r.moved === "number" && r.moved !== 0 && (
                   <em className={`rank-move ${r.moved > 0 ? "rank-move-up" : "rank-move-down"}`}>

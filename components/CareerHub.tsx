@@ -153,6 +153,7 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
   const hero = heroFor(career);
   const [picked, setPicked] = useState<Tier["id"] | null>(null);
   const playTip = useTipSeen("play");
+  const inboxTip = useTipSeen("inbox");
   const go = (v: View) => {
     uiFeedback("pick");
     setView(v);
@@ -308,10 +309,7 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
                 <TrophyIcon className="w-5 h-5" />
               </button>
             </div>
-            <div className="home-chips">
-              <PlaceChip room={career.room} />
-              <SeasonStrip career={career} />
-            </div>
+            <SeasonStrip career={career} />
             {news && (
               <button type="button" className="room-news" onClick={() => setNews(null)} aria-label={`Nytt i rommet: ${news}`}>
                 <StarIcon className="w-4 h-4" />
@@ -327,7 +325,7 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
                 <RankBadge rank={rankOf(career)} />
                 {rankOf(career)}
               </p>
-              <TrophyShelf career={career} />
+              {career.trophies.length > 0 && <TrophyShelf career={career} />}
             </div>
             <div className="relative rise-in" style={{ "--d": "0.2s" } as React.CSSProperties}>
               {!playTip && <TipPointer id="play" label="Trykk her" />}
@@ -339,11 +337,22 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
                 Nyheter
                 {unseenNews(lifeOf(career)) > 0 && <b className="home-pill-count">{unseenNews(lifeOf(career))}</b>}
               </button>
-              <button type="button" className={`home-pill tactile ${FOCUS_RING}`} onClick={() => go("inbox")}>
-                <MailIcon className="w-4 h-4" />
-                Meldinger
-                {inboxCount(lifeOf(career)) > 0 && <b className="home-pill-count">{inboxCount(lifeOf(career))}</b>}
-              </button>
+              <div className="relative">
+                {/* The first time something waits in the inbox after a first tournament, a pointer says where it is. */}
+                {!inboxTip && career.played >= 1 && inboxCount(lifeOf(career)) > 0 && <TipPointer id="inbox" label="Se her" />}
+                <button
+                  type="button"
+                  className={`home-pill tactile w-full ${FOCUS_RING}`}
+                  onClick={() => {
+                    markTipSeen("inbox");
+                    go("inbox");
+                  }}
+                >
+                  <MailIcon className="w-4 h-4" />
+                  Meldinger
+                  {inboxCount(lifeOf(career)) > 0 && <b className="home-pill-count">{inboxCount(lifeOf(career))}</b>}
+                </button>
+              </div>
             </div>
             <div className="round4 rise-in" style={{ "--d": "0.32s" } as React.CSSProperties}>
               <RoundButton icon={<HomeIcon />} label="Rom" badge={roomBadge(career)} onClick={() => go("rooms")} />

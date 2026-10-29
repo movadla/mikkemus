@@ -6,8 +6,19 @@ import { lifeOf, isOpen, type Message } from "@/lib/careerLife";
 import { answerMessage, markRead, whyNotAnswer } from "@/lib/careerWorld";
 import { newSeed } from "./careerFormat";
 import { Avatar } from "./ui/Avatar";
+import { MailIcon } from "./careerIcons";
+import { BoltIcon, CoinIcon, TrophyIcon, TvIcon } from "./icons";
 import { Button } from "./ui/Button";
 import { FOCUS_RING } from "./ui/focus";
+
+/** What a message is, in one word and one symbol, so the list can be read at a glance: an invitation, a challenge someone asks for, a show, a sponsor, or a note. */
+function kindOf(m: Message): { word: string; icon: React.ReactNode; tone: string } {
+  const o = m.offer;
+  if (o.kind === "invite") return { word: "Invitasjon", icon: <TrophyIcon className="w-5 h-5" />, tone: "gold" };
+  if (o.kind === "challenge") return o.tv ? { word: "TV", icon: <TvIcon className="w-5 h-5" />, tone: "teal" } : { word: "Utfordring", icon: <BoltIcon className="w-5 h-5" />, tone: "red" };
+  if (o.kind === "sponsor") return { word: "Sponsor", icon: <CoinIcon className="w-5 h-5" />, tone: "gold" };
+  return { word: "Beskjed", icon: <MailIcon className="w-5 h-5" />, tone: "muted" };
+}
 
 const STATE: Record<Exclude<Message["state"], "open">, string> = { taken: "Tatt imot", declined: "Avslått", expired: "Gikk ut" };
 
@@ -59,11 +70,17 @@ export function CareerInbox({ career, commit, onPlay, onChallenge }: { career: C
         return (
           <li key={m.id} className={`msg ${!m.read ? "msg-unread" : ""} ${m.state !== "open" ? "msg-done" : ""}`}>
             <button type="button" className={`msg-head tactile ${FOCUS_RING}`} aria-expanded={open === m.id} onClick={() => toggle(m)}>
-              <Avatar name={m.from.name} bot={person} px={40} />
+              {person ? (
+                <Avatar name={m.from.name} bot px={40} />
+              ) : (
+                <span className="msg-kind" data-tone={kindOf(m).tone} aria-hidden>
+                  {kindOf(m).icon}
+                </span>
+              )}
               <span className="min-w-0 text-left">
                 <b className="block truncate">{m.title}</b>
                 <small className="block truncate">
-                  {m.from.name}
+                  {kindOf(m).word} · {m.from.name}
                   {isOpen(m) && left !== null && <span className="msg-time"> · {left <= 1 ? "siste uke" : `${left} uker igjen`}</span>}
                   {m.state !== "open" && <span> · {STATE[m.state]}</span>}
                 </small>

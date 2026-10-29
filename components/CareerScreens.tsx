@@ -6,7 +6,7 @@ import { GAMES, REVENGE_BONUS, TIERS, challengeTier, closeChallenge, eventTier, 
 import { matchParticipants } from "@/lib/tournament";
 import { sponsorOutcome } from "@/lib/careerWorld";
 import { lifeOf } from "@/lib/careerLife";
-import { rankOf } from "@/lib/careerGoals";
+import { rankOf, rankProgress } from "@/lib/careerGoals";
 import { winnerOf as countdownWinner, newGame as newCountdown } from "@/lib/countdown";
 import { playFanfare } from "@/lib/fanfare";
 import { fxFlags, useFxLevel } from "@/lib/fxLevel";
@@ -20,7 +20,8 @@ import { levelLabel, oneDecimal } from "./careerFormat";
 import { CoinBurst } from "./CoinBurst";
 import { CountdownGameScreen } from "./CountdownApp";
 import { HighstrikerGameScreen } from "./HighstrikerApp";
-import { ArrowLeftIcon } from "./icons";
+import { ArrowLeftIcon, BoltIcon, CoinIcon, TrophyIcon } from "./icons";
+import { StarIcon } from "./careerIcons";
 import { LavaGameScreen } from "./LavaApp";
 import { PlayButton } from "./PlayButton";
 import { OverRoom } from "./RoomBackdrop";
@@ -29,7 +30,7 @@ import { Trophy } from "./Trophy";
 import { TrophyArt } from "./CareerTrophy";
 import { CharacterFigure } from "./CharacterFigure";
 import { EventIntro } from "./EventIntro";
-import { EVENT_PICTURES } from "./eventPictures";
+import { picturesFor } from "./eventPictures";
 import { CareerFaceContext } from "./ui/Avatar";
 import { poseFor } from "@/lib/characters";
 import { TIER_LOOK, foilVars } from "@/lib/materials";
@@ -48,7 +49,7 @@ function BackArrow({ onClick, label = "Tilbake" }: { onClick: () => void; label?
 /** A challenge: the two of them and the stake, then the game itself, then what it came to. */
 export function ChallengePlay(props: { career: Career; commit: (c: Career) => void; onHub: () => void }) {
   // Played inside the place it is dressed as, like a tournament, and the player is their character.
-  const inside = EVENT_PICTURES[challengeTier(props.career.challenge!).id];
+  const inside = picturesFor(challengeTier(props.career.challenge!));
   const over = props.career.challenge!.won !== null;
   return (
     <CareerFaceContext.Provider value={{ name: props.career.player, character: props.career.profile.character }}>
@@ -197,6 +198,7 @@ function ChallengeResult({ career, c, onDone }: { career: Career; c: Challenge; 
             </p>
           )}
           {!won && paid > 0 && <p style={{ color: "var(--color-text-2)" }}>Tapt, men honoraret er ditt.</p>}
+          <NextGoal career={career} />
         </div>
         {paid > 0 && <CoinBurst />}
         <PlayButton label={paid > 0 ? "HENT" : "OK"} tone={paid > 0 ? "gold" : "teal"} onClick={onDone} />
@@ -245,21 +247,41 @@ export function SeasonRecap({ career, onDone }: { career: Career; onDone: () => 
   );
 }
 
-/** The banner that comes up when a result opens the next step of the road, or gives a new level. */
-function UnlockBanner({ label, name, colour }: { label: string; name: string; colour: string }) {
+/** One quiet card for what a result gave besides the money (a revenge, a sponsor, a new tournament, a new rank), a row each, instead of a banner for each. */
+type NewRow = { icon: React.ReactNode; tone: string; title: string; text?: string; sound?: boolean };
+function NewCard({ rows }: { rows: NewRow[] }) {
+  const sound = rows.some((r) => r.sound);
   useEffect(() => {
-    const t = setTimeout(() => careerSound("unlock"), 1500);
-    return () => clearTimeout(t);
-  }, []);
+    if (!sound) return;
+    const timer = setTimeout(() => careerSound("unlock"), 1500);
+    return () => clearTimeout(timer);
+  }, [sound]);
+  if (rows.length === 0) return null;
   return (
-    <div role="status" className="unlock-banner text-center" style={{ borderColor: colour, color: colour }}>
-      <span className="section-label block" style={{ color: colour }}>
-        {label}
-      </span>
-      <span className="font-display" style={{ fontSize: "var(--text-title)", color: "var(--color-cream)" }}>
-        {name}
-      </span>
-    </div>
+    <ul className="new-card" aria-label="Nytt">
+      {rows.map((r) => (
+        <li key={r.title} role="status" className="new-row">
+          <span className="msg-kind" data-tone={r.tone} aria-hidden>
+            {r.icon}
+          </span>
+          <span className="min-w-0">
+            <b className="block">{r.title}</b>
+            {r.text && <small className="block">{r.text}</small>}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** What is next, in one line, so a result is never the end: how far there is to the next rank. */
+function NextGoal({ career }: { career: Career }) {
+  const g = rankProgress(career);
+  if (!g) return null;
+  return (
+    <p className="next-goal tabular">
+      {g.need - g.points} poeng til {g.name}
+    </p>
   );
 }
 
@@ -354,29 +376,17 @@ export function Result({ career, a, onDone }: { career: Career; a: ActiveEvent; 
               +{r.points} rangpoeng
             </p>
           )}
+          <NextGoal career={career} />
         </div>
-        {r.revenge && (
-          <div role="status" className="unlock-banner text-center" style={{ borderColor: "var(--color-gold)", color: "var(--color-gold)" }}>
-            <span className="section-label block" style={{ color: "var(--color-gold)" }}>
-              REVANSJ
-            </span>
-            <span className="font-display" style={{ fontSize: "var(--text-title)", color: "var(--color-cream)" }}>
-              Du slo {r.revenge.names.join(" og ")} · +{dollars(r.revenge.bonus)}
-            </span>
-          </div>
-        )}
-        {rivalLine && (
-          <p className="text-center" role="status" style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>
-            {rivalLine}
-          </p>
-        )}
-        {sponsor && (
-          <p className="text-center" role="status" style={{ color: sponsor.met ? "var(--color-gold)" : "var(--color-text-2)", fontSize: "var(--text-small)" }}>
-            {sponsor.met ? `${sponsor.name} betaler ${dollars(sponsor.pay)}` : `${sponsor.name} ville ha deg blant de ${sponsor.need === "quarter" ? "åtte" : "fire"} beste`}
-          </p>
-        )}
-        {opened && <UnlockBanner label="NY TURNERING" name={opened.short} colour={cupColor(opened.kind)} />}
-        {newRank && <UnlockBanner label="NY RANG" name={newRank} colour="var(--color-gold)" />}
+        <NewCard
+          rows={[
+            ...(r.revenge ? [{ icon: <BoltIcon className="w-5 h-5" />, tone: "gold", title: `Revansje: du slo ${r.revenge.names.join(" og ")}`, text: `+${dollars(r.revenge.bonus)}` }] : []),
+            ...(rivalLine && knockedOutBy && rec ? [{ icon: <BoltIcon className="w-5 h-5" />, tone: "red", title: `${knockedOutBy} har slått deg ${rec.l} ganger`, text: `En seier neste gang gir ${dollars(REVENGE_BONUS)} ekstra` }] : []),
+            ...(sponsor ? [{ icon: <CoinIcon className="w-5 h-5" />, tone: sponsor.met ? "gold" : "muted", title: sponsor.met ? `${sponsor.name} betaler ${dollars(sponsor.pay)}` : `${sponsor.name} betaler ikke denne gangen`, text: sponsor.met ? undefined : `Ville ha deg blant de ${sponsor.need === "quarter" ? "åtte" : "fire"} beste` }] : []),
+            ...(opened ? [{ icon: <TrophyIcon className="w-5 h-5" />, tone: "teal", title: `Ny turnering: ${opened.short}`, sound: true }] : []),
+            ...(newRank ? [{ icon: <StarIcon className="w-5 h-5" />, tone: "gold", title: `Ny rang: ${newRank}`, sound: true }] : []),
+          ]}
+        />
         {r.prize > 0 && <CoinBurst />}
         <PlayButton label={r.prize > 0 ? "HENT" : "OK"} tone={r.prize > 0 ? "gold" : "teal"} onClick={onDone} />
       </div>

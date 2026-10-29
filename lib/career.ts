@@ -544,8 +544,8 @@ export function settleChallenge(career: Career, won: boolean, now: string): Care
  */
 export function challengeTier(c: Challenge): Tier {
   const base = c.tv ? (c.tv.legs === 3 ? TIERS.nm : TIERS.gs) : TIERS.lu;
-  const name = c.tv ? c.tv.title : c.from ? `Duell mot ${c.opponent.name}` : `${GAMES[c.game].name}-duell`;
-  return { ...base, name, short: name, trophy: `${name}-pokalen`, stage: c.tv ? "På TV" : c.from ? "Revansje på Ly" : "Duell på Ly", tagline: GAMES[c.game].about, size: 8, fee: 0, prizes: { winner: c.stake }, points: {}, qualify: undefined, opens: undefined };
+  const name = c.tv ? c.tv.title : c.from ? `Utfordring fra ${c.opponent.name}` : `${GAMES[c.game].name}-duell`;
+  return { ...base, ...(c.tv ? { key: "tv" } : {}), name, short: name, trophy: `${name}-pokalen`, stage: c.tv ? "På TV" : c.from ? "Utfordring på Ly" : "Duell på Ly", tagline: GAMES[c.game].about, size: 8, fee: 0, prizes: { winner: c.stake }, points: {}, qualify: undefined, opens: undefined };
 }
 
 /** Takes the finished challenge off the table. */

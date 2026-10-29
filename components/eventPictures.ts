@@ -12,3 +12,15 @@ export const EVENT_PICTURES: Partial<Record<TierId, { outside: string; alt: stri
   gs: { outside: "/career/gs-outside.jpg", alt: "Civic Hall der Grand Slam spilles, sett utenfra om kvelden", outsideFocus: "40% 50%", inside: "/career/gs-inside.jpg", insideFocus: "55% 50%" },
   vm: { outside: "/career/vm-outside.jpg", alt: "Hallen til verdensmesterskapet, sett utenfra om kvelden", outsideFocus: "50% 55%", inside: "/career/vm-inside.jpg", insideFocus: "50% 50%" },
 };
+
+/**
+ * The pictures of an invitation that has places of its own (the World Cup, the finale of the season, the television studio), by the key of the
+ * invitation. One that is not here is played in the place of the step it is built on. To give one its own, make the two pictures (see
+ * art/prompts/turneringer.md), put them in public/career, and add the line here.
+ */
+export const INVITE_PICTURES: Record<string, NonNullable<(typeof EVENT_PICTURES)[TierId]>> = {
+  // wc: { outside: "/career/wc-outside.jpg", alt: "Hallen til World Cup of Darts, sett utenfra om kvelden", outsideFocus: "50% 55%", inside: "/career/wc-inside.jpg", insideFocus: "50% 50%" },
+};
+
+/** The pictures of an event: its own when it is an invitation with them, otherwise those of the step it is built on. */
+export const picturesFor = (tier: { id: TierId; key?: string }) => (tier.key ? INVITE_PICTURES[tier.key] : undefined) ?? EVENT_PICTURES[tier.id];

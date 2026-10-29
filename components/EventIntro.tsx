@@ -6,7 +6,7 @@ import { PUB, STAGE, TROPHY } from "@/lib/scenePalette";
 import { TIER_LOOK, foilVars } from "@/lib/materials";
 import { TrophyArt } from "./CareerTrophy";
 import { CharacterFace } from "./CharacterFigure";
-import { EVENT_PICTURES } from "./eventPictures";
+import { picturesFor } from "./eventPictures";
 import { EventScene } from "./EventScenes";
 import { PlayButton } from "./PlayButton";
 
@@ -47,7 +47,7 @@ export function EventIntro({ tier, player, character, onDone, label = "TREKK", l
     careerSound(tier.scale <= 1 ? "crowd-1" : tier.scale <= 3 ? "crowd-2" : "crowd-3");
   }, [tier.scale]);
   const [skip, setSkip] = useState(false);
-  const pictures = EVENT_PICTURES[tier.id];
+  const pictures = picturesFor(tier as Tier & { key?: string });
   const [top, bottom] = GROUND[tier.id];
   const s = tier.scale;
   const slam = SLAM[s];

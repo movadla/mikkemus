@@ -63,6 +63,10 @@ test.describe("karriere", () => {
     await page.getByRole("button", { name: "Neste" }).click();
     await expect(page.getByRole("radiogroup", { name: "Karakter" })).toBeVisible();
     await expect(page.getByText("SKJORTE")).toHaveCount(0);
+    // Three short steps, one thing on each: who, the character, and the game with the darts.
+    await expect(page.getByRole("radiogroup", { name: "Spill" })).toHaveCount(0);
+    await page.getByRole("button", { name: "Neste" }).click();
+    await expect(page.getByRole("radiogroup", { name: "Spill" })).toBeVisible();
     // Darts are a soft tip or a steel tip, each with its picture; steel is the start.
     await expect(page.getByRole("radio", { name: /Steel tip/ })).toBeChecked();
     await page.getByRole("radio", { name: /Soft tip/ }).click();
@@ -222,7 +226,9 @@ test.describe("karriere", () => {
     // The character stands in the room (the career in the seed has none saved: it gets the one there is), and the profile has its face.
     await expect(page.locator(".char-home .char-figure-img")).toHaveAttribute("src", /c03.noytral/);
     // It says where the player is: the room is a place with a name and a step.
-    await expect(page.getByText(/Garasjen din/)).toContainText("Ryddet");
+    // The top is the goal and the season; the room has its own screen, and a shelf of cups only once there is a cup to put on it.
+    await expect(page.getByText(/Sesong 1 · uke 1/)).toBeVisible();
+    await expect(page.getByRole("img", { name: /Pokalhylle/ })).toHaveCount(0);
     const hud = page.getByRole("group", { name: "Status" });
     await expect(hud.getByText("$300")).toBeVisible();
     // One star, not two: the goal says which rank it counts towards, and the rank is written under the name.

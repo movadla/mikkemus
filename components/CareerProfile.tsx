@@ -101,8 +101,8 @@ export function CareerProfile({ career }: { career: Career }) {
         </div>
       </dl>
       {life.seasons.length > 0 && (
-        <section aria-label="Sesonger">
-          <p className="section-label mb-2">SESONGER</p>
+        <details className="pf-sec" aria-label="Sesonger">
+          <summary className="section-label">SESONGER</summary>
           <ul className="pf-list">
             {life.seasons.slice(0, 5).map((s) => (
               <li key={s.season} className="flex items-baseline justify-between gap-3" style={{ fontSize: "var(--text-small)", color: "var(--color-text-2)" }}>
@@ -116,11 +116,11 @@ export function CareerProfile({ career }: { career: Career }) {
               </li>
             ))}
           </ul>
-        </section>
+        </details>
       )}
       {career.history.length > 0 && (
-        <section aria-label="Siste">
-          <p className="section-label mb-2">SISTE</p>
+        <details className="pf-sec" aria-label="Siste">
+          <summary className="section-label">SISTE TURNERINGER</summary>
           <ul className="pf-list">
             {career.history.slice(0, 6).map((h) => (
               <li key={h.at} className="flex items-baseline justify-between gap-3" style={{ fontSize: "var(--text-small)", color: "var(--color-text-2)" }}>
@@ -132,10 +132,10 @@ export function CareerProfile({ career }: { career: Career }) {
               </li>
             ))}
           </ul>
-        </section>
+        </details>
       )}
-      <section aria-label="Pokaler">
-        <p className="section-label mb-2">POKALER</p>
+      <details className="pf-sec" aria-label="Pokaler" open>
+        <summary className="section-label">POKALER</summary>
         {career.trophies.length === 0 ? (
           <p style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>Ingen pokaler ennå</p>
         ) : (
@@ -147,7 +147,7 @@ export function CareerProfile({ career }: { career: Career }) {
             ))}
           </ul>
         )}
-      </section>
+      </details>
     </div>
   );
 }

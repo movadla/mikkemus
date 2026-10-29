@@ -31,7 +31,7 @@ import { StarIcon } from "./careerIcons";
 import { Hub } from "./CareerHub";
 import { ChallengePlay, Result, TrainingPlay } from "./CareerScreens";
 import { EventIntro } from "./EventIntro";
-import { EVENT_PICTURES } from "./eventPictures";
+import { picturesFor } from "./eventPictures";
 import { OverRoom } from "./RoomBackdrop";
 import { CharacterFace, CharacterFigure } from "./CharacterFigure";
 import { CHARACTERS, DEFAULT_CHARACTER, characterOf } from "@/lib/characters";
@@ -156,8 +156,8 @@ export function CareerApp({ onExitToHome }: { onExitToHome: () => void }) {
 }
 
 /** The three steps of a start: who, what they look like, and the first tournament (which is the pub's, and free). */
-function Steps({ step }: { step: 1 | 2 }) {
-  const items = ["Hvem er du", "Karakter", "Første turnering"];
+function Steps({ step }: { step: 1 | 2 | 3 }) {
+  const items = ["Hvem er du", "Karakter", "Spill og piler"];
   return (
     <ol className="flex gap-2 mb-4" aria-label="Steg">
       {items.map((label, i) => (
@@ -176,7 +176,7 @@ function Steps({ step }: { step: 1 | 2 }) {
 function NewCareer({ taken, onBack, onCreate }: { taken: string[]; onBack: () => void; onCreate: (player: string, level: string, profile: { home: HomeId; darts: DartsId; character: string; game: CareerGame; doubleOut: boolean }) => void }) {
   const roster = useRoster();
   const people = roster.filter((r) => r.kind !== "team" && !taken.includes(careerId(r.name)));
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [player, setPlayer] = useState<string | null>(null);
   const [level, setLevel] = useState("dyktig");
   const [darts, setDarts] = useState<DartsId>("steel");
@@ -202,26 +202,12 @@ function NewCareer({ taken, onBack, onCreate }: { taken: string[]; onBack: () =>
   };
   const record = roster.find((r) => r.name === player);
 
-  if (step === 2 && record) {
+  if (step === 3 && record) {
     return (
       <div className="animate-screen-push screen has-sticky-action career-skin">
         <div className="screen-inner">
-          <ScreenTop title="Karakter" onBack={() => setStep(1)} sub={<span style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>{record.name}</span>} />
-          <Steps step={2} />
-          <p className="section-label mb-2">KARAKTER</p>
-          <div className="char-pick mb-5" role="radiogroup" aria-label="Karakter" style={{ "--tint": characterOf(character).tint } as React.CSSProperties}>
-            <div className="char-pick-stage">
-              <CharacterFigure id={character} glow />
-            </div>
-            <div className="char-pick-row">
-              {CHARACTERS.map((c) => (
-                <button key={c.id} type="button" role="radio" aria-checked={character === c.id} aria-label={c.name} onClick={() => setCharacter(c.id)} className={`char-pick-item tactile ${FOCUS_RING}`} style={{ "--tint": c.tint } as React.CSSProperties}>
-                  <CharacterFace id={c.id} px={56} />
-                </button>
-              ))}
-            </div>
-            <p className="char-pick-name">{characterOf(character).name}</p>
-          </div>
+          <ScreenTop title="Spill og piler" onBack={() => setStep(2)} sub={<span style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>{record.name}</span>} />
+          <Steps step={3} />
           <p className="section-label mb-2">SPILL</p>
           <div className="mb-5">
             <GameChoice {...gameSettings} onChange={setGameSettings} />
@@ -242,6 +228,34 @@ function NewCareer({ taken, onBack, onCreate }: { taken: string[]; onBack: () =>
           </p>
           <Button block variant="primary" size="lg" onClick={() => onCreate(record.name, level, { home: "garage", darts, character, ...gameSettings })}>
             Start karrieren
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (step === 2 && record) {
+    return (
+      <div className="animate-screen-push screen has-sticky-action career-skin">
+        <div className="screen-inner">
+          <ScreenTop title="Karakter" onBack={() => setStep(1)} sub={<span style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>{record.name}</span>} />
+          <Steps step={2} />
+          <p className="section-label mb-2">KARAKTER</p>
+          <div className="char-pick mb-5" role="radiogroup" aria-label="Karakter" style={{ "--tint": characterOf(character).tint } as React.CSSProperties}>
+            <div className="char-pick-stage">
+              <CharacterFigure id={character} glow />
+            </div>
+            <div className="char-pick-row">
+              {CHARACTERS.map((c) => (
+                <button key={c.id} type="button" role="radio" aria-checked={character === c.id} aria-label={c.name} onClick={() => setCharacter(c.id)} className={`char-pick-item tactile ${FOCUS_RING}`} style={{ "--tint": c.tint } as React.CSSProperties}>
+                  <CharacterFace id={c.id} px={56} />
+                </button>
+              ))}
+            </div>
+            <p className="char-pick-name">{characterOf(character).name}</p>
+          </div>
+          <Button block variant="primary" size="lg" onClick={() => setStep(3)}>
+            Neste
           </Button>
         </div>
       </div>
@@ -379,7 +393,7 @@ function Play({ career, commit, onHub }: { career: Career; commit: (c: Career) =
     />
   );
   // An event with a picture is played inside it: the bar of Ly, the hall of the world championship, behind the draw and the matches.
-  const inside = EVENT_PICTURES[a.tier];
+  const inside = picturesFor({ id: a.tier, key: a.invite?.key });
   return (
     <CareerFaceContext.Provider value={{ name: career.player, character: career.profile.character }}>
       <TeamsContext.Provider value={teams}>
