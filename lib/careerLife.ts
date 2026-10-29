@@ -143,7 +143,8 @@ export function welcomeLife(player: string): Life {
     ...newLife(),
     counter: 2,
     news: [{ id: "n1", week: 1, kind: "world", headline: `${player} er ny på Ly`, text: "Fredagscupen venter. Det er gratis å være med." }],
-    inbox: [{ id: "m2", week: 1, from: { name: "Puben på Ly", role: "Ly" }, title: `Velkommen, ${player}`, body: "Her kommer invitasjoner, utfordringer og tilbud når du har spilt litt. Spill en turnering, så skjer det noe.", read: false, state: "open", offer: { kind: "info" } }],
+    // Nothing in the inbox to begin with: it holds the invitations, duels and offers of sponsors, and nothing else.
+    inbox: [],
   };
 }
 

@@ -122,8 +122,9 @@ function ChallengeFlow({ career, commit, onHub }: { career: Career; commit: (c: 
         player={career.player}
         character={career.profile.character}
         label="SPILL"
-        extra={tv ? <FaceOff career={career} opponent={opponent} /> : undefined}
-        plates={tv ? [["Honorar", dollars(tv.honorarium)], ["Til vinneren", dollars(c.stake)]] : [["Mot", opponent], ["Spill", GAMES[c.game].name], ["Til vinneren", dollars(c.stake)]]}
+        extra={<FaceOff career={career} opponent={opponent} named={!tv} />}
+        plates={tv ? [["Honorar", dollars(tv.honorarium)], ["Til vinneren", dollars(c.stake)]] : [["Spill", GAMES[c.game].name], ["Premie", dollars(c.stake)], ...(c.risk ? [["Du risikerer", dollars(Math.min(career.money, c.risk))] as [string, string]] : [])]}
+        plain={!tv}
         line={
           <>
             <b>{career.player}</b> mot <b>{opponent}</b>.
@@ -276,15 +277,22 @@ export function SeasonRecap({ career, onDone }: { career: Career; onDone: () => 
 }
 
 /** The two who play a show, face to face, under the plates of its opening. */
-function FaceOff({ career, opponent }: { career: Career; opponent: string }) {
+function FaceOff({ career, opponent, named = false }: { career: Career; opponent: string; /** The names under the faces: a duel has no other place that says who plays. */ named?: boolean }) {
+  const px = named ? 84 : 60;
   return (
     <div className="ev-faceoff" aria-label={`${career.player} mot ${opponent}`}>
-      <CharacterFace id={career.profile.character} pose="kast" px={60} />
+      <span className="ev-face">
+        <CharacterFace id={career.profile.character} pose="kast" px={px} />
+        {named && <small>{career.player}</small>}
+      </span>
       <span className="font-display" style={{ color: "var(--color-gold-strong)", fontSize: "var(--text-num)" }}>
         VS
       </span>
-      <span style={{ width: 60 }}>
-        <OpponentPortrait name={opponent} />
+      <span className="ev-face">
+        <span style={{ width: px }}>
+          <OpponentPortrait name={opponent} />
+        </span>
+        {named && <small>{opponent}</small>}
       </span>
     </div>
   );

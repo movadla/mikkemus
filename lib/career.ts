@@ -152,6 +152,9 @@ export const TIERS: Record<TierId, Tier> = {
 /** The ladder, the smallest step first. */
 export const LADDER: Tier[] = [TIERS.lu, TIERS.region, TIERS.nm, TIERS.gs, TIERS.vm];
 
+/** Best first. */
+export const PLACE_ORDER: Place[] = ["winner", "final", "semi", "quarter", "r16", "r32"];
+
 export const PLACE_LABEL: Record<Place, string> = {
   winner: "Vinner",
   final: "Finalist",
@@ -250,6 +253,8 @@ export type Career = {
   qualified: TierId[];
   /** The cups won, newest first. */
   trophies: Trophy[];
+  /** The best place the player has had in each step of the ladder: kept for good (the history holds only the last thirty events). Absent on a career from before there was one: the profile reads the history and the shelf then. */
+  best?: Partial<Record<TierId, Place>>;
   /** The last training sessions, newest first. */
   training: TrainingSession[];
   /** How far each drill of the training room has come (lib/drills.ts). Absent on a career from before there were any. */
@@ -456,6 +461,7 @@ export function finishEvent(career: Career, now: string): Career {
     money: career.money + result.prize,
     points: career.points + result.points,
     titles: career.titles + (won ? 1 : 0),
+    best: a.invite || (career.best?.[a.tier] && PLACE_ORDER.indexOf(career.best[a.tier]!) <= PLACE_ORDER.indexOf(place)) ? career.best : { ...career.best, [a.tier]: place },
     trophies: won ? [{ tier: a.tier, at: now, prize: result.prize, ...(a.invite ? { name: a.invite.trophy } : {}) }, ...career.trophies] : career.trophies,
     worldTitles: career.worldTitles + (won && tier.id === "vm" && !a.invite ? 1 : 0),
     played: career.played + 1,

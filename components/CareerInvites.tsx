@@ -12,9 +12,31 @@ import { Button } from "./ui/Button";
 export function CareerInvites({ career, commit, onPlay }: { career: Career; commit: (c: Career) => void; onPlay: () => void }) {
   const life = lifeOf(career);
   const open = life.inbox.filter((m) => m.offer.kind === "invite" && isOpen(m));
-  if (open.length === 0) return null;
+  // An invitation that is taken waits here as the next tournament until the player goes in.
+  const next = career.active?.invite && !career.active.result ? career.active.invite : null;
+  if (open.length === 0 && !next) return null;
   return (
     <ul className="msgs" aria-label="Invitasjoner">
+      {next && (
+        <li className="msg msg-invite msg-next">
+          <div className="msg-head">
+            <span className="msg-kind" data-tone="gold" aria-hidden>
+              <TrophyIcon className="w-5 h-5" />
+            </span>
+            <span className="min-w-0 text-left">
+              <small className="msg-ribbon">NESTE TURNERING</small>
+              <b className="block truncate">{next.name}</b>
+            </span>
+          </div>
+          <div className="msg-body">
+            <div className="msg-actions">
+              <Button variant="primary" onClick={onPlay}>
+                Gå inn
+              </Button>
+            </div>
+          </div>
+        </li>
+      )}
       {open.map((m) => {
         if (m.offer.kind !== "invite") return null;
         const offer = m.offer;
@@ -24,7 +46,6 @@ export function CareerInvites({ career, commit, onPlay }: { career: Career; comm
           const next = answerMessage(markRead(career, m.id), m.id, accept, newSeed());
           if (next === career) return;
           commit(next);
-          if (accept) onPlay();
         };
         return (
           <li key={m.id} className="msg msg-invite">

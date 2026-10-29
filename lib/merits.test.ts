@@ -3,7 +3,7 @@ import { newCareer, type Career } from "./career";
 import { lifeOf } from "./careerLife";
 import { challengeRival, chooseRival, worldRankNow } from "./careerWorld";
 import type { Life } from "./careerLife";
-import { meritsOf } from "./merits";
+import { bestResults, meritsOf } from "./merits";
 import { rivalOf } from "./careerLife";
 
 const withLife = (c: Career, patch: Partial<Life>): Career => ({ ...c, life: { ...lifeOf(c), ...patch } });
@@ -26,6 +26,17 @@ describe("merits", () => {
     expect(done(beaten)).toContain("rival");
     const year = withLife(c, { seasons: [{ season: 1, rank: 1, points: 40, prize: 300, winner: "Lars" }] });
     expect(done(year)).toContain("year");
+  });
+});
+
+describe("the best results", () => {
+  it("keep the best place in each cup, not the last, and count titles when there are several", () => {
+    const c = fresh();
+    expect(bestResults(c)).toEqual([]);
+    const semi = { ...c, best: { nm: "semi" as const }, history: [{ at: AT, event: "Norgesmesterskapet", place: "r16" as const, prize: 0, cost: 0, points: 0 }] };
+    expect(bestResults(semi)).toEqual([expect.objectContaining({ id: "nm", best: "Semifinale" })]);
+    const twice = { ...c, trophies: [{ tier: "lu" as const, at: AT, prize: 100 }, { tier: "lu" as const, at: AT, prize: 100 }] };
+    expect(bestResults(twice)[0]).toMatchObject({ id: "lu", best: "Vinner ×2", titles: 2 });
   });
 });
 

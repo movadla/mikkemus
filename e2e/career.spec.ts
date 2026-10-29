@@ -171,9 +171,12 @@ test.describe("karriere", () => {
     await expect.poll(async () => (await saved(page)).life.reputation).toBe(4);
     // The invitation: yes signs up for it, as its own tournament.
     await page.getByRole("button", { name: /Ly-sprinten/ }).first().click();
-    await page.getByRole("button", { name: "Svar under Turneringer" }).click();
     await expect(page.getByText("Vinner $400")).toBeVisible();
-    await page.getByRole("button", { name: "Ta imot" }).click();
+    await page.getByRole("button", { name: "Aksepter" }).click();
+    // A yes does not go into the tournament: it points to the tournaments, where it waits as the next one.
+    await expect.poll(async () => (await saved(page)).active?.invite?.name).toBe("Ly-sprinten");
+    await page.getByRole("button", { name: "Gå til turneringer" }).click();
+    await expect(page.getByText("NESTE TURNERING")).toBeVisible();
     await expect.poll(async () => (await saved(page)).active?.invite?.name).toBe("Ly-sprinten");
     expect((await saved(page)).active.cup.countdown).toEqual({ start: 301, doubleOut: false });
   });

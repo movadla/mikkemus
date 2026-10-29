@@ -15,14 +15,14 @@ function finished(c: Career, place: Place, prize = 0, points = 0): Career {
 }
 
 describe("a new life", () => {
-  it("starts in week 1 of season 1 with a welcome in the inbox and a line of news", () => {
+  it("starts in week 1 of season 1 with an empty inbox and a line of news", () => {
     const l = lifeOf(fresh());
     expect(l.week).toBe(1);
     expect(seasonOf(l.week)).toBe(1);
     expect(l.reputation).toBe(5);
-    expect(l.inbox).toHaveLength(1);
+    expect(l.inbox).toHaveLength(0);
     expect(l.news).toHaveLength(1);
-    expect(inboxCount(l)).toBe(1);
+    expect(inboxCount(l)).toBe(0);
     expect(unseenNews(l)).toBe(1);
   });
 
@@ -150,8 +150,8 @@ describe("a week goes by", () => {
 
   it("gives each person's strength as the seasons made it", () => {
     const c = withLife(fresh(), { world: { ...newLife().world, drift: { Haakon: 0.9 } } });
-    expect(botMed(c, "Haakon")).toBeCloseTo(47 * 0.9, 5);
-    expect(botMed(c, "Marcus")).toBe(35);
+    expect(botMed(c, "Haakon")).toBeCloseTo(46 * 0.9, 5);
+    expect(botMed(c, "Marcus")).toBe(47);
   });
 });
 

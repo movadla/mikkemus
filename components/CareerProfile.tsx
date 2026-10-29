@@ -14,7 +14,7 @@ import { Button } from "./ui/Button";
 import { CheckIcon } from "./icons";
 import { LY_REGULARS } from "@/lib/opponents";
 import { chooseRival, challengeRival } from "@/lib/careerWorld";
-import { meritsOf } from "@/lib/merits";
+import { bestResults, meritsOf } from "@/lib/merits";
 import { FOCUS_RING } from "./ui/focus";
 
 /** One number with its name under it. */
@@ -50,6 +50,7 @@ export function CareerProfile({ career, tab: first = "oversikt", commit, onChall
   const rec = career.rivals?.[rival.name];
   const metRival = !!rec && rec.w + rec.l > 0;
   const merits = meritsOf(career);
+  const best = bestResults(career);
   const progress = next ? Math.min(1, career.points / next.min) : 1;
   return (
     <div className="space-y-4">
@@ -255,6 +256,18 @@ export function CareerProfile({ career, tab: first = "oversikt", commit, onChall
       )}
       {rivalSheet === "merits" && (
         <Sheet title={`Meritter · ${merits.filter((m) => m.done).length} av ${merits.length}`} onClose={() => setRivalSheet(null)}>
+          {best.length > 0 && (
+            <ul className="pf-merits pf-best" aria-label="Beste resultat">
+              {best.map((b) => (
+                <li key={b.id} className="done">
+                  <span className="min-w-0">
+                    <b>{b.name}</b>
+                    <small>Best: {b.best}</small>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
           <ul className="pf-merits">
             {merits.map((m) => (
               <li key={m.id} className={m.done ? "done" : ""}>
@@ -280,9 +293,7 @@ export function CareerProfile({ career, tab: first = "oversikt", commit, onChall
       {tab === "pokaler" && (
         <div className="space-y-4" role="tabpanel" aria-label="Pokaler">
           <TrophyCabinet career={career} />
-          {career.trophies.length === 0 ? (
-            <p style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>Ingen pokaler ennå</p>
-          ) : (
+          {career.trophies.length === 0 ? null : (
             <ul className="grid grid-cols-2 gap-3">
               {career.trophies.map((t) => (
                 <li key={t.at}>

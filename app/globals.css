@@ -8263,3 +8263,17 @@ button.season-strip { min-height: 2.75rem; padding-block: 0; }
 .pf-merits li.done .pf-merit-mark { background: var(--color-gold); border-color: var(--color-gold); }
 .pf-row dd.pf-season { flex-direction: row; flex-wrap: nowrap; white-space: nowrap; }
 .pf-row dd.pf-season .season-ticks { display: inline-flex; flex-wrap: nowrap; }
+
+/* Meritter: the best place in each cup, above the list of what is done */
+.pf-merits.pf-best { max-height: none; overflow: visible; margin-bottom: 0.8rem; }
+
+/* Meritter: the best place in each cup, above the list of what is done */
+.pf-merits.pf-best { max-height: none; overflow: visible; margin-bottom: 0.8rem; }
+
+/* Cups of invitations that have not come yet: a dark outline with a question mark */
+.cabinet-slot > .cabinet-q { position: absolute; top: 1.2rem; width: auto; height: auto; font-family: var(--font-display, inherit); font-size: 1.4rem; font-weight: 800; line-height: 1; color: var(--color-muted); }
+.cabinet-shelf-wrap { grid-auto-rows: auto; }
+
+/* The two who meet in a duel: a face each, with the name under it */
+.ev-face { display: grid; justify-items: center; gap: 0.25rem; }
+.ev-face small { color: var(--color-cream); font-weight: 700; font-size: var(--text-small); max-width: 8rem; text-align: center; }

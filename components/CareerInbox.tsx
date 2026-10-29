@@ -83,6 +83,8 @@ export function CareerInbox({
 }) {
   const life = lifeOf(career);
   const [open, setOpen] = useState<string | null>(null);
+  // The offers of a sponsor are shown when the player asks to see them.
+  const [deals, setDeals] = useState<string | null>(null);
   if (life.inbox.length === 0) return <p style={{ color: "var(--color-muted)" }}>Ingen meldinger.</p>;
   const toggle = (m: Message) => {
     const next = open === m.id ? null : m.id;
@@ -145,7 +147,7 @@ export function CareerInbox({
                       {offer.risk > 0 && <li>Taper {dollars(offer.risk)}</li>}
                     </ul>
                   )}
-                  {offer.kind === "sponsor" && (
+                  {offer.kind === "sponsor" && (m.state !== "open" || deals === m.id) && (
                     <ul className="msg-deals" aria-label="Avtalene">
                       {dealsOf(offer).map((d, i) => (
                         <li key={d.name}>
@@ -169,16 +171,37 @@ export function CareerInbox({
                   {m.state === "open" && offer.kind === "sponsor" && (
                     <>
                       <div className="msg-actions">
+                        {deals !== m.id && (
+                          <Button variant="primary" onClick={() => setDeals(m.id)}>
+                            Se tilbud
+                          </Button>
+                        )}
                         <Button onClick={() => answer(m, false)}>Ikke nå</Button>
                       </div>
                       {why && <p className="msg-why">{why}</p>}
                     </>
                   )}
                   {m.state === "open" && offer.kind === "invite" && (
+                    <>
+                      <div className="msg-actions">
+                        <Button variant="primary" disabled={!!why} onClick={() => answer(m, true)}>
+                          Aksepter
+                        </Button>
+                        <Button onClick={() => answer(m, false)}>Avslå</Button>
+                      </div>
+                      {why && <p className="msg-why">{why}</p>}
+                    </>
+                  )}
+                  {m.state === "taken" && offer.kind === "invite" && career.active?.invite?.id === offer.invite.id && !career.active.result && (
                     <div className="msg-actions">
                       <Button variant="primary" onClick={onRoad}>
-                        Svar under Turneringer
+                        Gå til turneringer
                       </Button>
+                    </div>
+                  )}
+                  {offer.kind === "info" && (
+                    <div className="msg-actions">
+                      <Button onClick={() => setOpen(null)}>Til info</Button>
                     </div>
                   )}
                   {m.state === "open" && words && (
