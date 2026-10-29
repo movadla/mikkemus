@@ -42,7 +42,6 @@ export function CareerInvites({ career, commit, onPlay }: { career: Career; comm
               </span>
             </div>
             <div className="msg-body">
-              <p>{m.body}</p>
               <InviteFacts offer={offer} />
               <div className="msg-actions">
                 <Button variant="primary" disabled={!!why} onClick={() => answer(true)}>

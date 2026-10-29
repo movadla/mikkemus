@@ -1,8 +1,7 @@
 "use client";
 
 import { STAGES, type Career } from "@/lib/career";
-import { DAILY_REWARD, DRILLS, LEVEL_MAX, UNLOCK_ROOM, dailyOf, drillLevel, goalLine, isDrillOpen, levelCap, type DrillId } from "@/lib/drills";
-import { levelLabel } from "./careerFormat";
+import { DAILY_REWARD, DRILLS, LEVEL_MAX, UNLOCK_ROOM, dailyOf, drillLevel, isDrillOpen, levelCap, type DrillId } from "@/lib/drills";
 import { LockIcon } from "./careerIcons";
 import { CheckIcon, FlameIcon } from "./icons";
 import { Button } from "./ui/Button";
@@ -19,12 +18,6 @@ export function DrillList({ career, onTrain, today }: { career: Career; onTrain:
   const daily = dailyOf(career, today);
   return (
     <div className="room-tile room-tile-wide drills" role="group" aria-label="Øvelser">
-      <p className="section-label">
-        TRENING · NIVÅ OPP TIL {cap} I DETTE ROMMET
-      </p>
-      <p className="drills-skill">
-        Treffsikkerhet <b>{levelLabel(career.skillMed)}</b>
-      </p>
       <div className={`drill-daily ${daily.done ? "drill-daily-done" : ""}`}>
         <span className="drill-flame" aria-hidden>
           {daily.done ? <CheckIcon className="w-6 h-6" /> : <FlameIcon className="w-6 h-6" />}
@@ -52,7 +45,7 @@ export function DrillList({ career, onTrain, today }: { career: Career; onTrain:
                   {d.name}
                   {open && <span className="tabular drills-level"> · Nivå {level}</span>}
                 </b>
-                <small className="block">{open ? goalLine(d.id, level) : `Åpnes i ${STAGES[UNLOCK_ROOM[d.id]].name}`}</small>
+                {!open && <small className="block">{`Åpnes i ${STAGES[UNLOCK_ROOM[d.id]].name}`}</small>}
                 {open && (
                   <span className="drill-meter" role="img" aria-label={`Nivå ${level} av ${cap} i dette rommet`}>
                     <i style={{ width: `${(level / LEVEL_MAX) * 100}%` }} />

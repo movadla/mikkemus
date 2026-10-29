@@ -17,8 +17,7 @@ import { CareerInvites } from "./CareerInvites";
 import { SeasonScreen } from "./SeasonScreen";
 import { RankUp, SeasonRecap } from "./CareerScreens";
 import { CareerNews } from "./CareerNews";
-import { Avatar } from "./ui/Avatar";
-import { rivalOf, sponsorLogo } from "@/lib/careerLife";
+import { sponsorLogo } from "@/lib/careerLife";
 import { inboxCount, isOpen, lifeOf, seasonOf, unseenNews, weekInSeason, WEEKS_PER_SEASON } from "@/lib/careerLife";
 import { markNewsSeen } from "@/lib/careerWorld";
 import { CareerHud } from "./CareerHud";
@@ -135,7 +134,7 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
     if (typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches) return begin();
     const r = from.getBoundingClientRect();
     setLaunch({ id: tier, x: r.left + r.width / 2, y: r.top + r.height / 2 });
-    launchTimer.current = setTimeout(begin, 600);
+    launchTimer.current = setTimeout(begin, 400);
   };
   const press = (e: React.MouseEvent<HTMLButtonElement>) => {
     uiFeedback("click");
@@ -215,16 +214,17 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
             <Button block onClick={onBack}>
               Alle karrierer
             </Button>
-            <Button
-              block
-              variant="ghost"
-              onClick={() => {
-                setMenu(false);
-                setConfirmDelete(true);
-              }}
-            >
-              <span style={{ color: "var(--color-red)" }}>Slett karrieren</span>
-            </Button>
+            <div className="menu-danger">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setMenu(false);
+                  setConfirmDelete(true);
+                }}
+              >
+                <span style={{ color: "var(--color-red)", fontSize: "var(--text-small)" }}>Slett karrieren</span>
+              </Button>
+            </div>
           </div>
         </Sheet>
       )}
@@ -272,28 +272,6 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
           <div className="screen-inner career-home">
             <CareerHud career={career} end={<span className="inline-flex items-center gap-2">{trophyChip}{menuButton}</span>} />
             <SeasonStrip career={career} onOpen={() => go("season")} />
-            {career.played >= 1 && (
-              <button
-                type="button"
-                className={`rival-chip tactile ${FOCUS_RING}`}
-                aria-label={`Rival: ${rivalOf(career).name}${career.rivals?.[rivalOf(career).name] ? `, ${career.rivals[rivalOf(career).name].w} mot ${career.rivals[rivalOf(career).name].l}` : ""}`}
-                onClick={() => {
-                  setProfileTab("oversikt");
-                  go("profile");
-                }}
-              >
-                <Avatar name={rivalOf(career).name} bot px={28} />
-                <span>
-                  <small>RIVAL</small>
-                  <b>{rivalOf(career).name}</b>
-                </span>
-                {career.rivals?.[rivalOf(career).name] && (
-                  <span className="tabular rival-score">
-                    {career.rivals[rivalOf(career).name].w}–{career.rivals[rivalOf(career).name].l}
-                  </span>
-                )}
-              </button>
-            )}
             {news && (
               <button type="button" className="room-news" onClick={() => setNews(null)} aria-label={`Nytt i rommet: ${news}`}>
                 <StarIcon className="w-4 h-4" />
@@ -409,7 +387,9 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
                 {!compare && (
                   <DrillList career={career} onTrain={onTrain} today={new Date().toISOString().slice(0, 10)} />
                 )}
-                <PlayButton label={next ? "KJØP" : "FERDIG"} sub={next ? (buyWhy ? `${dollars(next.price)} · ${buyWhy}` : dollars(next.price)) : "Drømmerommet er på plass"} disabled={!!buyWhy} onClick={buy} />
+                <div className="sticky-play">
+                  <PlayButton label={next ? "KJØP" : "FERDIG"} sub={next ? (buyWhy ? `${dollars(next.price)} · ${buyWhy}` : dollars(next.price)) : "Drømmerommet er på plass"} disabled={!!buyWhy} onClick={buy} />
+                </div>
               </div>
             </div>
           </div>
@@ -435,7 +415,7 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
           {view === "road" && (
             <>
               <CareerInvites career={career} commit={commit} onPlay={onPlay} />
-              <ul className="space-y-2" aria-label="Turneringer">
+              <ul className="space-y-2" aria-label="Turneringer" style={{ paddingBottom: "6.5rem" }}>
                 {LADDER.map((tier) => {
                   const locked = !isUnlocked(career, tier);
                   const here = career.active?.tier === tier.id;

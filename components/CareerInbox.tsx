@@ -129,7 +129,7 @@ export function CareerInbox({
               </button>
               {open === m.id && (
                 <div className="msg-body">
-                  <p>{m.body}</p>
+                  {offer.kind !== "sponsor" && <p>{m.body}</p>}
                   {offer.kind === "invite" && <InviteFacts offer={offer} />}
                   {offer.kind === "challenge" && (
                     <ul className="msg-chips" aria-label="Om utfordringen">

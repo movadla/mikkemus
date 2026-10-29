@@ -13,7 +13,7 @@ const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
 
 type Metrics = { w: number; h: number; pitch: number; gap: number; top: number; font: string; small: string };
-const NORMAL: Metrics = { w: 116, h: 56, pitch: 72, gap: 18, top: 42, font: "var(--text-small)", small: "var(--text-micro)" };
+const NORMAL: Metrics = { w: 116, h: 68, pitch: 84, gap: 18, top: 42, font: "var(--text-small)", small: "var(--text-micro)" };
 const LARGE: Metrics = { w: 250, h: 70, pitch: 92, gap: 48, top: 44, font: "var(--text-title)", small: "var(--text-small)" };
 
 /**

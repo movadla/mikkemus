@@ -529,13 +529,6 @@ function Play({ career, commit, onHub }: { career: Career; commit: (c: Career) =
         {...(team
           ? {
               plates: [["Lag", String(tier.size)], ["Innskudd", tier.fee === 0 ? "Gratis" : dollars(tier.fee)], ["Til vinneren", dollars(tier.prizes.winner ?? 0)]] as [string, string][],
-              line: (
-                <>
-                  <b>{career.player}</b> og <b>{team.mine.partner}</b> er med.
-                  <br />
-                  Trekningen starter nå.
-                </>
-              ),
             }
           : {})}
       />

@@ -158,7 +158,7 @@ export function CareerProfile({ career, onRank, tab: first = "oversikt" }: { car
             <ul className="pf-list">
               {life.seasons.slice(0, 8).map((s) => (
                 <li key={s.season} className="flex items-baseline justify-between gap-3" style={{ fontSize: "var(--text-small)", color: "var(--color-text-2)" }}>
-                  <span className="truncate">
+                  <span>
                     Sesong {s.season} · nr. {s.rank}
                     {s.rank === 1 ? " · årets spiller" : ` · vinner ${s.winner}`}
                   </span>
@@ -175,7 +175,7 @@ export function CareerProfile({ career, onRank, tab: first = "oversikt" }: { car
               <ul className="pf-list">
                 {career.history.slice(0, 8).map((h) => (
                   <li key={h.at} className="flex items-baseline justify-between gap-3" style={{ fontSize: "var(--text-small)", color: "var(--color-text-2)" }}>
-                    <span className="truncate">{h.place ? `${h.event} · ${PLACE_LABEL[h.place]}` : `${h.event} · ${h.won ? "vant" : "tapt"}`}</span>
+                    <span>{h.place ? `${h.event} · ${PLACE_LABEL[h.place]}` : `${h.event} · ${h.won ? "vant" : "tapt"}`}</span>
                     <span className="tabular shrink-0" style={{ color: "var(--color-muted)" }}>
                       {h.prize - h.cost > 0 ? "+" : ""}
                       {dollars(h.prize - h.cost)}

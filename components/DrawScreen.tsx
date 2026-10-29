@@ -130,7 +130,7 @@ export function DrawScreen({
     ) : career && name === career.player ? (
       <CharacterFace id={career.me?.character} pose="noytral" px={26} />
     ) : (
-      <span onClick={career?.me ? () => setProfileFor(name) : undefined} role={career?.me ? "button" : undefined} aria-label={career?.me ? `Se ${name}` : undefined} tabIndex={career?.me ? 0 : undefined} style={{ display: "inline-flex" }}>
+      <span onClick={career?.me ? () => setProfileFor(name) : undefined} role={career?.me ? "button" : undefined} aria-label={career?.me ? `Se ${name}` : undefined} tabIndex={career?.me ? 0 : undefined} className="hit-pad" style={{ display: "inline-flex" }}>
         <Avatar name={name} bot px={26} />
       </span>
     );

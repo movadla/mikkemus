@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { Career } from "@/lib/career";
-import { lifeOf, seasonOf, weekInSeason, WEEKS_PER_SEASON, type NewsItem } from "@/lib/careerLife";
+import { lifeOf, weekInSeason, type NewsItem } from "@/lib/careerLife";
 import { CharacterFace } from "./CharacterFigure";
 import { NewsIcon } from "./careerIcons";
 import { Avatar } from "./ui/Avatar";
@@ -31,7 +31,7 @@ export function CareerNews({ career }: { career: Career }) {
   for (const n of life.news) {
     if (n.week !== last)
       rows.push({
-        head: `Sesong ${seasonOf(n.week)} · uke ${weekInSeason(n.week)} av ${WEEKS_PER_SEASON}`,
+        head: `Uke ${weekInSeason(n.week)}`,
       });
     last = n.week;
     rows.push(n);

@@ -330,10 +330,13 @@ function NewCard({ rows }: { rows: NewRow[] }) {
     const timer = setTimeout(() => careerSound("unlock"), 1500);
     return () => clearTimeout(timer);
   }, [sound]);
+  const [all, setAll] = useState(false);
   if (rows.length === 0) return null;
+  // Two rows are the night's news; the rest are one tap away.
+  const shown = all ? rows : rows.slice(0, 2);
   return (
     <ul className="new-card" aria-label="Nytt">
-      {rows.map((r) => (
+      {shown.map((r) => (
         <li key={r.title} role="status" className="new-row">
           <span className="msg-kind" data-tone={r.tone} aria-hidden>
             {r.icon}
@@ -344,6 +347,13 @@ function NewCard({ rows }: { rows: NewRow[] }) {
           </span>
         </li>
       ))}
+      {!all && rows.length > 2 && (
+        <li className="new-more">
+          <button type="button" className="tactile" onClick={() => setAll(true)}>
+            + {rows.length - 2} til
+          </button>
+        </li>
+      )}
     </ul>
   );
 }

@@ -5964,7 +5964,7 @@ html[data-fx="full"] .hs-last {
   background: var(--c);
   transform: scale(0);
   pointer-events: none;
-  animation: ev-iris 0.65s cubic-bezier(0.6, 0, 0.3, 1) forwards;
+  animation: ev-iris 0.4s cubic-bezier(0.6, 0, 0.3, 1) forwards;
 }
 @keyframes ev-iris {
   to {
@@ -8139,3 +8139,28 @@ button.season-strip { border: 1px solid var(--color-border); text-align: left; }
   .ev-field { margin-top: 0.2rem; gap: 0.25rem; }
   .ev-field-faces > li { width: 2.9rem; }
 }
+
+/* Polish: thumb-sized strips and tabs, a quicker curtain, a short fade between the views of the career, and the danger kept apart in the menu. */
+button.season-strip { min-height: 2.75rem; padding-block: 0; }
+.pf-tab { min-height: 2.75rem; }
+.pf-row dd.pf-sponsor { display: flex; flex-direction: row; align-items: center; justify-content: flex-end; gap: 0.6rem; }
+.pf-sponsor .sponsor-logo { width: 2.25rem; height: 2.25rem; }
+.cabinet-slot small { font-size: 0.75rem; }
+.career-curtain { animation-duration: 0.3s; }
+@keyframes fade-quick { from { opacity: 0; } to { opacity: 1; } }
+.room-over .animate-screen-push { animation: fade-quick 0.12s ease-out both; }
+.menu-danger { display: flex; justify-content: center; margin-top: 1.6rem; }
+
+/* A bigger hit area round a small face, without changing how it looks. */
+.hit-pad { position: relative; }
+.hit-pad::after { content: ""; position: absolute; inset: -9px; }
+/* The rows of what a result gave: two, and a button for the rest. */
+.new-more { list-style: none; text-align: center; }
+.new-more button { padding: 0.5rem 1rem; color: var(--color-text-2); font-weight: 700; font-size: var(--text-small); min-height: 2.75rem; }
+/* An opening seen before is quick: the parts come in at once and the button is there after half a second. */
+.ev-quick .ev-from, .ev-quick .ev-kick, .ev-quick .ev-cup, .ev-quick .ev-title, .ev-quick .ev-plate, .ev-quick .ev-you, .ev-quick .ev-field { animation-duration: 0.25s !important; animation-delay: 0s !important; }
+.ev-quick .ev-go { animation-duration: 0.25s !important; animation-delay: 0.45s !important; }
+.ev-quick .ev-go .play-btn { animation-delay: 0.8s !important; }
+
+/* The home fits the screen exactly: the screen has 1 rem above and 2.5 rem below, and the home takes what is left (it used to be 1.5 rem too tall, so it scrolled). */
+.career-home { min-height: calc(100dvh - 3.5rem - var(--nav-space, 0px) - env(safe-area-inset-bottom, 0px)); }

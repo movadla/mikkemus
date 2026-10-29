@@ -48,6 +48,22 @@ export function EventIntro({ tier, player, character, onDone, label = "TREKK", l
     careerSound(tier.scale <= 1 ? "crowd-1" : tier.scale <= 3 ? "crowd-2" : "crowd-3");
   }, [tier.scale]);
   const [skip, setSkip] = useState(false);
+  // The first time an event is opened the whole show plays; after that it is quick (the button is there at once, and a tap still skips).
+  const seenKey = (tier as { key?: string }).key ?? tier.id;
+  const [quick] = useState(() => {
+    try {
+      return (JSON.parse(localStorage.getItem("mikke-mus-openings") ?? "[]") as string[]).includes(seenKey);
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    try {
+      const seen = new Set(JSON.parse(localStorage.getItem("mikke-mus-openings") ?? "[]") as string[]);
+      seen.add(seenKey);
+      localStorage.setItem("mikke-mus-openings", JSON.stringify([...seen]));
+    } catch {}
+  }, [seenKey]);
   const pictures = picturesFor(tier as Tier & { key?: string });
   const [top, bottom] = GROUND[tier.id];
   const s = tier.scale;
@@ -63,7 +79,7 @@ export function EventIntro({ tier, player, character, onDone, label = "TREKK", l
   const confetti = s >= 3 ? Array.from({ length: s === 3 ? 18 : 30 }, (_, i) => ({ x: (i * 37) % 100, c: colours[i % 4], d: 1.9 + ((i * 13) % 14) / 10, r: ((i * 83) % 700) - 350 })) : [];
   return (
     <div
-      className={`ev ${skip ? "ev-skip" : ""}`}
+      className={`ev ${skip ? "ev-skip" : ""} ${quick ? "ev-quick" : ""}`}
       style={{ "--c": TROPHY[tier.id], "--top": top, "--bot": bottom, "--beam": BEAM[tier.id], "--laser": STAGE.gs.laser, "--sh": `${slam.sh}px`, "--sc": slam.sc } as React.CSSProperties}
       data-scale={s}
       data-tier={tier.id}
@@ -126,15 +142,7 @@ export function EventIntro({ tier, player, character, onDone, label = "TREKK", l
             <CharacterFace id={character} pose="kast" px={64} />
             {partner && <Avatar name={partner} bot px={64} />}
           </span>
-          <span>
-            {line ?? (
-              <>
-                <b>{player}</b> er med.
-                <br />
-                Trekningen starter nå.
-              </>
-            )}
-          </span>
+          <span>{line ?? <b>{partner ? `${player} og ${partner}` : player}</b>}</span>
         </p>
         <div className="ev-go" onClick={(e) => e.stopPropagation()}>
           <PlayButton label={label} onClick={onDone} />
