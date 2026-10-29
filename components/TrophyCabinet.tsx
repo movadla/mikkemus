@@ -48,7 +48,7 @@ export function TrophyCabinet({ career }: { career: Career }) {
         <div className="cabinet-shelf">
           {[...named].map(([name, { tier, n }]) => (
             <div key={name} className="cabinet-slot">
-              <TrophyArt kind={tier} bare />
+              <TrophyArt kind={tier} bare variant={name} />
               <small>{name.replace(/-pokalen$/, "")}</small>
               <small className="cabinet-note">{n > 1 ? `×${n}` : "Vunnet"}</small>
             </div>

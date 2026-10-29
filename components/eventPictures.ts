@@ -19,13 +19,14 @@ export const EVENT_PICTURES: Partial<Record<TierId, { outside: string; alt: stri
  * art/prompts/turneringer.md), put them in public/career, and add the line here.
  */
 export const INVITE_PICTURES: Record<string, Partial<NonNullable<(typeof EVENT_PICTURES)[TierId]>>> = {
-  // Trondheim Open: the place from outside is its own; inside it is played where the step it is built on is played.
-  stavanger: { outside: "/career/stavanger-outside.jpg", alt: "Fargerike trehus og flagglenker i en gate i Stavanger, der Stavanger Masters åpnes", outsideFocus: "50% 50%" },
-  trondheim: { outside: "/career/trondheim-outside.jpg", alt: "Domkirken i Trondheim i solnedgang, der Trondheim Open åpnes", outsideFocus: "50% 50%" },
-  // The television studio: the show of one leg, the best of three, and the evening of eight. One picture does for the opening and for the matches.
-  tv: { outside: "/career/tv-inside.jpg", alt: "TV-studioet der showet spilles, med publikum foran scenen", outsideFocus: "50% 45%", inside: "/career/tv-inside.jpg", insideFocus: "50% 45%" },
-  "tv-kveld": { outside: "/career/tv-inside.jpg", alt: "TV-studioet der showet spilles, med publikum foran scenen", outsideFocus: "50% 45%", inside: "/career/tv-inside.jpg", insideFocus: "50% 45%" },
-  // wc: { outside: "/career/wc-outside.jpg", alt: "Hallen til World Cup of Darts, sett utenfra om kvelden", outsideFocus: "50% 55%", inside: "/career/wc-inside.jpg", insideFocus: "50% 50%" },
+  // Trondheim Open and Stavanger Masters have a picture of their own both outside and inside.
+  stavanger: { outside: "/career/stavanger-outside.jpg", alt: "Fargerike trehus og flagglenker i en gate i Stavanger, der Stavanger Masters åpnes", outsideFocus: "50% 50%", inside: "/career/stavanger-inside.jpg", insideFocus: "50% 50%" },
+  trondheim: { outside: "/career/trondheim-outside.jpg", alt: "Domkirken i Trondheim i solnedgang, der Trondheim Open åpnes", outsideFocus: "50% 50%", inside: "/career/trondheim-inside.jpg", insideFocus: "50% 50%" },
+  // The television studio: the show of one leg, the best of three, and the evening of eight. The building at sunset opens it, the studio is where it is played.
+  tv: { outside: "/career/tv-outside.jpg", alt: "TV-huset i solnedgang, med parabolantenner på taket, der showet spilles", outsideFocus: "50% 45%", inside: "/career/tv-inside.jpg", insideFocus: "50% 45%" },
+  "tv-kveld": { outside: "/career/tv-outside.jpg", alt: "TV-huset i solnedgang, med parabolantenner på taket, der showet spilles", outsideFocus: "50% 45%", inside: "/career/tv-inside.jpg", insideFocus: "50% 45%" },
+  // World Cup of Darts: the hall from outside and the arena inside, where the matches are played.
+  wc: { outside: "/career/wc-outside.jpg", alt: "Hallen til World Cup of Darts i solnedgang, sett utenfra", outsideFocus: "50% 55%", inside: "/career/wc-inside.jpg", insideFocus: "50% 50%" },
 };
 
 /** The pictures of an event: its own when it is an invitation with them, otherwise those of the step it is built on. */

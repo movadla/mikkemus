@@ -8116,3 +8116,26 @@ button.season-strip { border: 1px solid var(--color-border); text-align: left; }
 .season-next { display: grid; gap: 0.4rem; padding: 0; margin: 0; list-style: none; }
 .season-next li { display: flex; justify-content: space-between; gap: 0.6rem; padding: 0.5rem 0.7rem; border-radius: var(--radius-s); background: var(--color-surface); border: 1px solid var(--color-border); }
 .season-next small { color: var(--color-gold-strong); font-weight: 700; white-space: nowrap; }
+
+/* A trophy that is a photograph: it fills the same box as the drawn one. */
+.t3d-photo { display: grid; place-items: center; }
+.t3d-photo img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.45)); }
+
+/* In the cabinet a photographed cup keeps to its slot, so the words under it stay readable. */
+.cabinet-slot > span { overflow: hidden; }
+.cabinet-slot .t3d, .cabinet-slot .t3d-art, .cabinet-slot .t3d-photo { width: 100%; height: 100%; }
+.cabinet-slot .t3d-photo img { max-height: 100%; }
+.cabinet-slot .t3d-photo { height: 4.4rem; }
+.cabinet-slot .t3d-photo img { width: auto; height: 4.4rem; max-width: 100%; margin: 0 auto; }
+
+/* The black bars of the big openings are only a frame: they never take a touch, so a button that scrolls under one can still be pressed. */
+.ev-bar { pointer-events: none; }
+
+/* With the black bars of a big opening, the content keeps clear of them (the kicker at the top, the button at the bottom), and on a short phone it is packed a little closer. */
+.ev[data-scale="3"] .ev-inner, .ev[data-scale="4"] .ev-inner, .ev[data-scale="5"] .ev-inner { padding-block: 4.6rem; }
+@media (max-height: 820px) {
+  .ev-inner { gap: 0.55rem; }
+  .ev-cup { width: 4rem; }
+  .ev-field { margin-top: 0.2rem; gap: 0.25rem; }
+  .ev-field-faces > li { width: 2.9rem; }
+}

@@ -372,7 +372,7 @@ function Ceremony({ tier, player, prize, confetti, character }: { tier: (typeof 
         <span className="cer-spot" />
         <span className="cer-rays" />
         <div className="cer-trophy">
-          <TrophyArt kind={tier.id} tilt />
+          <TrophyArt kind={tier.id} tilt variant={(tier as { key?: string }).key} />
         </div>
       </div>
       <span className="cer-flash" aria-hidden />

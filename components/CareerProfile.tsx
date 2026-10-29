@@ -197,7 +197,7 @@ export function CareerProfile({ career, onRank, tab: first = "oversikt" }: { car
             <ul className="grid grid-cols-2 gap-3">
               {career.trophies.map((t) => (
                 <li key={t.at}>
-                  <PokalCard kind={t.tier} name={t.name ?? TIERS[t.tier].trophy} date={t.at.slice(0, 10)} prize={dollars(t.prize)} />
+                  <PokalCard kind={t.tier} name={t.name ?? TIERS[t.tier].trophy} variant={t.name} date={t.at.slice(0, 10)} prize={dollars(t.prize)} />
                 </li>
               ))}
             </ul>

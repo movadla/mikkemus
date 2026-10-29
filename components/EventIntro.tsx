@@ -98,7 +98,7 @@ export function EventIntro({ tier, player, character, onDone, label = "TREKK", l
       <div className="ev-inner">
         <p className="ev-kick">{tier.stage}</p>
         <div className="ev-cup">
-          <TrophyArt kind={tier.id} bare />
+          <TrophyArt kind={tier.id} bare variant={(tier as { key?: string }).key} />
         </div>
         <h1 className="ev-title" style={{ fontSize: `clamp(1.7rem, 8.4vw, ${slam.size}rem)` }}>
           {s >= 4 ? (

@@ -5,12 +5,19 @@ import type { TierId } from "@/lib/career";
 import { MATERIALS, RANK_LOOK, TIER_LOOK, foilVars, frameOf } from "@/lib/materials";
 import { badgeSvg, trophySvg } from "@/lib/trophySvg";
 
+/** The cups that have a photographed trophy (public/career/trophies/<id>.webp): it stands in for the drawn one wherever the cup is shown. */
+export const TROPHY_PHOTO: Partial<Record<TierId, string>> = { lu: "/career/trophies/lu.webp", region: "/career/trophies/region.webp", nm: "/career/trophies/nm.webp", gs: "/career/trophies/gs.webp", vm: "/career/trophies/vm.webp" };
+
+/** The cups of invitations, by the key of the invitation or the name of its trophy: they have a trophy of their own, not the one of the step they stand on. */
+export const INVITE_TROPHY_PHOTO: Record<string, string> = { wc: "/career/trophies/wc.webp", "World Cup of Darts-pokalen": "/career/trophies/wc.webp" };
+
 /**
  * The trophy of an event, in metal. `bare` is the trophy alone (cards, shelves, lists); without it it stands on a plinth with a shadow and a
  * reflection. With `tilt` it follows the finger or the pointer, and the gloss moves with it. It is an image: what it stands for is said by the
  * text next to it.
  */
-export function TrophyArt({ kind, bare = false, tilt = false, className = "", style }: { kind: TierId; bare?: boolean; tilt?: boolean; className?: string; style?: CSSProperties }) {
+export function TrophyArt({ kind, bare = false, tilt = false, className = "", style, variant }: { kind: TierId; bare?: boolean; tilt?: boolean; className?: string; style?: CSSProperties; /** The key or the trophy name of an invitation: its cup is not the one of the step it stands on. */ variant?: string }) {
+  const photo = variant !== undefined ? INVITE_TROPHY_PHOTO[variant] : TROPHY_PHOTO[kind];
   const id = useId().replace(/[^a-zA-Z0-9]/g, "");
   const html = useMemo(() => trophySvg(kind, `t${id}_`, bare), [kind, id, bare]);
   const el = useRef<HTMLSpanElement>(null);
@@ -28,7 +35,14 @@ export function TrophyArt({ kind, bare = false, tilt = false, className = "", st
   return (
     <span ref={el} className={`t3d ${tilt ? "t3d-tilt" : ""} ${className}`} style={{ "--tint": TIER_LOOK[kind].tint, ...style } as CSSProperties} onPointerMove={tilt ? move : undefined} onPointerLeave={tilt ? leave : undefined} aria-hidden>
       <span className="t3d-glow" />
-      <span className="t3d-art" dangerouslySetInnerHTML={{ __html: html }} />
+      {photo ? (
+        <span className="t3d-art t3d-photo">
+          {/* eslint-disable-next-line @next/next/no-img-element -- one fixed picture from public/career */}
+          <img src={photo} alt="" draggable={false} />
+        </span>
+      ) : (
+        <span className="t3d-art" dangerouslySetInnerHTML={{ __html: html }} />
+      )}
     </span>
   );
 }
@@ -42,7 +56,7 @@ export function RankBadge({ rank, className = "" }: { rank: string; className?: 
 }
 
 /** A cup the player has won, as a card: a frame in the metal of the event, the cup, the name in foil, the date and the prize. It tilts under a finger. */
-export function PokalCard({ kind, date, prize, name }: { kind: TierId; date: string; prize: string; name: string }) {
+export function PokalCard({ kind, date, prize, name, variant }: { kind: TierId; date: string; prize: string; name: string; variant?: string }) {
   const el = useRef<HTMLDivElement>(null);
   const move = (e: React.PointerEvent) => {
     const box = el.current;
@@ -61,7 +75,7 @@ export function PokalCard({ kind, date, prize, name }: { kind: TierId; date: str
       </span>
       <div className="pokal-in">
         <div style={{ width: "5rem" }}>
-          <TrophyArt kind={kind} bare />
+          <TrophyArt kind={kind} bare variant={variant} />
         </div>
         <span className="pokal-name foil foil-soft" data-t={name} style={foilVars(kind) as CSSProperties}>
           {name}
