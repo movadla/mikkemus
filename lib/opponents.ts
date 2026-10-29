@@ -36,6 +36,8 @@ export const LY_REGULARS: Opponent[] = [
   o("Haakon", "NOR", "", ["", ""], 14, 47),
   o("Marcus", "NOR", "", ["", ""], 15, 35),
   o("Guro", "NOR", "", ["", ""], 107, 37),
+  o("Halfdan", "NOR", "", ["", ""], 16, 45),
+  o("Svein", "NOR", "", ["", ""], 17, 47),
 ];
 
 /** The international players: thirty-one, one for each place in the world championship, each with a face of their own (the three women are Sofia, Mei and Emma). They come back in the bigger events. The jobs and the words are left out: only the numbers are the game's. */

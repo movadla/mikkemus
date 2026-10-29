@@ -11,8 +11,8 @@ import { REVENGE_BONUS, TIERS, cupFor, fieldNames, finishEvent, newCareer, start
 import { matchParticipants, type Tournament } from "./tournament";
 
 describe("the people", () => {
-  it("are Ly's sixteen and the thirty-one international players, each with a picture that exists", () => {
-    expect(LY_REGULARS).toHaveLength(16);
+  it("are Ly's eighteen and the thirty-one international players, each with a picture that exists", () => {
+    expect(LY_REGULARS).toHaveLength(18);
     expect(INTERNATIONALS).toHaveLength(31);
     for (const o of [...LY_REGULARS, ...INTERNATIONALS, ...LEVEL_BOTS]) expect(existsSync(join(process.cwd(), "public", faceSrc(o.face))), o.name).toBe(true);
   });
