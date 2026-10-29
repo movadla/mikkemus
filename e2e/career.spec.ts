@@ -371,7 +371,7 @@ test.describe("karriere", () => {
     await page.getByRole("button", { name: /Lars/ }).click();
     await place(page, "Trening").click();
     await expect(page.getByText("Dyktig")).toBeVisible();
-    await page.getByRole("button", { name: /^Tren · / }).click();
+    await page.getByRole("button", { name: "Tren Trippel 20" }).click();
     const keys = page.getByRole("group", { name: "Tastatur" });
     for (let i = 0; i < 15; i++) {
       await expect(page.getByText(`${i + 1}/15`)).toBeVisible();
@@ -385,6 +385,29 @@ test.describe("karriere", () => {
     expect(s.training).toHaveLength(1);
     await play(page, "OK").click();
     await expect(play(page, /^SPILL/)).toBeVisible();
+  });
+
+  test("trening: øvelser med nivå, en trefføvelse som bestås, og taket rommet setter", async ({ page }) => {
+    await seed(page, { ...CAREER, drills: { tre20: { level: 20, passes: 19, tries: 19 } } });
+    await page.getByRole("button", { name: /Lars/ }).click();
+    await place(page, "Trening").click();
+    // The list: each drill with its goal and level, and what the room allows.
+    await expect(page.getByText(/NIVÅ OPP TIL 20 I DETTE ROMMET/)).toBeVisible();
+    await expect(page.getByRole("list", { name: "Øvelser" }).getByText("Nivå 20")).toBeVisible();
+    await page.getByRole("button", { name: "Tren Tre 20 på tre piler" }).click();
+    // At level 20 there are eight attempts; three on the first passes it, but the room stops the level at twenty.
+    await expect(page.getByText("FORSØK 1 AV 8")).toBeVisible();
+    await page.getByRole("button", { name: "3 treff" }).click();
+    await expect(page.getByText("Bestått")).toBeVisible();
+    await expect(page.getByText(/Rommet tillater nivå 20/)).toBeVisible();
+    await expect.poll(async () => (await saved(page)).drills.tre20).toEqual({ level: 20, passes: 20, tries: 20 });
+    await play(page, "OK").click();
+    // Bull on nine darts at level 1: none in three attempts is not passed.
+    await place(page, "Trening").click();
+    await page.getByRole("button", { name: "Tren Bull på ni piler" }).click();
+    for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "0 treff" }).click();
+    await expect(page.getByText("Ikke denne gangen")).toBeVisible();
+    await expect.poll(async () => (await saved(page)).drills.bull9).toEqual({ level: 1, passes: 0, tries: 1 });
   });
 
   test("menyen: slett karrieren ligger bak de tre prikkene, og slett sier hva det koster", async ({ page }) => {

@@ -21,6 +21,7 @@ import { deleteCareer, loadCareers, mergeCareers, readLocalCareers, saveCareer }
 import { ensurePlayer, useRoster } from "@/lib/storage";
 import { gameName, gameOf, type CareerGame } from "@/lib/careerGame";
 import { GameChoice } from "./GameChoice";
+import type { DrillId } from "@/lib/drills";
 import { sameName } from "@/lib/people";
 import { TextField } from "./ui/TextField";
 import { applyTheme } from "@/lib/theme";
@@ -59,6 +60,7 @@ export function CareerApp({ onExitToHome }: { onExitToHome: () => void }) {
   const [id, setId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [screen, setScreen] = useState<"hub" | "play" | "challenge" | "training">("hub");
+  const [drill, setDrill] = useState<DrillId>("t20");
 
   useEffect(() => {
     let live = true;
@@ -147,12 +149,15 @@ export function CareerApp({ onExitToHome }: { onExitToHome: () => void }) {
     return <Play career={career} commit={commit} onHub={() => setScreen("hub")} />;
   }
   if (screen === "training") {
-    return <TrainingPlay career={career} commit={commit} onHub={() => setScreen("hub")} />;
+    return <TrainingPlay career={career} commit={commit} drill={drill} onHub={() => setScreen("hub")} />;
   }
   if (screen === "challenge" && career.challenge) {
     return <ChallengePlay career={career} commit={commit} onHub={() => setScreen("hub")} />;
   }
-  return <Hub career={career} onBack={() => setId(null)} onPlay={() => setScreen("play")} onChallenge={() => setScreen("challenge")} onTrain={() => setScreen("training")} commit={commit} onDelete={() => remove(career)} />;
+  return <Hub career={career} onBack={() => setId(null)} onPlay={() => setScreen("play")} onChallenge={() => setScreen("challenge")} onTrain={(id) => {
+    setDrill(id);
+    setScreen("training");
+  }} commit={commit} onDelete={() => remove(career)} />;
 }
 
 /** The three steps of a start: who, what they look like, and the first tournament (which is the pub's, and free). */

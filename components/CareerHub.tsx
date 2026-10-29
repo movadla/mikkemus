@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { DRILL_ROUNDS } from "@/lib/training";
+import { DRILLS, drillLevel, goalLine, levelCap, type DrillId } from "@/lib/drills";
 import { LADDER, ROOM_MAX, STAGES, buyStage, dollars, hubPicture, topStep, isUnlocked, nextStage, startEvent, whyNot, whyNotBuy, type Career, type Tier } from "@/lib/career";
 import { cupColor } from "@/lib/botCup";
 import { TROPHY } from "@/lib/scenePalette";
@@ -9,7 +9,7 @@ import { foilVars, frameOf } from "@/lib/materials";
 import { rankOf, roomBadge } from "@/lib/careerGoals";
 import { heroButton, heroFor } from "@/lib/careerHero";
 import { careerSound, uiFeedback } from "@/lib/uiSound";
-import { levelLabel, newSeed, oneDecimal } from "./careerFormat";
+import { levelLabel, newSeed } from "./careerFormat";
 import { HomeIcon, LockIcon, MailIcon, RoadIcon, StarIcon } from "./careerIcons";
 import { CareerInbox } from "./CareerInbox";
 import { CareerInvites } from "./CareerInvites";
@@ -107,7 +107,7 @@ function TrophyShelf({ career }: { career: Career }) {
 const ROOM_TITLE = { fontSize: "var(--text-num)", textTransform: "uppercase", letterSpacing: "0.04em", lineHeight: 1.05, color: "var(--color-cream)", textAlign: "center" } as const;
 
 /** The home of a career, made as simple as it goes: the room behind it, one big button, four round ones. Everything else is behind one of them. */
-export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDelete }: { career: Career; onBack: () => void; onPlay: () => void; onChallenge: () => void; onTrain: () => void; commit: (c: Career) => void; onDelete: () => void }) {
+export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDelete }: { career: Career; onBack: () => void; onPlay: () => void; onChallenge: () => void; onTrain: (id: DrillId) => void; commit: (c: Career) => void; onDelete: () => void }) {
   const [view, setView] = useState<View>("home");
   const [menu, setMenu] = useState(false);
   const [settings, setSettings] = useState(false);
@@ -259,6 +259,9 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
     return (
       <OverRoom stage={career.room} src={hubPicture(topStep(career))} focus="50% 35%" clear>
         {news && <span className="room-news-ring" aria-hidden />}
+        <span className="char-home" aria-hidden>
+          <CharacterFigure id={career.profile.character} pose={hero.kind === "event" && hero.done ? "jubel" : "noytral"} glow />
+        </span>
         {launch && <span className="launch-iris" aria-hidden style={{ "--c": TROPHY[launch.id], "--ox": `${launch.x}px`, "--oy": `${launch.y}px` } as React.CSSProperties} />}
         <div className="animate-screen-push screen">
           {sheets}
@@ -271,11 +274,7 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
                 Nytt i rommet: <b>{news}</b>
               </button>
             )}
-            <div className="char-home-area">
-              <span className="char-home" aria-hidden>
-                <CharacterFigure id={career.profile.character} pose={hero.kind === "event" && hero.done ? "jubel" : "noytral"} glow />
-              </span>
-            </div>
+            <div className="flex-1" />
             <div className="room-text char-home-text rise-in" style={{ "--d": "0.1s" } as React.CSSProperties}>
               <p className="font-display" style={{ fontSize: "var(--text-num)", lineHeight: 1.05, color: "var(--color-cream)" }}>
                 {career.player}
@@ -365,18 +364,30 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
                     </ul>
                   </div>
                 )}
-                <div className="room-tile room-tile-wide" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.75rem", padding: "0.6rem 0.9rem" }}>
-                  <span className="min-w-0">
-                    <span className="section-label block">TREFFSIKKERHET</span>
-                    <b className="font-display" style={{ fontSize: "var(--text-title)", color: "var(--color-cream)" }}>
-                      {levelLabel(career.skillMed)}
-                    </b>
-                    <span className="tabular block" style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>
-                      avvik {oneDecimal(career.skillMed)} mm{career.training[0] ? ` · sist snitt ${oneDecimal(career.training[0].average)}` : ""}
-                    </span>
-                  </span>
-                  <Button onClick={onTrain}>Tren · {DRILL_ROUNDS} runder</Button>
-                </div>
+                {!compare && (
+                  <div className="room-tile room-tile-wide drills">
+                    <p className="section-label">
+                      TRENING · NIVÅ OPP TIL {levelCap(career.room)} I DETTE ROMMET
+                    </p>
+                    <p className="drills-skill">
+                      Treffsikkerhet <b>{levelLabel(career.skillMed)}</b>
+                    </p>
+                    <ul aria-label="Øvelser">
+                      {DRILLS.map((d) => (
+                        <li key={d.id}>
+                          <span className="min-w-0">
+                            <b className="block truncate">{d.name}</b>
+                            <small className="block truncate">{goalLine(d.id, drillLevel(career, d.id))}</small>
+                          </span>
+                          <span className="tabular drills-level">Nivå {drillLevel(career, d.id)}</span>
+                          <Button label={`Tren ${d.name}`} onClick={() => onTrain(d.id)}>
+                            Tren
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
                 <PlayButton label={next ? "KJØP" : "FERDIG"} sub={next ? (buyWhy ? `${dollars(next.price)} · ${buyWhy}` : dollars(next.price)) : "Drømmerommet er på plass"} disabled={!!buyWhy} onClick={buy} />
               </div>
             </div>

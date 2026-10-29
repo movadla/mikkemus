@@ -7024,19 +7024,13 @@ button.play-btn:disabled::after {
 }
 
 /* Home: the character stands to the right in the room, with name, rank and the shelf in a column to the left of it. */
-/* The room between the top and the name: the character stands in it and ends where the name begins, so it never lies over a button. */
-.char-home-area {
-  position: relative;
-  flex: 1;
-  min-height: min(36dvh, 18rem);
-  pointer-events: none;
-}
+/* The character stands in the room, behind the screen: the big button and the round ones lie over it, and it never takes a touch. */
 .char-home {
-  position: absolute;
-  z-index: 1;
+  position: fixed;
+  z-index: 0;
   right: max(-14vw, -3.5rem);
-  bottom: 0;
-  height: min(100%, 30rem);
+  bottom: calc(9.4rem + env(safe-area-inset-bottom, 0px));
+  height: min(54dvh, 30rem);
   pointer-events: none;
 }
 .char-home .char-figure {
@@ -7984,3 +7978,13 @@ button.play-btn:disabled::after {
 .msg-deals { display: grid; gap: 0.5rem; margin-top: 0.5rem; }
 .msg-deals > li { display: flex; align-items: center; gap: 0.6rem; }
 .msg-deals small { color: var(--color-text-2); font-size: var(--text-small); }
+
+/* The drills of the training room: a row of one line each, with the level and a button. */
+.drills { display: grid; gap: 0.5rem; padding: 0.7rem 0.8rem; }
+.drills ul { display: grid; gap: 0.5rem; }
+.drills li { display: flex; align-items: center; gap: 0.6rem; }
+.drills li > span:first-child { flex: 1; }
+.drills small { color: var(--color-text-2); font-size: var(--text-small); }
+.drills-skill { color: var(--color-text-2); font-size: var(--text-small); }
+.drills-skill b { color: var(--color-cream); }
+.drills-level { color: var(--color-gold-strong); font-weight: 800; white-space: nowrap; }

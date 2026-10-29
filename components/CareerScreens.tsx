@@ -14,7 +14,8 @@ import { haptics } from "@/lib/haptics";
 import { winnerOf as highstrikerWinner, newGame as newHighstriker } from "@/lib/highstriker";
 import { DEFAULT_LIVES, newGame as newLava, stateOf as lavaState } from "@/lib/lava";
 import { useRoster } from "@/lib/storage";
-import { DRILL_ROUNDS, sessionFrom, trainCareer } from "@/lib/training";
+import { DRILL_ROUNDS, sessionFrom } from "@/lib/training";
+import { applyDrill, drillLevel, drillOf, goalLine, goalOf, levelCap, passed, type DrillId, type HitsDrill } from "@/lib/drills";
 import { careerSound } from "@/lib/uiSound";
 import { levelLabel, oneDecimal } from "./careerFormat";
 import { CoinBurst } from "./CoinBurst";
@@ -32,6 +33,7 @@ import { CharacterFigure } from "./CharacterFigure";
 import { EventIntro } from "./EventIntro";
 import { picturesFor } from "./eventPictures";
 import { CareerFaceContext } from "./ui/Avatar";
+import { Button } from "./ui/Button";
 import { poseFor } from "@/lib/characters";
 import { TIER_LOOK, foilVars } from "@/lib/materials";
 import { CountUp } from "./ui/CountUp";
@@ -395,23 +397,104 @@ export function Result({ career, a, onDone }: { career: Career; a: ActiveEvent; 
 }
 
 /** A training session: fifteen rounds at the treble 20 written in, and then the level, before and after. */
-export function TrainingPlay(props: { career: Career; commit: (c: Career) => void; onHub: () => void }) {
+export function TrainingPlay(props: { career: Career; commit: (c: Career) => void; onHub: () => void; drill: DrillId }) {
   return (
     <OverRoom stage={props.career.room} dim={60} blur={5}>
-      <TrainingFlow {...props} />
+      {drillOf(props.drill).kind === "hits" ? <HitsFlow {...props} /> : <TrainingFlow {...props} />}
     </OverRoom>
   );
 }
 
+/** What a drill that has been thrown says: passed or not, and the level it is at now, with a word when the room is what holds it back. */
+function DrillDone({ career, before, after, ok, onHub }: { career: Career; before: number; after: number; ok: boolean; onHub: () => void }) {
+  const held = ok && after === before && before >= levelCap(career.room);
+  return (
+    <>
+      <p className="font-display" style={{ fontSize: "var(--text-num)", color: ok ? "var(--color-green)" : "var(--color-cream)" }}>
+        {ok ? "Bestått" : "Ikke denne gangen"}
+      </p>
+      <p className="tabular" style={{ fontSize: "var(--text-title)", color: "var(--color-text-2)", fontWeight: 700 }}>
+        Nivå {before === after ? after : `${before} → ${after}`}
+      </p>
+      {held && <p style={{ color: "var(--color-muted)" }}>Rommet tillater nivå {levelCap(career.room)}. Bygg ut rommet for å komme videre.</p>}
+      <PlayButton label="OK" onClick={onHub} />
+    </>
+  );
+}
+
+/** A drill of darts at one target: each attempt is written in as the number of darts that hit, and it is passed when one attempt has enough. */
+function HitsFlow({ career, commit, onHub, drill }: { career: Career; commit: (c: Career) => void; onHub: () => void; drill: DrillId }) {
+  const d = drillOf(drill) as HitsDrill;
+  const level = drillLevel(career, drill);
+  const g = goalOf(drill, level);
+  const [tries, setTries] = useState<number[]>([]);
+  const [done, setDone] = useState<{ before: number; after: number; ok: boolean } | null>(null);
+  if (g.kind !== "hits") return null;
+  const pick = (hits: number) => {
+    const next = [...tries, hits];
+    setTries(next);
+    if (hits >= g.need || next.length >= g.attempts) {
+      const result = { id: drill, level, scores: next };
+      const after = applyDrill(career, result, new Date().toISOString());
+      commit(after);
+      setDone({ before: level, after: drillLevel(after, drill), ok: passed(result) });
+    }
+  };
+  if (done) {
+    return (
+      <div className="animate-screen-enter screen">
+        <div className="screen-inner flex flex-col items-center justify-center text-center gap-3" style={{ minHeight: "calc(100dvh - 2rem)" }}>
+          <DrillDone career={career} {...done} onHub={onHub} />
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="animate-screen-push screen">
+      <div className="screen-inner flex flex-col gap-3" style={{ minHeight: "calc(100dvh - 2rem)" }}>
+        <div className="flex items-center gap-3">
+          <BackArrow onClick={onHub} />
+          <h1 className="font-display flex-1" style={{ fontSize: "var(--text-num)", color: "var(--color-cream)", lineHeight: 1 }}>
+            {d.name}
+          </h1>
+          <span className="tabular" style={{ fontSize: "var(--text-title)", color: "var(--color-text-2)", fontWeight: 700 }}>
+            Nivå {level}
+          </span>
+        </div>
+        <p style={{ color: "var(--color-text-2)" }}>{goalLine(drill, level)}</p>
+        <div role="progressbar" aria-valuemin={0} aria-valuemax={g.attempts} aria-valuenow={tries.length} aria-label="Forsøk" style={{ height: "0.5rem", borderRadius: "var(--radius-pill)", background: "var(--color-cell)" }}>
+          <div style={{ width: `${(tries.length / g.attempts) * 100}%`, height: "100%", borderRadius: "var(--radius-pill)", background: "var(--color-teal)", transition: "width var(--pull)" }} />
+        </div>
+        <div className="mt-auto grid gap-2">
+          <p className="section-label">FORSØK {tries.length + 1} AV {g.attempts} · HVOR MANGE TRAKK {d.target === "bull" ? "BULL" : d.target.toUpperCase()}?</p>
+          <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.min(5, g.darts + 1)}, 1fr)` }}>
+            {Array.from({ length: g.darts + 1 }, (_, n) => (
+              <Button key={n} label={`${n} treff`} onClick={() => pick(n)}>
+                {n}
+              </Button>
+            ))}
+          </div>
+          <Button variant="ghost" disabled={tries.length === 0} onClick={() => setTries((x) => x.slice(0, -1))}>
+            Angre
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function TrainingFlow({ career, commit, onHub }: { career: Career; commit: (c: Career) => void; onHub: () => void }) {
+  const level = drillLevel(career, "t20");
   const [rounds, setRounds] = useState<number[]>([]);
-  const [done, setDone] = useState<ReturnType<typeof sessionFrom> | null>(null);
+  const [done, setDone] = useState<(ReturnType<typeof sessionFrom> & { ok: boolean; after20: number }) | null>(null);
   const submit = (score: number) => {
     const next = [...rounds, score];
     if (next.length >= DRILL_ROUNDS) {
       const now = new Date().toISOString();
-      setDone(sessionFrom(career, next, now));
-      commit(trainCareer(career, next, now));
+      const result = { id: "t20" as const, level, scores: next };
+      const applied = applyDrill(career, result, now);
+      setDone({ ...sessionFrom(career, next, now), ok: passed(result), after20: drillLevel(applied, "t20") });
+      commit(applied);
     }
     setRounds(next);
   };
@@ -428,8 +511,8 @@ function TrainingFlow({ career, commit, onHub }: { career: Career; commit: (c: C
               avvik {oneDecimal(done.before)} → {oneDecimal(done.after)} mm
             </p>
             <p style={{ color: "var(--color-muted)" }}>{levelLabel(done.after)}</p>
+            <DrillDone career={career} before={level} after={done.after20} ok={done.ok} onHub={onHub} />
           </div>
-          <PlayButton label="OK" onClick={onHub} />
         </div>
       </div>
     );
@@ -440,7 +523,7 @@ function TrainingFlow({ career, commit, onHub }: { career: Career; commit: (c: C
         <div className="flex items-center gap-3">
           <BackArrow onClick={onHub} />
           <h1 className="font-display flex-1" style={{ fontSize: "var(--text-num)", color: "var(--color-cream)", lineHeight: 1 }}>
-            Trippel 20
+            Trippel 20 · nivå {level}
           </h1>
           <span className="tabular" style={{ fontSize: "var(--text-title)", color: "var(--color-text-2)", fontWeight: 700 }}>
             {Math.min(rounds.length + 1, DRILL_ROUNDS)}/{DRILL_ROUNDS}
@@ -450,7 +533,7 @@ function TrainingFlow({ career, commit, onHub }: { career: Career; commit: (c: C
           <div style={{ width: `${(rounds.length / DRILL_ROUNDS) * 100}%`, height: "100%", borderRadius: "var(--radius-pill)", background: "var(--color-teal)", transition: "width var(--pull)" }} />
         </div>
         <div className="mt-auto">
-          <ScoreKeypad onSubmit={submit} onUndo={() => setRounds((r) => r.slice(0, -1))} canUndo={rounds.length > 0} line={() => <span style={{ color: "var(--color-text-2)" }}>Summen av tre piler</span>} />
+          <ScoreKeypad onSubmit={submit} onUndo={() => setRounds((r) => r.slice(0, -1))} canUndo={rounds.length > 0} line={() => <span style={{ color: "var(--color-text-2)" }}>Summen av tre piler · {goalLine("t20", level)}</span>} />
         </div>
       </div>
     </div>
