@@ -9,7 +9,16 @@ import { badgeSvg, trophySvg } from "@/lib/trophySvg";
 export const TROPHY_PHOTO: Partial<Record<TierId, string>> = { lu: "/career/trophies/lu.webp", region: "/career/trophies/region.webp", nm: "/career/trophies/nm.webp", gs: "/career/trophies/gs.webp", vm: "/career/trophies/vm.webp" };
 
 /** The cups of invitations, by the key of the invitation or the name of its trophy: they have a trophy of their own, not the one of the step they stand on. */
-export const INVITE_TROPHY_PHOTO: Record<string, string> = { wc: "/career/trophies/wc.webp", "World Cup of Darts-pokalen": "/career/trophies/wc.webp" };
+export const INVITE_TROPHY_PHOTO: Record<string, string> = {
+  wc: "/career/trophies/wc.webp",
+  "World Cup of Darts-pokalen": "/career/trophies/wc.webp",
+  pair: "/career/trophies/pair.webp",
+  "Parcupen-pokalen": "/career/trophies/pair.webp",
+  // The two shows of the TV duels have the one cup.
+  tv: "/career/trophies/tv.webp",
+  "Utfordreren-pokalen": "/career/trophies/tv.webp",
+  "Studioduellen-pokalen": "/career/trophies/tv.webp",
+};
 
 /**
  * The trophy of an event, in metal. `bare` is the trophy alone (cards, shelves, lists); without it it stands on a plinth with a shadow and a

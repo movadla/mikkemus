@@ -25,6 +25,10 @@ export const INVITE_PICTURES: Record<string, Partial<NonNullable<(typeof EVENT_P
   // The television studio: the show of one leg, the best of three, and the evening of eight. The building at sunset opens it, the studio is where it is played.
   tv: { outside: "/career/tv-outside.jpg", alt: "TV-huset i solnedgang, med parabolantenner på taket, der showet spilles", outsideFocus: "50% 45%", inside: "/career/tv-inside.jpg", insideFocus: "50% 45%" },
   "tv-kveld": { outside: "/career/tv-outside.jpg", alt: "TV-huset i solnedgang, med parabolantenner på taket, der showet spilles", outsideFocus: "50% 45%", inside: "/career/tv-inside.jpg", insideFocus: "50% 45%" },
+  // Parcupen: Winter Gardens, the building from outside and the ballroom with the stage inside.
+  pair: { outside: "/career/pair-outside.jpg", alt: "Winter Gardens om kvelden, med lyskastere og dartskiver på fasaden, der Parcupen åpnes", outsideFocus: "50% 50%", inside: "/career/pair-inside.jpg", insideFocus: "62% 40%" },
+  // The finale of the season: Circus Tavern at dusk, and the stage inside.
+  finale: { outside: "/career/finale-outside.jpg", alt: "Circus Tavern i skumringen, der sesongfinalen spilles", outsideFocus: "50% 50%", inside: "/career/finale-inside.jpg", insideFocus: "50% 45%" },
   // World Cup of Darts: the hall from outside and the arena inside, where the matches are played.
   wc: { outside: "/career/wc-outside.jpg", alt: "Hallen til World Cup of Darts i solnedgang, sett utenfra", outsideFocus: "50% 55%", inside: "/career/wc-inside.jpg", insideFocus: "50% 50%" },
 };
