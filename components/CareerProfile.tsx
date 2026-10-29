@@ -1,6 +1,6 @@
 "use client";
 
-import { DARTS, PLACE_LABEL, STAGES, TIERS, dollars, type Career } from "@/lib/career";
+import { DARTS, PLACE_LABEL, STAGES, START_LEVELS, TIERS, dollars, type Career } from "@/lib/career";
 import { nextRank, rankOf } from "@/lib/careerGoals";
 import { lifeOf, rivalOf, seasonOf, weekInSeason, WEEKS_PER_SEASON } from "@/lib/careerLife";
 import { levelLabel } from "./careerFormat";
@@ -21,13 +21,14 @@ function Stat({ label, value }: { label: string; value: string }) {
 
 /**
  * Who the player is in the career: the shirt and the face, the title the points have given and how far there is to the next, the numbers of
- * the career so far and the cups that have been won. Opened from the menu on the home screen.
+ * the career so far and the cups that have been won. Its own place on the home screen.
  */
 export function CareerProfile({ career }: { career: Career }) {
   const next = nextRank(career);
   const darts = DARTS.find((d) => d.id === career.profile.darts)?.name ?? "";
   const life = lifeOf(career);
   const rival = rivalOf(career);
+  const startName = START_LEVELS.find((l) => l.key === career.startLevel)?.name ?? levelLabel(career.skillMed);
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-4">
@@ -66,6 +67,15 @@ export function CareerProfile({ career }: { career: Career }) {
           </dd>
         </div>
         <div className="pf-row">
+          <dt>Utvikling</dt>
+          <dd>
+            {startName === levelLabel(career.skillMed) ? levelLabel(career.skillMed) : `${startName} → ${levelLabel(career.skillMed)}`}
+            <small>
+              {career.training.length} treningsøkter · {career.played} turneringer
+            </small>
+          </dd>
+        </div>
+        <div className="pf-row">
           <dt>Rival</dt>
           <dd>
             {rival.name}
@@ -101,7 +111,7 @@ export function CareerProfile({ career }: { career: Career }) {
         </div>
       </dl>
       {life.seasons.length > 0 && (
-        <details className="pf-sec" aria-label="Sesonger">
+        <details className="pf-sec" aria-label="Sesonger" open>
           <summary className="section-label">SESONGER</summary>
           <ul className="pf-list">
             {life.seasons.slice(0, 5).map((s) => (

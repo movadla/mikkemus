@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { DRILL_ROUNDS } from "@/lib/training";
-import { GAMES, LADDER, ROOM_MAX, STAGES, buyStage, dollars, hubPicture, topStep, isUnlocked, nextStage, offerChallenge, stakeFor, startEvent, whyNot, whyNotBuy, type Career, type GameId, type Tier } from "@/lib/career";
+import { LADDER, ROOM_MAX, STAGES, buyStage, dollars, hubPicture, topStep, isUnlocked, nextStage, startEvent, whyNot, whyNotBuy, type Career, type Tier } from "@/lib/career";
 import { cupColor } from "@/lib/botCup";
 import { TROPHY } from "@/lib/scenePalette";
 import { foilVars, frameOf } from "@/lib/materials";
@@ -10,11 +10,12 @@ import { rankOf, rankProgress, roomBadge } from "@/lib/careerGoals";
 import { heroButton, heroFor } from "@/lib/careerHero";
 import { careerSound, uiFeedback } from "@/lib/uiSound";
 import { levelLabel, newSeed, oneDecimal } from "./careerFormat";
-import { HomeIcon, LockIcon, MailIcon, NewsIcon, RoadIcon, StarIcon } from "./careerIcons";
+import { HomeIcon, LockIcon, MailIcon, RoadIcon, StarIcon } from "./careerIcons";
 import { CareerInbox } from "./CareerInbox";
+import { CareerInvites } from "./CareerInvites";
 import { SeasonRecap } from "./CareerScreens";
 import { CareerNews } from "./CareerNews";
-import { inboxCount, lifeOf, seasonOf, unseenNews, weekInSeason, WEEKS_PER_SEASON } from "@/lib/careerLife";
+import { inboxCount, isOpen, lifeOf, seasonOf, unseenNews, weekInSeason, WEEKS_PER_SEASON } from "@/lib/careerLife";
 import { markNewsSeen } from "@/lib/careerWorld";
 import { CareerHud } from "./CareerHud";
 import { RankBadge, TrophyArt } from "./CareerTrophy";
@@ -25,7 +26,7 @@ import { gameOf } from "@/lib/careerGame";
 import { CareerProfile } from "./CareerProfile";
 import { markTipSeen, TipPointer, useTipSeen } from "./CareerTip";
 import { ConfirmDialog } from "./ConfirmDialog";
-import { BoltIcon, BullseyeIcon, CoinIcon, MoreIcon, TrophyIcon } from "./icons";
+import { MoreIcon, PersonIcon, TrophyIcon } from "./icons";
 import { PlayButton } from "./PlayButton";
 import { OverRoom } from "./RoomBackdrop";
 import { EVENT_PICTURES } from "./eventPictures";
@@ -35,9 +36,9 @@ import { Button } from "./ui/Button";
 import { Sheet } from "./ui/Sheet";
 import { FOCUS_RING } from "./ui/focus";
 
-type View = "home" | "rooms" | "road" | "training" | "challenges" | "rank" | "news" | "inbox";
+type View = "home" | "rooms" | "road" | "profile" | "rank" | "inbox";
 
-const TITLE: Record<Exclude<View, "home">, string> = { rooms: "Rom", road: "Turneringer", training: "Trening", challenges: "Duell", rank: "Rangering", news: "Nyheter", inbox: "Meldinger" };
+const TITLE: Record<Exclude<View, "home">, string> = { rooms: "Rom", road: "Turneringer", profile: "Profil", rank: "Rangering", inbox: "Meldinger" };
 
 /** Where the career is in its season: ten ticks, the weeks that are played filled in. */
 function SeasonStrip({ career }: { career: Career }) {
@@ -129,7 +130,6 @@ function GoalStrip({ career }: { career: Career }) {
 export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDelete }: { career: Career; onBack: () => void; onPlay: () => void; onChallenge: () => void; onTrain: () => void; commit: (c: Career) => void; onDelete: () => void }) {
   const [view, setView] = useState<View>("home");
   const [menu, setMenu] = useState(false);
-  const [profile, setProfile] = useState(false);
   const [settings, setSettings] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   // A room that has just changed: the step it came from (kept so it can be compared), the buy that is playing, and the way it is played.
@@ -153,12 +153,11 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
   const hero = heroFor(career);
   const [picked, setPicked] = useState<Tier["id"] | null>(null);
   const playTip = useTipSeen("play");
-  const inboxTip = useTipSeen("inbox");
   const go = (v: View) => {
     uiFeedback("pick");
     setView(v);
   };
-  // The news are seen when the paper is closed, so the new ones stay marked while they are read.
+  // The news are seen when the messages are closed, so the new ones stay marked while they are read.
   const leaveNews = () => {
     commit(markNewsSeen(career));
     setView("home");
@@ -184,7 +183,8 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
   };
   const button = heroButton(hero);
   // Something beyond the pub is open and has not been entered: the road button says so.
-  const roadDot = !career.active && !career.challenge && LADDER.some((t) => t.id !== "lu" && whyNot(career, t) === null);
+  const invited = lifeOf(career).inbox.some((m) => m.offer.kind === "invite" && isOpen(m));
+  const roadDot = invited || (!career.active && !career.challenge && LADDER.some((t) => t.id !== "lu" && whyNot(career, t) === null));
   const buy = () => {
     const was = career.room;
     const bought = nextStage(career);
@@ -227,15 +227,6 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
               block
               onClick={() => {
                 setMenu(false);
-                setProfile(true);
-              }}
-            >
-              Profil
-            </Button>
-            <Button
-              block
-              onClick={() => {
-                setMenu(false);
                 setSettings(true);
               }}
             >
@@ -264,11 +255,6 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
           <p className="mt-3" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
             {career.active ? "Gjelder fra neste turnering: den som pågår spilles ferdig slik den ble startet." : "Gjelder fra neste turnering."}
           </p>
-        </Sheet>
-      )}
-      {profile && (
-        <Sheet title="Profil" onClose={() => setProfile(false)}>
-          <CareerProfile career={career} />
         </Sheet>
       )}
       {confirmDelete && (
@@ -331,34 +317,11 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
               {!playTip && <TipPointer id="play" label="Trykk her" />}
               <PlayButton label={button.label} sub={button.sub} tone={hero.kind === "event" && hero.done ? "gold" : hero.kind === "challenge" && hero.done && hero.challenge.won ? "gold" : "teal"} onClick={press} />
             </div>
-            <div className="home-pills rise-in" style={{ "--d": "0.27s" } as React.CSSProperties}>
-              <button type="button" className={`home-pill tactile ${FOCUS_RING}`} onClick={() => go("news")}>
-                <NewsIcon className="w-4 h-4" />
-                Nyheter
-                {unseenNews(lifeOf(career)) > 0 && <b className="home-pill-count">{unseenNews(lifeOf(career))}</b>}
-              </button>
-              <div className="relative">
-                {/* The first time something waits in the inbox after a first tournament, a pointer says where it is. */}
-                {!inboxTip && career.played >= 1 && inboxCount(lifeOf(career)) > 0 && <TipPointer id="inbox" label="Se her" />}
-                <button
-                  type="button"
-                  className={`home-pill tactile w-full ${FOCUS_RING}`}
-                  onClick={() => {
-                    markTipSeen("inbox");
-                    go("inbox");
-                  }}
-                >
-                  <MailIcon className="w-4 h-4" />
-                  Meldinger
-                  {inboxCount(lifeOf(career)) > 0 && <b className="home-pill-count">{inboxCount(lifeOf(career))}</b>}
-                </button>
-              </div>
-            </div>
             <div className="round4 rise-in" style={{ "--d": "0.32s" } as React.CSSProperties}>
               <RoundButton icon={<HomeIcon />} label="Rom" badge={roomBadge(career)} onClick={() => go("rooms")} />
-              <RoundButton icon={<BullseyeIcon />} label="Trening" onClick={() => go("training")} />
-              <RoundButton icon={<BoltIcon />} label="Duell" onClick={() => go("challenges")} />
+              <RoundButton icon={<PersonIcon />} label="Profil" onClick={() => go("profile")} />
               <RoundButton icon={<RoadIcon />} label="Turneringer" badge={roadDot} onClick={() => go("road")} />
+              <RoundButton icon={<MailIcon />} label="Meldinger" badge={inboxCount(lifeOf(career)) > 0 || unseenNews(lifeOf(career)) > 0} onClick={() => go("inbox")} />
             </div>
           </div>
         </div>
@@ -429,6 +392,18 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
                     </ul>
                   </div>
                 )}
+                <div className="room-tile room-tile-wide" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.75rem", padding: "0.6rem 0.9rem" }}>
+                  <span className="min-w-0">
+                    <span className="section-label block">TRENING</span>
+                    <b className="font-display" style={{ fontSize: "var(--text-title)", color: "var(--color-cream)" }}>
+                      {levelLabel(career.skillMed)}
+                    </b>
+                    <span className="tabular block" style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>
+                      avvik {oneDecimal(career.skillMed)} mm{career.training[0] ? ` · sist snitt ${oneDecimal(career.training[0].average)}` : ""}
+                    </span>
+                  </span>
+                  <Button onClick={onTrain}>Tren · {DRILL_ROUNDS} runder</Button>
+                </div>
                 <PlayButton label={next ? "KJØP" : "FERDIG"} sub={next ? (buyWhy ? `${dollars(next.price)} · ${buyWhy}` : dollars(next.price)) : "Drømmerommet er på plass"} disabled={!!buyWhy} onClick={buy} />
               </div>
             </div>
@@ -444,14 +419,16 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
       <div className="animate-screen-push screen" style={{ paddingBottom: "1rem" }}>
         {sheets}
         <div className="screen-inner flex flex-col gap-3" style={{ minHeight: "calc(100dvh - 2rem)" }}>
-          <CareerHud career={career} onBack={view === "news" ? leaveNews : () => setView("home")} title={TITLE[view]} />
+          <CareerHud career={career} onBack={view === "inbox" ? leaveNews : () => setView("home")} title={TITLE[view]} />
 
           {view === "rank" && <RankingList career={career} />}
-          {view === "news" && <CareerNews career={career} />}
-          {view === "inbox" && <CareerInbox career={career} commit={commit} onPlay={onPlay} onChallenge={onChallenge} />}
+          {view === "inbox" && <CareerInbox career={career} commit={commit} onChallenge={onChallenge} onRoad={() => setView("road")} />}
+          {view === "inbox" && <CareerNews career={career} />}
+          {view === "profile" && <CareerProfile career={career} />}
 
           {view === "road" && (
             <>
+              <CareerInvites career={career} commit={commit} onPlay={onPlay} />
               <ul className="space-y-2" aria-label="Turneringer">
                 {LADDER.map((tier) => {
                   const locked = !isUnlocked(career, tier);
@@ -508,55 +485,6 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
                   }}
                 />
               </div>
-            </>
-          )}
-
-          {view === "training" && (
-            <>
-              <div className="flex-1" />
-              <div className="room-tile room-tile-wide" style={{ display: "grid", justifyItems: "center", gap: "0.15rem", padding: "1rem" }}>
-                <span className="section-label">TREFFSIKKERHET</span>
-                <b className="font-display" style={{ fontSize: "var(--text-num)", color: "var(--color-cream)" }}>
-                  {levelLabel(career.skillMed)}
-                </b>
-                <span className="tabular" style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>
-                  avvik {oneDecimal(career.skillMed)} mm{career.training[0] ? ` · sist snitt ${oneDecimal(career.training[0].average)}` : ""}
-                </span>
-              </div>
-              <PlayButton label="START" sub={`${DRILL_ROUNDS} runder · trippel 20`} onClick={onTrain} />
-            </>
-          )}
-
-          {view === "challenges" && (
-            <>
-              <div className="flex-1" />
-              <ul className="space-y-2" aria-label="Duell">
-                {(Object.keys(GAMES) as GameId[]).map((game) => {
-                  const shut = !!career.active || !!career.challenge;
-                  return (
-                    <li key={game}>
-                      <button
-                        type="button"
-                        disabled={shut}
-                        className={`pick-row tactile ${FOCUS_RING}`}
-                        onClick={() => {
-                          uiFeedback("click");
-                          commit(offerChallenge(career, game, newSeed()));
-                          onChallenge();
-                        }}
-                      >
-                        <b className="font-display flex-1 text-left" style={{ fontSize: "var(--text-num)", color: "var(--color-cream)" }}>
-                          {GAMES[game].name}
-                        </b>
-                        <span className="inline-flex items-center gap-1.5 tabular" style={{ color: "var(--color-gold-strong)", fontWeight: 800, fontSize: "var(--text-title)" }}>
-                          <CoinIcon className="w-5 h-5" />
-                          {dollars(stakeFor(career, game))}
-                        </span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
             </>
           )}
         </div>

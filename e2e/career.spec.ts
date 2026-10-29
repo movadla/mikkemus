@@ -44,7 +44,7 @@ async function toCareer(page: Page, withCareer = true) {
 
 const saved = (page: Page) => page.evaluate(() => JSON.parse(localStorage.getItem("mikke-mus-career:lars") ?? "null"));
 const play = (page: Page, name: RegExp | string) => page.getByRole("button", { name });
-const place = (page: Page, name: "Rom" | "Trening" | "Duell" | "Turneringer") => page.getByRole("button", { name: new RegExp(`^${name}`) });
+const place = (page: Page, name: "Rom" | "Profil" | "Turneringer" | "Meldinger") => page.getByRole("button", { name: new RegExp(`^${name}`) });
 
 test.describe("karriere", () => {
   test.skip(!PIN, "E2E_PIN is not set");
@@ -147,21 +147,18 @@ test.describe("karriere", () => {
     await seed(page, { ...CAREER, life: LIFE });
     await page.getByRole("button", { name: /Lars/ }).click();
     await expect(page.getByText("Sesong 1 · uke 3")).toBeVisible();
-    await expect(page.getByRole("button", { name: /^Nyheter/ })).toContainText("2");
-    await expect(page.getByRole("button", { name: /^Meldinger/ })).toContainText("2");
-    // The news: the new ones are marked until the paper is closed.
-    await page.getByRole("button", { name: /^Nyheter/ }).click();
-    await expect(page.getByText("Haakon vant Ly-cupen")).toBeVisible();
-    await page.getByRole("button", { name: "Tilbake" }).click();
-    await expect(page.getByRole("button", { name: /^Nyheter/ })).not.toContainText("2");
-    // The inbox: say no to the challenge, and the name pays for it.
+    // One round button for it all: it has a dot, and behind it the offers come first and the news below.
+    await expect(page.getByRole("button", { name: "Meldinger, nytt" })).toBeVisible();
     await page.getByRole("button", { name: /^Meldinger/ }).click();
+    await expect(page.getByText("Haakon vant Ly-cupen")).toBeVisible();
+    // Say no to the challenge, and the name pays for it.
     await page.getByRole("button", { name: /Roger vil ha revansje/ }).click();
     await expect(page.getByText("Taper $100")).toBeVisible();
     await page.getByRole("button", { name: "Ikke i kveld" }).click();
     await expect.poll(async () => (await saved(page)).life.reputation).toBe(4);
     // The invitation: yes signs up for it, as its own tournament.
     await page.getByRole("button", { name: /Ly-sprinten/ }).first().click();
+    await page.getByRole("button", { name: "Svar under Turneringer" }).click();
     await expect(page.getByText("Vinner $400")).toBeVisible();
     await page.getByRole("button", { name: "Ta imot" }).click();
     await expect.poll(async () => (await saved(page)).active?.invite?.name).toBe("Ly-sprinten");
@@ -252,7 +249,7 @@ test.describe("karriere", () => {
     // The one big button leads to the biggest step that can be entered, with the price as a small line.
     await expect(play(page, "SPILL Ly · gratis")).toBeVisible();
     // Four round buttons. The room has no dot: the first step costs $500 and there is $300.
-    for (const name of ["Rom", "Trening", "Duell", "Turneringer"] as const) await expect(place(page, name)).toBeVisible();
+    for (const name of ["Rom", "Profil", "Turneringer", "Meldinger"] as const) await expect(place(page, name)).toBeVisible();
     await expect(page.getByRole("button", { name: "Rom, nytt" })).toHaveCount(0);
     // Nothing else: no lists, no explanations, no second row of tabs.
     await expect(page.getByRole("navigation", { name: "Karriere" })).toHaveCount(0);
@@ -311,13 +308,15 @@ test.describe("karriere", () => {
     await expect(play(page, "Start kampen")).toBeVisible();
   });
 
-  test("utfordring: velg spillet, se innsatsen, spill, og gi opp uten å tape noe", async ({ page }) => {
-    await toCareer(page);
+  test("utfordring: kommer som melding, vis innsatsen, spill, og gi opp uten å tape noe", async ({ page }) => {
+    const life = { ...LIFE, inbox: [LIFE.inbox[1]] };
+    await seed(page, { ...CAREER, life });
     await page.getByRole("button", { name: /Lars/ }).click();
-    await place(page, "Duell").click();
-    await page.getByRole("list", { name: "Duell" }).getByRole("button", { name: /^501/ }).click();
+    await place(page, "Meldinger").click();
+    await page.getByRole("button", { name: /Roger vil ha revansje/ }).click();
+    await page.getByRole("button", { name: "Ta den" }).click();
     // The two of them and the stake, and one button.
-    await expect(page.getByText("$150", { exact: true })).toBeVisible();
+    await expect(page.getByText("$250", { exact: true })).toBeVisible();
     await play(page, "SPILL").click();
     // The game of 501 is on; leaving it gives the challenge up.
     await expect(page.getByRole("button", { name: /Gi opp/ })).toBeVisible();
@@ -367,9 +366,9 @@ test.describe("karriere", () => {
   test("trening: femten runder flytter nivået, og det blir lagret", async ({ page }) => {
     await toCareer(page);
     await page.getByRole("button", { name: /Lars/ }).click();
-    await place(page, "Trening").click();
+    await place(page, "Rom").click();
     await expect(page.getByText("Dyktig")).toBeVisible();
-    await play(page, /^START/).click();
+    await page.getByRole("button", { name: /^Tren · / }).click();
     const keys = page.getByRole("group", { name: "Tastatur" });
     for (let i = 0; i < 15; i++) {
       await expect(page.getByText(`${i + 1}/15`)).toBeVisible();
@@ -385,7 +384,7 @@ test.describe("karriere", () => {
     await expect(play(page, /^SPILL/)).toBeVisible();
   });
 
-  test("menyen: profil og slett karrieren ligger bak de tre prikkene, og slett sier hva det koster", async ({ page }) => {
+  test("menyen: slett karrieren ligger bak de tre prikkene, og slett sier hva det koster", async ({ page }) => {
     await toCareer(page);
     await page.getByRole("button", { name: /Lars/ }).click();
     await page.getByRole("button", { name: "Meny" }).click();
@@ -415,7 +414,7 @@ test.describe("karriere", () => {
     };
     await page.waitForTimeout(1500);
     await check();
-    for (const tab of ["Turneringer", "Rom", "Trening", "Duell"] as const) {
+    for (const tab of ["Turneringer", "Rom", "Profil", "Meldinger"] as const) {
       await place(page, tab).click();
       await page.waitForTimeout(700);
       await check();

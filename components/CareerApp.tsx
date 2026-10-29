@@ -187,7 +187,7 @@ function StoryIntro({ onDone }: { onDone: () => void }) {
   return (
     <OverRoom stage={0} src={STORY[i].src} dim={20}>
       <div className="animate-screen-push" style={{ display: "flex", flexDirection: "column", justifyContent: "flex-end", gap: "0.75rem", minHeight: "100dvh", padding: "1rem 1rem 3rem" }}>
-        <p aria-live="polite" style={{ fontFamily: "var(--font-display)", fontSize: "var(--text-title)", lineHeight: 1.25, color: "var(--color-cream)", textShadow: "0 2px 12px rgba(0,0,0,0.85)", textWrap: "balance" }}>
+        <p aria-live="polite" style={{ fontFamily: "var(--font-display)", fontSize: "var(--text-title)", lineHeight: 1.25, color: "var(--color-cream)", textWrap: "balance" }}>
           {STORY[i].line}
         </p>
         <Button block variant="primary" size="lg" onClick={next}>

@@ -18,9 +18,13 @@ describe("the main button of the home screen", () => {
     expect(heroButton(heroFor(c))).toEqual({ label: "SPILL", sub: "Ly · gratis" });
   });
 
+  it("points a brand new career at the pub's cup, however much money there is", () => {
+    expect(heroButton(heroFor({ ...fresh(), money: 20000 }))).toEqual({ label: "SPILL", sub: "Ly · gratis" });
+  });
+
   it("goes to the biggest step the player can enter: the regional championship once there is money for it", () => {
-    expect(heroButton(heroFor({ ...fresh(), money: 500 }))).toEqual({ label: "SPILL", sub: "Region · $200" });
-    expect(heroButton(heroFor({ ...fresh(), money: 20000, qualified: ["nm"] })).sub).toMatch(/^NM · /);
+    expect(heroButton(heroFor({ ...fresh(), played: 1, money: 500 }))).toEqual({ label: "SPILL", sub: "Region · $200" });
+    expect(heroButton(heroFor({ ...fresh(), played: 1, money: 20000, qualified: ["nm"] })).sub).toMatch(/^NM · /);
   });
 
   it("is the cup that is going, with the round and the opponent under the word", () => {

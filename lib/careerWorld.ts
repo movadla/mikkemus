@@ -194,9 +194,12 @@ function inviteOf(t: Template, career: Career, life: Life, salt: string): Invita
 
 const openOf = (life: Life, kind: Offer["kind"]) => life.inbox.filter((m) => m.state === "open" && m.offer.kind === kind);
 
-/** Maybe an invitation: one of the kinds that fit the player now, that has not been sent lately. Never more than two wait at once. */
+/** Only one thing is asked of the player at a time: an invitation or a challenge (a show is one), never both. */
+const asked = (life: Life) => life.inbox.some((m) => m.state === "open" && (m.offer.kind === "invite" || m.offer.kind === "challenge"));
+
+/** Maybe an invitation: one of the kinds that fit the player now, that has not been sent lately. Only one thing waits at a time. */
 function maybeInvite(career: Career, life: Life, week: number): Life {
-  if (openOf(life, "invite").length >= 2 || unit(`${career.id}|${week}|invite`) > 0.55) return life;
+  if (asked(life) || unit(`${career.id}|${week}|invite`) > 0.55) return life;
   const sent = (key: string) => Math.min(99, ...life.inbox.filter((m) => m.offer.kind === "invite" && (m.offer as { invite: Invitation }).invite.key === key).map((m) => week - m.week));
   const fits = TEMPLATES.filter((t) => sent(t.key) > (t.gap ?? 4) && t.need(career));
   const t = fits[Math.floor(unit(`${career.id}|${week}|invite-which`) * fits.length)];
@@ -232,13 +235,14 @@ function maybeFinale(career: Career, life: Life, week: number): Life {
     reason: `Du er nr. ${rank} i sesongtabellen.`,
     field: table.filter((s) => s.name !== career.player).slice(0, 7).map((s) => s.name),
   };
-  return addMessage(life, { name: "Norges Dartsforbund", role: "Forbundet" }, invite.name, invite.reason, { kind: "invite", invite }, week + 1);
+  // The finale is what the season ends on: what else was asked is closed, with no cost to the name.
+  const clear: Life = { ...life, inbox: life.inbox.map((m) => (m.state === "open" && (m.offer.kind === "invite" || m.offer.kind === "challenge") ? { ...m, state: "expired" as const } : m)) };
+  return addMessage(clear, { name: "Norges Dartsforbund", role: "Forbundet" }, invite.name, invite.reason, { kind: "invite", invite }, week + 1);
 }
 
 /** A game for television, now and then, for a player who is doing well: a show of one leg against the strongest there is, with a head start, or the best of three against a name. */
 function maybeTv(career: Career, life: Life, week: number): Life {
-  const open = life.inbox.some((m) => m.state === "open" && m.offer.kind === "challenge" && m.offer.tv);
-  if (career.challenge || open || !(norwayRank(career) <= 12 || career.points >= 40) || unit(`${career.id}|${week}|tv`) > 0.3) return life;
+  if (career.challenge || asked(life) || !(norwayRank(career) <= 12 || career.points >= 40) || unit(`${career.id}|${week}|tv`) > 0.3) return life;
   const since = (title: string) => Math.min(99, ...life.inbox.filter((m) => m.offer.kind === "challenge" && m.offer.tv?.title === title).map((m) => week - m.week));
   const options = [
     { title: "Utfordreren", gap: 8 },
@@ -278,7 +282,7 @@ function challengeFrom(career: Career, life: Life, week: number, rival: string |
 
 /** Maybe a challenge that nobody asked for: more often the better the name. */
 function maybeChallenge(career: Career, life: Life, week: number): Life {
-  if (career.challenge || openOf(life, "challenge").length > 0) return life;
+  if (career.challenge || asked(life)) return life;
   if (unit(`${career.id}|${week}|surprise`) > 0.15 + 0.05 * life.reputation) return life;
   // The ones who ask for a match are the rival, the same one every time, and now and then someone at the bar.
   const rival = unit(`${career.id}|${week}|rival`) < 0.6 ? rivalOf({ ...career, life }).name : null;
@@ -311,7 +315,7 @@ function offerSponsors(career: Career, life: Life, week: number): Life {
 
 /** Now and then a sponsor turns up on its own, once the player has played a little and has a name. */
 function maybeSponsor(career: Career, life: Life, week: number): Life {
-  if (life.sponsor || openOf(life, "sponsor").length > 0 || life.reputation < 3 || career.played < 2 || unit(`${career.id}|${week}|sponsor`) > 0.3) return life;
+  if (life.sponsor || asked(life) || openOf(life, "sponsor").length > 0 || life.reputation < 3 || career.played < 2 || unit(`${career.id}|${week}|sponsor`) > 0.3) return life;
   return offerSponsors(career, life, week);
 }
 
@@ -368,7 +372,7 @@ function endSeason(career: Career, life: Life, week: number): { life: Life; priz
   next = addNews(next, "season", youWon ? `Du er årets spiller, sesong ${season}` : `${winner.name} er årets spiller, sesong ${season}`, `${winner.pts} poeng. ${rank === 1 ? "" : `Du ble nummer ${rank} med ${life.seasonPts}.`}`.trim(), youWon ? career.player : winner.name);
   if (leaves) next = addNews(next, "world", `${leaves.name} legger opp`, "Etter en lang karriere på brettet.", leaves.name);
   for (const r of fresh) next = addNews(next, "world", `Nytt navn: ${r.name}, ${r.age} år`, "Kommer inn på listene fra neste sesong.", r.name);
-  next = addMessage(next, { name: "Norges Dartsforbund", role: "Forbundet" }, `Sesong ${season} er over`, `Du ble nummer ${rank} av ${standings.length} med ${life.seasonPts} poeng.${prize > 0 ? ` Sesongpremien er ${dollars(prize)}.` : ""} Ny sesong starter nå.`, { kind: "info" });
+  next = addNews(next, "season", `Sesong ${season} er over`, `Du ble nummer ${rank} av ${standings.length} med ${life.seasonPts} poeng.${prize > 0 ? ` Sesongpremien er ${dollars(prize)}.` : ""}`, career.player);
   return { life: next, prize };
 }
 
@@ -421,8 +425,6 @@ export function sponsorOutcome(career: Career): { name: string; met: boolean; pa
   return { name: s.name, met, pay: met ? s.perEvent : 0, need: s.need };
 }
 
-const CONGRATS: Record<TierId, string> = { lu: "Puben på Ly", region: "Regionforbundet", nm: "Norges Dartsforbund", gs: "Slam-arrangøren", vm: "Verdensforbundet" };
-
 const WENT: Record<Place, string> = { winner: "vant", final: "tapte finalen i", semi: "tapte semifinalen i", quarter: "tapte kvartfinalen i", r16: "røk ut i åttedelsfinalen i", r32: "røk ut i første runde i" };
 
 /** The player leaves a finished event: the sponsor pays or not, the result is news, a rival may ask for the match back, and the week goes by. */
@@ -440,9 +442,9 @@ export function leaveEvent(career: Career): Career {
     const next = { ...s, left: s.left - 1, misses: s.misses + (so.met ? 0 : 1), earned: s.earned + so.pay };
     money += so.pay;
     if (next.misses >= 3) {
-      life = addMessage({ ...life, sponsor: null, reputation: Math.max(0, life.reputation - 1) }, { name: s.name, role: "Sponsor" }, "Avtalen er brutt", `${s.name} har ventet på en plass blant de ${s.need === "quarter" ? "åtte" : "fire"} beste tre ganger. De avslutter avtalen. Den ga ${dollars(next.earned)}.`, { kind: "info" });
+      life = addNews({ ...life, sponsor: null, reputation: Math.max(0, life.reputation - 1) }, "you", `${s.name} avslutter avtalen`, `De ventet på en plass blant de ${s.need === "quarter" ? "åtte" : "fire"} beste tre ganger. Avtalen ga ${dollars(next.earned)}.`, career.player);
     } else if (next.left <= 0) {
-      life = addMessage({ ...life, sponsor: null }, { name: s.name, role: "Sponsor" }, "Avtalen er over", `Takk for samarbeidet. Avtalen ga ${dollars(next.earned)}.`, { kind: "info" });
+      life = addNews({ ...life, sponsor: null }, "you", `Avtalen med ${s.name} er over`, `Den ga ${dollars(next.earned)}.`, career.player);
     } else life = { ...life, sponsor: next };
   }
   // The news about the player.
@@ -453,7 +455,6 @@ export function leaveEvent(career: Career): Career {
   life = { ...life, seasonPts: life.seasonPts + r.points };
   if (r.place === "winner") {
     life = { ...life, reputation: Math.min(REP_MAX, life.reputation + 1) };
-    life = addMessage(life, { name: a.invite ? a.invite.city : CONGRATS[a.tier], role: "Gratulerer" }, `Gratulerer med ${tier.name}`, `Du tok tittelen og ${dollars(r.prize)}.`, { kind: "info" });
   }
   // The first title brings sponsors: three of them, with a deal each.
   if (r.place === "winner" && career.titles === 1 && !life.sponsor && openOf(life, "sponsor").length === 0) life = offerSponsors(career, life, life.week);
@@ -463,11 +464,11 @@ export function leaveEvent(career: Career): Career {
   const by = m ? [m.participantA, m.participantB].find((n) => n && n !== career.player) ?? null : null;
   const rec = career.rivals?.[rival];
   let next = withLife({ ...career, money }, life);
-  if (by === rival && rec && rec.l > rec.w && !next.challenge && openOf(life, "challenge").length === 0 && unit(`${career.id}|${life.week}|ask`) < 0.7) {
+  if (by === rival && rec && rec.l > rec.w && !next.challenge && !asked(life) && unit(`${career.id}|${life.week}|ask`) < 0.7) {
     next = withLife(next, challengeFrom(next, life, life.week, rival));
   } else if (unit(`${career.id}|${life.week}|line`) < 0.5) {
     const line = team?.mine.partner === rival ? (r.place === "winner" ? "Vi gjorde det. Sammen er vi best." : "Vi tar den neste gangen, du og jeg.") : r.place === "winner" ? "Bra spilt. Neste gang er det min tur." : by === rival ? "Det var meg som tok deg. Vi sees." : r.place === "final" ? "Så nærme. Jeg venter i neste finale." : "Jeg ser deg i neste turnering.";
-    next = withLife(next, addMessage(life, { name: rival, role: "Rival" }, rival, line, { kind: "info" }));
+    next = withLife(next, addNews(life, "you", rival, line, rival));
   }
   return advanceWeek(closeEvent(next));
 }

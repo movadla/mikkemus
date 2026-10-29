@@ -160,10 +160,10 @@ describe("leaving a tournament", () => {
     expect(l.news.some((n) => n.kind === "you" && n.headline.includes("tapte finalen"))).toBe(true);
   });
 
-  it("makes a title good for the name and brings a message of congratulations", () => {
+  it("makes a title good for the name and puts it in the news", () => {
     const c = leaveEvent(finished(fresh(), "winner", 500, 10));
     expect(lifeOf(c).reputation).toBe(6);
-    expect(lifeOf(c).inbox.some((m) => m.title.startsWith("Gratulerer"))).toBe(true);
+    expect(lifeOf(c).news.some((n) => n.kind === "you" && n.headline.includes("vant"))).toBe(true);
   });
 
   it("passes the week for an event that is given up, too", () => {
@@ -191,14 +191,14 @@ describe("a sponsor", () => {
     expect(c.money).toBe(START_MONEY);
     c = leaveEvent(finished(withLife(c, { sponsor: { ...deal, left: 3, misses: 2, earned: 0 } }), "r16", 0, 1));
     expect(lifeOf(c).sponsor).toBeNull();
-    expect(lifeOf(c).inbox.some((m) => m.title === "Avtalen er brutt")).toBe(true);
+    expect(lifeOf(c).news.some((n) => n.headline === "Hansens Rør avslutter avtalen")).toBe(true);
     expect(lifeOf(c).reputation).toBeLessThan(5);
   });
 
   it("ends when the last tournament of the deal is played", () => {
     const c = leaveEvent(finished(signed(0, 1), "winner", 500, 10));
     expect(lifeOf(c).sponsor).toBeNull();
-    expect(lifeOf(c).inbox.some((m) => m.title === "Avtalen er over")).toBe(true);
+    expect(lifeOf(c).news.some((n) => n.headline === "Avtalen med Hansens Rør er over")).toBe(true);
   });
 });
 

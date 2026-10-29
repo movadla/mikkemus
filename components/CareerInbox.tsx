@@ -24,13 +24,12 @@ const STATE: Record<Exclude<Message["state"], "open">, string> = { taken: "Tatt 
 
 /** The buttons of an offer: the words say what a yes is. */
 const WORDS = {
-  invite: ["Ta imot", "Takk nei"],
   challenge: ["Ta den", "Ikke i kveld"],
   sponsor: ["Skriv under", "Ikke nå"],
 } as const;
 
 /** What an invitation is, in chips: the number of players, the game, the price and the prize. */
-function InviteFacts({ offer }: { offer: Extract<Message["offer"], { kind: "invite" }> }) {
+export function InviteFacts({ offer }: { offer: Extract<Message["offer"], { kind: "invite" }> }) {
   const i = offer.invite;
   return (
     <ul className="msg-chips" aria-label="Om turneringen">
@@ -43,7 +42,7 @@ function InviteFacts({ offer }: { offer: Extract<Message["offer"], { kind: "invi
 }
 
 /** The inbox: the people who write, the offers they make and how long they last. Answering is two buttons, and a yes takes the player on to what it was for. */
-export function CareerInbox({ career, commit, onPlay, onChallenge }: { career: Career; commit: (c: Career) => void; onPlay: () => void; onChallenge: () => void }) {
+export function CareerInbox({ career, commit, onChallenge, onRoad }: { career: Career; commit: (c: Career) => void; onChallenge: () => void; /** An invitation is answered under the tournaments: this takes the player there. */ onRoad: () => void }) {
   const life = lifeOf(career);
   const [open, setOpen] = useState<string | null>(null);
   if (life.inbox.length === 0) return <p style={{ color: "var(--color-muted)" }}>Ingen meldinger.</p>;
@@ -56,8 +55,7 @@ export function CareerInbox({ career, commit, onPlay, onChallenge }: { career: C
     const next = answerMessage(career, m.id, accept, newSeed());
     if (next === career) return;
     commit(next);
-    if (accept && m.offer.kind === "invite") onPlay();
-    else if (accept && m.offer.kind === "challenge") onChallenge();
+    if (accept && m.offer.kind === "challenge") onChallenge();
   };
   return (
     <ul className="msgs" aria-label="Meldinger">
@@ -66,7 +64,7 @@ export function CareerInbox({ career, commit, onPlay, onChallenge }: { career: C
         const left = m.until !== undefined ? m.until - life.week + 1 : null;
         const why = whyNotAnswer(career, m);
         const offer = m.offer;
-        const words = offer.kind === "invite" || offer.kind === "challenge" || offer.kind === "sponsor" ? WORDS[offer.kind] : null;
+        const words = offer.kind === "challenge" || offer.kind === "sponsor" ? WORDS[offer.kind] : null;
         return (
           <li key={m.id} className={`msg ${!m.read ? "msg-unread" : ""} ${m.state !== "open" ? "msg-done" : ""}`}>
             <button type="button" className={`msg-head tactile ${FOCUS_RING}`} aria-expanded={open === m.id} onClick={() => toggle(m)}>
@@ -110,6 +108,13 @@ export function CareerInbox({ career, commit, onPlay, onChallenge }: { career: C
                     <li>{dollars(offer.deal.perEvent)} per turnering</li>
                     <li>{offer.deal.events} uker</li>
                   </ul>
+                )}
+                {m.state === "open" && offer.kind === "invite" && (
+                  <div className="msg-actions">
+                    <Button variant="primary" onClick={onRoad}>
+                      Svar under Turneringer
+                    </Button>
+                  </div>
                 )}
                 {m.state === "open" && words && (
                   <>
