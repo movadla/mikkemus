@@ -172,11 +172,49 @@ function Steps({ step }: { step: 1 | 2 | 3 }) {
   );
 }
 
+/** The story a first career opens with: three pictures, one line each, and a way past them. Seen once per device. */
+const STORY = [
+  { src: "/career/start-1.jpg", line: "Det begynte ved et kjøkkenbord, med én pil." },
+  { src: "/career/start-2.jpg", line: "En kveld tok du bagen og gikk ut døren." },
+  { src: "/career/start-3.jpg", line: "Nede i gaten lyste Ly. Første turnering er gratis." },
+] as const;
+const STORY_KEY = "mikke-mus-career-story";
+
+function StoryIntro({ onDone }: { onDone: () => void }) {
+  const [i, setI] = useState(0);
+  const last = i === STORY.length - 1;
+  const next = () => (last ? onDone() : setI(i + 1));
+  return (
+    <OverRoom stage={0} src={STORY[i].src} dim={20}>
+      <div className="animate-screen-push" style={{ display: "flex", flexDirection: "column", justifyContent: "flex-end", gap: "0.75rem", minHeight: "100dvh", padding: "1rem 1rem 3rem" }}>
+        <p aria-live="polite" style={{ fontFamily: "var(--font-display)", fontSize: "var(--text-title)", lineHeight: 1.25, color: "var(--color-cream)", textShadow: "0 2px 12px rgba(0,0,0,0.85)", textWrap: "balance" }}>
+          {STORY[i].line}
+        </p>
+        <Button block variant="primary" size="lg" onClick={next}>
+          {last ? "Start" : "Neste"}
+        </Button>
+        {!last && (
+          <Button block variant="ghost" onClick={onDone}>
+            Hopp over
+          </Button>
+        )}
+      </div>
+    </OverRoom>
+  );
+}
+
 /** Two steps: who and how good, then the look and the start (the shirt, the darts, the place). */
 function NewCareer({ taken, onBack, onCreate }: { taken: string[]; onBack: () => void; onCreate: (player: string, level: string, profile: { home: HomeId; darts: DartsId; character: string; game: CareerGame; doubleOut: boolean }) => void }) {
   const roster = useRoster();
   const people = roster.filter((r) => r.kind !== "team" && !taken.includes(careerId(r.name)));
   const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [story, setStory] = useState(() => {
+    try {
+      return !localStorage.getItem(STORY_KEY);
+    } catch {
+      return false;
+    }
+  });
   const [player, setPlayer] = useState<string | null>(null);
   const [level, setLevel] = useState("dyktig");
   const [darts, setDarts] = useState<DartsId>("steel");
@@ -201,6 +239,19 @@ function NewCareer({ taken, onBack, onCreate }: { taken: string[]; onBack: () =>
     setNameError("");
   };
   const record = roster.find((r) => r.name === player);
+
+  if (story) {
+    return (
+      <StoryIntro
+        onDone={() => {
+          try {
+            localStorage.setItem(STORY_KEY, "1");
+          } catch {}
+          setStory(false);
+        }}
+      />
+    );
+  }
 
   if (step === 3 && record) {
     return (

@@ -20,17 +20,19 @@ const CAREER = {
   active: null,
 };
 
-async function seed(page: Page, career: object | null) {
+async function seed(page: Page, career: object | null, story = false) {
   await page.addInitScript(
-    ([c]) => {
+    ([c, story]) => {
       localStorage.setItem("mikke-mus-bot-speed", "instant");
+      // The story a first career opens with has been seen, unless a test is about it.
+      if (!story) localStorage.setItem("mikke-mus-career-story", "1");
       // Only the first load puts the career there: after that it is what the app has saved.
       if (c && !sessionStorage.getItem("seeded")) {
         sessionStorage.setItem("seeded", "1");
         localStorage.setItem("mikke-mus-career:lars", c);
       }
     },
-    [career ? JSON.stringify(career) : ""],
+    [career ? JSON.stringify(career) : "", story] as const,
   );
   await openApp(page, "dark");
   await page.getByRole("button", { name: "Karriere" }).click();
@@ -46,6 +48,18 @@ const place = (page: Page, name: "Rom" | "Trening" | "Duell" | "Turneringer") =>
 
 test.describe("karriere", () => {
   test.skip(!PIN, "E2E_PIN is not set");
+
+  test("første karriere: en historie med tre bilder som kan hoppes over, og som bare vises én gang", async ({ page }) => {
+    await seed(page, null, true);
+    await expect(page.getByText("Det begynte ved et kjøkkenbord")).toBeVisible();
+    await page.getByRole("button", { name: "Neste" }).click();
+    await expect(page.getByText("En kveld tok du bagen")).toBeVisible();
+    await page.getByRole("button", { name: "Hopp over" }).click();
+    await expect(page.getByRole("button", { name: "Ny spiller" })).toBeVisible();
+    await page.reload();
+    await page.getByRole("button", { name: "Karriere" }).click();
+    await expect(page.getByRole("button", { name: "Ny spiller" })).toBeVisible();
+  });
 
   test("ny karriere: legg til en spiller der, velg nivå og karakter, og start med 2 000 dollar", async ({ page }) => {
     await toCareer(page, false);
