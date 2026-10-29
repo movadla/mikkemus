@@ -18,12 +18,22 @@ export const EVENT_PICTURES: Partial<Record<TierId, { outside: string; alt: stri
  * invitation. One that is not here is played in the place of the step it is built on. To give one its own, make the two pictures (see
  * art/prompts/turneringer.md), put them in public/career, and add the line here.
  */
-export const INVITE_PICTURES: Record<string, NonNullable<(typeof EVENT_PICTURES)[TierId]>> = {
+export const INVITE_PICTURES: Record<string, Partial<NonNullable<(typeof EVENT_PICTURES)[TierId]>>> = {
+  // Trondheim Open: the place from outside is its own; inside it is played where the step it is built on is played.
+  stavanger: { outside: "/career/stavanger-outside.jpg", alt: "Fargerike trehus og flagglenker i en gate i Stavanger, der Stavanger Masters åpnes", outsideFocus: "50% 50%" },
+  trondheim: { outside: "/career/trondheim-outside.jpg", alt: "Domkirken i Trondheim i solnedgang, der Trondheim Open åpnes", outsideFocus: "50% 50%" },
+  // The television studio: the show of one leg, the best of three, and the evening of eight. One picture does for the opening and for the matches.
+  tv: { outside: "/career/tv-inside.jpg", alt: "TV-studioet der showet spilles, med publikum foran scenen", outsideFocus: "50% 45%", inside: "/career/tv-inside.jpg", insideFocus: "50% 45%" },
+  "tv-kveld": { outside: "/career/tv-inside.jpg", alt: "TV-studioet der showet spilles, med publikum foran scenen", outsideFocus: "50% 45%", inside: "/career/tv-inside.jpg", insideFocus: "50% 45%" },
   // wc: { outside: "/career/wc-outside.jpg", alt: "Hallen til World Cup of Darts, sett utenfra om kvelden", outsideFocus: "50% 55%", inside: "/career/wc-inside.jpg", insideFocus: "50% 50%" },
 };
 
 /** The pictures of an event: its own when it is an invitation with them, otherwise those of the step it is built on. */
-export const picturesFor = (tier: { id: TierId; key?: string }) => (tier.key ? INVITE_PICTURES[tier.key] : undefined) ?? EVENT_PICTURES[tier.id];
+export const picturesFor = (tier: { id: TierId; key?: string }) => {
+  const own = tier.key ? INVITE_PICTURES[tier.key] : undefined;
+  const base = EVENT_PICTURES[tier.id];
+  return own && base ? { ...base, ...own } : base;
+};
 
 /**
  * Pictures kept in reserve, ready to be used where an event needs one (public/career, the originals in art/arenas): two arenas full of people, with
