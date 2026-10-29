@@ -9,7 +9,7 @@
  * here is plain data in and out: a career can be saved as it is, paused anywhere and picked up again. See CAREER_PLAN.md.
  */
 import { levelOfMed } from "./botLevels";
-import { lifeOf, lyPool, welcomeLife, REP_MAX, type Invitation, type Life } from "./careerLife";
+import { lifeOf, lyPool, mustPlay, rivalOf, welcomeLife, REP_MAX, type Invitation, type Life, type Tv } from "./careerLife";
 import { INTERNATIONALS, LY_REGULARS } from "./opponents";
 import { countdownOf, gameOf, type CareerGame } from "./careerGame";
 import { unit, type CupConfig, type CupKind } from "./botCup";
@@ -311,11 +311,19 @@ export function fieldCentre(career: Career, tier: Tier): number {
 }
 
 /** The field: the player and the rest, strongest first (the player where their own level puts them). Each bot has a skill of its own around the centre. */
-export function fieldFor(career: Career, tier: Tier, seed: number): Participant[] {
-  const names = fieldNames(tier, career.player, seed, tier.size - 1, lifeOf(career).world);
+export function fieldFor(career: Career, tier: Tier | Invitation, seed: number): Participant[] {
+  const fixed = "field" in tier && tier.field ? tier.field.filter((n) => n !== career.player).slice(0, tier.size - 1) : null;
+  const names = fixed ?? fieldNames(tier, career.player, seed, tier.size - 1, lifeOf(career).world);
+  // The rival and the boss of the step are in the field every time, in place of the weakest names drawn (a field that is fixed is left as it is).
+  const must = mustPlay(career, tier.id);
+  const wanted = must.filter((n) => !names.includes(n));
+  for (let i = 0; !fixed && i < wanted.length && names.length > 0; i++) names[names.length - 1 - i] = wanted[i];
   const factor = factorFor(career, tier);
+  const rival = rivalOf(career).name;
   const bots = names.map((name) => {
-    const med = career.skillMed * factor * (0.88 + unit(`${seed}|skill|${name}`) * 0.24);
+    // The rival is the sharpest of a field, and the boss of a step nearly as sharp: the ones to beat.
+    const edge = name === rival ? 0.85 : must.includes(name) ? 0.88 : 0.88 + unit(`${seed}|skill|${name}`) * 0.24;
+    const med = career.skillMed * factor * edge;
     const skill = Math.min(8, Math.max(1, levelOfMed(med)));
     return { name, isBot: true as const, botLevel: String(Math.round(skill)) as Participant["botLevel"], skill };
   });
@@ -404,7 +412,7 @@ export function finishEvent(career: Career, now: string): Career {
     rivals[other] = { w: before.w + (won ? 1 : 0), l: before.l + (won ? 0 : 1), last: now, lastWon: won };
   }
   const bonus = revenge.length * REVENGE_BONUS;
-  const result: EventResult = { place, prize: (tier.prizes[place] ?? 0) + bonus, cost: a.cost, points: tier.points[place] ?? 0, ...(bonus ? { revenge: { names: revenge, bonus } } : {}) };
+  const result: EventResult = { place, prize: (tier.prizes[place] ?? 0) + bonus + (a.invite?.honorarium ?? 0), cost: a.cost, points: tier.points[place] ?? 0, ...(bonus ? { revenge: { names: revenge, bonus } } : {}) };
   const entry: HistoryEntry = { at: now, event: tier.name, place, prize: result.prize, cost: result.cost, points: result.points };
   const won = place === "winner";
   const opens = tier.opens && tier.opens.places.includes(place) ? tier.opens.tier : null;
@@ -462,6 +470,8 @@ export type Challenge = {
   risk?: number;
   /** The message it came from, when someone asked for it. */
   from?: string;
+  /** A game for television: it has a title, a fee for being there, and may be several legs and have a handicap. */
+  tv?: Tv;
 };
 
 /** What a challenge is worth for a player at this point of the ladder: a quarter of the first prize of the biggest step they can enter, with a floor. */
@@ -491,11 +501,22 @@ export function settleChallenge(career: Career, won: boolean, now: string): Care
   const c = career.challenge;
   if (!c || c.won !== null) return career;
   const lost = won ? 0 : Math.min(career.money, c.risk ?? 0);
-  const prize = won ? c.stake : -lost;
+  // A show pays for being there, whatever the result.
+  const prize = (won ? c.stake : -lost) + (c.tv?.honorarium ?? 0);
   const entry: HistoryEntry = { at: now, event: `Duell: ${GAMES[c.game].name} mot ${c.opponent.name}`, prize, cost: 0, points: 0, game: c.game, won };
   // Playing what someone asked for is good for the name.
   const life = c.from ? lifeOf(career) : null;
   return { ...career, money: career.money + prize, history: [entry, ...career.history].slice(0, 30), challenge: { ...c, won }, ...(life ? { life: { ...life, reputation: Math.min(REP_MAX, life.reputation + 1) } } : {}) };
+}
+
+/**
+ * A challenge dressed as a tournament, for the scenes every tournament has (the opening, the ceremony of a win): the look of one of the steps, with the
+ * name of the match. A show on television is dressed as the Grand Slam, a match of someone's asking as the pub, a duel the player picked the same.
+ */
+export function challengeTier(c: Challenge): Tier {
+  const base = c.tv ? (c.tv.legs === 3 ? TIERS.nm : TIERS.gs) : TIERS.lu;
+  const name = c.tv ? c.tv.title : c.from ? `Duell mot ${c.opponent.name}` : `${GAMES[c.game].name}-duell`;
+  return { ...base, name, short: name, trophy: `${name}-pokalen`, stage: c.tv ? "På TV" : c.from ? "Revansje på Ly" : "Duell på Ly", tagline: GAMES[c.game].about, size: 8, fee: 0, prizes: { winner: c.stake }, points: {}, qualify: undefined, opens: undefined };
 }
 
 /** Takes the finished challenge off the table. */
@@ -506,7 +527,7 @@ export function declineChallenge(career: Career): Career {
   const c = career.challenge;
   if (!c || c.won !== null) return career;
   // Turning down what someone asked for costs some of the name.
-  if (!c.from) return { ...career, challenge: null };
+  if (!c.from || c.tv) return { ...career, challenge: null, ...(c.from ? { life: { ...lifeOf(career), inbox: lifeOf(career).inbox.map((m) => (m.id === c.from ? { ...m, state: "declined" as const } : m)) } } : {}) };
   const life = lifeOf(career);
   return { ...career, challenge: null, life: { ...life, reputation: Math.max(0, life.reputation - 1), inbox: life.inbox.map((m) => (m.id === c.from ? { ...m, state: "declined" as const } : m)) } };
 }

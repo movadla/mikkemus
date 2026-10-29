@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { cupColor } from "@/lib/botCup";
-import { REVENGE_BONUS, TIERS, closeChallenge, eventTier, declineChallenge, dollars, settleChallenge, type ActiveEvent, type Career, type Challenge } from "@/lib/career";
+import { GAMES, REVENGE_BONUS, TIERS, challengeTier, closeChallenge, eventTier, declineChallenge, dollars, settleChallenge, type ActiveEvent, type Career, type Challenge } from "@/lib/career";
 import { matchParticipants } from "@/lib/tournament";
 import { sponsorOutcome } from "@/lib/careerWorld";
 import { rankOf } from "@/lib/careerGoals";
@@ -19,7 +19,7 @@ import { levelLabel, oneDecimal } from "./careerFormat";
 import { CoinBurst } from "./CoinBurst";
 import { CountdownGameScreen } from "./CountdownApp";
 import { HighstrikerGameScreen } from "./HighstrikerApp";
-import { ArrowLeftIcon, CoinIcon } from "./icons";
+import { ArrowLeftIcon } from "./icons";
 import { LavaGameScreen } from "./LavaApp";
 import { PlayButton } from "./PlayButton";
 import { OverRoom } from "./RoomBackdrop";
@@ -27,9 +27,9 @@ import { ScoreKeypad } from "./ScoreKeypad";
 import { Trophy } from "./Trophy";
 import { TrophyArt } from "./CareerTrophy";
 import { CharacterFigure } from "./CharacterFigure";
+import { EventIntro } from "./EventIntro";
 import { poseFor } from "@/lib/characters";
 import { TIER_LOOK, foilVars } from "@/lib/materials";
-import { Avatar } from "./ui/Avatar";
 import { CountUp } from "./ui/CountUp";
 import { FOCUS_RING } from "./ui/focus";
 
@@ -39,16 +39,6 @@ function BackArrow({ onClick, label = "Tilbake" }: { onClick: () => void; label?
     <button type="button" onClick={onClick} aria-label={label} className={`tactile inline-flex items-center justify-center shrink-0 ${FOCUS_RING}`} style={{ width: "var(--control)", height: "var(--control)", borderRadius: "var(--radius-pill)", background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-cream)" }}>
       <ArrowLeftIcon className="w-5 h-5" />
     </button>
-  );
-}
-
-/** The amount in gold, in a pill with a coin. */
-function Amount({ value, big = false }: { value: number; big?: boolean }) {
-  return (
-    <span className="inline-flex items-center gap-2 tabular" style={{ padding: big ? "0.5rem 1.2rem" : "0.35rem 0.9rem", borderRadius: "var(--radius-pill)", background: "var(--gold-soft)", border: "1px solid var(--color-gold)", color: "var(--color-gold-strong)", fontWeight: 800, fontSize: big ? "var(--text-num)" : "var(--text-title)" }}>
-      <CoinIcon className={big ? "w-7 h-7" : "w-5 h-5"} />
-      {dollars(value)}
-    </span>
   );
 }
 
@@ -65,16 +55,31 @@ function ChallengeFlow({ career, commit, onHub }: { career: Career; commit: (c: 
   const c = career.challenge!;
   const roster = useRoster();
   const photos = useMemo(() => new Map(roster.map((r) => [r.name, r.photo])), [roster]);
-  const [playing, setPlaying] = useState(false);
-  const players = [career.player, c.opponent.name];
-  const botLevels = { [c.opponent.name]: c.opponent.skill };
-  const [cd, setCd] = useState(() => newCountdown(501, true, players));
-  const [lava, setLava] = useState(() => newLava(DEFAULT_LIVES, players));
-  const [hs, setHs] = useState(() => newHighstriker(DEFAULT_LIVES, players));
+  // The same stages as a tournament: the opening, the match, and the result with its ceremony. A show of several legs has a break between them.
+  const [stage, setStage] = useState<"intro" | "play" | "break">("intro");
+  const [leg, setLeg] = useState(0);
+  const [score, setScore] = useState({ you: 0, them: 0 });
+  const tv = c.tv;
+  const opponent = c.opponent.name;
+  // Whoever throws first changes from one leg to the next.
+  const order = (n: number) => (n % 2 === 0 ? [career.player, opponent] : [opponent, career.player]);
+  const newLeg = (n: number) => newCountdown(tv?.theirStart === 301 ? 301 : 501, true, order(n), tv ? { [career.player]: tv.humanStart } : undefined);
+  const botLevels = { [opponent]: c.opponent.skill };
+  const [cd, setCd] = useState(() => newLeg(0));
+  const [lava, setLava] = useState(() => newLava(DEFAULT_LIVES, [career.player, opponent]));
+  const [hs, setHs] = useState(() => newHighstriker(DEFAULT_LIVES, [career.player, opponent]));
   const settle = (winner: string | null) => commit(settleChallenge(career, winner === career.player, new Date().toISOString()));
   const giveUp = () => {
     commit(declineChallenge(career));
     onHub();
+  };
+  // A leg is over: the match is decided when someone has the most of the legs, or the next one is played.
+  const legDone = (winner: string | null) => {
+    const next = { you: score.you + (winner === career.player ? 1 : 0), them: score.them + (winner === career.player ? 0 : 1) };
+    const need = Math.floor((tv?.legs ?? 1) / 2) + 1;
+    if (next.you >= need || next.them >= need) return settle(next.you >= need ? career.player : opponent);
+    setScore(next);
+    setStage("break");
   };
   if (c.won !== null) {
     return (
@@ -88,48 +93,52 @@ function ChallengeFlow({ career, commit, onHub }: { career: Career; commit: (c: 
       />
     );
   }
-  if (!playing) {
+  if (stage === "intro") {
+    const detail = tv ? (tv.humanStart !== tv.theirStart ? `${career.player} starter på ${tv.humanStart}, ${opponent} på ${tv.theirStart}.` : `Best av ${tv.legs}.`) : c.risk ? `Taper du, mister du ${dollars(Math.min(career.money, c.risk))}.` : "Én runde.";
+    return (
+      <EventIntro
+        tier={challengeTier(c)}
+        player={career.player}
+        character={career.profile.character}
+        label="SPILL"
+        plates={[["Mot", opponent], [tv ? "Honorar" : "Spill", tv ? dollars(tv.honorarium) : GAMES[c.game].name], ["Til vinneren", dollars(c.stake)]]}
+        line={
+          <>
+            <b>{career.player}</b> mot <b>{opponent}</b>.
+            <br />
+            {detail}
+          </>
+        }
+        onBack={giveUp}
+        onDone={() => setStage("play")}
+      />
+    );
+  }
+  if (stage === "break") {
     return (
       <div className="animate-screen-enter screen">
         <div className="screen-inner flex flex-col" style={{ minHeight: "calc(100dvh - 2rem)", gap: "1.25rem" }}>
-          <div className="flex items-center gap-3">
-            <BackArrow onClick={giveUp} label="Avslå" />
-            <h1 className="font-display" style={{ fontSize: "var(--text-num)", color: "var(--color-cream)", lineHeight: 1 }}>
-              {c.game === "501" ? "501" : c.game === "lava" ? "Lava" : "Highstriker"}
-            </h1>
+          <div className="flex-1 flex flex-col items-center justify-center leg-break">
+            <p className="section-label">LEGG {leg + 1} AV {tv?.legs}</p>
+            <p className="font-display tabular" style={{ fontSize: "clamp(2.6rem, 16vw, 4rem)", color: "var(--color-cream)", lineHeight: 1 }}>
+              {score.you}–{score.them}
+            </p>
+            <p style={{ color: "var(--color-text-2)" }}>{score.you > score.them ? `${career.player} leder` : score.you < score.them ? `${opponent} leder` : "Likt"}</p>
           </div>
-          <div className="flex-1 flex flex-col items-center justify-center gap-6">
-            <div className="flex items-start justify-center gap-3 w-full text-center">
-              <div className="final-left" style={{ flex: "1 1 0", minWidth: 0 }}>
-                <Avatar name={career.player} photo={photos.get(career.player)} size="xl" state="active" />
-                <p className="font-display truncate mt-2" style={{ color: "var(--color-cream)", fontSize: "var(--text-title)" }}>
-                  {career.player}
-                </p>
-              </div>
-              <span className="final-vs font-display" style={{ color: "var(--color-gold)", fontSize: "var(--text-title)", paddingTop: "2.2rem" }} aria-hidden>
-                VS
-              </span>
-              <div className="final-right" style={{ flex: "1 1 0", minWidth: 0 }}>
-                <Avatar name={c.opponent.name} size="xl" bot />
-                <p className="font-display truncate mt-2" style={{ color: "var(--color-cream)", fontSize: "var(--text-title)" }}>
-                  {c.opponent.name}
-                </p>
-              </div>
-            </div>
-            <Amount value={c.stake} big />
-            {!!c.risk && (
-              <p style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>
-                Taper du, mister du {dollars(Math.min(career.money, c.risk))}. Å gi opp teller som tap.
-              </p>
-            )}
-          </div>
-          <PlayButton label="SPILL" onClick={() => setPlaying(true)} />
+          <PlayButton
+            label="NESTE LEGG"
+            onClick={() => {
+              setLeg(leg + 1);
+              setCd(newLeg(leg + 1));
+              setStage("play");
+            }}
+          />
         </div>
       </div>
     );
   }
   if (c.game === "501") {
-    return <CountdownGameScreen game={cd} setGame={setCd} botLevels={botLevels} photos={photos} onHome={giveUp} onNew={() => undefined} career={{ onDone: () => settle(countdownWinner(cd)), giveUp: true }} />;
+    return <CountdownGameScreen key={leg} game={cd} setGame={setCd} botLevels={botLevels} photos={photos} onHome={giveUp} onNew={() => undefined} career={{ onDone: () => legDone(countdownWinner(cd)), giveUp: true }} />;
   }
   if (c.game === "lava") {
     return <LavaGameScreen game={lava} setGame={setLava} botLevels={botLevels} photos={photos} onHome={giveUp} onNew={() => undefined} career={{ onDone: () => settle(lavaState(lava).winner) }} />;
@@ -137,30 +146,43 @@ function ChallengeFlow({ career, commit, onHub }: { career: Career; commit: (c: 
   return <HighstrikerGameScreen game={hs} setGame={setHs} botLevels={botLevels} photos={photos} onHome={giveUp} onNew={() => undefined} career={{ onDone: () => settle(highstrikerWinner(hs)) }} />;
 }
 
+/** What a challenge came to: for a win the ceremony of a title (the match dressed as a tournament), for a loss the player and what it cost or paid. */
 function ChallengeResult({ career, c, onDone }: { career: Career; c: Challenge; onDone: () => void }) {
   const won = c.won === true;
+  const paid = (won ? c.stake : 0) + (c.tv?.honorarium ?? 0);
+  const fx = fxFlags(useFxLevel());
   useEffect(() => {
-    if (won) haptics.win();
-  }, [won]);
+    if (won) {
+      if (fx.confetti) playFanfare();
+      careerSound("cheer");
+      haptics.win();
+    } else haptics.confirm();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, when the result comes up
+  }, []);
   return (
-    <div className="animate-screen-enter screen cup-lamp relative overflow-hidden" style={won ? ({ "--cup": "var(--color-gold)" } as React.CSSProperties) : undefined}>
+    <div className="animate-screen-enter screen cup-lamp relative overflow-hidden" style={{ "--cup": won ? "var(--color-gold)" : cupColor(challengeTier(c).kind) } as React.CSSProperties}>
       <div className="screen-inner relative z-10 flex flex-col" style={{ minHeight: "calc(100dvh - 2rem)", gap: "1.25rem" }}>
-        <div className="flex-1 flex flex-col items-center justify-center gap-5 text-center">
-          <div className={`char-result ${won ? "" : "char-result-low"}`}>
-            <CharacterFigure id={career.profile.character} pose={won ? "jubel" : "skuffet"} glow={won} />
-          </div>
+        <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center">
           {won ? (
+            <Ceremony tier={challengeTier(c)} player={career.player} prize={paid} confetti={fx.confetti} character={career.profile.character} />
+          ) : (
+            <div className={`char-result ${paid > 0 ? "" : "char-result-low"}`}>
+              <CharacterFigure id={career.profile.character} pose="skuffet" glow={paid > 0} />
+            </div>
+          )}
+          {paid > 0 ? (
             <p className="font-display tabular" style={{ fontSize: "clamp(2.6rem, 16vw, 4rem)", color: "var(--color-gold)", lineHeight: 1 }}>
-              <CountUp value={c.stake} format={(n) => `+${dollars(n)}`} />
+              <CountUp value={paid} format={(n) => `+${dollars(n)}`} />
             </p>
           ) : (
             <p className="font-display" style={{ fontSize: "var(--text-num)", color: "var(--color-text-2)" }}>
               Tapt{c.risk ? ` · −${dollars(c.risk)}` : ""}
             </p>
           )}
+          {!won && paid > 0 && <p style={{ color: "var(--color-text-2)" }}>Tapt, men honoraret er ditt.</p>}
         </div>
-        {won && <CoinBurst />}
-        <PlayButton label={won ? "HENT" : "OK"} tone={won ? "gold" : "teal"} onClick={onDone} />
+        {paid > 0 && <CoinBurst />}
+        <PlayButton label={paid > 0 ? "HENT" : "OK"} tone={paid > 0 ? "gold" : "teal"} onClick={onDone} />
       </div>
     </div>
   );

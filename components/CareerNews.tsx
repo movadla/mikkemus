@@ -1,12 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import type { Career } from "@/lib/career";
 import { lifeOf, seasonOf, weekInSeason, WEEKS_PER_SEASON, type NewsItem } from "@/lib/careerLife";
 import { CharacterFace } from "./CharacterFigure";
 import { NewsIcon } from "./careerIcons";
 import { Avatar } from "./ui/Avatar";
-
-const KIND: Record<NewsItem["kind"], string> = { cup: "Turnering", upset: "Skrell", you: "Deg", season: "Sesong", world: "Verden" };
+import { FOCUS_RING } from "./ui/focus";
 
 /** The face by a story: the player's own character, the person it is about, or the paper's mark when it is about no one. */
 function Face({ career, who }: { career: Career; who?: string }) {
@@ -20,9 +20,10 @@ function Face({ career, who }: { career: Career; who?: string }) {
   return who === career.player ? <CharacterFace id={career.profile.character} px={40} /> : <Avatar name={who} bot px={40} />;
 }
 
-/** The news of the career: what the others did while the player played, newest first, a week at a time. */
+/** The news of the career: a headline for each, newest first, a week at a time. A tap opens the story under it. */
 export function CareerNews({ career }: { career: Career }) {
   const life = lifeOf(career);
+  const [open, setOpen] = useState<string | null>(null);
   const unseen = (n: NewsItem) => Number(n.id.slice(1)) > life.newsSeen;
   // Items come newest first, so a heading goes in where the week changes.
   const rows: ({ head: string } | NewsItem)[] = [];
@@ -42,12 +43,11 @@ export function CareerNews({ career }: { career: Career }) {
           </li>
         ) : (
           <li key={r.id} className={`feed-item ${unseen(r) ? "feed-new" : ""}`}>
-            <Face career={career} who={r.who} />
-            <span className="min-w-0">
-              <small className="feed-kind">{KIND[r.kind]}</small>
-              <b className="block">{r.headline}</b>
-              <span className="feed-text">{r.text}</span>
-            </span>
+            <button type="button" className={`feed-row tactile ${FOCUS_RING}`} aria-expanded={open === r.id} onClick={() => setOpen(open === r.id ? null : r.id)}>
+              <Face career={career} who={r.who} />
+              <b className="min-w-0 text-left">{r.headline}</b>
+            </button>
+            {open === r.id && <p className="feed-text">{r.text}</p>}
           </li>
         ),
       )}

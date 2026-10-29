@@ -26,6 +26,7 @@ import {
   playerUp,
   remainingOf,
   roundsOf,
+  startOf,
   tonsOf,
   winnerOf,
   type CountdownGame,
@@ -345,7 +346,7 @@ export function CountdownGameScreen({
             const mine = fresh?.player === p ? fresh : null;
             const tier = last && !last.bust ? tierOf(last.scored) : "none";
             const togo = remainingOf(game, p);
-            const pct = Math.max(0, Math.min(100, (togo / game.start) * 100));
+            const pct = Math.max(0, Math.min(100, (togo / startOf(game, p)) * 100));
             const hot = active && way !== null;
             return (
               <li

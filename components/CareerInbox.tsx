@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { GAMES, dollars, type Career } from "@/lib/career";
-import { lifeOf, isOpen, weekInSeason, type Message } from "@/lib/careerLife";
+import { lifeOf, isOpen, type Message } from "@/lib/careerLife";
 import { answerMessage, markRead, whyNotAnswer } from "@/lib/careerWorld";
 import { newSeed } from "./careerFormat";
 import { Avatar } from "./ui/Avatar";
@@ -21,12 +21,11 @@ const WORDS = {
 /** What an invitation is, in chips: the number of players, the game, the price and the prize. */
 function InviteFacts({ offer }: { offer: Extract<Message["offer"], { kind: "invite" }> }) {
   const i = offer.invite;
-  const game = i.countdown ? `${i.countdown.start}${i.countdown.doubleOut ? " dobbel ut" : ""}` : "Din vanlige";
   return (
     <ul className="msg-chips" aria-label="Om turneringen">
-      <li>{i.size} spillere</li>
-      <li>{game}</li>
-      <li>{i.fee === 0 ? "Gratis" : `Innsats ${dollars(i.fee)}`}</li>
+      {i.countdown && <li>{i.countdown.humanStart ? `Du starter på ${i.countdown.humanStart}` : i.countdown.start}</li>}
+      <li>{i.fee === 0 ? "Gratis" : dollars(i.fee)}</li>
+      {!!i.honorarium && <li>Honorar {dollars(i.honorarium)}</li>}
       <li>Vinner {dollars(i.prizes.winner ?? 0)}</li>
     </ul>
   );
@@ -64,7 +63,7 @@ export function CareerInbox({ career, commit, onPlay, onChallenge }: { career: C
               <span className="min-w-0 text-left">
                 <b className="block truncate">{m.title}</b>
                 <small className="block truncate">
-                  {m.from.name} · uke {weekInSeason(m.week)}
+                  {m.from.name}
                   {isOpen(m) && left !== null && <span className="msg-time"> · {left <= 1 ? "siste uke" : `${left} uker igjen`}</span>}
                   {m.state !== "open" && <span> · {STATE[m.state]}</span>}
                 </small>
@@ -77,7 +76,14 @@ export function CareerInbox({ career, commit, onPlay, onChallenge }: { career: C
                 {offer.kind === "invite" && <InviteFacts offer={offer} />}
                 {offer.kind === "challenge" && (
                   <ul className="msg-chips" aria-label="Om utfordringen">
-                    <li>{GAMES[offer.game].name}</li>
+                    {offer.tv ? (
+                      <>
+                        {offer.tv.humanStart !== offer.tv.theirStart ? <li>Du starter på {offer.tv.humanStart}</li> : <li>Best av {offer.tv.legs}</li>}
+                        <li>Honorar {dollars(offer.tv.honorarium)}</li>
+                      </>
+                    ) : (
+                      <li>{GAMES[offer.game].name}</li>
+                    )}
                     <li>Vinner {dollars(offer.stake)}</li>
                     {offer.risk > 0 && <li>Taper {dollars(offer.risk)}</li>}
                   </ul>
@@ -85,7 +91,7 @@ export function CareerInbox({ career, commit, onPlay, onChallenge }: { career: C
                 {offer.kind === "sponsor" && (
                   <ul className="msg-chips" aria-label="Om avtalen">
                     <li>{dollars(offer.deal.perEvent)} per turnering</li>
-                    <li>{offer.deal.events} turneringer</li>
+                    <li>{offer.deal.events} uker</li>
                   </ul>
                 )}
                 {m.state === "open" && words && (
@@ -97,7 +103,7 @@ export function CareerInbox({ career, commit, onPlay, onChallenge }: { career: C
                       <Button onClick={() => answer(m, false)}>{words[1]}</Button>
                     </div>
                     {why && <p className="msg-why">{why}</p>}
-                    {offer.kind === "challenge" && !why && <p className="msg-why">Å si nei, eller la tiden gå ut, koster litt rykte.</p>}
+                    {offer.kind === "challenge" && !offer.tv && !why && <p className="msg-why">Nei koster litt rykte.</p>}
                   </>
                 )}
               </div>
@@ -105,7 +111,6 @@ export function CareerInbox({ career, commit, onPlay, onChallenge }: { career: C
           </li>
         );
       })}
-      <li className="msg-foot">Rykte {life.reputation} av 10</li>
     </ul>
   );
 }

@@ -23,17 +23,22 @@ export type CountdownGame = {
   doubleOut: boolean;
   players: string[];
   turns: CountdownTurn[];
+  /** A start of their own for some of the players (a handicap: the one who starts lower has the head start). The others start at `start`. */
+  starts?: Record<string, number>;
 };
 
 export const DARTS_PER_ROUND = 3;
 
-export function newGame(start: CountdownStart, doubleOut: boolean, players: string[]): CountdownGame {
-  return { start, doubleOut, players, turns: [] };
+export function newGame(start: CountdownStart, doubleOut: boolean, players: string[], starts?: Record<string, number>): CountdownGame {
+  return { start, doubleOut, players, turns: [], ...(starts ? { starts } : {}) };
 }
+
+/** Where a player starts: the start of the game, or their own when they have a handicap. */
+export const startOf = (g: CountdownGame, player: string): number => g.starts?.[player] ?? g.start;
 
 /** What a player has left: the start, less every round that counted. */
 export function remainingOf(g: CountdownGame, player: string): number {
-  return g.turns.reduce<number>((left, t) => (t.player === player && !t.bust ? left - t.scored : left), g.start);
+  return g.turns.reduce<number>((left, t) => (t.player === player && !t.bust ? left - t.scored : left), startOf(g, player));
 }
 
 /** Who throws next: the players in turn, one round each. */

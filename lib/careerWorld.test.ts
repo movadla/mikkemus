@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { START_MONEY, TIERS, declineChallenge, eventTier, newCareer, settleChallenge, startEvent, type Career, type Place } from "./career";
-import { WEEKS_PER_SEASON, inboxCount, lifeOf, lyPool, newLife, seasonOf, unseenNews, type Life, type Message } from "./careerLife";
+import { WEEKS_PER_SEASON, inboxCount, lifeOf, lyPool, newLife, rivalOf, seasonOf, unseenNews, type Life, type Message } from "./careerLife";
 import { advanceWeek, answerMessage, botMed, leaveAbandoned, leaveEvent, markNewsSeen, markRead, peopleOf, playBracket, seasonPrize, sponsorOutcome, whyNotAnswer } from "./careerWorld";
 import { normalizeCareer } from "./careerStorage";
 
@@ -315,5 +315,115 @@ describe("a long career", () => {
     }
     expect(lifeOf(c).seasons).toHaveLength(8);
     expect(seasonOf(lifeOf(c).week)).toBe(9);
+  });
+});
+
+describe("the sponsors of a first title", () => {
+  it("come as three, the longer the deal the more it pays for each tournament, and signing one closes the others", () => {
+    const c = leaveEvent({ ...finished(fresh(), "winner", 500, 10), titles: 1 });
+    const open = lifeOf(c).inbox.filter((m) => m.state === "open" && m.offer.kind === "sponsor");
+    expect(open).toHaveLength(3);
+    const deals = open.map((m) => (m.offer as { deal: { name: string; perEvent: number; events: number } }).deal).sort((a, b) => a.events - b.events);
+    expect(deals.map((d) => d.events)).toEqual([3, 6, 10]);
+    expect(deals[0].perEvent).toBeLessThan(deals[1].perEvent);
+    expect(deals[1].perEvent).toBeLessThan(deals[2].perEvent);
+    expect(new Set(deals.map((d) => d.name)).size).toBe(3);
+    const longest = open.find((m) => (m.offer as { deal: { events: number } }).deal.events === 10)!;
+    const signed = answerMessage(c, longest.id, true, 1);
+    expect(lifeOf(signed).sponsor?.left).toBe(10);
+    expect(lifeOf(signed).inbox.filter((m) => m.state === "open" && m.offer.kind === "sponsor")).toHaveLength(0);
+  });
+
+  it("do not come for a title that is not the first", () => {
+    const c = leaveEvent({ ...finished(fresh(), "winner", 500, 10), titles: 2 });
+    expect(lifeOf(c).inbox.filter((m) => m.offer.kind === "sponsor").length).toBeLessThanOrEqual(3);
+    expect(lifeOf(c).inbox.some((m) => m.offer.kind === "sponsor" && m.week === 1 && m.until === 4)).toBe(false);
+  });
+});
+
+describe("the show on television", () => {
+  const strong = (): Career => ({ ...fresh(), points: 90, played: 12, money: 100_000, history: [{ at: AT, event: "Norgesmesterskapet", place: "winner", prize: 0, cost: 0, points: 0 }] });
+  function untilTv(c: Career) {
+    let cur = c;
+    for (let i = 0; i < 40; i++) {
+      cur = advanceWeek(cur);
+      const m = lifeOf(cur).inbox.find((x) => x.state === "open" && x.offer.kind === "challenge" && x.offer.tv);
+      if (m) return { cur, m };
+    }
+    throw new Error("no show came");
+  }
+
+  it("comes for a player who is doing well, with a fee for being there", () => {
+    const { m } = untilTv(strong());
+    if (m.offer.kind !== "challenge" || !m.offer.tv) throw new Error("not a show");
+    expect(["Utfordreren", "Studioduellen"]).toContain(m.offer.tv.title);
+    expect(m.offer.tv.honorarium).toBeGreaterThan(0);
+    expect(m.offer.stake).toBeGreaterThan(m.offer.tv.honorarium);
+    if (m.offer.tv.title === "Utfordreren") expect(m.offer.tv).toMatchObject({ humanStart: 201, theirStart: 301, legs: 1 });
+    else expect(m.offer.tv.legs).toBe(3);
+  });
+
+  it("does not come for a player who has done nothing", () => {
+    let c = fresh();
+    for (let i = 0; i < 6; i++) c = advanceWeek(c);
+    expect(lifeOf(c).inbox.some((m) => m.offer.kind === "challenge" && m.offer.tv)).toBe(false);
+  });
+
+  it("pays the fee for being there even for a loss, and turning it down costs nothing", () => {
+    const { cur, m } = untilTv(strong());
+    const taken = answerMessage(cur, m.id, true, 5);
+    const tv = taken.challenge!.tv!;
+    expect(taken.challenge).toMatchObject({ risk: 0, from: m.id });
+    expect(settleChallenge(taken, false, AT).money).toBe(cur.money + tv.honorarium);
+    expect(settleChallenge(taken, true, AT).money).toBe(cur.money + tv.honorarium + taken.challenge!.stake);
+    const no = answerMessage(cur, m.id, false, 5);
+    expect(lifeOf(no).reputation).toBe(lifeOf(cur).reputation);
+    expect(declineChallenge(taken).challenge).toBeNull();
+    expect(lifeOf(declineChallenge(taken)).reputation).toBe(lifeOf(taken).reputation);
+  });
+});
+
+describe("the finale of the season", () => {
+  it("is offered in the last week to a player among the eight best, with the others fixed", () => {
+    const c = advanceWeek(withLife({ ...fresh(), money: 5000 }, { week: WEEKS_PER_SEASON - 1, seasonPts: 40, world: { ...newLife().world, pts: { Marcus: 50, Haakon: 30 } } }));
+    const m = lifeOf(c).inbox.find((x) => x.offer.kind === "invite" && x.offer.invite.key === "finale")!;
+    expect(m).toBeDefined();
+    if (m.offer.kind !== "invite") throw new Error("not an invitation");
+    expect(m.offer.invite.size).toBe(8);
+    expect(m.offer.invite.field).toHaveLength(7);
+    expect(m.offer.invite.field![0]).toBe("Marcus");
+    const started = answerMessage(c, m.id, true, 3);
+    expect(started.active?.entrants.map((p) => p.name).sort()).toEqual([...m.offer.invite.field!, "Lars"].sort());
+  });
+
+  it("is not offered to someone with no points this season", () => {
+    const c = advanceWeek(withLife(fresh(), { week: WEEKS_PER_SEASON - 1, seasonPts: 0 }));
+    expect(lifeOf(c).inbox.some((x) => x.offer.kind === "invite" && x.offer.invite.key === "finale")).toBe(false);
+  });
+});
+
+describe("the rival", () => {
+  it("is the one who asks for the match back, after a loss to them, and nobody else", () => {
+    const rival = rivalOf(fresh()).name;
+    const lost = (to: string): Career => {
+      const base = finished(fresh(), "quarter", 0, 1);
+      const t = { matches: [{ id: "m", isBye: false, bracketRoundSize: 4, participantA: "Lars", participantB: to, winner: to }] } as unknown as NonNullable<Career["active"]>["tournament"];
+      return { ...base, rivals: { [rival]: { w: 0, l: 2, last: AT, lastWon: false }, Dan: { w: 0, l: 3, last: AT, lastWon: false } }, active: { ...base.active!, tournament: t } };
+    };
+    const byRival = lifeOf(leaveEvent(lost(rival))).inbox.filter((m) => m.offer.kind === "challenge");
+    expect(byRival).toHaveLength(1);
+    expect(byRival[0].from.name).toBe(rival);
+    const other = rival === "Dan" ? "Dave" : "Dan";
+    expect(lifeOf(leaveEvent(lost(other))).inbox.filter((m) => m.offer.kind === "challenge" && m.from.name === other).length).toBe(0);
+  });
+
+  it("never stops playing while the career goes on, and is always the one in the surprise challenges", () => {
+    let c: Career = { ...fresh(), points: 12, played: 3 };
+    const rival = rivalOf(c).name;
+    for (let w = 0; w < 120; w++) {
+      c = advanceWeek(c);
+      expect(lifeOf(c).world.retired).not.toContain(rival);
+    }
+    for (const m of lifeOf(c).inbox) if (m.offer.kind === "challenge" && m.from.role === "Rival") expect(m.from.name).toBe(rival);
   });
 });

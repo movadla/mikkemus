@@ -41,7 +41,7 @@ const CONFETTI = ["var(--color-cream)", "var(--color-gold-strong)", "var(--color
  * Grand Slam adds lasers and the world championship fireworks and the hardest blow. A tap anywhere takes it to the end at once, and the
  * button is there from the first second, so nothing here is needed to play.
  */
-export function EventIntro({ tier, player, character, onDone }: { tier: Tier; player: string; /** The id of the player's character (lib/characters.ts). */ character?: string; onDone: () => void }) {
+export function EventIntro({ tier, player, character, onDone, label = "TREKK", line, plates, onBack }: { tier: Tier; player: string; /** The id of the player's character (lib/characters.ts). */ character?: string; onDone: () => void; /** The words on the button (the draw, for a tournament). */ label?: string; /** What stands by the player: who they play, and what comes next. */ line?: React.ReactNode; /** The three plates, when it is not a tournament of many (who plays, what it costs, what it pays). */ plates?: [string, string][]; /** A way out, for what can be turned down. */ onBack?: () => void }) {
   // The crowd of the place swells as the scene comes up: the murmur of the pub, a hall filling, an arena roaring.
   useEffect(() => {
     careerSound(tier.scale <= 1 ? "crowd-1" : tier.scale <= 3 ? "crowd-2" : "crowd-3");
@@ -112,29 +112,32 @@ export function EventIntro({ tier, player, character, onDone }: { tier: Tier; pl
           <span className="ev-ring" aria-hidden />
         </h1>
         <ul className="ev-plates" aria-label="Om turneringen">
-          <li className="ev-plate" style={{ "--i": "0s", "--fx": "-60px" } as React.CSSProperties}>
-            <small>Spillere</small>
-            <b>{tier.size}</b>
-          </li>
-          <li className="ev-plate" style={{ "--i": "0.12s", "--fx": "60px" } as React.CSSProperties}>
-            <small>Innskudd</small>
-            <b>{tier.fee === 0 ? "Gratis" : dollars(tier.fee)}</b>
-          </li>
-          <li className="ev-plate ev-plate-prize" style={{ "--i": "0.24s", "--fx": "-60px" } as React.CSSProperties}>
-            <small>Til vinneren</small>
-            <b>{dollars(tier.prizes.winner ?? 0)}</b>
-          </li>
+          {(plates ?? [["Spillere", String(tier.size)], ["Innskudd", tier.fee === 0 ? "Gratis" : dollars(tier.fee)], ["Til vinneren", dollars(tier.prizes.winner ?? 0)]]).map(([k, v], i) => (
+            <li key={k} className={`ev-plate ${i === 2 ? "ev-plate-prize" : ""}`} style={{ "--i": `${i * 0.12}s`, "--fx": i % 2 ? "60px" : "-60px" } as React.CSSProperties}>
+              <small>{k}</small>
+              <b>{v}</b>
+            </li>
+          ))}
         </ul>
         <p className="ev-you">
           <CharacterFace id={character} pose="kast" px={64} />
           <span>
-            <b>{player}</b> er med.
-            <br />
-            Trekningen starter nå.
+            {line ?? (
+              <>
+                <b>{player}</b> er med.
+                <br />
+                Trekningen starter nå.
+              </>
+            )}
           </span>
         </p>
         <div className="ev-go" onClick={(e) => e.stopPropagation()}>
-          <PlayButton label="TREKK" onClick={onDone} />
+          <PlayButton label={label} onClick={onDone} />
+          {onBack && (
+            <button type="button" className="ev-back tactile" onClick={onBack}>
+              Avslå
+            </button>
+          )}
         </div>
       </div>
     </div>

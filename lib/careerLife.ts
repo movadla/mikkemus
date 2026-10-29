@@ -27,9 +27,16 @@ export type Invitation = Tier & {
   city: string;
   /** Why the player is asked, in a line. */
   reason: string;
-  /** A game of its own (301 or 501): without it the tournament is played in the game of the career. */
-  countdown?: { start: 301 | 501; doubleOut: boolean };
+  /** A game of its own (301 or 501): without it the tournament is played in the game of the career. `humanStart` is where the player starts when it is not where the others do. */
+  countdown?: { start: 301 | 501; doubleOut: boolean; humanStart?: number };
+  /** Paid to the player on top of any prize, for being there (a television show pays everyone who comes). */
+  honorarium?: number;
+  /** The names that play, when they are fixed (the best of the season): without it the field is drawn. */
+  field?: string[];
 };
+
+/** A game made for television: a title, what it pays for being there, how many legs, and where each side starts (a head start for the one who starts lower). */
+export type Tv = { title: string; honorarium: number; legs: 1 | 3; humanStart: number; theirStart: number };
 
 export type Sender = { name: string; role: string };
 
@@ -42,7 +49,7 @@ export type Sponsor = SponsorDeal & { left: number; misses: number; earned: numb
 /** What a message holds that can be answered. */
 export type Offer =
   | { kind: "invite"; invite: Invitation }
-  | { kind: "challenge"; game: GameId; opponent: { name: string; skill: number }; stake: number; risk: number }
+  | { kind: "challenge"; game: GameId; opponent: { name: string; skill: number }; stake: number; risk: number; tv?: Tv }
   | { kind: "sponsor"; deal: SponsorDeal }
   | { kind: "info" };
 
@@ -123,4 +130,37 @@ export function welcomeLife(player: string): Life {
     news: [{ id: "n1", week: 1, kind: "world", headline: `${player} er ny på Ly`, text: "Fredagscupen venter. Det er gratis å være med." }],
     inbox: [{ id: "m2", week: 1, from: { name: "Puben på Ly", role: "Ly" }, title: `Velkommen, ${player}`, body: "Her kommer invitasjoner, utfordringer og tilbud når du har spilt litt. Spill en turnering, så skjer det noe.", read: false, state: "open", offer: { kind: "info" } }],
   };
+}
+
+/** How the rival throws, in a few words: the same one for the whole career. Only colour: nothing in the game is steered by it. */
+export const RIVAL_STYLES = ["Rolig og jevn", "Rask og risikabel", "Presis og kald", "Pratsom og uberegnelig"];
+
+const hashUnit = (s: string) => {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
+  return (h >>> 0) / 4294967296;
+};
+
+/**
+ * The player's rival: one of the regulars of Ly, the same for the whole career (it follows from the name of the career, so nothing is kept).
+ * If they stop, the next in the order takes their place.
+ */
+export function rivalOf(career: { id: string; player: string; life?: Life }): { name: string; style: string } {
+  const retired = career.life?.world.retired ?? [];
+  const own = career.player.trim().toLowerCase();
+  const order = LY_REGULARS.map((r) => r.name)
+    .filter((n) => n.toLowerCase() !== own)
+    .sort((a, b) => hashUnit(`${career.id}|rival|${a}`) - hashUnit(`${career.id}|rival|${b}`));
+  const name = order.find((n) => !retired.includes(n)) ?? order[0];
+  return { name, style: RIVAL_STYLES[Math.floor(hashUnit(`${career.id}|rival-style|${name}`) * RIVAL_STYLES.length)] };
+}
+
+/** The one who waits at each step above the pub: always the same, and in the field every time. The one at the top is the best of the level bots. */
+export const BOSSES: Record<"region" | "nm" | "gs" | "vm", string> = { region: "Rudolf", nm: "Emil Haugen", gs: "Max Hartmann", vm: "Littler" };
+
+/** Who is sure to be in the field of a step, besides the player: the rival, and the boss of the step (when they still play). */
+export function mustPlay(career: { id: string; player: string; life?: Life }, tier: string): string[] {
+  const retired = career.life?.world.retired ?? [];
+  const boss = BOSSES[tier as keyof typeof BOSSES];
+  return [rivalOf(career).name, ...(boss && !retired.includes(boss) ? [boss] : [])];
 }

@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { levelOfMed } from "./botLevels";
+import { rivalOf } from "./careerLife";
 import {
   GAMES,
+  REGULARS,
   ROOM_MAX,
   START_ROOM,
   STAGES,
@@ -114,11 +116,32 @@ describe("the field", () => {
     expect(field.filter((e) => !e.isBot).map((e) => e.name)).toEqual(["Lars"]);
     const lo = levelOfMed(37 * 1.2 * 0.87);
     const hi = levelOfMed(37 * 1.2 * 1.13);
+    const rival = rivalOf(fresh()).name;
     for (const e of field) {
-      if (!e.isBot) continue;
+      if (!e.isBot || e.name === rival) continue;
       expect(e.skill!).toBeGreaterThanOrEqual(lo);
       expect(e.skill!).toBeLessThanOrEqual(hi);
     }
+  });
+
+  it("always has the rival in it, as the sharpest, and the boss of a step above the pub", () => {
+    const c = fresh();
+    const rival = rivalOf(c).name;
+    for (const seed of [1, 2, 3, 4, 5]) {
+      const lu = fieldFor(c, TIERS.lu, seed);
+      expect(lu.some((e) => e.name === rival)).toBe(true);
+      const sharpest = Math.min(...lu.filter((e) => e.isBot).map((e) => e.skill!));
+      expect(lu.find((e) => e.name === rival)!.skill).toBe(sharpest);
+      expect(fieldFor(c, TIERS.region, seed).some((e) => e.name === "Rudolf")).toBe(true);
+      expect(fieldFor(c, TIERS.vm, seed).some((e) => e.name === "Littler")).toBe(true);
+    }
+  });
+
+  it("gives the same rival for the same career, one of the regulars of Ly, never the player", () => {
+    const a = rivalOf(fresh());
+    expect(rivalOf(fresh())).toEqual(a);
+    expect(REGULARS).toContain(a.name);
+    expect(rivalOf({ ...fresh(), player: a.name }).name).not.toBe(a.name);
   });
 
   it.each(LADDER.map((t) => [t.id, t.size] as const))("has the right number of different names at %s (%i)", (id, size) => {

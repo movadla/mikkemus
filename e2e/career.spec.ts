@@ -144,10 +144,29 @@ test.describe("karriere", () => {
     await expect.poll(async () => (await saved(page)).life.reputation).toBe(4);
     // The invitation: yes signs up for it, as its own tournament.
     await page.getByRole("button", { name: /Ly-sprinten/ }).first().click();
-    await expect(page.getByText("301 uten dobbel").or(page.getByText("8 spillere"))).toBeVisible();
+    await expect(page.getByText("Vinner $400")).toBeVisible();
     await page.getByRole("button", { name: "Ta imot" }).click();
     await expect.poll(async () => (await saved(page)).active?.invite?.name).toBe("Ly-sprinten");
     expect((await saved(page)).active.cup.countdown).toEqual({ start: 301, doubleOut: false });
+  });
+
+  test("tv: Utfordreren har en åpning som en turnering, viser honoraret og handicapet, og kan avslås uten å koste noe", async ({ page }) => {
+    const tv = { title: "Utfordreren", honorarium: 150, legs: 1, humanStart: 201, theirStart: 301 };
+    const offer = { kind: "challenge", game: "501", opponent: { name: "Littler", skill: 1 }, stake: 600, risk: 0, tv };
+    const life = { ...LIFE, inbox: [MSG("m7", "Utfordreren", offer, { from: { name: "TV-selskapet", role: "TV" } })] };
+    await seed(page, { ...CAREER, life });
+    await page.getByRole("button", { name: /Lars/ }).click();
+    await page.getByRole("button", { name: /^Meldinger/ }).click();
+    await page.getByRole("button", { name: /Utfordreren/ }).click();
+    await expect(page.getByText("Du starter på 201")).toBeVisible();
+    await page.getByRole("button", { name: "Ta den" }).click();
+    // The opening of a tournament, for a match: the name, who plays, the fee and the prize, and the way out.
+    await expect(page.getByRole("heading", { name: "Utfordreren" })).toBeVisible();
+    await expect(page.getByText("Honorar")).toBeVisible();
+    await expect(page.getByText("Lars starter på 201, Littler på 301.")).toBeVisible();
+    await page.getByRole("button", { name: "Avslå" }).click();
+    await expect.poll(async () => (await saved(page)).challenge).toBeNull();
+    expect((await saved(page)).life.reputation).toBe(5);
   });
 
   test("etter en turnering: uken går, nyheten om deg er skrevet, og sesongen teller", async ({ page }) => {

@@ -459,7 +459,7 @@ export function TournamentApp({ onExitToHome, career }: { onExitToHome: () => vo
     // A cup of the career played as 501 or 301: one leg to nothing, not a game of Mikke Mus.
     const countdown = tournament.cup?.countdown;
     if (countdown) {
-      return <CountdownMatch key={currentMatch.id} players={matchParticipants(currentMatch)} botLevels={botLevels} start={countdown.start} doubleOut={countdown.doubleOut} onDone={handleMatchComplete} onAbort={handleMatchAbort} />;
+      return <CountdownMatch key={currentMatch.id} players={matchParticipants(currentMatch)} botLevels={botLevels} start={countdown.start} doubleOut={countdown.doubleOut} humanStart={countdown.humanStart} onDone={handleMatchComplete} onAbort={handleMatchAbort} />;
     }
     return (
       <MikkeMusApp

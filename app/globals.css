@@ -7617,13 +7617,21 @@ button.play-btn:disabled::after {
   margin-top: 0.4rem;
 }
 .feed-item {
-  display: flex;
-  gap: 0.7rem;
-  align-items: flex-start;
-  padding: 0.65rem 0.75rem;
   border-radius: var(--radius-m);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
+  overflow: hidden;
+}
+.feed-row {
+  display: flex;
+  gap: 0.7rem;
+  align-items: center;
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  background: transparent;
+  border: 0;
+  color: var(--color-cream);
+  min-height: var(--control-lg);
 }
 .feed-new {
   border-color: var(--color-teal);
@@ -7646,6 +7654,7 @@ button.play-btn:disabled::after {
   text-transform: uppercase;
 }
 .feed-text {
+  padding: 0 0.75rem 0.8rem 3.8rem;
   color: var(--color-text-2);
   font-size: var(--text-small);
 }
@@ -7740,4 +7749,21 @@ button.play-btn:disabled::after {
 }
 .rank-move-new {
   color: var(--color-gold-strong);
+}
+
+.ev-back {
+  display: block;
+  margin: 0.6rem auto 0;
+  padding: 0.5rem 1.2rem;
+  background: transparent;
+  border: 0;
+  color: var(--color-text-2);
+  font-size: var(--text-small);
+  font-weight: 700;
+}
+.leg-break {
+  display: grid;
+  gap: 0.4rem;
+  justify-items: center;
+  text-align: center;
 }
