@@ -42,15 +42,18 @@ test.describe("sted for turneringen", () => {
     await expect.poll(async () => page.evaluate(() => Object.values(JSON.parse(localStorage.getItem("mikke-mus-venues") ?? "{}")))).toContain("region");
   });
 
-  test("mot boter: EM spilles i Civic Hall, og favorittene har portrett", async ({ page }) => {
+  test("mot boter: Grand Slam spilles i Civic Hall, og favorittene har portrett", async ({ page }) => {
     await openApp(page, "dark");
     await page.getByRole("button", { name: "Turnering" }).first().click();
     await addPlayers(page, ["Lars", "Vadla"]);
     await page.getByRole("radio", { name: /Mot boter/ }).click();
-    await page.getByRole("radio", { name: /EM i dart/ }).click();
+    // The cups are the ones of the career, the smallest first; there is no European championship.
+    await expect(page.getByRole("radio", { name: /Ly-cupen|Regionmesterskapet|Norgesmesterskapet|Grand Slam|VM i dart|Ly Pilotturnering/ })).toHaveCount(6);
+    await expect(page.getByRole("radio", { name: /EM i dart/ })).toHaveCount(0);
+    await page.getByRole("radio", { name: /Grand Slam/ }).click();
     await expect(page.getByRole("radiogroup", { name: "Sted" }).getByRole("radio", { name: /Civic Hall/ })).toBeChecked();
     await page.getByRole("button", { name: "Neste", exact: true }).click();
-    await expect(page.getByRole("heading", { name: "EM i dart" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Grand Slam" })).toBeVisible();
     await page.getByRole("button", { name: "TREKK" }).click({ timeout: 10_000 });
     await expect(page.getByLabel("Favoritter")).toBeVisible({ timeout: 15_000 });
     // Three favourites, each a portrait with a name, and no ranking number under them.

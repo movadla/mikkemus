@@ -151,7 +151,7 @@ export function CareerProfile({ career, tab: first = "oversikt", commit, onChall
               <dt>Meritter</dt>
               <dd>
                 <button type="button" className={`pf-link tactile ${FOCUS_RING}`} onClick={() => setRivalSheet("merits")}>
-                  {merits.filter((m) => m.done).length} av {merits.length} ›
+                  {best.length > 0 ? `${best[0].name}: ${best[0].best}` : "Ingen ennå"} ›
                 </button>
               </dd>
             </div>

@@ -8,6 +8,9 @@ import { LevelBadge } from "./LevelBadge";
 import { Chip } from "./ui/Chip";
 import { FOCUS_RING } from "./ui/focus";
 
+/** The same cups as in the career, the smallest first; Ly Pilotturnering last, with its format of its own. */
+const LADDER_ORDER: CupKind[] = ["lu", "region", "nm", "gs", "vm", "open", "em"];
+
 export type CupChoice = { kind: CupKind; size: number; level: BotLevel; growth: boolean };
 
 /**
@@ -21,7 +24,7 @@ export function CupTypePicker({ value, onChange, maxSize }: { value: CupChoice; 
   }, [value.kind]);
   return (
     <div ref={box} className="cup-posters mb-6" role="radiogroup" aria-label="Turnering">
-      {CUP_TYPES.filter((t) => !t.career).map((t) => {
+      {[...CUP_TYPES].filter((t) => !t.retired).sort((a, b) => LADDER_ORDER.indexOf(a.kind) - LADDER_ORDER.indexOf(b.kind)).map((t) => {
         const selected = t.kind === value.kind;
         return (
           <button

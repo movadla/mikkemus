@@ -560,10 +560,13 @@ test.describe("karriere", () => {
   });
 
   test("meritter: en liste med hva som er gjort og hva som gjenstår", async ({ page }) => {
-    await seed(page, { ...CAREER, played: 6, life: { ...LIFE, inbox: [] } });
+    await seed(page, { ...CAREER, played: 6, best: { lu: "winner", nm: "semi" }, life: { ...LIFE, inbox: [] } });
     await page.getByRole("button", { name: /Lars/ }).click();
     await place(page, "Profil").click();
-    await page.getByRole("button", { name: /^\d+ av \d+ ›$/ }).click();
+    // The row says the best that has been done (the highest cup reached), and the list holds the best of each cup.
+    await page.getByRole("button", { name: "Norgesmesterskapet: Semifinale ›" }).click();
+    await expect(page.getByText("Best: Semifinale")).toBeVisible();
+    await expect(page.getByText("Best: Vinner")).toBeVisible();
     await expect(page.getByText("Første turnering", { exact: true })).toBeVisible();
     await expect(page.getByText("Fem turneringer", { exact: true })).toBeVisible();
     await expect(page.getByText("Drømmerommet", { exact: true })).toBeVisible();

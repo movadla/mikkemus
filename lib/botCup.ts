@@ -14,16 +14,16 @@ import type { Participant, Tournament, TournamentMatch, TournamentMode } from ".
 
 export type CupKind = "vm" | "em" | "gs" | "nm" | "open" | "lu" | "region";
 
-export type CupType = { kind: CupKind; name: string; trophy: string; tagline: string; defaultSize: number; /** The sizes it can be played at. */ sizes: number[]; /** Only played in the career (lib/career.ts), so it is not among the cups to pick. */ career?: boolean };
+export type CupType = { kind: CupKind; name: string; trophy: string; tagline: string; defaultSize: number; /** The sizes it can be played at. */ sizes: number[]; /** No longer among the cups to pick (the cups are the ones of the career); a tournament that was made with it is still read. */ retired?: boolean };
 
 export const CUP_TYPES: CupType[] = [
   { kind: "vm", name: "VM i dart", trophy: "Verdensmesterpokalen", tagline: "Hele verden, én pokal", defaultSize: 128, sizes: [4, 8, 16, 32, 64, 128] },
-  { kind: "em", name: "EM i dart", trophy: "Europamesterpokalen", tagline: "Europas beste kasteføringer", defaultSize: 8, sizes: [4, 8, 16, 32, 64] },
+  { kind: "em", name: "EM i dart", trophy: "Europamesterpokalen", tagline: "Europas beste kasteføringer", defaultSize: 8, sizes: [4, 8, 16, 32, 64], retired: true },
   { kind: "gs", name: "Grand Slam", trophy: "Grand Slam-pokalen", tagline: "Fire runder mot de beste", defaultSize: 16, sizes: [4, 8, 16, 32, 64] },
   { kind: "nm", name: "Norgesmesterskapet", trophy: "Norgesmesterpokalen", tagline: "Kampen om Norge", defaultSize: 8, sizes: [4, 8, 16, 32, 64] },
   // The one cup with a format of its own (lib/pilot.ts): sixteen play, four at a time, so there is one size. The rest are knockouts.
-  { kind: "lu", name: "Ly-cupen", trophy: "Ly-pokalen", tagline: "Fredagsturneringen på Ly", defaultSize: 8, sizes: [8], career: true },
-  { kind: "region", name: "Regionmesterskapet", trophy: "Regionpokalen", tagline: "Beste i regionen", defaultSize: 16, sizes: [16], career: true },
+  { kind: "lu", name: "Ly-cupen", trophy: "Ly-pokalen", tagline: "Fredagsturneringen på Ly", defaultSize: 8, sizes: [8] },
+  { kind: "region", name: "Regionmesterskapet", trophy: "Regionpokalen", tagline: "Beste i regionen", defaultSize: 16, sizes: [16] },
   { kind: "open", name: "Ly Pilotturnering", trophy: "Ly-pokalen", tagline: "Fire og fire, med en ny sjanse", defaultSize: 16, sizes: [16] },
 ];
 
