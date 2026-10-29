@@ -21,6 +21,7 @@ export function heroFor(career: Career): Hero {
     return { kind: "event", tier, round: next?.round ?? null, opponent: next?.opponent ?? null, drawn: !!a.tournament, done: false, prize: 0 };
   }
   if (career.challenge) return { kind: "challenge", challenge: career.challenge, done: career.challenge.won !== null };
+  if (career.played === 0) return { kind: "enter", tier: TIERS.lu };
   const enter = [...LADDER].reverse().find((t) => whyNot(career, t) === null) ?? TIERS.lu;
   return { kind: "enter", tier: enter };
 }

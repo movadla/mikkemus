@@ -236,7 +236,7 @@ test.describe("karriere", () => {
     await expect(page.getByRole("progressbar", { name: "Neste rang: Regionspiller, 0 av 10 poeng" })).toBeVisible();
     await expect(page.getByText("Pubspiller", { exact: true })).toBeVisible();
     // The one big button leads to the biggest step that can be entered, with the price as a small line.
-    await expect(play(page, "SPILL Region · $200")).toBeVisible();
+    await expect(play(page, "SPILL Ly · gratis")).toBeVisible();
     // Four round buttons. The room has no dot: the first step costs $500 and there is $300.
     for (const name of ["Rom", "Trening", "Duell", "Turneringer"] as const) await expect(place(page, name)).toBeVisible();
     await expect(page.getByRole("button", { name: "Rom, nytt" })).toHaveCount(0);
