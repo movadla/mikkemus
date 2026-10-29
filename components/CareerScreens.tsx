@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { cupColor } from "@/lib/botCup";
-import { TIERS, closeChallenge, declineChallenge, dollars, settleChallenge, type ActiveEvent, type Career, type Challenge } from "@/lib/career";
+import { REVENGE_BONUS, TIERS, closeChallenge, declineChallenge, dollars, settleChallenge, type ActiveEvent, type Career, type Challenge } from "@/lib/career";
+import { matchParticipants } from "@/lib/tournament";
 import { rankOf } from "@/lib/careerGoals";
 import { winnerOf as countdownWinner, newGame as newCountdown } from "@/lib/countdown";
 import { playFanfare } from "@/lib/fanfare";
@@ -229,6 +230,13 @@ export function Result({ career, a, onDone }: { career: Career; a: ActiveEvent; 
   const before = rankOf({ ...career, points: career.points - r.points, worldTitles: career.worldTitles - (won && tier.id === "vm" ? 1 : 0) });
   const newRank = rankOf(career) !== before ? rankOf(career) : null;
   const fx = fxFlags(useFxLevel());
+  // The one who knocked the player out, and how many times they have now: a rival has the better of them twice and more, and a win over them pays more.
+  const knockedOutBy = (() => {
+    const m = a.tournament?.matches.find((x) => !x.isBronzeMatch && x.winner && x.winner !== career.player && matchParticipants(x).includes(career.player));
+    return m ? matchParticipants(m).find((n) => n !== career.player) ?? null : null;
+  })();
+  const rec = knockedOutBy ? career.rivals?.[knockedOutBy] : undefined;
+  const rivalLine = !won && knockedOutBy && rec && rec.l >= 2 && rec.l > rec.w ? `${knockedOutBy} har slått deg ${rec.l} ganger. En seier over ham neste gang gir ${dollars(REVENGE_BONUS)} ekstra.` : null;
   // The sounds of the moment: a win is a fanfare and a cheer, whatever place it is a pay-out for is a touch.
   useEffect(() => {
     if (won) {
@@ -259,6 +267,21 @@ export function Result({ career, a, onDone }: { career: Career; a: ActiveEvent; 
             </p>
           )}
         </div>
+        {r.revenge && (
+          <div role="status" className="unlock-banner text-center" style={{ borderColor: "var(--color-gold)", color: "var(--color-gold)" }}>
+            <span className="section-label block" style={{ color: "var(--color-gold)" }}>
+              REVANSJ
+            </span>
+            <span className="font-display" style={{ fontSize: "var(--text-title)", color: "var(--color-cream)" }}>
+              Du slo {r.revenge.names.join(" og ")} · +{dollars(r.revenge.bonus)}
+            </span>
+          </div>
+        )}
+        {rivalLine && (
+          <p className="text-center" role="status" style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>
+            {rivalLine}
+          </p>
+        )}
         {opened && <UnlockBanner label="NY TURNERING" name={opened.short} colour={cupColor(opened.kind)} />}
         {newRank && <UnlockBanner label="NY RANG" name={newRank} colour="var(--color-gold)" />}
         {r.prize > 0 && <CoinBurst />}

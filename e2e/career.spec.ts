@@ -69,6 +69,35 @@ test.describe("karriere", () => {
     expect((await saved(page)).startLevel).toBe("sterk");
   });
 
+  test("innstillinger: spillet kan byttes underveis, og 501 gir tall for 501 og en kamp i 501", async ({ page }) => {
+    test.setTimeout(120000);
+    await seed(page, { ...CAREER, money: 2000 });
+    await page.getByRole("button", { name: /Lars/ }).click();
+    // The game is a setting of the career: Mikke Mus to begin with, and it can be changed from the menu.
+    await page.getByRole("button", { name: "Meny" }).click();
+    await page.getByRole("button", { name: "Innstillinger" }).click();
+    await expect(page.getByRole("radio", { name: /^Mikke Mus/ })).toBeChecked();
+    await page.getByRole("radio", { name: /^501/ }).click();
+    await expect(page.getByRole("switch", { name: /Dobbel ut/ })).toBeVisible();
+    await expect.poll(async () => (await saved(page)).profile.game).toBe("501");
+    await page.keyboard.press("Escape");
+    // The pub's cup in 501: the comparison before the match has the figures of 501, not of Mikke Mus.
+    await place(page, "Turneringer").click();
+    await page.getByRole("list", { name: "Turneringer" }).getByRole("button", { name: /^Ly-cupen/ }).click();
+    await play(page, "SPILL Ly-cupen · gratis").click();
+    await page.waitForTimeout(3300);
+    await play(page, "TREKK").click();
+    await page.getByLabel("Trekningen").getByText("DU").waitFor({ timeout: 15_000 });
+    await play(page, "START").click();
+    await play(page, "Start kampen").click();
+    await expect(page.getByRole("row", { name: /Snitt, 3 piler/ })).toBeVisible();
+    await expect(page.getByRole("row", { name: /Piler per runde/ })).toBeVisible();
+    await expect(page.getByRole("row", { name: /Treffprosent/ })).toHaveCount(0);
+    // The match is 501, a leg to nothing.
+    await play(page, "KAST").click();
+    await expect(page.getByText("501").first()).toBeVisible();
+  });
+
   test("hjemmet: rommet, saldo og nivå, ett mål, én stor knapp og fire runde", async ({ page }) => {
     await toCareer(page);
     await page.getByRole("button", { name: /Lars/ }).click();

@@ -14,6 +14,12 @@ import { CupEmblem } from "./ui/CupEmblem";
 import { TrophyIcon } from "./icons";
 import { drawSound } from "@/lib/uiSound";
 import { publishShow } from "@/lib/liveMatch";
+import { medOfLevel } from "@/lib/opponentStats";
+import { opponentOf } from "@/lib/opponents";
+import { CharacterFace } from "./CharacterFigure";
+import { OpponentPortrait, OpponentProfile, ranksOf, type Me } from "./OpponentCard";
+import { Avatar } from "./ui/Avatar";
+import { Sheet } from "./ui/Sheet";
 
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
@@ -45,8 +51,10 @@ export function DrawScreen({
   onBack: () => void;
   onStart: (order: Participant[]) => void;
   /** In the career the draw is not set up: no changing the cup, no choosing the kind of draw, the pairs are cards that turn over, the player's own lights up, and the button says what it starts. */
-  career?: { player: string };
+  career?: { player: string; me?: Me };
 }) {
+  // An opponent whose profile is open, in the career.
+  const [profileFor, setProfileFor] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>("seeded");
   const [order, setOrder] = useState<Participant[]>(seeded);
   const [picked, setPicked] = useState<number | null>(null);
@@ -113,6 +121,15 @@ export function DrawScreen({
   const now = revealed > 0 ? pairs[revealed - 1] : null;
   const colour = cupColor(cup?.kind);
   // The seeding follows the name in brackets, only in a seeded draw: «Lars (1)».
+  // A small face by a name in the career: the player's own character, or the opponent's face (a tap opens who they are).
+  const who = (name: string) =>
+    career && name === career.player ? (
+      <CharacterFace id={career.me?.character} pose="noytral" px={26} />
+    ) : (
+      <span onClick={career?.me ? () => setProfileFor(name) : undefined} role={career?.me ? "button" : undefined} aria-label={career?.me ? `Se ${name}` : undefined} tabIndex={career?.me ? 0 : undefined} style={{ display: "inline-flex" }}>
+        <Avatar name={name} bot px={26} />
+      </span>
+    );
   const seedNo = (name: string): number | null => (mode === "seeded" ? order.findIndex((p) => p.name === name) + 1 : null);
   const slot = (name: string | null, shown: boolean) =>
     name ? (
@@ -214,6 +231,27 @@ export function DrawScreen({
             </div>
           </div>
         )}
+        {career && career.me && !drawing && (
+          <div className="mb-4" aria-label="Favoritter">
+            <p className="section-label mb-2">FAVORITTER</p>
+            <div className="grid grid-cols-3 gap-2">
+              {order
+                .filter((p) => p.isBot)
+                .map((p) => ({ p, med: opponentOf(p.name).med }))
+                .sort((x, y) => x.med - y.med)
+                .slice(0, 3)
+                .map(({ p }) => (
+                  <div key={p.name} className="text-center min-w-0">
+                    <OpponentPortrait name={p.name} onClick={() => setProfileFor(p.name)} />
+                    <span className="block truncate font-display mt-1" style={{ fontSize: "var(--text-small)", color: "var(--color-cream)" }}>
+                      {p.name}
+                    </span>
+                    <span className="opp-chip opp-chip-gold">#{ranksOf(p.name, opponentOf(p.name).nat, opponentOf(p.name).med).world}</span>
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
         {career ? (
           <div className="grid grid-cols-2 gap-2 mb-4" aria-label="Trekningen">
             {pairs.map((p, i) => {
@@ -224,12 +262,14 @@ export function DrawScreen({
                   <div className="draw-card-back" aria-hidden />
                   <div className="draw-card-front">
                     {mine && <span className="draw-card-me">DU</span>}
-                    <span className="truncate w-full text-center" style={{ fontWeight: p.a === career.player ? 800 : 500 }}>
+                    <span className="truncate w-full text-center inline-flex items-center justify-center gap-1.5" style={{ fontWeight: p.a === career.player ? 800 : 500 }}>
+                      {p.a && who(p.a)}
                       {p.a ?? "Walkover"}
                       {seedNo(p.a ?? "") ? <span style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}> ({seedNo(p.a ?? "")})</span> : null}
                     </span>
                     <span style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>mot</span>
-                    <span className="truncate w-full text-center" style={{ fontWeight: p.b === career.player ? 800 : 500 }}>
+                    <span className="truncate w-full text-center inline-flex items-center justify-center gap-1.5" style={{ fontWeight: p.b === career.player ? 800 : 500 }}>
+                      {p.b && who(p.b)}
                       {p.b ?? "Walkover"}
                       {seedNo(p.b ?? "") ? <span style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}> ({seedNo(p.b ?? "")})</span> : null}
                     </span>
@@ -272,7 +312,12 @@ export function DrawScreen({
             </button>
           </div>
         )}
-        <StickyAction onClick={() => onStart(order)} ready reason={null}>
+        {profileFor && career?.me && (
+        <Sheet title={profileFor} onClose={() => setProfileFor(null)}>
+          <OpponentProfile name={profileFor} med={(() => { const p = seeded.find((x) => x.name === profileFor); return p?.isBot ? medOfLevel(p.skill ?? Number(p.botLevel ?? 4)) : career.me.med; })()} me={career.me} />
+        </Sheet>
+      )}
+      <StickyAction onClick={() => onStart(order)} ready reason={null}>
           {career ? "START" : "Start"}
         </StickyAction>
       </div>

@@ -14,10 +14,13 @@ import { HomeIcon, LockIcon, RoadIcon, StarIcon } from "./careerIcons";
 import { CareerHud } from "./CareerHud";
 import { RankBadge, TrophyArt } from "./CareerTrophy";
 import { CharacterFigure } from "./CharacterFigure";
+import { RankingList } from "./RankingList";
+import { GameChoice } from "./GameChoice";
+import { gameOf } from "@/lib/careerGame";
 import { CareerProfile } from "./CareerProfile";
 import { markTipSeen, TipPointer, useTipSeen } from "./CareerTip";
 import { ConfirmDialog } from "./ConfirmDialog";
-import { BoltIcon, BullseyeIcon, CoinIcon, MoreIcon } from "./icons";
+import { BoltIcon, BullseyeIcon, CoinIcon, MoreIcon, TrophyIcon } from "./icons";
 import { PlayButton } from "./PlayButton";
 import { OverRoom } from "./RoomBackdrop";
 import { EVENT_PICTURES } from "./eventPictures";
@@ -27,9 +30,9 @@ import { Button } from "./ui/Button";
 import { Sheet } from "./ui/Sheet";
 import { FOCUS_RING } from "./ui/focus";
 
-type View = "home" | "rooms" | "road" | "training" | "challenges";
+type View = "home" | "rooms" | "road" | "training" | "challenges" | "rank";
 
-const TITLE: Record<Exclude<View, "home">, string> = { rooms: "Rom", road: "Turneringer", training: "Trening", challenges: "Duell" };
+const TITLE: Record<Exclude<View, "home">, string> = { rooms: "Rom", road: "Turneringer", training: "Trening", challenges: "Duell", rank: "Rangering" };
 
 /** Where the player is: the room is a place with a name and a step, so the picture behind everything reads as theirs. */
 function PlaceChip({ room }: { room: number }) {
@@ -106,6 +109,7 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
   const [view, setView] = useState<View>("home");
   const [menu, setMenu] = useState(false);
   const [profile, setProfile] = useState(false);
+  const [settings, setSettings] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   // A room that has just changed: the step it came from (kept so it can be compared), the buy that is playing, and the way it is played.
   const [before, setBefore] = useState<number | null>(null);
@@ -201,6 +205,15 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
             >
               Profil
             </Button>
+            <Button
+              block
+              onClick={() => {
+                setMenu(false);
+                setSettings(true);
+              }}
+            >
+              Innstillinger
+            </Button>
             <Button block onClick={onBack}>
               Alle karrierer
             </Button>
@@ -215,6 +228,15 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
               <span style={{ color: "var(--color-red)" }}>Slett karrieren</span>
             </Button>
           </div>
+        </Sheet>
+      )}
+      {settings && (
+        <Sheet title="Innstillinger" onClose={() => setSettings(false)}>
+          <p className="section-label mb-2">SPILL</p>
+          <GameChoice {...gameOf(career.profile)} onChange={(next) => commit({ ...career, profile: { ...career.profile, ...next } })} />
+          <p className="mt-3" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
+            {career.active ? "Gjelder fra neste turnering: den som pågår spilles ferdig slik den ble startet." : "Gjelder fra neste turnering."}
+          </p>
         </Sheet>
       )}
       {profile && (
@@ -246,7 +268,14 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
           {sheets}
           <div className="screen-inner career-home">
             <CareerHud career={career} end={menuButton} />
-            <GoalStrip career={career} />
+            <div className="flex items-center gap-2">
+              <div className="flex-1 min-w-0">
+                <GoalStrip career={career} />
+              </div>
+              <button type="button" onClick={() => go("rank")} aria-label="Rangering" className={`tactile inline-flex items-center justify-center shrink-0 ${FOCUS_RING}`} style={{ width: "var(--control)", height: "var(--control)", borderRadius: "var(--radius-pill)", background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-gold-strong)" }}>
+                <TrophyIcon className="w-5 h-5" />
+              </button>
+            </div>
             <PlaceChip room={career.room} />
             {news && (
               <button type="button" className="room-news" onClick={() => setNews(null)} aria-label={`Nytt i rommet: ${news}`}>
@@ -360,6 +389,8 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
         {sheets}
         <div className="screen-inner flex flex-col gap-3" style={{ minHeight: "calc(100dvh - 2rem)" }}>
           <CareerHud career={career} onBack={() => setView("home")} title={TITLE[view]} />
+
+          {view === "rank" && <RankingList career={career} />}
 
           {view === "road" && (
             <>

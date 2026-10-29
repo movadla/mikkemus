@@ -1,14 +1,15 @@
+import { useState } from "react";
 import { cupColor } from "@/lib/botCup";
-import { TIER_LOOK, foilVars } from "@/lib/materials";
-import { TrophyArt } from "./CareerTrophy";
-import { CharacterFace } from "./CharacterFigure";
 import { dollars, type Place } from "@/lib/career";
+import { TIER_LOOK, foilVars } from "@/lib/materials";
+import { medOfLevel } from "@/lib/opponentStats";
 import { bracketRoundLabel, matchParticipants, type Tournament, type TournamentMatch } from "@/lib/tournament";
-import { useRoster } from "@/lib/storage";
 import { FlameIcon } from "./icons";
 import { SnowIcon } from "./careerIcons";
+import { TrophyArt } from "./CareerTrophy";
+import { ChanceMeter, CompareRows, MePortrait, OpponentPortrait, OpponentProfile, type Me } from "./OpponentCard";
 import { PlayButton } from "./PlayButton";
-import { Avatar } from "./ui/Avatar";
+import { Sheet } from "./ui/Sheet";
 import { ArrowLeftIcon } from "./icons";
 
 /** The place a player has at least reached once they have won a match of this round (the one they lose in next). */
@@ -32,24 +33,25 @@ export function formWord(you: number, opponent: number): "hot" | "even" | "cold"
 }
 
 /**
- * The card before each match of the career: the two of them, what winning is worth, and one button. A flame by the opponent's name means
- * they are sharp today, a snowflake that they are not. There is nothing to read, and the moment still has something to lose.
+ * The card before each match of the career: the two of them in frames of metal, and under them what sets them apart: the ranks, the average and
+ * how often each hits. The bars grow in, the better of each pair is lit, and the chance of winning comes last. Tapping the opponent opens their
+ * profile. A flame by the opponent's name means they are sharp today, a snowflake that they are not.
  */
-export function MatchIntro({ tournament, match, player, character, level, opponentLevel, prizes, onStart, onBack }: { tournament: Tournament; match: TournamentMatch; player: string; /** The id of the player's character. */ character?: string; /** The player's level on the bots' scale. */ level: number; opponentLevel: number; prizes: Partial<Record<Place, number>>; onStart: () => void; onBack: () => void }) {
-  const roster = useRoster();
+export function MatchIntro({ tournament, match, player, me, level, opponentLevel, prizes, onStart, onBack }: { tournament: Tournament; match: TournamentMatch; player: string; me: Me; /** The player's level on the bots' scale. */ level: number; opponentLevel: number; prizes: Partial<Record<Place, number>>; onStart: () => void; onBack: () => void }) {
+  const [profile, setProfile] = useState(false);
   const [a, b] = matchParticipants(match);
-  const opponent = a === player ? b : a;
+  const opponent = (a === player ? b : a) ?? "";
   const colour = cupColor(tournament.cup?.kind);
   const stake = stakeOf(match.bracketRoundSize ?? 1, prizes);
-  const photo = (n: string) => roster.find((r) => r.name === n)?.photo;
   // The frame, the foil and the cup in the metal of the event; an event without a material (an open tournament) has none of them.
   const kind = tournament.cup?.kind;
   const tier = kind && kind in TIER_LOOK ? (kind as keyof typeof TIER_LOOK) : null;
   const foil = tier ? (foilVars(tier) as React.CSSProperties) : undefined;
   const form = formWord(level, opponentLevel);
+  const med = medOfLevel(opponentLevel);
   return (
     <div className="animate-screen-enter screen cup-lamp" style={{ "--cup": colour } as React.CSSProperties}>
-      <div className="screen-inner flex flex-col" style={{ minHeight: "calc(100dvh - 2rem)", gap: "1.25rem" }}>
+      <div className="screen-inner flex flex-col" style={{ minHeight: "calc(100dvh - 2rem)", gap: "0.9rem" }}>
         <div className="flex items-center gap-3">
           <button type="button" onClick={onBack} aria-label="Tilbake" className="tactile inline-flex items-center justify-center shrink-0" style={{ width: "var(--control)", height: "var(--control)", borderRadius: "var(--radius-pill)", background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-cream)" }}>
             <ArrowLeftIcon className="w-5 h-5" />
@@ -63,40 +65,38 @@ export function MatchIntro({ tournament, match, player, character, level, oppone
             {bracketRoundLabel(match.bracketRoundSize ?? 1, match.isBronzeMatch).toUpperCase()}
           </p>
         </div>
-        <div className="flex-1 flex flex-col items-center justify-center gap-6">
-          <div className="flex items-start justify-center gap-3 w-full text-center">
-            <div className="final-left" style={{ flex: "1 1 0", minWidth: 0 }}>
-              <span className="vs-ring">
-                <CharacterFace id={character} pose="kast" px={96} />
-              </span>
-              <p className={`font-display truncate mt-2 ${tier ? "foil foil-soft" : ""}`} data-t={player} style={{ color: "var(--color-cream)", fontSize: "var(--text-title)", ...foil }}>
-                {player}
-              </p>
-            </div>
-            <span className={`final-vs font-display vs-mark ${tier ? "foil" : ""}`} data-t="VS" style={{ color: colour, fontSize: "var(--text-num)", paddingTop: "1.6rem", ...foil }} aria-hidden>
-              VS
-            </span>
-            <div className="final-right" style={{ flex: "1 1 0", minWidth: 0 }}>
-              <span className="vs-ring vs-ring-b">
-                <Avatar name={opponent} photo={photo(opponent)} size="xl" bot={tournament.participants.find((p) => p.name === opponent)?.isBot} />
-              </span>
-              <p className="font-display truncate mt-2 inline-flex items-center justify-center gap-1 max-w-full" style={{ color: "var(--color-cream)", fontSize: "var(--text-title)" }}>
-                <span className="truncate">{opponent}</span>
-                {form === "hot" && (
-                  <span role="img" aria-label="Varm i dag" style={{ color: "var(--color-red)" }}>
-                    <FlameIcon className="w-5 h-5" />
-                  </span>
-                )}
-                {form === "cold" && (
-                  <span role="img" aria-label="Svak i dag" style={{ color: "var(--color-teal)" }}>
-                    <SnowIcon className="w-5 h-5" />
-                  </span>
-                )}
-              </p>
-            </div>
+        <div className="flex items-start justify-center gap-3 w-full text-center">
+          <div className="final-left" style={{ flex: "1 1 0", minWidth: 0, maxWidth: "9.5rem" }}>
+            <MePortrait me={me} />
+            <p className={`font-display truncate mt-2 ${tier ? "foil foil-soft" : ""}`} data-t={player} style={{ color: "var(--color-cream)", fontSize: "var(--text-title)", ...foil }}>
+              {player}
+            </p>
           </div>
+          <span className={`final-vs font-display vs-mark ${tier ? "foil" : ""}`} data-t="VS" style={{ color: colour, fontSize: "var(--text-num)", paddingTop: "2.4rem", ...foil }} aria-hidden>
+            VS
+          </span>
+          <div className="final-right" style={{ flex: "1 1 0", minWidth: 0, maxWidth: "9.5rem" }}>
+            <OpponentPortrait name={opponent} onClick={() => setProfile(true)} />
+            <p className="font-display truncate mt-2 inline-flex items-center justify-center gap-1 max-w-full" style={{ color: "var(--color-cream)", fontSize: "var(--text-title)" }}>
+              <span className="truncate">{opponent}</span>
+              {form === "hot" && (
+                <span role="img" aria-label="Varm i dag" style={{ color: "var(--color-red)" }}>
+                  <FlameIcon className="w-5 h-5" />
+                </span>
+              )}
+              {form === "cold" && (
+                <span role="img" aria-label="Svak i dag" style={{ color: "var(--color-teal)" }}>
+                  <SnowIcon className="w-5 h-5" />
+                </span>
+              )}
+            </p>
+          </div>
+        </div>
+        <CompareRows me={me} opponent={opponent} med={med} />
+        <div className="flex-1 flex flex-col items-center justify-center gap-3">
+          <ChanceMeter me={me} med={med} />
           {stake.money > 0 && (
-            <span className="final-fade inline-flex items-center gap-2 tabular" style={{ "--d": "1.2s", padding: "0.4rem 1rem", borderRadius: "var(--radius-pill)", background: "var(--gold-soft)", border: "1px solid var(--color-gold)", color: "var(--color-gold-strong)", fontWeight: 800, fontSize: "var(--text-title)" } as React.CSSProperties}>
+            <span className="final-fade inline-flex items-center gap-2 tabular" style={{ "--d": "1.2s", padding: "0.3rem 0.9rem", borderRadius: "var(--radius-pill)", background: "var(--gold-soft)", border: "1px solid var(--color-gold)", color: "var(--color-gold-strong)", fontWeight: 800, fontSize: "var(--text-body)" } as React.CSSProperties}>
               <span className="coin-mark" aria-hidden />
               {dollars(stake.money)}
             </span>
@@ -104,6 +104,11 @@ export function MatchIntro({ tournament, match, player, character, level, oppone
         </div>
         <PlayButton label="KAST" onClick={onStart} />
       </div>
+      {profile && (
+        <Sheet title={opponent} onClose={() => setProfile(false)}>
+          <OpponentProfile name={opponent} med={med} me={me} />
+        </Sheet>
+      )}
     </div>
   );
 }

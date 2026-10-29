@@ -45,7 +45,7 @@ function renamed(a: Career["active"]): Career["active"] {
 function normalize(career: Career): Career {
   const c = { ...career, history: (career.history ?? []).map((h) => ({ ...h, event: ly(h.event) ?? h.event })) };
   const old = c.active && !("cup" in c.active);
-  return { ...c, profile: { ...(c.profile ?? DEFAULT_PROFILE), character: characterOf(c.profile?.character).id }, worldTitles: c.worldTitles ?? 0, qualified: c.qualified ?? [], trophies: c.trophies ?? trophiesFromHistory(c), training: c.training ?? [], room: Math.max(START_ROOM, typeof c.room === "number" ? c.room : roomFromArena((c as { arena?: Record<string, number> }).arena)), challenge: c.challenge ?? null, challenges: c.challenges ?? 0, active: old ? null : renamed(c.active) };
+  return { ...c, profile: { ...(c.profile ?? DEFAULT_PROFILE), character: characterOf(c.profile?.character).id, game: c.profile?.game ?? "mm", doubleOut: c.profile?.doubleOut ?? true }, worldTitles: c.worldTitles ?? 0, qualified: c.qualified ?? [], trophies: c.trophies ?? trophiesFromHistory(c), training: c.training ?? [], room: Math.max(START_ROOM, typeof c.room === "number" ? c.room : roomFromArena((c as { arena?: Record<string, number> }).arena)), challenge: c.challenge ?? null, challenges: c.challenges ?? 0, rivals: c.rivals ?? {}, active: old ? null : renamed(c.active) };
 }
 
 function readLocal(): Career[] {

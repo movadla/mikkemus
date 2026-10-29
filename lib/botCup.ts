@@ -49,6 +49,8 @@ export type CupConfig = {
   seed: number;
   /** A cup of the career: the bots go down to level 8, so a beginner meets people who are worse than they are. */
   career?: boolean;
+  /** A cup played in 501 or 301 instead of Mikke Mus: where it starts, and whether it takes a double to finish (lib/careerGame.ts). */
+  countdown?: { start: 301 | 501; doubleOut: boolean };
 };
 
 /** The colour a cup is drawn in (a token, so it follows the theme); the everyday teal for a tournament that is not a cup. */

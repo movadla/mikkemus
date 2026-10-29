@@ -9,6 +9,8 @@
  * here is plain data in and out: a career can be saved as it is, paused anywhere and picked up again. See CAREER_PLAN.md.
  */
 import { levelOfMed } from "./botLevels";
+import { INTERNATIONALS, LY_REGULARS } from "./opponents";
+import { countdownOf, gameOf, type CareerGame } from "./careerGame";
 import { unit, type CupConfig, type CupKind } from "./botCup";
 import { playElsewhere } from "./botSim";
 import { createKnockout } from "./knockout";
@@ -183,11 +185,17 @@ export const DARTS: { id: DartsId; name: string; about: string }[] = [
   { id: "tunge", name: "Tunge", about: "26 g, tunge å stoppe" },
 ];
 
-export type Profile = { home: HomeId; darts: DartsId; /** The character the player is in the career (lib/characters.ts). Absent on a career from before there were any. */ character?: string };
+export type Profile = { home: HomeId; darts: DartsId; /** The game the career is played in (lib/careerGame.ts), and whether 501 and 301 need a double to finish. Absent on a career from before there was a choice: Mikke Mus, with a double. */ game?: CareerGame; doubleOut?: boolean; /** The character the player is in the career (lib/characters.ts). Absent on a career from before there were any. */ character?: string };
 
 export const START_MONEY = 2000;
 
-export type EventResult = { place: Place; prize: number; cost: number; points: number };
+export type EventResult = { place: Place; prize: number; cost: number; points: number; /** Paid on top of the prize for beating someone who had beaten the player twice: the names, and the amount in all. */ revenge?: { names: string[]; bonus: number } };
+
+/** What the player has done against one opponent: wins, losses, when they last met and who won then. */
+export type Rival = { w: number; l: number; last: string; lastWon: boolean };
+
+/** Extra prize for beating someone who has beaten the player twice and more often than the player has beaten them. */
+export const REVENGE_BONUS = 100;
 
 export type ActiveEvent = {
   id: string;
@@ -242,6 +250,8 @@ export type Career = {
   challenge: Challenge | null;
   /** How many challenges there have been, so each is a new one. */
   challenges: number;
+  /** The record against each opponent met, by name. Absent on a career from before there were any. */
+  rivals?: Record<string, Rival>;
 };
 
 export const careerId = (player: string) => player.trim().toLowerCase();
@@ -256,8 +266,8 @@ export function newCareer(player: string, startLevel: string, now: string, profi
 /** The money, as the career writes it: dollars, so nobody takes it for real money. */
 export const dollars = (n: number) => `${n < 0 ? "−" : ""}$${Math.abs(n).toLocaleString("nb-NO")}`;
 
-/** The regulars of Ly: the names the pub's field is drawn from. */
-export const REGULARS = ["Roger", "Tone", "Svein-Arne", "Kenneth", "Bjørn", "Mia", "Åge", "Ragnhild", "Terje", "Lise", "Odd", "Siri", "Freddy", "Gunnhild", "Truls", "Hege", "Rolf", "Kjartan", "Unni", "Øyvind"];
+/** The regulars of Ly: the names the pub's field is drawn from (lib/opponents.ts has who they are). */
+export const REGULARS = LY_REGULARS.map((r) => r.name);
 
 /** The names of the bigger events: a first name and a surname, put together by the draw so no two in a field are alike. */
 const FIRST = ["Anders", "Mikael", "Jonas", "Tobias", "Henrik", "Lukas", "Marius", "Erik", "Stian", "Daniel", "Peter", "Marco", "Luca", "Jan", "Pieter", "Sven", "Karl", "Dmitri", "Ivan", "Tomas", "Rafael", "Hugo", "Oskar", "Felix", "Emil", "Nils", "Magnus", "Viktor", "Adam", "Leon", "Matteo", "Jesper"];
@@ -271,7 +281,11 @@ export function fieldNames(tier: Tier, player: string, seed: number, count: numb
   if (tier.id === "lu") return byLuck(REGULARS.filter((n) => n.toLowerCase() !== own), (n) => n, `${seed}|names`).slice(0, count);
   const firsts = byLuck(FIRST, (n) => n, `${seed}|first`);
   const lasts = byLuck(LAST, (n) => n, `${seed}|last`);
-  return firsts.map((f, i) => `${f} ${lasts[i]}`).filter((n) => !n.toLowerCase().startsWith(`${own} `) && n.toLowerCase() !== own).slice(0, count);
+  // The international players with a face of their own come back in the bigger events; the rest of the field is made up.
+  const made = firsts.map((f, i) => `${f} ${lasts[i]}`);
+  const known = byLuck(INTERNATIONALS.map((n) => n.name), (n) => n, `${seed}|intl`);
+  const surnames = new Set(known.map((n) => n.split(" ")[1]));
+  return [...known, ...made.filter((n) => !surnames.has(n.split(" ")[1]))].filter((n) => !n.toLowerCase().startsWith(`${own} `) && n.toLowerCase() !== own).slice(0, count);
 }
 
 /** The factor of a step of the ladder for this player: the world championship gets sharper with every title. */
@@ -300,7 +314,8 @@ export function fieldFor(career: Career, tier: Tier, seed: number): Participant[
 }
 
 export function cupFor(career: Career, tier: Tier, seed: number): CupConfig {
-  return { kind: tier.kind, name: tier.name, trophy: tier.trophy, level: String(Math.round(Math.min(8, Math.max(1, fieldCentre(career, tier))))) as CupConfig["level"], growth: true, seed, career: true };
+  const countdown = countdownOf(gameOf(career.profile));
+  return { kind: tier.kind, name: tier.name, trophy: tier.trophy, level: String(Math.round(Math.min(8, Math.max(1, fieldCentre(career, tier))))) as CupConfig["level"], growth: true, seed, career: true, ...(countdown ? { countdown } : {}) };
 }
 
 /** What it costs to get in. */
@@ -365,7 +380,20 @@ export function finishEvent(career: Career, now: string): Career {
   const t = a.tournament.status === "done" ? a.tournament : playElsewhere(a.tournament).tournament;
   const tier = TIERS[a.tier];
   const place = placeIn(t, career.player);
-  const result: EventResult = { place, prize: tier.prizes[place] ?? 0, cost: a.cost, points: tier.points[place] ?? 0 };
+  // The matches the player played, for the record against each opponent; a win over one who had the better of them is worth a bonus.
+  const rivals: Record<string, Rival> = { ...(career.rivals ?? {}) };
+  const revenge: string[] = [];
+  for (const m of t.matches) {
+    if (m.isBye || !m.winner || !matchParticipants(m).includes(career.player)) continue;
+    const other = matchParticipants(m).find((n) => n !== career.player);
+    if (!other) continue;
+    const before = rivals[other] ?? { w: 0, l: 0, last: now, lastWon: false };
+    const won = m.winner === career.player;
+    if (won && before.l >= 2 && before.l > before.w && !revenge.includes(other)) revenge.push(other);
+    rivals[other] = { w: before.w + (won ? 1 : 0), l: before.l + (won ? 0 : 1), last: now, lastWon: won };
+  }
+  const bonus = revenge.length * REVENGE_BONUS;
+  const result: EventResult = { place, prize: (tier.prizes[place] ?? 0) + bonus, cost: a.cost, points: tier.points[place] ?? 0, ...(bonus ? { revenge: { names: revenge, bonus } } : {}) };
   const entry: HistoryEntry = { at: now, event: tier.name, place, prize: result.prize, cost: result.cost, points: result.points };
   const won = place === "winner";
   const opens = tier.opens && tier.opens.places.includes(place) ? tier.opens.tier : null;
@@ -379,6 +407,7 @@ export function finishEvent(career: Career, now: string): Career {
     worldTitles: career.worldTitles + (won && tier.id === "vm" ? 1 : 0),
     played: career.played + 1,
     history: [entry, ...career.history].slice(0, 30),
+    rivals,
     active: { ...a, tournament: t, result },
   };
 }

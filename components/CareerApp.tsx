@@ -18,6 +18,8 @@ import {
 } from "@/lib/career";
 import { deleteCareer, loadCareers, mergeCareers, readLocalCareers, saveCareer } from "@/lib/careerStorage";
 import { ensurePlayer, useRoster } from "@/lib/storage";
+import { gameOf, type CareerGame } from "@/lib/careerGame";
+import { GameChoice } from "./GameChoice";
 import { sameName } from "@/lib/people";
 import { TextField } from "./ui/TextField";
 import { applyTheme } from "@/lib/theme";
@@ -183,7 +185,7 @@ function Steps({ step }: { step: 1 | 2 }) {
 }
 
 /** Two steps: who and how good, then the look and the start (the shirt, the darts, the place). */
-function NewCareer({ taken, onBack, onCreate }: { taken: string[]; onBack: () => void; onCreate: (player: string, level: string, profile: { home: HomeId; darts: DartsId; character: string }) => void }) {
+function NewCareer({ taken, onBack, onCreate }: { taken: string[]; onBack: () => void; onCreate: (player: string, level: string, profile: { home: HomeId; darts: DartsId; character: string; game: CareerGame; doubleOut: boolean }) => void }) {
   const roster = useRoster();
   const people = roster.filter((r) => r.kind !== "team" && !taken.includes(careerId(r.name)));
   const [step, setStep] = useState<1 | 2>(1);
@@ -191,6 +193,7 @@ function NewCareer({ taken, onBack, onCreate }: { taken: string[]; onBack: () =>
   const [level, setLevel] = useState("dyktig");
   const [darts, setDarts] = useState<DartsId>("middels");
   const [character, setCharacter] = useState(DEFAULT_CHARACTER);
+  const [gameSettings, setGameSettings] = useState<{ game: CareerGame; doubleOut: boolean }>({ game: "mm", doubleOut: true });
   // A new player typed in here: the career is for someone, and that someone may not be in the list yet.
   const [adding, setAdding] = useState(false);
   const [nameInput, setNameInput] = useState("");
@@ -231,6 +234,10 @@ function NewCareer({ taken, onBack, onCreate }: { taken: string[]; onBack: () =>
             </div>
             <p className="char-pick-name">{characterOf(character).name}</p>
           </div>
+          <p className="section-label mb-2">SPILL</p>
+          <div className="mb-5">
+            <GameChoice {...gameSettings} onChange={setGameSettings} />
+          </div>
           <p className="section-label mb-2">PILER</p>
           <div className="space-y-2 mb-5" role="radiogroup" aria-label="Piler">
             {DARTS.map((d) => (
@@ -240,7 +247,7 @@ function NewCareer({ taken, onBack, onCreate }: { taken: string[]; onBack: () =>
           <p className="mb-3" style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>
             Neste er din første turnering: Ly-cupen på puben. Den er gratis.
           </p>
-          <Button block variant="primary" size="lg" onClick={() => onCreate(record.name, level, { home: "garage", darts, character })}>
+          <Button block variant="primary" size="lg" onClick={() => onCreate(record.name, level, { home: "garage", darts, character, ...gameSettings })}>
             Start karrieren
           </Button>
         </div>
@@ -343,7 +350,7 @@ function Play({ career, commit, onHub }: { career: Career; commit: (c: Career) =
         onDone: () => commit(finishEvent(career, new Date().toISOString())),
         cost: a.cost,
         level: levelOfMed(career.skillMed),
-        character: career.profile.character,
+        me: { name: career.player, med: career.skillMed, points: career.points, character: career.profile.character, rivals: career.rivals, settings: gameOf(career.profile) },
         prizes: TIERS[a.tier].prizes,
         onAbandon: () => {
           commit(abandonEvent(career));

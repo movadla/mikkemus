@@ -33,7 +33,9 @@ import { DrawScreen } from "./DrawScreen";
 import { PilotOverview } from "./PilotOverview";
 import { EliminatedScreen } from "./EliminatedScreen";
 import { FinalIntro } from "./FinalIntro";
+import { CountdownMatch } from "./CountdownMatch";
 import { MatchIntro } from "./MatchIntro";
+import type { Me } from "./OpponentCard";
 import type { Place } from "@/lib/career";
 import { KnockoutOverview } from "./KnockoutOverview";
 import { MikkeMusApp } from "./MikkeMusApp";
@@ -60,8 +62,8 @@ export type CareerHooks = {
   /** The player's level on the bots' scale, and what each place pays: for the card before a match. */
   level: number;
   prizes: Partial<Record<Place, number>>;
-  /** The id of the player's character (lib/characters.ts), for the card before a match. */
-  character?: string;
+  /** Who the player is in the career, for the card before a match and the profiles. */
+  me?: Me;
 };
 
 /** The career has no champion screen of its own: when a cup is done the player goes straight on to the pay-out. */
@@ -440,7 +442,7 @@ export function TournamentApp({ onExitToHome, career }: { onExitToHome: () => vo
   }
 
   if (screen === "draw" && pendingMode && pendingParticipants) {
-    return <DrawScreen seeded={seededOrder()} cup={pendingCup ?? undefined} summary={[pendingName || pendingCup?.name || "Turnering", String(pendingParticipants.length)].join(" · ")} onBack={() => (career ? onExitToHome() : setScreen("setup"))} onStart={createAndOpen} career={career ? { player: pendingParticipants.find((p) => !p.isBot)?.name ?? "" } : undefined} />;
+    return <DrawScreen seeded={seededOrder()} cup={pendingCup ?? undefined} summary={[pendingName || pendingCup?.name || "Turnering", String(pendingParticipants.length)].join(" · ")} onBack={() => (career ? onExitToHome() : setScreen("setup"))} onStart={createAndOpen} career={career ? { player: pendingParticipants.find((p) => !p.isBot)?.name ?? "", me: career.me } : undefined} />;
   }
 
   if (screen === "final" && tournament && currentMatch && career) {
@@ -448,12 +450,17 @@ export function TournamentApp({ onExitToHome, career }: { onExitToHome: () => vo
     const { botLevels } = botSetupForMatch(tournament, currentMatch);
     const names = matchParticipants(currentMatch);
     const bot = names.find((n) => botLevels[n] !== undefined);
-    return <MatchIntro tournament={tournament} match={currentMatch} player={names.find((n) => n !== bot) ?? names[0]} character={career.character} level={career.level} opponentLevel={bot ? Number(botLevels[bot]) : career.level} prizes={career.prizes} onStart={() => setScreen("match")} onBack={() => setScreen("overview")} />;
+    return <MatchIntro tournament={tournament} match={currentMatch} player={names.find((n) => n !== bot) ?? names[0]} me={career.me ?? { name: names.find((n) => n !== bot) ?? names[0], med: 37, points: 0 }} level={career.level} opponentLevel={bot ? Number(botLevels[bot]) : career.level} prizes={career.prizes} onStart={() => setScreen("match")} onBack={() => setScreen("overview")} />;
   }
 
   if (screen === "match" && tournament && currentMatch && matchParticipants(currentMatch).length >= 2) {
     // For a cup against bots the levels are those of this very match: how far into the cup it is, and the bots' form.
     const { botLevels, teamRosters } = botSetupForMatch(tournament, currentMatch);
+    // A cup of the career played as 501 or 301: one leg to nothing, not a game of Mikke Mus.
+    const countdown = tournament.cup?.countdown;
+    if (countdown) {
+      return <CountdownMatch key={currentMatch.id} players={matchParticipants(currentMatch)} botLevels={botLevels} start={countdown.start} doubleOut={countdown.doubleOut} onDone={handleMatchComplete} onAbort={handleMatchAbort} />;
+    }
     return (
       <MikkeMusApp
         initialPlayers={matchParticipants(currentMatch)}

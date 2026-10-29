@@ -3,7 +3,7 @@
 import { ViewTransition } from "react";
 import { avatarAccent } from "@/lib/avatarAccent";
 import { useRoster } from "@/lib/storage";
-import { BotFace } from "./BotFace";
+import { faceSrc, opponentOf } from "@/lib/opponents";
 
 /** The five sizes of a face in the app, in pixels (any other size is a `px`). */
 export const AVATAR_SIZES = { xs: 24, s: 32, m: 44, l: 64, xl: 96, xxl: 120 } as const;
@@ -58,7 +58,8 @@ export function Avatar({
         }}
       >
         {bot ? (
-          <BotFace name={name} className="w-full h-full" />
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={faceSrc(opponentOf(name.replace(/ (d+)$/, "")).face)} alt="" className="w-full h-full object-cover" style={{ objectPosition: "50% 4%" }} draggable={false} />
         ) : photo ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={photo} alt="" className="w-full h-full object-cover" />

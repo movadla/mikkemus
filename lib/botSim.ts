@@ -1,6 +1,8 @@
 import type { TurnAggregate } from "./game";
 import { emptyProgress, totalMarks } from "./game";
 import { botSetupForMatch, unit } from "./botCup";
+import { botCountdownRound } from "./botDarts";
+import { medOfLevel, winChance } from "./opponentStats";
 import type { BotLevel, TeamMember } from "./botLevels";
 import { sigmaForLevel } from "./botStrategy";
 import { finishCdf, stateOf } from "./odds/forward";
@@ -48,8 +50,36 @@ function turnFrom(cdf: Float64Array, u: number): number {
 
 export type SimulatedResult = { placements: string[]; stats: Record<string, TurnAggregate>; chanceA: number };
 
+/** A leg of 501 or 301 between two bots, thrown dart by dart by the bot that plays it: who gets to nothing first, and the darts each used. */
+function simulateCountdown(t: Tournament, match: TournamentMatch): SimulatedResult | null {
+  const cd = t.cup?.countdown;
+  const [a, b] = [match.participantA, match.participantB];
+  if (!cd || !a || !b) return null;
+  const { botLevels } = botSetupForMatch(t, match);
+  const level = (n: string) => botLevels[n] ?? t.participants.find((p) => p.name === n)?.botLevel ?? "4";
+  const left: Record<string, number> = { [a]: cd.start, [b]: cd.start };
+  const darts: Record<string, number> = { [a]: 0, [b]: 0 };
+  // Whoever throws first is drawn from the cup's seed, so the same cup is the same after a reload.
+  let turn = unit(`${t.cup?.seed ?? 0}|sim|${match.id}|first`) < 0.5 ? a : b;
+  let winner = "";
+  for (let guard = 0; guard < 600 && !winner; guard++) {
+    const r = botCountdownRound(left[turn], cd.doubleOut, Number(level(turn)));
+    darts[turn] += r.darts;
+    if (!r.bust) left[turn] -= r.scored;
+    if (!r.bust && left[turn] === 0) winner = turn;
+    else turn = turn === a ? b : a;
+  }
+  // A leg that never ends (two hopeless players on a double) goes to the one with the fewer points left.
+  if (!winner) winner = left[a] <= left[b] ? a : b;
+  const loser = winner === a ? b : a;
+  const chanceA = winChance(medOfLevel(Number(level(a))), medOfLevel(Number(level(b)))) / 100;
+  const make = (who: string): TurnAggregate => ({ hits: 0, misses: 0, darts: darts[who], hitsByStep: {}, missesByStep: {} });
+  return { placements: [winner, loser], stats: { [winner]: make(winner), [loser]: make(loser) }, chanceA };
+}
+
 /** The result of a match between two bots (or two sides of bots): who wins, and numbers that look like the match they played. */
 export function simulateMatch(t: Tournament, match: TournamentMatch): SimulatedResult | null {
+  if (t.cup?.countdown) return simulateCountdown(t, match);
   const [pa, pb] = [t.participants.find((p) => p.name === match.participantA), t.participants.find((p) => p.name === match.participantB)];
   if (!pa || !pb) return null;
   const { botLevels, teamRosters } = botSetupForMatch(t, match);

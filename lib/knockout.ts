@@ -32,7 +32,7 @@ function emptyMatch(size: number, index: number, feedA: string, feedB: string, b
   };
 }
 
-/** The matches of an empty bracket for `n` entrants, in the order they are played: round by round, the bronze match before the final. */
+/** The matches of an empty bracket for `n` entrants, in the order they are played: round by round. There is no match for third place: the two who lose the semi-finals share it. */
 export function bracketSkeleton(entrants: (string | null)[]): TournamentMatch[] {
   const size = nextPowerOfTwo(entrants.length);
   const order = bracketSeedOrder(size);
@@ -43,7 +43,6 @@ export function bracketSkeleton(entrants: (string | null)[]): TournamentMatch[] 
     matches.push({ id: matchId(first, i), round: "bracket", bracketRoundSize: first, isBronzeMatch: false, participantA: slots[2 * i], participantB: slots[2 * i + 1] });
   }
   for (let count = first / 2; count >= 1; count /= 2) {
-    if (count === 1 && entrants.length >= 4) matches.push(emptyMatch(2, 0, matchId(2, 0), matchId(2, 1), true));
     for (let i = 0; i < count; i++) matches.push(emptyMatch(count, i, matchId(count * 2, 2 * i), matchId(count * 2, 2 * i + 1)));
   }
   return matches;

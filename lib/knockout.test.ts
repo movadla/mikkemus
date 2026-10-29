@@ -56,28 +56,28 @@ describe("the bracket is whole from the start", () => {
     const semi = t.matches.find((m) => m.id === "bracket-2-0")!;
     expect(placeholderLabel(t, semi, "A")).toBe("Vinner Kvartfinale 1");
     expect(placeholderLabel(t, semi, "B")).toBe("Vinner Kvartfinale 2");
-    const bronze = t.matches.find((m) => m.isBronzeMatch)!;
-    expect(placeholderLabel(t, bronze, "A")).toBe("Taper Semifinale 1");
+    // There is no match for third place.
+    expect(t.matches.some((m) => m.isBronzeMatch)).toBe(false);
   });
 });
 
 describe("a result moves everyone on", () => {
-  it("fills the next place, and the bronze match with the semi-final losers", () => {
+  it("fills the next place, and there is no match for the semi-final losers", () => {
     let t = make(4);
     t = playNext(t);
     t = playNext(t);
     const final = t.matches.find((m) => m.bracketRoundSize === 1 && !m.isBronzeMatch)!;
     expect(final).toMatchObject({ participantA: "P1", participantB: "P2" });
-    expect(t.matches.find((m) => m.isBronzeMatch)).toMatchObject({ participantA: "P4", participantB: "P3" });
+    expect(t.matches.some((m) => m.isBronzeMatch)).toBe(false);
     expect(t.status).toBe("playoff");
   });
 
-  it("plays out an 8-cup in 8 matches to a podium", () => {
+  it("plays out an 8-cup in 7 matches, with no one in third place", () => {
     const t = playAll(make(8));
     expect(t.status).toBe("done");
     expect(t.winner).toBe("P1");
-    expect(podium(t)).toEqual({ first: "P1", second: "P2", third: "P3" });
-    expect(t.matches.filter((m) => m.winner && !m.isBye)).toHaveLength(8);
+    expect(podium(t)).toEqual({ first: "P1", second: "P2", third: null });
+    expect(t.matches.filter((m) => m.winner && !m.isBye)).toHaveLength(7);
   });
 
   it("finishes a cup of 5 through its byes", () => {
@@ -89,7 +89,6 @@ describe("a result moves everyone on", () => {
   it("goes to the one who beats the odds", () => {
     let t = make(4);
     t = playNext(t, true);
-    t = playNext(t);
     t = playNext(t);
     t = playNext(t);
     expect(t.winner).toBe("P2");
@@ -157,7 +156,6 @@ describe("awards", () => {
   it("finds the fewest darts and the biggest upset", () => {
     let t = make(4);
     t = playNext(t, true);
-    t = playNext(t);
     t = playNext(t);
     t = playNext(t);
     const a = awards(t);
