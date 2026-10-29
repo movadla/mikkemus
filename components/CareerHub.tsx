@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { DRILL_ROUNDS } from "@/lib/training";
-import { GAMES, LADDER, ROOM_MAX, STAGES, buyStage, dollars, isUnlocked, nextStage, offerChallenge, stakeFor, startEvent, whyNot, whyNotBuy, type Career, type GameId, type Tier } from "@/lib/career";
+import { GAMES, LADDER, ROOM_MAX, STAGES, buyStage, dollars, hubPicture, topStep, isUnlocked, nextStage, offerChallenge, stakeFor, startEvent, whyNot, whyNotBuy, type Career, type GameId, type Tier } from "@/lib/career";
 import { cupColor } from "@/lib/botCup";
 import { TROPHY } from "@/lib/scenePalette";
 import { foilVars, frameOf } from "@/lib/materials";
@@ -291,7 +291,7 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
 
   if (view === "home") {
     return (
-      <OverRoom stage={career.room} clear>
+      <OverRoom stage={career.room} src={hubPicture(topStep(career))} focus="50% 35%" clear>
         {news && <span className="room-news-ring" aria-hidden />}
         <span className="char-home" aria-hidden>
           <CharacterFigure id={career.profile.character} pose={hero.kind === "event" && hero.done ? "jubel" : "noytral"} glow />

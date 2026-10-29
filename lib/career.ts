@@ -374,6 +374,9 @@ export function whyNot(career: Career, tier: Tier): string | null {
   return null;
 }
 
+/** The scene behind the home screen: the hall of the biggest step the player has reached (public/career/hub-<step>.jpg). */
+export const hubPicture = (tier: Tier) => `/career/hub-${tier.id}.jpg`;
+
 /** The biggest step the player has played or qualified for (the pub at the least): what a challenge is priced by. */
 export function topStep(career: Career): Tier {
   return [...LADDER].reverse().find((t) => t.id === "lu" || career.qualified.includes(t.id) || career.history.some((h) => h.event === t.name)) ?? TIERS.lu;

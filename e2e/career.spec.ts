@@ -221,8 +221,8 @@ test.describe("karriere", () => {
   test("hjemmet: rommet, saldo og nivå, ett mål, én stor knapp og fire runde", async ({ page }) => {
     await toCareer(page);
     await page.getByRole("button", { name: /Lars/ }).click();
-    // The room is the picture behind everything: the first step of the room.
-    await expect(page.locator(".room-backdrop-img")).toHaveAttribute("src", /room-02.jpg/);
+    // Home is the hall of the biggest step reached (the pub at the start); the room itself is on its own screen.
+    await expect(page.locator(".room-backdrop-img")).toHaveAttribute("src", /hub-lu.jpg/);
     // The character stands in the room (the career in the seed has none saved: it gets the one there is), and the profile has its face.
     await expect(page.locator(".char-home .char-figure-img")).toHaveAttribute("src", /c03.noytral/);
     // It says where the player is: the room is a place with a name and a step.
