@@ -132,7 +132,7 @@ describe("the field", () => {
       expect(lu.some((e) => e.name === rival)).toBe(true);
       const sharpest = Math.min(...lu.filter((e) => e.isBot).map((e) => e.skill!));
       expect(lu.find((e) => e.name === rival)!.skill).toBe(sharpest);
-      expect(fieldFor(c, TIERS.region, seed).some((e) => e.name === "Rudolf")).toBe(true);
+      expect(fieldFor(c, TIERS.region, seed).some((e) => e.name === "Kjetil")).toBe(true);
       expect(fieldFor(c, TIERS.vm, seed).some((e) => e.name === "Littler")).toBe(true);
     }
   });

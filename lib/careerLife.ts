@@ -169,7 +169,7 @@ export function rivalOf(career: { id: string; player: string; life?: Life }): { 
 }
 
 /** The one who waits at each step above the pub: always the same, and in the field every time. The one at the top is the best of the level bots. */
-export const BOSSES: Record<"region" | "nm" | "gs" | "vm", string> = { region: "Rudolf", nm: "Emil Haugen", gs: "Max Hartmann", vm: "Littler" };
+export const BOSSES: Record<"region" | "nm" | "gs" | "vm", string> = { region: "Kjetil", nm: "Emil Haugen", gs: "Max Hartmann", vm: "Littler" };
 
 /** Who is sure to be in the field of a step, besides the player: the rival, and the boss of the step (when they still play). */
 export function mustPlay(career: { id: string; player: string; life?: Life }, tier: string): string[] {
