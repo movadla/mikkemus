@@ -38,17 +38,11 @@ export function posterSides(t: Tournament, match: TournamentMatch, records: Pick
 
 export function Side({ side, large, clean = false }: { side: PosterSide; large: boolean; clean?: boolean }) {
   if (clean) {
-    // The quiet card: the face, the name and the seeding as a small tag in the corner. The chance of winning is the stripe under the poster.
+    // The quiet card: the face and the name, small, so the match and its button fit on the screen with the bracket under them.
     return (
-      <div className="match-side relative" style={{ "--pc": avatarAccent(side.name), padding: "1.5rem 0.5rem 1rem" } as CSSProperties}>
-        {side.seed ? (
-          <span className="seed-tag" title={`Seedet ${side.seed}`}>
-            <span className="sr-only">Seedet </span>
-            {side.seed}
-          </span>
-        ) : null}
-        <Avatar name={side.name} photo={side.photo} size="l" bot={side.bot} />
-        <p className="font-display w-full line-clamp-2 mt-1 break-words" style={{ color: "var(--color-cream)", fontSize: "var(--text-title)", lineHeight: 1.1 }}>
+      <div className="match-side relative" style={{ "--pc": avatarAccent(side.name), padding: "0.8rem 0.4rem 0.6rem" } as CSSProperties}>
+        <Avatar name={side.name} photo={side.photo} px={64} bot={side.bot} />
+        <p className="font-display w-full line-clamp-2 mt-1 break-words" style={{ color: "var(--color-cream)", fontSize: "var(--text-body)", lineHeight: 1.1 }}>
           {side.name}
         </p>
       </div>

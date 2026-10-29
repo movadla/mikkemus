@@ -37,7 +37,7 @@ export type TournamentMatch = {
   round: "group" | "bracket";
   groupIndex?: number;
   /** Number of matches originally in this bracket round (1=final, 2=semifinal/bronze,
-   *  4=quarterfinal, larger=`Runde av ${size*2}`) — see bracketRoundLabel. Unset for group matches. */
+   *  4=quarterfinal, larger=`${size}-delsfinale`) — see bracketRoundLabel. Unset for group matches. */
   bracketRoundSize?: number;
   isBronzeMatch?: boolean;
   /** Null participant = an unfilled bye slot, auto-resolved by resolveByes. */
@@ -298,13 +298,14 @@ export function standingsWithMovement(names: string[], matches: TournamentMatch[
 }
 
 /** Human-facing round name from its original match count — generalizes past quarterfinal
- *  (e.g. 8 → "Runde av 16") so larger tournaments never hit an unlabeled round. */
+ *  (e.g. 8 → "8-delsfinale") so larger tournaments never hit an unlabeled round. */
 export function bracketRoundLabel(size: number, isBronze?: boolean): string {
   if (isBronze) return "Bronsefinale";
   if (size === 1) return "Finale";
   if (size === 2) return "Semifinale";
   if (size === 4) return "Kvartfinale";
-  return `Runde av ${size * 2}`;
+  // Eight matches are the eighth-finals (8-delsfinale), sixteen the sixteenth-finals.
+  return `${size}-delsfinale`;
 }
 
 export function nextPowerOfTwo(n: number): number {

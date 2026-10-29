@@ -36,9 +36,10 @@ import { Hub } from "./CareerHub";
 import { ChallengePlay, Result, TrainingPlay } from "./CareerScreens";
 import { EventIntro } from "./EventIntro";
 import { OpponentPortrait, TeamPortrait } from "./OpponentCard";
-import { medOfLevel } from "@/lib/opponentStats";
-import { opponentOf } from "@/lib/opponents";
+
+
 import type { Participant } from "@/lib/tournament";
+import { rankField } from "@/lib/fieldRank";
 import { picturesFor } from "./eventPictures";
 import { OverRoom } from "./RoomBackdrop";
 import { CharacterFace, CharacterFigure } from "./CharacterFigure";
@@ -480,38 +481,34 @@ function NewCareerSteps({ taken, onBack, onCreate }: NewCareerProps) {
  * place (with dots over it when it is further down), so it is clear what the player is up against and where they stand.
  */
 function FieldPreview({ career, field }: { career: Career; field: Participant[] }) {
-  const strength = (p: Participant) => (p.members ? p.members.reduce((s, m) => s + medOfLevel(m.skill ?? 4), 0) / p.members.length : p.name === career.player ? career.skillMed : opponentOf(p.name).med);
-  const isMine = (p: Participant) => (p.members ? p.members.some((m) => m.name === career.player) : p.name === career.player);
+  const own = { name: career.player, med: career.skillMed };
+  const isMine = (p: Participant) => (p.members ? p.members.some((m) => !m.isBot) : p.name === career.player);
   if (field.filter((p) => !isMine(p)).length === 0) return null;
-  const ranked = [...field].sort((x, y) => strength(x) - strength(y));
+  const ranked = rankField(field, own);
   const at = ranked.findIndex(isMine);
-  const first = ranked[0];
-  const label = (p: Participant) => (isMine(p) ? (p.members ? p.name : `Du, ${career.player}`) : p.name);
-  const rows = [1, 2].filter((i) => i < ranked.length).map((i) => ({ n: i + 1, p: ranked[i] }));
-  // The player is shown in the list when they are among the first three; otherwise they follow after dots.
-  const own = at > 2 ? { n: at + 1, p: ranked[at] } : null;
+  const label = (p: Participant) => p.name;
+  const face = (p: Participant) => (isMine(p) ? <CharacterFace id={career.profile.character} px={34} /> : p.members ? <TeamPortrait members={p.members.map((m) => m.name)} label={p.name} /> : <OpponentPortrait name={p.name} />);
+  // The first three, and the player's own place after dots when it is further down.
+  const rows = ranked.slice(0, 3).map((p, i) => ({ n: i + 1, p }));
+  const own3 = at > 2 ? { n: at + 1, p: ranked[at] } : null;
+  const row = ({ n, p }: { n: number; p: Participant }) => (
+    <li key={p.name} className={isMine(p) ? "me" : ""}>
+      <span>{n}</span>
+      <i className="ev-rank-face">{face(p)}</i>
+      <b>{label(p)}</b>
+    </li>
+  );
   return (
-    <div className="ev-field" role="group" aria-label="Feltet">
-      <div className="ev-fav">
-        {isMine(first) ? <CharacterFace id={career.profile.character} px={72} /> : first.members ? <TeamPortrait members={first.members.map((m) => m.name)} label={first.name} /> : <OpponentPortrait name={first.name} />}
-        <b>{label(first)}</b>
-      </div>
-      <ol className="ev-rank" start={2}>
-        {rows.map(({ n, p }) => (
-          <li key={p.name} className={isMine(p) ? "me" : ""}>
-            <span>{n}</span>
-            <b>{label(p)}</b>
-          </li>
-        ))}
-        {own && (
+    <div className="ev-field" role="group" aria-label="Rangering">
+      <p className="ev-rank-title">RANGERING</p>
+      <ol className="ev-rank">
+        {rows.map(row)}
+        {own3 && (
           <>
             <li className="gap" aria-hidden>
               <span>…</span>
             </li>
-            <li className="me">
-              <span>{own.n}</span>
-              <b>{label(own.p)}</b>
-            </li>
+            {row(own3)}
           </>
         )}
       </ol>

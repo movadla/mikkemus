@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Career } from "@/lib/career";
 import { NATION } from "@/lib/opponents";
 import { lifeOf, rivalOf, seasonOf } from "@/lib/careerLife";
-import { peopleOf } from "@/lib/careerWorld";
-import { norwayRankOf, playerWorldRank, worldRankFor } from "@/lib/opponentStats";
+import { peopleOf, worldRankNow } from "@/lib/careerWorld";
+import { norwayRankOf, playerWorldRank } from "@/lib/opponentStats";
 import { gameOf, statsFor } from "@/lib/careerGame";
 import { CharacterFace } from "./CharacterFigure";
 import { Avatar } from "./ui/Avatar";
@@ -27,10 +27,14 @@ export function RankingList({ career }: { career: Career }) {
   // Only someone who has really come in since is new; the rival is marked, so they are easy to find.
   const rivalName = rivalOf(career).name;
   const isNew = (name: string) => lifeOf(career).world.rookies.some((x) => x.name === name && x.since >= seasonOf(lifeOf(career).week));
-  const rows: Row[] = [...peopleOf(career).map((o) => ({ name: o.name, nat: o.nat, world: worldRankFor(o.name, o.med), figure: first(o.med).value, me: false, moved: !seen ? undefined : isNew(o.name) ? ("ny" as const) : snap[o.name] === undefined ? undefined : snap[o.name] - worldRankFor(o.name, o.med) })), me].filter((r) => tab === "world" || r.nat === "NOR").sort((a, b) => a.world - b.world || (a.me ? -1 : 1));
+  const rows: Row[] = [...peopleOf(career).map((o) => ({ name: o.name, nat: o.nat, world: worldRankNow(lifeOf(career), o.name, o.med), figure: first(o.med).value, me: false, moved: !seen ? undefined : isNew(o.name) ? ("ny" as const) : snap[o.name] === undefined ? undefined : snap[o.name] - worldRankNow(lifeOf(career), o.name, o.med) })), me].filter((r) => tab === "world" || r.nat === "NOR").sort((a, b) => a.world - b.world || (a.me ? -1 : 1));
   const at = rows.findIndex((r) => r.me);
-  const from = Math.max(0, Math.min(rows.length - 9, at - 4));
-  const shown = rows.slice(from, from + 9);
+  // The whole list can be scrolled; it opens with the player in view.
+  const shown = rows;
+  const mine = useRef<HTMLLIElement>(null);
+  useEffect(() => {
+    mine.current?.scrollIntoView({ block: "center" });
+  }, [tab]);
   const stat = first(0);
   const ahead = at > 0 ? rows[at - 1] : null;
   return (
@@ -48,7 +52,7 @@ export function RankingList({ career }: { career: Career }) {
       </p>
       <ol className="space-y-2" aria-label={tab === "world" ? "Verdensrangering" : "Norgesrangering"}>
         {shown.map((r) => (
-          <li key={r.name} className={`rank-row ${r.me ? "rank-row-me" : ""}`} aria-current={r.me ? "true" : undefined}>
+          <li key={r.name} ref={r.me ? mine : undefined} className={`rank-row ${r.me ? "rank-row-me" : ""}`} aria-current={r.me ? "true" : undefined}>
             <span className="rank-no tabular">{tab === "world" ? r.world : norwayRankOf(r.world)}</span>
             {r.me ? <CharacterFace id={career.profile.character} px={36} /> : <Avatar name={r.name} bot px={36} />}
             <span className="min-w-0">

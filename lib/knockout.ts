@@ -196,7 +196,7 @@ export function placeholderLabel(t: Tournament, m: TournamentMatch, side: "A" | 
   const source = feed ? t.matches.find((x) => x.id === feed) : undefined;
   if (!source) return "Frist plass";
   const index = t.matches.filter((x) => x.bracketRoundSize === source.bracketRoundSize && !x.isBronzeMatch).findIndex((x) => x.id === source.id) + 1;
-  const name = source.bracketRoundSize === 2 ? "Semifinale" : source.bracketRoundSize === 4 ? "Kvartfinale" : `Runde av ${(source.bracketRoundSize ?? 1) * 2}`;
+  const name = source.bracketRoundSize === 2 ? "Semifinale" : source.bracketRoundSize === 4 ? "Kvartfinale" : `${source.bracketRoundSize ?? 1}-delsfinale`;
   return `${m.feedKind === "loser" ? "Taper" : "Vinner"} ${name} ${index}`;
 }
 
@@ -354,10 +354,10 @@ export function routeOf(t: Tournament, name: string): Set<string> {
   return ids;
 }
 
-/** «Vinner Semifinale 2» as the short mark in a bracket box: «Vinner S2». «Taper Kvartfinale 1» is «Taper K1», «Vinner Runde av 16 3» is «Vinner R16 3». */
+/** «Vinner Semifinale 2» as the short mark in a bracket box: «Vinner S2». «Taper Kvartfinale 1» is «Taper K1», «Vinner 8-delsfinale 3» is «Vinner 8D 3». */
 export function placeholderShort(label: string): string {
-  const m = /^(Vinner|Taper) (Semifinale|Kvartfinale|Runde av (\d+)) (\d+)$/.exec(label);
+  const m = /^(Vinner|Taper) (Semifinale|Kvartfinale|(\d+)-delsfinale) (\d+)$/.exec(label);
   if (!m) return label;
-  const round = m[2] === "Semifinale" ? "S" : m[2] === "Kvartfinale" ? "K" : `R${m[3]} `;
+  const round = m[2] === "Semifinale" ? "S" : m[2] === "Kvartfinale" ? "K" : `${m[3]}D `;
   return `${m[1]} ${round}${m[4]}`;
 }

@@ -88,7 +88,7 @@ export type Rookie = { name: string; med: number; age: number; since: number };
  * How the other players have changed: a factor on each one's strength (under 1 is sharper), who has stopped, who has come, the ranking points
  * of this season, and the world rank each had at the end of the last one (for the arrows in the lists).
  */
-export type World = { drift: Record<string, number>; retired: string[]; rookies: Rookie[]; pts: Record<string, number>; snap: Record<string, number> };
+export type World = { drift: Record<string, number>; retired: string[]; rookies: Rookie[]; pts: Record<string, number>; snap: Record<string, number>; /** The ranking points the others have won in the seasons that are over, so the world list keeps what they have done. */ cum?: Record<string, number> };
 
 export type SeasonResult = { season: number; rank: number; points: number; prize: number; winner: string; /** The best five of the table, for the recap. Absent on a season from before it was kept. */ table?: { name: string; pts: number }[] };
 
@@ -107,6 +107,8 @@ export type Life = {
   seasons: SeasonResult[];
   /** The last season whose recap the player has seen. */
   recapSeen?: number;
+  /** The rival the player has chosen (one of the regulars of Ly); absent: the one the career gives. */
+  rivalPick?: string;
   /** The rank the player last saw (the rank-up screen shows when the rank is another one). Absent on a career from before it was kept. */
   rankSeen?: string;
   /** Counts what is made (news, messages), so each has a name of its own. */
@@ -164,7 +166,8 @@ export function rivalOf(career: { id: string; player: string; life?: Life }): { 
   const order = LY_REGULARS.map((r) => r.name)
     .filter((n) => n.toLowerCase() !== own)
     .sort((a, b) => hashUnit(`${career.id}|rival|${a}`) - hashUnit(`${career.id}|rival|${b}`));
-  const name = order.find((n) => !retired.includes(n)) ?? order[0];
+  const picked = career.life?.rivalPick;
+  const name = picked && order.includes(picked) && !retired.includes(picked) ? picked : (order.find((n) => !retired.includes(n)) ?? order[0]);
   return { name, style: RIVAL_STYLES[Math.floor(hashUnit(`${career.id}|rival-style|${name}`) * RIVAL_STYLES.length)] };
 }
 

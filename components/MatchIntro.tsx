@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { cupColor } from "@/lib/botCup";
-import { dollars, type Place } from "@/lib/career";
+import type { Place } from "@/lib/career";
 import { TIER_LOOK, foilVars } from "@/lib/materials";
 import { medOfLevel } from "@/lib/opponentStats";
 import { bracketRoundLabel, matchParticipants, type Tournament, type TournamentMatch } from "@/lib/tournament";
@@ -37,12 +37,11 @@ export function formWord(you: number, opponent: number): "hot" | "even" | "cold"
  * how often each hits. The bars grow in, the better of each pair is lit, and the chance of winning comes last. Tapping the opponent opens their
  * profile. A flame by the opponent's name means they are sharp today, a snowflake that they are not.
  */
-export function MatchIntro({ tournament, match, player, me, level, opponentLevel, prizes, onStart, onBack }: { tournament: Tournament; match: TournamentMatch; player: string; me: Me; /** The player's level on the bots' scale. */ level: number; opponentLevel: number; prizes: Partial<Record<Place, number>>; onStart: () => void; onBack: () => void }) {
+export function MatchIntro({ tournament, match, player, me, level, opponentLevel, onStart, onBack }: { tournament: Tournament; match: TournamentMatch; player: string; me: Me; /** The player's level on the bots' scale. */ level: number; opponentLevel: number; prizes: Partial<Record<Place, number>>; onStart: () => void; onBack: () => void }) {
   const [profile, setProfile] = useState(false);
   const [a, b] = matchParticipants(match);
   const opponent = (a === player ? b : a) ?? "";
   const colour = cupColor(tournament.cup?.kind);
-  const stake = stakeOf(match.bracketRoundSize ?? 1, prizes);
   // The frame, the foil and the cup in the metal of the event; an event without a material (an open tournament) has none of them.
   const kind = tournament.cup?.kind;
   const tier = kind && kind in TIER_LOOK ? (kind as keyof typeof TIER_LOOK) : null;
@@ -98,12 +97,6 @@ export function MatchIntro({ tournament, match, player, me, level, opponentLevel
         <CompareRows me={me} opponent={opponent} med={med} />
         <div className="flex-1 flex flex-col items-center justify-center gap-3">
           <ChanceMeter me={me} med={med} />
-          {stake.money > 0 && (
-            <span className="final-fade inline-flex items-center gap-2 tabular" style={{ "--d": "1.2s", padding: "0.3rem 0.9rem", borderRadius: "var(--radius-pill)", background: "var(--gold-soft)", border: "1px solid var(--color-gold)", color: "var(--color-gold-strong)", fontWeight: 800, fontSize: "var(--text-body)" } as React.CSSProperties}>
-              <span className="coin-mark" aria-hidden />
-              {dollars(stake.money)}
-            </span>
-          )}
         </div>
         <PlayButton label="KAST" onClick={onStart} />
       </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import type { Career } from "@/lib/career";
-import { CLIMB_MAX, CLIMB_REWARD, DAILY_REWARD, DRILLS, climbLevel, climbOpen, climbTarget, dailyOf, levelCap, type DrillId } from "@/lib/drills";
+import { CLIMB_MAX, CLIMB_REWARD, DAILY_REWARD, DRILLS, climbLevel, climbOpen, climbTarget, dailyOf, goalLine, drillLevel, type DrillId } from "@/lib/drills";
 import { CheckIcon, FlameIcon } from "./icons";
 import { Button } from "./ui/Button";
 
@@ -9,8 +9,8 @@ import { Button } from "./ui/Button";
 export type TrainTarget = DrillId | "stige";
 
 /**
- * What the training room holds, and nothing else: the drill of the day (it pays the most, and comes once a day), the ladder (a hundred levels,
- * each passed by making enough with three darts, each paying once) and the button for a better room.
+ * What the training room holds, and nothing else: the button for a better room on top, then the drill of the day (one line, with what it pays as a
+ * badge) and the ladder (a hundred levels, each passed by making enough with three darts, each paying once), each with a Tren button.
  */
 export function TrainingPanel({ career, onTrain, onUpgrade, today }: { career: Career; onTrain: (t: TrainTarget) => void; onUpgrade: () => void; /** The day, as a date (the drill of the day changes with it). */ today: string }) {
   const daily = dailyOf(career, today);
@@ -20,39 +20,45 @@ export function TrainingPanel({ career, onTrain, onUpgrade, today }: { career: C
   const open = climbOpen(career);
   return (
     <div className="train" role="group" aria-label="Trening">
-      <div className={`drill-daily ${daily.done ? "drill-daily-done" : ""}`}>
+      <Button block onClick={onUpgrade}>
+        Oppgrader
+      </Button>
+      <div className={`train-row ${daily.done ? "train-row-done" : ""}`}>
         <span className="drill-flame" aria-hidden>
-          {daily.done ? <CheckIcon className="w-6 h-6" /> : <FlameIcon className="w-6 h-6" />}
+          {daily.done ? <CheckIcon className="w-5 h-5" /> : <FlameIcon className="w-5 h-5" />}
         </span>
         <span className="min-w-0 flex-1">
-          <small className="drill-kicker">DAGENS ØVELSE{daily.streak > 0 ? ` · ${daily.streak} ${daily.streak === 1 ? "dag" : "dager"} på rad` : ""}</small>
-          <b className="block">{dailyName}</b>
-          <small className="block">{daily.done ? "Ferdig i dag" : `+$${DAILY_REWARD} når du består den`}</small>
+          <small className="drill-kicker">DAGENS ØVELSE{daily.streak > 0 ? ` · ${daily.streak} på rad` : ""}</small>
+          <span className="train-line">
+            <b>{dailyName}</b> <em>{goalLine(daily.id, drillLevel(career, daily.id)).toLowerCase()}</em>
+          </span>
         </span>
+        <span className="train-badge">{daily.done ? "ferdig" : `+$${DAILY_REWARD}`}</span>
         {!daily.done && (
           <Button label={`Dagens øvelse: ${dailyName}`} onClick={() => onTrain(daily.id)}>
             Tren
           </Button>
         )}
       </div>
-      <div className="drill-daily train-climb">
+      <div className="train-row">
         <span className="drill-level-badge" aria-hidden>
           {finished ? CLIMB_MAX : level}
         </span>
         <span className="min-w-0 flex-1">
           <small className="drill-kicker">{finished ? "STIGEN ER FULLFØRT" : `NIVÅ ${level} AV ${CLIMB_MAX}`}</small>
-          <b className="block">{finished ? "Alle nivåene er klare" : `Få minst ${climbTarget(level)} poeng på tre piler`}</b>
-          <small className="block">{finished ? "" : open ? `+$${CLIMB_REWARD} for hvert nivå` : `Oppgrader rommet for å komme videre (tak: nivå ${levelCap(career.room)})`}</small>
+          {!finished && (
+            <span className="train-line">
+              <b>Minst {climbTarget(level)}p</b> <em>på tre piler</em>
+            </span>
+          )}
         </span>
+        {!finished && <span className="train-badge">+${CLIMB_REWARD}</span>}
         {!finished && (
           <Button label={`Stigen, nivå ${level}`} disabled={!open} onClick={() => onTrain("stige")}>
             Tren
           </Button>
         )}
       </div>
-      <Button block onClick={onUpgrade}>
-        Oppgrader
-      </Button>
     </div>
   );
 }

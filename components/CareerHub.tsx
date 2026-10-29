@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { DRILLS, UNLOCK_ROOM, levelCap } from "@/lib/drills";
 import { TrainingPanel, type TrainTarget } from "./TrainingPanel";
-import { LADDER, buyStage, dollars, hubPicture, topStep, isUnlocked, nextStage, startEvent, whyNot, whyNotBuy, type Career, type Tier } from "@/lib/career";
+import { LADDER, roomPicture, buyStage, dollars, hubPicture, topStep, isUnlocked, nextStage, startEvent, whyNot, whyNotBuy, type Career, type Tier } from "@/lib/career";
 import { cupColor } from "@/lib/botCup";
 import { TROPHY } from "@/lib/scenePalette";
 import { foilVars, frameOf } from "@/lib/materials";
@@ -346,33 +345,12 @@ export function Hub({ career, onBack, onExit, onPlay, onChallenge, onTrain, comm
           </div>
         </div>
         {upgrade && (
-          <Sheet title={next ? `Oppgrader til ${next.name.toLowerCase()}` : "Drømmerommet"} onClose={() => setUpgrade(false)}>
+          <Sheet title={next ? `Oppgrader til nivå ${career.room + 2}` : "Drømmerommet"} onClose={() => setUpgrade(false)}>
             {next ? (
               <div className="space-y-3">
-                <ul className="flex gap-2 flex-wrap" aria-label="Du får">
-                  {next.items.map((item) => (
-                    <li key={item} className="stage-chip">
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-                <ul className="flex gap-2 flex-wrap" aria-label="Låser opp">
-                  <li className="stage-chip stage-chip-unlock">Stigen opp til nivå {levelCap(career.room + 1)}</li>
-                  {DRILLS.filter((d) => UNLOCK_ROOM[d.id] === career.room + 1).map((d) => (
-                    <li key={d.id} className="stage-chip stage-chip-unlock">
-                      Ny øvelse: {d.name}
-                    </li>
-                  ))}
-                </ul>
-                <PlayButton
-                  label="KJØP"
-                  sub={buyWhy ? `${dollars(next.price)} · ${buyWhy}` : dollars(next.price)}
-                  disabled={!!buyWhy}
-                  onClick={() => {
-                    setUpgrade(false);
-                    buy();
-                  }}
-                />
+                {/* eslint-disable-next-line @next/next/no-img-element -- the room it becomes, from public/career */}
+                <img src={roomPicture(career.room + 1)} alt={`Rommet etter oppgraderingen: ${next.name}`} className="upgrade-picture" draggable={false} />
+                <PlayButton label="KJØP" sub={dollars(next.price)} disabled={!!buyWhy} onClick={() => { setUpgrade(false); buy(); }} />
               </div>
             ) : (
               <p className="info-line" style={{ paddingInline: 0 }}>
@@ -396,7 +374,7 @@ export function Hub({ career, onBack, onExit, onPlay, onChallenge, onTrain, comm
           {view === "inbox" && <CareerInbox career={career} commit={commit} onChallenge={onChallenge} onRoad={() => setView("road")} />}
           {view === "inbox" && <CareerNews career={career} />}
           {view === "season" && <SeasonScreen career={career} />}
-          {view === "profile" && <CareerProfile key={profileTab} career={career} tab={profileTab} />}
+          {view === "profile" && <CareerProfile key={profileTab} career={career} tab={profileTab} commit={commit} onChallenge={onChallenge} />}
 
           {view === "road" && (
             <>

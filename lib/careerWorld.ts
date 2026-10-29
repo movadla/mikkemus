@@ -366,7 +366,9 @@ function endSeason(career: Career, life: Life, week: number): { life: Life; priz
     known.add(name);
     fresh.push({ name, med: 33 + unit(`${career.id}|${season}|rm${i}`) * 10, age: 17 + Math.floor(unit(`${career.id}|${season}|ra${i}`) * 5), since: season + 1 });
   }
-  next = { ...next, world: { drift, retired, rookies: [...rookies, ...fresh].slice(-12), pts: {}, snap }, seasonPts: 0 };
+  const cum = { ...(life.world.cum ?? {}) };
+  for (const [n, p] of Object.entries(life.world.pts)) cum[n] = (cum[n] ?? 0) + p;
+  next = { ...next, world: { drift, retired, rookies: [...rookies, ...fresh].slice(-12), pts: {}, snap, cum }, seasonPts: 0 };
   // The word about it.
   const youWon = winner.name === career.player;
   next = addNews(next, "season", youWon ? `Du er årets spiller, sesong ${season}` : `${winner.name} er årets spiller, sesong ${season}`, `${winner.pts} poeng. ${rank === 1 ? "" : `Du ble nummer ${rank} med ${life.seasonPts}.`}`.trim(), youWon ? career.player : winner.name);
@@ -495,6 +497,26 @@ export function whyNotAnswer(career: Career, m: Message): string | null {
   if (o.kind === "challenge") return career.active || career.challenge ? "Fullfør det som pågår først" : null;
   if (o.kind === "sponsor") return lifeOf(career).sponsor ? "Du har en avtale fra før" : null;
   return null;
+}
+
+/** The world rank of one of the others now: where their strength puts them, and every ranking point they have won moves them up, as for the player. */
+export function worldRankNow(life: Life, name: string, med: number): number {
+  const pts = (life.world.cum?.[name] ?? 0) + (life.world.pts[name] ?? 0);
+  return Math.max(1, Math.round(worldRankFor(name, med) * 0.992 ** pts));
+}
+
+/** The player picks who the rival is, among the regulars of Ly. */
+export function chooseRival(career: Career, name: string): Career {
+  if (!LY_REGULARS.some((r) => r.name === name) || name.toLowerCase() === career.player.trim().toLowerCase()) return career;
+  return withLife(career, { ...lifeOf(career), rivalPick: name });
+}
+
+/** The player challenges the rival to a duel in 501: the rival's stake is more than a regular's, and a loss costs half of it. Not while a cup or a duel is going. */
+export function challengeRival(career: Career, seed: number): Career {
+  if (career.active || career.challenge) return career;
+  const base = newChallenge(career, "501", seed);
+  const stake = round50(stakeFor(career, "501") * 1.5);
+  return { ...career, challenge: { ...base, opponent: { name: rivalOf(career).name, skill: base.opponent.skill }, stake, risk: riskFor(stake) }, challenges: career.challenges + 1 };
 }
 
 /** The player has read a message. */

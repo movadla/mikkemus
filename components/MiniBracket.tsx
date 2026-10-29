@@ -1,3 +1,5 @@
+import { TrophyIcon } from "./icons";
+
 /**
  * The road to the cup before the first match: the first round with the names drawn, an empty box for every match after it, the lines
  * between them and the cup at the end. Shown under the draw, and it changes with it.
@@ -16,7 +18,7 @@ export function MiniBracket({ pairs, accent, seedOf }: { pairs: { a: string | nu
   const height = pairs.length * pitch;
   const cy = (c: number, i: number) => (i + 0.5) * (height / cols[c]);
   const x = (c: number) => c * (w + gap);
-  const width = cols.length * (w + gap) + 40;
+  const width = cols.length * (w + gap) - gap;
   const name = (n: string | null) => (n ? `${n}${seedOf && seedOf(n) ? ` (${seedOf(n)})` : ""}` : "Walkover");
   return (
     <div className="overflow-x-auto" style={{ paddingBottom: 4 }}>
@@ -30,7 +32,6 @@ export function MiniBracket({ pairs, accent, seedOf }: { pairs: { a: string | nu
               return <path key={`${c}-${i}`} d={`M${x0},${y} H${x0 + gap / 2} V${yt} H${x0 + gap}`} stroke="var(--color-hairline)" strokeWidth={1.5} fill="none" />;
             }),
           )}
-          <path d={`M${x(cols.length - 1) + w},${cy(cols.length - 1, 0)} H${x(cols.length)}`} stroke={accent} strokeWidth={2} fill="none" />
         </svg>
         {cols.map((count, c) =>
           Array.from({ length: count }, (_, i) => {
@@ -50,7 +51,9 @@ export function MiniBracket({ pairs, accent, seedOf }: { pairs: { a: string | nu
             );
           }),
         )}
-        <span aria-hidden className="absolute rounded-full" style={{ left: x(cols.length) + 4, top: cy(cols.length - 1, 0) - 16, width: 32, height: 32, background: "var(--gradient-gold)", boxShadow: `0 0 0 2px var(--color-surface), 0 0 0 3.5px ${accent}, var(--glow-gold)` }} />
+        <span aria-hidden className="absolute flex justify-center" style={{ left: x(cols.length - 1), top: cy(cols.length - 1, 0) - h / 2 - 28, width: w, color: accent }}>
+          <TrophyIcon className="w-6 h-6" />
+        </span>
       </div>
     </div>
   );

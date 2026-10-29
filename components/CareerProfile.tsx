@@ -1,14 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { DARTS, PLACE_LABEL, STAGES, START_LEVELS, TIERS, dollars, type Career } from "@/lib/career";
+import { PLACE_LABEL, TIERS, dollars, type Career } from "@/lib/career";
 import { nextRank, rankOf } from "@/lib/careerGoals";
 import { lifeOf, rivalOf, seasonOf, sponsorLogo, weekInSeason, WEEKS_PER_SEASON } from "@/lib/careerLife";
-import { levelLabel } from "./careerFormat";
 import { PokalCard, RankBadge } from "./CareerTrophy";
 import { CharacterFace } from "./CharacterFigure";
 import { TrophyCabinet } from "./TrophyCabinet";
 import { RankingList } from "./RankingList";
+import { OpponentPortrait } from "./OpponentCard";
+import { Sheet } from "./ui/Sheet";
+import { Button } from "./ui/Button";
+import { CheckIcon } from "./icons";
+import { LY_REGULARS } from "@/lib/opponents";
+import { chooseRival, challengeRival } from "@/lib/careerWorld";
+import { meritsOf } from "@/lib/merits";
 import { FOCUS_RING } from "./ui/focus";
 
 /** One number with its name under it. */
@@ -35,13 +41,15 @@ const TABS: { id: ProfileTab; label: string }[] = [
  * Who the player is in the career: the face in a ring that fills towards the next title, and three tabs: the overview (the numbers of the
  * career, the rival, the sponsor), the seasons with the last tournaments, and the cups, in the cabinet and as cards.
  */
-export function CareerProfile({ career, tab: first = "oversikt" }: { career: Career; tab?: ProfileTab }) {
+export function CareerProfile({ career, tab: first = "oversikt", commit, onChallenge }: { career: Career; tab?: ProfileTab; commit?: (c: Career) => void; /** Goes to the duel when the rival has been challenged. */ onChallenge?: () => void }) {
   const [tab, setTab] = useState<ProfileTab>(first);
+  const [rivalSheet, setRivalSheet] = useState<"rival" | "pick" | "merits" | null>(null);
   const next = nextRank(career);
-  const darts = DARTS.find((d) => d.id === career.profile.darts)?.name ?? "";
   const life = lifeOf(career);
   const rival = rivalOf(career);
-  const startName = START_LEVELS.find((l) => l.key === career.startLevel)?.name ?? levelLabel(career.skillMed);
+  const rec = career.rivals?.[rival.name];
+  const metRival = !!rec && rec.w + rec.l > 0;
+  const merits = meritsOf(career);
   const progress = next ? Math.min(1, career.points / next.min) : 1;
   return (
     <div className="space-y-4">
@@ -90,34 +98,35 @@ export function CareerProfile({ career, tab: first = "oversikt" }: { career: Car
           <dl className="pf-card">
             <div className="pf-row">
               <dt>Sesong</dt>
-              <dd>
-                {seasonOf(life.week)} · uke {weekInSeason(life.week)} av {WEEKS_PER_SEASON}
-              </dd>
-            </div>
-            <div className="pf-row">
-              <dt>Utvikling</dt>
-              <dd>
-                {startName === levelLabel(career.skillMed) ? levelLabel(career.skillMed) : `${startName} → ${levelLabel(career.skillMed)}`}
-                <small>
-                  {career.training.length} treningsøkter · {career.played} turneringer
-                </small>
+              <dd className="pf-season">
+                {seasonOf(life.week)}
+                <span className="season-ticks" role="img" aria-label={`Uke ${weekInSeason(life.week)} av ${WEEKS_PER_SEASON}`}>
+                  {Array.from({ length: WEEKS_PER_SEASON }, (_, i) => (
+                    <i key={i} className={i < weekInSeason(life.week) ? "on" : ""} />
+                  ))}
+                </span>
               </dd>
             </div>
             <div className="pf-row">
               <dt>Rival</dt>
               <dd>
-                {rival.name}
-                <small>
-                  {rival.style} · {career.rivals?.[rival.name] ? `${career.rivals?.[rival.name].w}–${career.rivals?.[rival.name].l}` : "ikke møtt"}
-                </small>
-              </dd>
-            </div>
-            <div className="pf-row">
-              <dt>Rykte</dt>
-              <dd>
-                <span className="pf-bar" role="img" aria-label={`Rykte ${life.reputation} av 10`}>
-                  <i style={{ width: `${life.reputation * 10}%` }} />
-                </span>
+                {metRival || life.rivalPick ? (
+                  <button type="button" className={`pf-rival tactile ${FOCUS_RING}`} onClick={() => setRivalSheet("rival")}>
+                    <span className="pf-rival-face">
+                      <OpponentPortrait name={rival.name} />
+                    </span>
+                    <span>
+                      {rival.name}
+                      {metRival && (
+                        <small>
+                          {rec!.w}–{rec!.l}
+                        </small>
+                      )}
+                    </span>
+                  </button>
+                ) : (
+                  <Button onClick={() => setRivalSheet("pick")}>Velg rival</Button>
+                )}
               </dd>
             </div>
             {life.sponsor && (
@@ -134,12 +143,16 @@ export function CareerProfile({ career, tab: first = "oversikt" }: { career: Car
               </div>
             )}
             <div className="pf-row">
-              <dt>Rom</dt>
-              <dd>{STAGES[career.room].name}</dd>
+              <dt>Treningsrom</dt>
+              <dd>Nivå {career.room + 1}</dd>
             </div>
             <div className="pf-row">
-              <dt>Piler</dt>
-              <dd>{darts}</dd>
+              <dt>Meritter</dt>
+              <dd>
+                <button type="button" className={`pf-link tactile ${FOCUS_RING}`} onClick={() => setRivalSheet("merits")}>
+                  {merits.filter((m) => m.done).length} av {merits.length} ›
+                </button>
+              </dd>
             </div>
           </dl>
         </div>
@@ -181,6 +194,81 @@ export function CareerProfile({ career, tab: first = "oversikt" }: { career: Car
             </>
           )}
         </div>
+      )}
+
+      {rivalSheet === "rival" && (
+        <Sheet title={rival.name} onClose={() => setRivalSheet(null)}>
+          <div className="space-y-3">
+            <div className="pf-rival-big">
+              <OpponentPortrait name={rival.name} />
+            </div>
+            <p style={{ color: "var(--color-text-2)", textAlign: "center" }}>
+              {rival.style}
+              {metRival ? ` · ${rec!.w}–${rec!.l}` : ""}
+            </p>
+            <Button
+              block
+              variant="primary"
+              disabled={!!career.active || !!career.challenge}
+              onClick={() => {
+                setRivalSheet(null);
+                commit?.(challengeRival(career, Math.floor(Math.random() * 2 ** 31)));
+                onChallenge?.();
+              }}
+            >
+              Utfordre til duell
+            </Button>
+            {(career.active || career.challenge) && (
+              <p className="info-line" style={{ paddingInline: 0, textAlign: "center" }}>
+                Fullfør det som pågår først
+              </p>
+            )}
+            <Button block onClick={() => setRivalSheet("pick")}>
+              Bytt rival
+            </Button>
+          </div>
+        </Sheet>
+      )}
+      {rivalSheet === "pick" && (
+        <Sheet title="Velg rival" onClose={() => setRivalSheet(null)}>
+          <ul className="pf-pick">
+            {LY_REGULARS.filter((r) => r.name.toLowerCase() !== career.player.trim().toLowerCase() && !life.world.retired.includes(r.name)).map((r) => (
+              <li key={r.name}>
+                <button
+                  type="button"
+                  className={`pf-pick-row tactile ${FOCUS_RING}`}
+                  aria-pressed={r.name === rival.name && !!life.rivalPick}
+                  onClick={() => {
+                    commit?.(chooseRival(career, r.name));
+                    setRivalSheet(null);
+                  }}
+                >
+                  <span className="pf-rival-face">
+                    <OpponentPortrait name={r.name} />
+                  </span>
+                  <b>{r.name}</b>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </Sheet>
+      )}
+      {rivalSheet === "merits" && (
+        <Sheet title={`Meritter · ${merits.filter((m) => m.done).length} av ${merits.length}`} onClose={() => setRivalSheet(null)}>
+          <ul className="pf-merits">
+            {merits.map((m) => (
+              <li key={m.id} className={m.done ? "done" : ""}>
+                <span aria-hidden className="pf-merit-mark">
+                  {m.done ? <CheckIcon className="w-4 h-4" /> : null}
+                </span>
+                <span className="min-w-0">
+                  <b>{m.name}</b>
+                  <small>{m.about}</small>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Sheet>
       )}
 
       {tab === "rangering" && (

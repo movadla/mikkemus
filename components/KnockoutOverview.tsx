@@ -78,7 +78,6 @@ export function queueAfter(t: Tournament, next: TournamentMatch | null): Tournam
 function NextUpCard({ tournament, match, queue, onPlay }: { tournament: Tournament; match: TournamentMatch; queue: TournamentMatch[]; onPlay: () => void }) {
   const records = useRoster();
   const chance = useMemo(() => winChanceFor(tournament, match, records), [tournament, match, records]);
-  const a = match.participantA!;
   const ratings = useMemo(() => ratingsOf(records), [records]);
   const [sideA, sideB] = posterSides(tournament, match, records, chance, ratings);
   return (
@@ -87,18 +86,6 @@ function NextUpCard({ tournament, match, queue, onPlay }: { tournament: Tourname
       <div className="mb-3">
         <MatchPoster a={sideA} b={sideB} tint={cupColor(tournament.cup?.kind)} />
       </div>
-      {chance !== null && Math.round(chance * 100) !== 50 && (
-        <div className="mb-4" role="img" aria-label={`Vinnersjanse: ${a} ${Math.round(chance * 100)} prosent`}>
-          <div className="flex justify-between tabular mb-1" style={{ fontSize: "var(--text-small)", fontWeight: 700 }}>
-            <span style={{ color: "var(--color-teal-strong)" }}>{Math.round(chance * 100)}</span>
-            <span style={{ color: "var(--color-gold-strong)" }}>{100 - Math.round(chance * 100)}</span>
-          </div>
-          <div className="flex rounded-full overflow-hidden" style={{ height: "0.5rem", background: "var(--color-cell)" }}>
-            <div style={{ width: `${chance * 100}%`, background: "var(--color-teal)" }} />
-            <div style={{ flex: 1, background: "var(--color-gold)" }} />
-          </div>
-        </div>
-      )}
       <button
         type="button"
         onClick={onPlay}

@@ -41,7 +41,7 @@ export function BracketTree({
   const first = rounds[0]?.matches.length ?? 1;
   const total = first * m.pitch;
   const colX = (ci: number) => ci * (m.w + m.gap);
-  const width = (rounds.length + 1) * (m.w + m.gap) - m.gap;
+  const width = rounds.length * (m.w + m.gap) - m.gap;
   const height = m.top + total + (bronze ? m.h + 44 : 0);
   const centerY = (ci: number, i: number) => {
     const pitch = total / rounds[ci].matches.length;
@@ -240,7 +240,7 @@ export function BracketTree({
   const final = rounds[lastCol]?.matches[0];
   const finalY = centerY(lastCol, 0);
   if (final) {
-    lines.push(<path key="cup" d={`M${colX(lastCol) + m.w},${finalY} H${colX(lastCol + 1)}`} stroke={final.winner ? accent : PLAIN} strokeDasharray={final.winner ? undefined : "4 4"} strokeWidth={final.winner ? 2.5 : 1.5} fill="none" style={glow(final.winner ? accent : "")} />);
+    lines.push(<path key="cup" d={`M${colX(lastCol) + m.w},${finalY} H${colX(lastCol) + m.w}`} stroke={final.winner ? accent : PLAIN} strokeDasharray={final.winner ? undefined : "4 4"} strokeWidth={final.winner ? 2.5 : 1.5} fill="none" style={glow(final.winner ? accent : "")} />);
   }
 
   return (
@@ -297,22 +297,13 @@ export function BracketTree({
             {r.label.toUpperCase()}
           </div>
         ))}
-        <div className="absolute text-center section-label" style={{ left: colX(rounds.length), top: 0, width: m.w, borderBottom: `1px solid ${accent}`, paddingBottom: 6, color: accent }}>
-          MESTER
-        </div>
         <svg width={width} height={height} className="absolute left-0 top-0 pointer-events-none" aria-hidden>
           {lines}
         </svg>
         {rounds.map((r, ci) => r.matches.map((match, i) => tie(match, colX(ci), centerY(ci, i) - m.h / 2)))}
-        <div
-          className="absolute flex flex-col items-center justify-center gap-1 text-center"
-          style={{ left: colX(rounds.length), top: finalY - m.h * 0.75, width: m.w, height: m.h * 1.5, borderRadius: 10, border: `1px ${tournament.winner ? "solid" : "dashed"} ${accent}`, color: accent, background: tournament.winner ? "color-mix(in srgb, var(--color-gold) 10%, transparent)" : "transparent", boxShadow: tournament.winner || final?.id === nextId ? "var(--glow-gold)" : undefined }}
-        >
+        <span className="absolute flex justify-center" aria-hidden style={{ left: colX(lastCol), top: finalY - m.h / 2 - (large ? 46 : 32), width: m.w, color: tournament.winner ? "var(--color-gold)" : accent, opacity: tournament.winner ? 1 : 0.8, filter: tournament.winner ? "drop-shadow(0 0 6px var(--color-gold))" : undefined }}>
           <TrophyIcon className={large ? "w-9 h-9" : "w-6 h-6"} />
-          <span className="font-display w-full px-2" style={{ lineHeight: 1.1, fontSize: large ? "var(--text-title)" : "var(--text-body)", color: tournament.winner ? "var(--color-cream)" : "var(--color-gold)" }}>
-            {tournament.winner ?? tournament.cup?.trophy ?? "Pokalen"}
-          </span>
-        </div>
+        </span>
         {bronze && (
           <>
             <div className="absolute section-label" style={{ left: colX(lastCol), top: m.top + total + 6, width: m.w, color: "var(--color-muted)" }}>

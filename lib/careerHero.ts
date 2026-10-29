@@ -26,7 +26,7 @@ export function heroFor(career: Career): Hero {
   return { kind: "enter", tier: enter };
 }
 
-/** "Semifinale" is "semifinalen" in a sentence; "Runde av 16" stays. */
+/** "Semifinale" is "semifinalen" in a sentence; "8-delsfinale" stays. */
 const inSentence = (round: string) => (round.toLowerCase().endsWith("finale") ? `${round.toLowerCase()}n` : round.toLowerCase());
 
 /** What the main button says: one word, and a small line under it for where it leads. */

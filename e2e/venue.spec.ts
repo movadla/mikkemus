@@ -53,6 +53,8 @@ test.describe("sted for turneringen", () => {
     await expect(page.getByRole("heading", { name: "EM i dart" })).toBeVisible();
     await page.getByRole("button", { name: "TREKK" }).click({ timeout: 10_000 });
     await expect(page.getByLabel("Favoritter")).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByLabel("Favoritter").getByText(/^#\d+/).first()).toBeVisible();
+    // Three favourites, each a portrait with a name, and no ranking number under them.
+    await expect(page.getByLabel("Favoritter").locator("img").first()).toBeVisible();
+    await expect(page.getByLabel("Favoritter").getByText(/^#\d+/)).toHaveCount(0);
   });
 });

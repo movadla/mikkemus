@@ -96,7 +96,8 @@ export function CompareRows({ me, opponent, med }: { me: Me; opponent: string; m
   const team = !!me.members;
   const rows: Row[] = [
     ...(team ? [] : [{ label: "Verdensrang", mine: mine.world, theirs: theirs.world, better: "low" as const, format: (n: number) => `#${n}` }]),
-    ...a.map((s, i) => ({ label: s.label, mine: s.value, theirs: b[i].value, better: s.better, format: s.suffix ? (n: number) => `${n}${s.suffix}` : undefined })),
+    // Only the first figure of the game (the hit share, or the average): the chance of winning says the rest, and it is the bigger thing on the screen.
+    ...a.slice(0, 1).map((s, i) => ({ label: s.label, mine: s.value, theirs: b[i].value, better: s.better, format: s.suffix ? (n: number) => `${n}${s.suffix}` : undefined })),
   ];
   return (
     <div className="tape-rows" role="table" aria-label="Du mot motstanderen">

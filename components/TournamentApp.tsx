@@ -42,6 +42,7 @@ import { MikkeMusApp } from "./MikkeMusApp";
 import { TournamentHistoryScreen } from "./TournamentHistoryScreen";
 import { TournamentSetupScreen } from "./TournamentSetupScreen";
 import { TournamentOpening } from "./TournamentOpening";
+import { rankField } from "@/lib/fieldRank";
 import { RoomBackdrop } from "./RoomBackdrop";
 import { picturesFor } from "./eventPictures";
 import { defaultVenue, saveVenue, venueOf, venueOfTournament, type VenueId } from "@/lib/venues";
@@ -220,6 +221,8 @@ function TournamentInner({ onExitToHome, career, onVenue }: { onExitToHome: () =
   /** The draw's order is the seeding: strongest first, by what the matches say about each. */
   function seededOrder(): Participant[] {
     const list = pendingParticipants ?? [];
+    // In the career the seeding is the ranking of the field by strength: the same list the opening shows.
+    if (career) return rankField(list, { name: career.me?.name ?? "", med: career.me?.med ?? 37 });
     const rules = RULES[baseOf(pendingVariant)];
     const strength = strengthMap(roster, list, { target: rules.target, ringChoice: rules.ringOnOwnNumberIsChoice });
     return seedByStrength(list, (name) => strength.get(name) ?? 0.5);

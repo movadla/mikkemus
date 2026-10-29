@@ -17,7 +17,7 @@ import { publishShow } from "@/lib/liveMatch";
 import { medOfLevel } from "@/lib/opponentStats";
 import { opponentOf } from "@/lib/opponents";
 import { CharacterFace } from "./CharacterFigure";
-import { OpponentPortrait, OpponentProfile, ranksOf, type Me } from "./OpponentCard";
+import { OpponentPortrait, OpponentProfile, type Me } from "./OpponentCard";
 import { Avatar, TeamsContext } from "./ui/Avatar";
 import { TeamPortrait } from "./OpponentCard";
 import { Sheet } from "./ui/Sheet";
@@ -247,10 +247,9 @@ export function DrawScreen({
                 .map(({ p }) => (
                   <div key={p.name} className="text-center min-w-0">
                     {p.members ? <TeamPortrait members={p.members.map((m) => m.name)} label={`Se ${p.name}`} onClick={career?.me ? () => setProfileFor(p.name) : undefined} /> : <OpponentPortrait name={p.name} onClick={career?.me ? () => setProfileFor(p.name) : undefined} />}
-                    <span className="block truncate font-display mt-1" style={{ fontSize: "var(--text-small)", color: "var(--color-cream)" }}>
+                    <span className="block truncate font-display mt-1" style={{ fontSize: "var(--text-micro)", color: "var(--color-cream)" }}>
                       {p.name}
                     </span>
-                    {!p.members && <span className="opp-chip opp-chip-gold">#{ranksOf(p.name, opponentOf(p.name).nat, opponentOf(p.name).med).world}</span>}
                   </div>
                 ))}
             </div>

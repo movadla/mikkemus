@@ -1468,32 +1468,15 @@ button {
   }
 }
 
-/* The foil cards of the line-up: they turn in with a flash, and the foil keeps catching the light. */
+/* The foil cards of the line-up: they rise and fade in. Only transform and opacity move, so the phone can do it on the graphics chip and it stays smooth; the foil is a still sheen. */
 @keyframes foil-in {
   from {
-    transform: perspective(700px) rotateY(180deg) scale(0.5);
+    transform: translateY(28px) scale(0.94);
     opacity: 0;
-    filter: brightness(3);
-  }
-  70% {
-    transform: perspective(700px) rotateY(-20deg) scale(1.08);
-    opacity: 1;
-    filter: brightness(1.6);
   }
   to {
-    transform: perspective(700px) rotateY(0) scale(1);
+    transform: none;
     opacity: 1;
-    filter: none;
-  }
-}
-
-@keyframes foil-sweep {
-  0%,
-  100% {
-    background-position: 0 0, 0% 0%;
-  }
-  50% {
-    background-position: 0 0, 100% 100%;
   }
 }
 
@@ -1629,13 +1612,10 @@ button {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  mix-blend-mode: overlay;
-  opacity: 0.45;
+  opacity: 0.3;
   background:
-    radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.45), transparent 42%),
-    linear-gradient(115deg, transparent 20%, rgba(255, 60, 170, 0.35) 35%, rgba(60, 255, 235, 0.35) 50%, rgba(255, 240, 60, 0.35) 65%, transparent 80%);
-  background-size: 100% 100%, 220% 220%;
-  animation: foil-sweep 3.2s ease-in-out infinite;
+    radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.4), transparent 42%),
+    linear-gradient(115deg, transparent 20%, rgba(255, 60, 170, 0.28) 35%, rgba(60, 255, 235, 0.28) 50%, rgba(255, 240, 60, 0.28) 65%, transparent 80%);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -8231,3 +8211,55 @@ button.season-strip { min-height: 2.75rem; padding-block: 0; }
 
 /* The level of the ladder, in a gold circle. */
 .drill-level-badge { display: grid; place-items: center; width: 2rem; height: 2rem; flex-shrink: 0; border-radius: 50%; background: var(--color-gold); color: #1b1405; font-weight: 800; font-size: 0.85rem; }
+
+/* The chance of winning is the big thing before a match. */
+.chance-ring { width: 8.6rem; height: 8.6rem; }
+.chance-ring::before { inset: 0.5rem; }
+.chance-ring .chance-n { font-size: 2.3rem; }
+.chance-cap { font-size: var(--text-small); }
+
+/* The draw in the career: names whole, in a smaller type, the ranking number small after them; the favourites in small frames without a number. */
+.draw-lines .draw-card-front { gap: 0.3rem; padding: 0 0.5rem; font-size: 0.8rem; }
+.draw-lines .draw-card-front > span:not(.draw-name):not(.draw-card-me) { font-size: 0.62rem; flex: none; }
+.draw-lines .draw-name { gap: 0.3rem; }
+.fav-compact { max-width: 11.5rem; gap: 0.4rem; }
+.fav-compact .opp-frame { padding: 2px; }
+
+/* The ranking in an opening: a title, and a row for each with a small face beside it. */
+.ev-rank-title { color: var(--color-text-2); font-size: var(--text-micro); font-weight: 800; letter-spacing: 0.16em; }
+.ev-rank { width: min(17rem, 100%); }
+.ev-rank li { grid-template-columns: 1.4rem 2.2rem 1fr; gap: 0.4rem; padding: 0.2rem 0.6rem; }
+.ev-rank-face { display: block; width: 2rem; font-style: normal; }
+.ev-rank-face .opp-frame { padding: 1.5px; }
+
+/* The training panel: three rows of one line each; the pay is a badge, the words are small. */
+.train { display: grid; gap: 0.5rem; }
+.train-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.65rem; border-radius: var(--radius-m); border: 1px solid var(--color-gold); background: color-mix(in srgb, var(--color-gold) 10%, var(--color-surface)); }
+.train-row-done { border-color: var(--color-border); background: var(--color-surface); opacity: 0.85; }
+.train-line { display: block; font-size: 0.82rem; line-height: 1.25; color: var(--color-cream); }
+.train-line b { font-weight: 800; }
+.train-line em { font-style: normal; color: var(--color-text-2); font-size: 0.75rem; }
+.train-badge { flex: none; padding: 0.15rem 0.55rem; border-radius: var(--radius-pill); background: var(--color-gold); color: #1b1405; font-weight: 800; font-size: 0.78rem; }
+.train .drill-kicker { font-size: 0.62rem; }
+.upgrade-picture { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border-radius: var(--radius-m); border: 1px solid var(--color-border); }
+
+/* The overview of the profile: the season as its number and ten dots, the rival as a face to press, merits as a link. */
+.pf-season { display: flex; align-items: center; justify-content: flex-end; gap: 0.6rem; }
+.pf-rival { display: inline-flex; align-items: center; gap: 0.5rem; min-height: 2.75rem; padding: 0 0.2rem; background: none; border: 0; color: var(--color-cream); text-align: right; font-weight: 700; }
+.pf-rival small { display: block; color: var(--color-gold-strong); }
+.pf-rival-face { display: block; width: 2.2rem; flex: none; }
+.pf-rival-face .opp-frame { padding: 1.5px; }
+.pf-rival-big { width: 7rem; margin: 0 auto; }
+.pf-link { min-height: 2.75rem; padding: 0 0.2rem; background: none; border: 0; color: var(--color-teal); font-weight: 700; }
+.pf-pick { display: grid; gap: 0.4rem; padding: 0; margin: 0; list-style: none; max-height: 60dvh; overflow-y: auto; }
+.pf-pick-row { display: flex; align-items: center; gap: 0.7rem; width: 100%; min-height: 3rem; padding: 0.3rem 0.7rem; border-radius: var(--radius-m); background: var(--color-surface); border: 1px solid var(--color-border); color: var(--color-cream); text-align: left; }
+.pf-pick-row[aria-pressed="true"] { border-color: var(--color-gold); }
+.pf-merits { display: grid; gap: 0.4rem; padding: 0; margin: 0; list-style: none; max-height: 62dvh; overflow-y: auto; }
+.pf-merits li { display: flex; align-items: center; gap: 0.7rem; padding: 0.45rem 0.7rem; border-radius: var(--radius-m); background: var(--color-surface); border: 1px solid var(--color-border); color: var(--color-text-2); }
+.pf-merits li.done { border-color: var(--color-gold); color: var(--color-cream); }
+.pf-merits b { display: block; font-size: var(--text-small); }
+.pf-merits small { display: block; font-size: 0.72rem; color: var(--color-muted); }
+.pf-merit-mark { display: grid; place-items: center; width: 1.5rem; height: 1.5rem; flex: none; border-radius: 50%; border: 1.5px solid var(--color-border); color: #1b1405; }
+.pf-merits li.done .pf-merit-mark { background: var(--color-gold); border-color: var(--color-gold); }
+.pf-row dd.pf-season { flex-direction: row; flex-wrap: nowrap; white-space: nowrap; }
+.pf-row dd.pf-season .season-ticks { display: inline-flex; flex-wrap: nowrap; }

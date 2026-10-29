@@ -6,6 +6,7 @@ import type { Kit } from "@/lib/teamKit";
 import { KitStage } from "./TeamKit";
 import { Avatar } from "./ui/Avatar";
 import { formatOdds } from "@/lib/odds/price";
+import { faceSrc, opponentOf } from "@/lib/opponents";
 
 export type LineupSide = {
   name: string;
@@ -33,7 +34,10 @@ export type LineupSide = {
 };
 
 /** The bars start to grow once the cards have turned in. */
-const GROW_AFTER_MS = 1500;
+const GROW_AFTER_MS = 900;
+
+/** The longest the cards wait for the pictures: after this they come in with what has loaded, so the screen is never held back. */
+const PICTURES_WAIT_MS = 700;
 
 type Row = { label: string; a: number; b: number; low: boolean; fmt: (n: number) => string; /** What is written for each side when it is not just the number («2 av 8»). */ shown?: [string, string] };
 
@@ -64,14 +68,42 @@ const share = (r: Row, v: number) => (r.low ? 1 / v / (1 / r.a + 1 / r.b) : r.a 
  */
 export function LineupIntro({ sides, onDone }: { sides: LineupSide[]; onDone: () => void }) {
   const [grow, setGrow] = useState(false);
+  // The cards come in once the faces are loaded and decoded (or after a short wait), so they never turn in empty and then jump to the finished card.
+  const [ready, setReady] = useState(false);
   const rows = compareRows(sides);
 
   useEffect(() => {
-    const t = setTimeout(() => setGrow(true), rows.length > 0 ? GROW_AFTER_MS : 0);
-    return () => clearTimeout(t);
-    // The bars grow once, for the sides the intro was opened with.
+    let done = false;
+    const go = () => {
+      if (!done) {
+        done = true;
+        setReady(true);
+      }
+    };
+    const srcs = sides.map((s) => (s.kit ? null : s.photo ?? (s.isBot ? faceSrc(opponentOf(s.name).face) : null))).filter((x): x is string => !!x);
+    const timer = setTimeout(go, PICTURES_WAIT_MS);
+    Promise.all(
+      srcs.map((src) => {
+        const img = new Image();
+        img.src = src;
+        return img.decode().catch(() => undefined);
+      }),
+    ).then(() => {
+      clearTimeout(timer);
+      go();
+    });
+    return () => clearTimeout(timer);
+    // Once, for the sides the intro was opened with.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!ready) return;
+    const t = setTimeout(() => setGrow(true), rows.length > 0 ? GROW_AFTER_MS : 0);
+    return () => clearTimeout(t);
+    // The bars grow once, after the cards are in.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready]);
 
   const two = sides.length === 2;
   const sideAccent = (x: LineupSide) => (x.kit ? x.kit.primary : avatarAccent(x.name));
@@ -91,7 +123,8 @@ export function LineupIntro({ sides, onDone }: { sides: LineupSide[]; onDone: ()
           "--edge-fill-image": `linear-gradient(165deg, color-mix(in srgb, ${accent} 34%, var(--color-panel)) 0%, var(--color-panel) 72%)`,
           "--edge-accent": accent,
           boxShadow: "var(--elevation-3)",
-          animation: `foil-in 800ms ${i * 160}ms cubic-bezier(0.2,0.8,0.2,1) both`,
+          animation: ready ? `foil-in 420ms ${i * 90}ms cubic-bezier(0.2,0.8,0.2,1) both` : "none",
+          opacity: ready ? undefined : 0,
           isolation: "isolate",
         } as React.CSSProperties}
       >
@@ -137,13 +170,13 @@ export function LineupIntro({ sides, onDone }: { sides: LineupSide[]; onDone: ()
             {sides.map(card)}
             <span
               className="absolute flex items-center justify-center font-display rounded-full"
-              style={{ left: "50%", top: "50%", width: 54, height: 54, marginLeft: -27, marginTop: -27, background: "var(--color-gold)", color: "#2b2000", fontSize: "var(--text-title)", animation: "lineup-vs 450ms 700ms cubic-bezier(0.2,0.9,0.3,1.3) both", zIndex: 5, border: "3px solid var(--color-bg)" }}
+              style={{ left: "50%", top: "50%", width: 54, height: 54, marginLeft: -27, marginTop: -27, background: "var(--color-gold)", color: "#2b2000", fontSize: "var(--text-title)", animation: ready ? "lineup-vs 350ms 350ms cubic-bezier(0.2,0.9,0.3,1.3) both" : "none", opacity: ready ? undefined : 0, zIndex: 5, border: "3px solid var(--color-bg)" }}
             >
               VS
             </span>
           </div>
           {rows.length > 0 && (
-            <div className="w-full grid gap-3" style={{ animation: "lineup-count 400ms 1200ms ease-out both" }}>
+            <div className="w-full grid gap-3" style={{ animation: ready ? "lineup-count 300ms 600ms ease-out both" : "none", opacity: ready ? undefined : 0 }}>
               {rows.map((r, i) => {
                 const aBetter = r.low ? r.a < r.b : r.a > r.b;
                 const tie = r.a === r.b;
@@ -184,7 +217,7 @@ export function LineupIntro({ sides, onDone }: { sides: LineupSide[]; onDone: ()
         autoFocus
         onClick={onDone}
         className="glossy absolute rounded-full font-semibold outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]"
-        style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", left: "50%", bottom: "7%", transform: "translateX(-50%)", minHeight: "var(--control-lg)", padding: "0 2.5rem", fontSize: "var(--text-title)", animation: "lineup-count 400ms 900ms ease-out both" } as React.CSSProperties}
+        style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", left: "50%", bottom: "7%", transform: "translateX(-50%)", minHeight: "var(--control-lg)", padding: "0 2.5rem", fontSize: "var(--text-title)", animation: "lineup-count 300ms 500ms ease-out both" } as React.CSSProperties}
       >
         Fortsett
       </button>
