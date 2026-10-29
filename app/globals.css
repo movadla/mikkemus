@@ -8164,3 +8164,70 @@ button.season-strip { min-height: 2.75rem; padding-block: 0; }
 
 /* The home fits the screen exactly: the screen has 1 rem above and 2.5 rem below, and the home takes what is left (it used to be 1.5 rem too tall, so it scrolled). */
 .career-home { min-height: calc(100dvh - 3.5rem - var(--nav-space, 0px) - env(safe-area-inset-bottom, 0px)); }
+
+/* The places to play in, as a row of pictures. */
+.venue-row { display: flex; gap: 0.6rem; overflow-x: auto; padding: 0.2rem 0.1rem 0.8rem; margin-bottom: 0.6rem; scroll-snap-type: x proximity; }
+.venue-tile { position: relative; flex: 0 0 8.6rem; height: 6.2rem; padding: 0; border-radius: var(--radius-m); overflow: hidden; border: 2px solid var(--color-border); background: var(--color-surface); text-align: left; scroll-snap-align: start; }
+.venue-tile[aria-checked="true"] { border-color: var(--color-teal); box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-teal) 40%, transparent); }
+.venue-tile img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.venue-name { position: absolute; inset: auto 0 0 0; display: grid; padding: 1.2rem 0.5rem 0.4rem; background: linear-gradient(transparent, rgba(0, 0, 0, 0.8)); color: var(--color-cream); }
+.venue-name b { font-size: var(--text-small); line-height: 1.15; }
+.venue-name small { font-size: 0.68rem; color: var(--color-text-2); line-height: 1.2; }
+
+/* The field of a tournament outside the career, in its opening: the faces in a row. */
+.ev-faces { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem; padding: 0; margin: 0; list-style: none; }
+.ev-more { display: grid; place-items: center; min-width: 2.5rem; height: 2.5rem; border-radius: 50%; background: var(--color-surface); border: 1px solid var(--color-border); color: var(--color-cream); font-weight: 800; font-size: var(--text-small); }
+
+/* The pairs of a draw outside the career let the picture of the place show through. */
+.room-over .draw-row { background: color-mix(in srgb, var(--color-panel) 78%, transparent) !important; backdrop-filter: blur(6px); }
+
+/* The cup on the winner screen of a tournament, over the winner. */
+.champion-cup { width: 8.5rem; margin: 0 auto 0.5rem; }
+
+/* The name of a game or of darts, centred; what it is stands behind a small i. */
+.game-row-wrap { position: relative; }
+.game-row-wrap .game-row { width: 100%; justify-content: center; align-items: center; padding-inline: 3rem; }
+.dart-card-wrap { position: relative; }
+.dart-card-wrap .dart-card { width: 100%; height: 100%; }
+.info-dot { position: absolute; top: 50%; right: 0.2rem; transform: translateY(-50%); display: grid; place-items: center; width: 2.75rem; height: 2.75rem; border-radius: 50%; background: none; border: 0; color: var(--color-text-2); }
+.info-dot > span { display: grid; place-items: center; width: 1.45rem; height: 1.45rem; border-radius: 50%; border: 1.5px solid currentColor; font-family: var(--font-display); font-style: italic; font-weight: 700; font-size: 0.85rem; line-height: 1; }
+.info-dot[aria-expanded="true"] { color: var(--color-teal); }
+.info-dot.dart-info { top: 0.1rem; right: 0.1rem; transform: none; }
+.info-line { padding: 0.5rem 0.9rem; color: var(--color-text-2); font-size: var(--text-small); }
+
+/* The ranking of the field in an opening: the favourite in a frame, the next ones in a short list, and the player's own place. */
+.ev-fav { display: grid; justify-items: center; gap: 0.3rem; width: 5.2rem; }
+.ev-fav b { color: var(--color-cream); font-size: var(--text-small); text-align: center; line-height: 1.15; }
+.ev-rank { display: grid; gap: 0.3rem; width: min(15rem, 100%); padding: 0; margin: 0; list-style: none; }
+.ev-rank li { display: grid; grid-template-columns: 1.6rem 1fr; align-items: center; padding: 0.25rem 0.6rem; border-radius: var(--radius-s); background: color-mix(in srgb, var(--color-bg) 55%, transparent); border: 1px solid var(--color-border); color: var(--color-cream); font-size: var(--text-small); text-align: left; }
+.ev-rank li > span { color: var(--color-text-2); font-weight: 700; }
+.ev-rank li.me { border-color: var(--color-gold); color: var(--color-gold-strong); }
+.ev-rank li.gap { background: none; border: 0; padding-block: 0; line-height: 0.8; }
+
+/* The title card of a cup: the trophy stands a little out of the card. */
+.cup-banner { position: relative; display: flex; align-items: center; gap: 0.9rem; min-height: 4rem; margin: 1.4rem 0 1rem; padding: 0.6rem 1rem 0.6rem 4.4rem; border-radius: var(--radius-m); background: linear-gradient(90deg, color-mix(in srgb, var(--cup) 20%, var(--color-surface)), var(--color-surface) 80%); border: 1px solid color-mix(in srgb, var(--cup) 45%, var(--color-border)); box-shadow: var(--elevation-1); }
+.cup-banner-trophy { position: absolute; left: 0.7rem; bottom: 0.2rem; width: 2.9rem; height: 5.4rem; display: block; }
+.cup-banner-trophy .t3d, .cup-banner-trophy .t3d-art, .cup-banner-trophy .t3d-photo { width: 100%; height: 100%; }
+.cup-banner-trophy .t3d-photo img { width: auto; height: 100%; max-width: 100%; margin: 0 auto; }
+.cup-banner-trophy .t3d-art svg { height: 100%; width: auto; }
+.cup-banner-name { font-size: var(--text-title); line-height: 1.1; }
+.cup-banner-sub { color: var(--cup); font-size: var(--text-small); font-weight: 600; }
+.cup-banner-large { min-height: 5rem; padding-left: 5.4rem; }
+.cup-banner-large .cup-banner-trophy { width: 3.6rem; height: 6.8rem; }
+.cup-banner-large .cup-banner-name { font-size: var(--text-num); }
+/* The draw as one line per match: the two sides and "mot" between, the player's own line framed in gold. */
+.draw-lines { display: grid; gap: 0.4rem; }
+.draw-lines .draw-card { aspect-ratio: auto; height: 3rem; }
+.draw-lines .draw-card-front { flex-direction: row; justify-content: space-between; align-items: center; gap: 0.4rem; padding: 0 0.7rem; font-size: var(--text-small); }
+.draw-lines .draw-name { width: auto; flex: 1; min-width: 0; justify-content: flex-start; }
+.draw-lines .draw-name:last-of-type { flex-direction: row-reverse; justify-content: flex-start; }
+.draw-lines .draw-name:last-of-type .draw-nm { text-align: right; }
+.draw-lines .draw-card-me { top: 0.1rem; left: 0.5rem; right: auto; font-size: 0.55rem; }
+/* The favourites, in small frames. */
+.fav-compact { max-width: 15rem; margin-inline: auto; }
+
+/* The way back and the money stay at the top when a page of the career scrolls. */
+.career-hud-top { position: sticky; top: 0; z-index: 25; padding-block: 0.5rem; margin-block: -0.5rem 0; background: linear-gradient(var(--color-bg) 55%, transparent); }
+
+/* The level of the ladder, in a gold circle. */
+.drill-level-badge { display: grid; place-items: center; width: 2rem; height: 2rem; flex-shrink: 0; border-radius: 50%; background: var(--color-gold); color: #1b1405; font-weight: 800; font-size: 0.85rem; }

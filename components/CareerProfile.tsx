@@ -8,7 +8,7 @@ import { levelLabel } from "./careerFormat";
 import { PokalCard, RankBadge } from "./CareerTrophy";
 import { CharacterFace } from "./CharacterFigure";
 import { TrophyCabinet } from "./TrophyCabinet";
-import { Button } from "./ui/Button";
+import { RankingList } from "./RankingList";
 import { FOCUS_RING } from "./ui/focus";
 
 /** One number with its name under it. */
@@ -23,18 +23,19 @@ function Stat({ label, value }: { label: string; value: string }) {
   );
 }
 
-export type ProfileTab = "oversikt" | "sesonger" | "pokaler";
+export type ProfileTab = "oversikt" | "sesonger" | "pokaler" | "rangering";
 const TABS: { id: ProfileTab; label: string }[] = [
   { id: "oversikt", label: "Oversikt" },
   { id: "sesonger", label: "Sesonger" },
   { id: "pokaler", label: "Pokaler" },
+  { id: "rangering", label: "Rangering" },
 ];
 
 /**
  * Who the player is in the career: the face in a ring that fills towards the next title, and three tabs: the overview (the numbers of the
  * career, the rival, the sponsor), the seasons with the last tournaments, and the cups, in the cabinet and as cards.
  */
-export function CareerProfile({ career, onRank, tab: first = "oversikt" }: { career: Career; onRank?: () => void; tab?: ProfileTab }) {
+export function CareerProfile({ career, tab: first = "oversikt" }: { career: Career; tab?: ProfileTab }) {
   const [tab, setTab] = useState<ProfileTab>(first);
   const next = nextRank(career);
   const darts = DARTS.find((d) => d.id === career.profile.darts)?.name ?? "";
@@ -82,15 +83,9 @@ export function CareerProfile({ career, onRank, tab: first = "oversikt" }: { car
 
       {tab === "oversikt" && (
         <div className="space-y-4" role="tabpanel" aria-label="Oversikt">
-          {onRank && (
-            <Button block onClick={onRank}>
-              Se rangeringen
-            </Button>
-          )}
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             <Stat label="Turneringer" value={String(career.played)} />
             <Stat label="Titler" value={String(career.titles)} />
-            <Stat label="Treffsikkerhet" value={levelLabel(career.skillMed)} />
           </div>
           <dl className="pf-card">
             <div className="pf-row">
@@ -185,6 +180,12 @@ export function CareerProfile({ career, onRank, tab: first = "oversikt" }: { car
               </ul>
             </>
           )}
+        </div>
+      )}
+
+      {tab === "rangering" && (
+        <div role="tabpanel" aria-label="Rangering">
+          <RankingList career={career} />
         </div>
       )}
 

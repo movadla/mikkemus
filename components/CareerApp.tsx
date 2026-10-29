@@ -21,7 +21,8 @@ import { deleteCareer, loadCareers, mergeCareers, readLocalCareers, saveCareer }
 import { ensurePlayer, useRoster } from "@/lib/storage";
 import { gameName, gameOf, type CareerGame } from "@/lib/careerGame";
 import { GameChoice } from "./GameChoice";
-import type { DrillId } from "@/lib/drills";
+import { InfoDot } from "./ui/InfoDot";
+import type { TrainTarget } from "./TrainingPanel";
 import { sameName } from "@/lib/people";
 import { TextField } from "./ui/TextField";
 import { applyTheme } from "@/lib/theme";
@@ -43,6 +44,7 @@ import { OverRoom } from "./RoomBackdrop";
 import { CharacterFace, CharacterFigure } from "./CharacterFigure";
 import { CHARACTERS, DEFAULT_CHARACTER, characterOf } from "@/lib/characters";
 import { ScreenTop } from "./ScreenTop";
+import { StickyAction } from "./StickyAction";
 import { TournamentApp } from "./TournamentApp";
 import { Avatar, CareerFaceContext, TeamsContext } from "./ui/Avatar";
 import { Button } from "./ui/Button";
@@ -76,7 +78,7 @@ function CareerAppInner({ onExitToHome }: { onExitToHome: () => void }) {
   const [id, setId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [screen, setScreen] = useState<"hub" | "play" | "challenge" | "training">("hub");
-  const [drill, setDrill] = useState<DrillId>("t20");
+  const [drill, setDrill] = useState<TrainTarget>("t20");
 
   useEffect(() => {
     let live = true;
@@ -181,7 +183,7 @@ function CareerAppInner({ onExitToHome }: { onExitToHome: () => void }) {
   if (screen === "challenge" && career.challenge) {
     return <ChallengePlay career={career} commit={commit} onHub={() => setScreen("hub")} />;
   }
-  return <Hub career={career} onBack={() => setId(null)} onPlay={() => setScreen("play")} onChallenge={() => setScreen("challenge")} onTrain={(id) => {
+  return <Hub career={career} onBack={() => setId(null)} onExit={onExitToHome} onPlay={() => setScreen("play")} onChallenge={() => setScreen("challenge")} onTrain={(id) => {
     setDrill(id);
     setScreen("training");
   }} commit={commit} onDelete={() => remove(career)} />;
@@ -271,6 +273,7 @@ function NewCareerSteps({ taken, onBack, onCreate }: NewCareerProps) {
   const [gameSettings, setGameSettings] = useState<{ game: CareerGame; doubleOut: boolean }>({ game: "mm", doubleOut: true });
   // The game and the darts start as they are most likely wanted; changing them is one tap away, not three cards in the way.
   const [changing, setChanging] = useState(false);
+  const [dartInfo, setDartInfo] = useState<DartsId | null>(null);
   // A new player typed in here: the career is for someone, and that someone may not be in the list yet.
   const [adding, setAdding] = useState(false);
   const [nameInput, setNameInput] = useState("");
@@ -319,14 +322,17 @@ function NewCareerSteps({ taken, onBack, onCreate }: NewCareerProps) {
             <p className="section-label mb-2">PILER</p>
             <div className="dart-pick mb-5" role="radiogroup" aria-label="Piler">
               {DARTS.map((d) => (
-                <button key={d.id} type="button" role="radio" aria-checked={darts === d.id} onClick={() => setDarts(d.id)} className={`dart-card tactile ${FOCUS_RING}`}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={d.picture} alt="" className="dart-card-img" draggable={false} />
-                  <span className="level-name">{d.name}</span>
-                  <span className="game-about">{d.about}</span>
-                </button>
+                <div key={d.id} className="dart-card-wrap">
+                  <button type="button" role="radio" aria-checked={darts === d.id} onClick={() => setDarts(d.id)} className={`dart-card tactile ${FOCUS_RING}`}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={d.picture} alt="" className="dart-card-img" draggable={false} />
+                    <span className="level-name">{d.name}</span>
+                  </button>
+                  <InfoDot label={`Om ${d.name}`} open={dartInfo === d.id} onClick={() => setDartInfo(dartInfo === d.id ? null : d.id)} className="dart-info" />
+                </div>
               ))}
             </div>
+            {dartInfo && <p className="info-line mb-3">{DARTS.find((d) => d.id === dartInfo)?.about}</p>}
             </>
           ) : (
             <div className="card-plain mb-3" style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.8rem 0.9rem", borderRadius: "var(--radius-m)", background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
@@ -348,9 +354,9 @@ function NewCareerSteps({ taken, onBack, onCreate }: NewCareerProps) {
             </p>
             <p style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>Fredagskveld på puben · Gratis</p>
           </div>
-          <Button block variant="primary" size="lg" onClick={() => onCreate(record.name, level, { home: "garage", darts, character, ...gameSettings })}>
+          <StickyAction onClick={() => onCreate(record.name, level, { home: "garage", darts, character, ...gameSettings })} ready reason={null}>
             Start karrieren
-          </Button>
+          </StickyAction>
         </div>
       </div>
     );
@@ -391,9 +397,9 @@ function NewCareerSteps({ taken, onBack, onCreate }: NewCareerProps) {
             </div>
             <p className="char-pick-name">{characterOf(character).name}</p>
           </div>
-          <Button block variant="primary" size="lg" onClick={() => setStep(3)}>
+          <StickyAction onClick={() => setStep(3)} ready reason={null}>
             Neste
-          </Button>
+          </StickyAction>
         </div>
       </div>
     );
@@ -461,37 +467,54 @@ function NewCareerSteps({ taken, onBack, onCreate }: NewCareerProps) {
         <p className="level-about mb-6" aria-live="polite">
           {START_LEVELS.find((l) => l.key === level)?.about}
         </p>
-        <Button block variant="primary" size="lg" disabled={!player} onClick={() => setStep(2)}>
+        <StickyAction onClick={() => setStep(2)} ready={!!player} reason="Velg en spiller">
           Neste
-        </Button>
+        </StickyAction>
       </div>
     </div>
   );
 }
 
-/** Who is in the field, before the draw: the three strongest by name and face, and where the player stands among them, with the rival flagged. */
+/**
+ * Who is in the field, before the draw, as a ranking by strength: the picture of the favourite, the next ones in a list under it, and the player's own
+ * place (with dots over it when it is further down), so it is clear what the player is up against and where they stand.
+ */
 function FieldPreview({ career, field }: { career: Career; field: Participant[] }) {
   const strength = (p: Participant) => (p.members ? p.members.reduce((s, m) => s + medOfLevel(m.skill ?? 4), 0) / p.members.length : p.name === career.player ? career.skillMed : opponentOf(p.name).med);
-  const others = field.filter((p) => (p.members ? !p.members.some((m) => m.name === career.player) : p.name !== career.player));
-  const mine = field.find((p) => (p.members ? p.members.some((m) => m.name === career.player) : p.name === career.player));
-  if (others.length === 0) return null;
-  const me = mine ? (p: Participant) => strength(p) : () => career.skillMed;
-  const myStrength = mine ? me(mine) : career.skillMed;
-  const standing = 1 + others.filter((p) => strength(p) < myStrength).length;
-  const top = [...others].sort((x, y) => strength(x) - strength(y)).slice(0, 3);
-  const rival = rivalOf(career).name;
-  const hasRival = others.some((p) => p.name === rival);
+  const isMine = (p: Participant) => (p.members ? p.members.some((m) => m.name === career.player) : p.name === career.player);
+  if (field.filter((p) => !isMine(p)).length === 0) return null;
+  const ranked = [...field].sort((x, y) => strength(x) - strength(y));
+  const at = ranked.findIndex(isMine);
+  const first = ranked[0];
+  const label = (p: Participant) => (isMine(p) ? (p.members ? p.name : `Du, ${career.player}`) : p.name);
+  const rows = [1, 2].filter((i) => i < ranked.length).map((i) => ({ n: i + 1, p: ranked[i] }));
+  // The player is shown in the list when they are among the first three; otherwise they follow after dots.
+  const own = at > 2 ? { n: at + 1, p: ranked[at] } : null;
   return (
-    <div className="ev-field" aria-label="Feltet">
-      <ul className="ev-field-faces">
-        {top.map((p) => (
-          <li key={p.name}>{p.members ? <TeamPortrait members={p.members.map((m) => m.name)} label={p.name} /> : <OpponentPortrait name={p.name} />}</li>
+    <div className="ev-field" role="group" aria-label="Feltet">
+      <div className="ev-fav">
+        {isMine(first) ? <CharacterFace id={career.profile.character} px={72} /> : first.members ? <TeamPortrait members={first.members.map((m) => m.name)} label={first.name} /> : <OpponentPortrait name={first.name} />}
+        <b>{label(first)}</b>
+      </div>
+      <ol className="ev-rank" start={2}>
+        {rows.map(({ n, p }) => (
+          <li key={p.name} className={isMine(p) ? "me" : ""}>
+            <span>{n}</span>
+            <b>{label(p)}</b>
+          </li>
         ))}
-      </ul>
-      <p>
-        Du er <b>nr. {standing}</b> av {field.length} etter styrke
-        {hasRival && <span className="ev-field-rival">Rival: {rival}</span>}
-      </p>
+        {own && (
+          <>
+            <li className="gap" aria-hidden>
+              <span>…</span>
+            </li>
+            <li className="me">
+              <span>{own.n}</span>
+              <b>{label(own.p)}</b>
+            </li>
+          </>
+        )}
+      </ol>
     </div>
   );
 }
@@ -525,7 +548,7 @@ function Play({ career, commit, onHub }: { career: Career; commit: (c: Career) =
         character={career.profile.character}
         onDone={() => setIntro(false)}
         extra={<FieldPreview career={career} field={a.entrants} />}
-        partner={team?.mine.partner}
+        plain
         {...(team
           ? {
               plates: [["Lag", String(tier.size)], ["Innskudd", tier.fee === 0 ? "Gratis" : dollars(tier.fee)], ["Til vinneren", dollars(tier.prizes.winner ?? 0)]] as [string, string][],

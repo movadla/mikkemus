@@ -13,6 +13,8 @@ import { CupEmblem } from "./ui/CupEmblem";
 import { BracketTree } from "./BracketTree";
 import { ShirtRain } from "./ShirtRain";
 import { Trophy } from "./Trophy";
+import { TrophyArt } from "./CareerTrophy";
+import { venueOf, venueOfTournament } from "@/lib/venues";
 import { roundName } from "./KnockoutOverview";
 
 const FOCUS_RING =
@@ -52,6 +54,8 @@ export function ChampionScreen({
   const prizes = awards(tournament);
   const places = podium(tournament);
   const trophy = tournament.cup?.trophy;
+  // The cup is the one of the place it was played in (a European championship is a Grand Slam in looks), in a photograph where there is one.
+  const venue = venueOf(venueOfTournament(tournament));
   const houseOut = tournament.participants.filter((p) => isHouseName(tournament, p.name) && p.name !== winner && outIn(tournament, p.name));
   const shirts = !!winnerSide?.members && fx.shirtRain ? firstKit(winnerSide.members.map((m) => m.name)) : null;
   return (
@@ -73,7 +77,10 @@ export function ChampionScreen({
         </p>
         <ViewTransition name={`cup-${tournament.id}`} share="morph" default="none">
           <div>
-            <Trophy cannons={fx.confetti && !shirts} />
+            <Trophy plain cannons={fx.confetti && !shirts} />
+            <div className="champion-cup">
+              <TrophyArt kind={venue.tier} bare tilt variant={venue.key} />
+            </div>
           </div>
         </ViewTransition>
         {!tournament.participants.find((p) => p.name === winner)?.members && (

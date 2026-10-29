@@ -14,6 +14,8 @@ import { CupDetails, CupSizePicker, CupTypePicker, type CupChoice } from "./CupO
 import { ModeToggle, commitPeople, commitTeams } from "./SetupScreen";
 import { StepStrip } from "./StepStrip";
 import { TextField } from "./ui/TextField";
+import { VenuePicker } from "./VenuePicker";
+import { defaultVenue, type VenueId } from "@/lib/venues";
 import { StickyAction } from "./StickyAction";
 import { TeamPicker } from "./TeamPicker";
 
@@ -56,10 +58,11 @@ export function TournamentSetupScreen({
   initialVariant = "standard",
   initialCup = null,
   initialName = "",
+  initialVenue = null,
 }: {
   onBack: () => void;
   /** On to the draw, with everyone who is in. */
-  onNext: (mode: TournamentMode, participants: Participant[], variant: GameVariant, cup?: CupConfig, name?: string) => void;
+  onNext: (mode: TournamentMode, participants: Participant[], variant: GameVariant, cup?: CupConfig, name?: string, venue?: VenueId) => void;
   /** The trophy cabinet, one tap away. */
   onHistory?: () => void;
   /** Seeds mode/people/teams from a previous submission — lets "Tilbake" from the draw restore
@@ -70,6 +73,8 @@ export function TournamentSetupScreen({
   /** Coming back from the draw of a cup against bots: its choices are restored, and only the house's own entrants are picked again. */
   initialCup?: CupConfig | null;
   initialName?: string;
+  /** The place chosen before, when coming back from the draw. */
+  initialVenue?: VenueId | null;
 }) {
   // Individual to begin with, as in Enkeltkamp, so the whole screen is there from the first moment.
   const [mode, setMode] = useState<TournamentMode>(initialMode ?? "individual");
@@ -109,6 +114,9 @@ export function TournamentSetupScreen({
       : individualSetupProblem(people.map((p) => p.name), !botsAllowed && people.some((p) => p.isBot), MIN_INDIVIDUAL);
 
   const trimmedName = name.trim();
+  // The place is the one that fits the cup (or the size) until one is chosen; choosing is only how it looks.
+  const [chosenVenue, setChosenVenue] = useState<VenueId | null>(initialVenue);
+  const venue: VenueId = chosenVenue ?? defaultVenue(cupMode ? cup.kind : undefined, cupMode ? cupSize : ownCount);
 
   function handleNext() {
     if (problem) return;
@@ -119,11 +127,11 @@ export function TournamentSetupScreen({
       if (mode === "individual") {
         commitPeople(people);
         const own: Participant[] = people.map((p) => ({ name: p.name, isBot: false }));
-        onNext("individual", buildCupParticipants("individual", own, cupSize, config), pilot ? "standard" : withStandRule(variant, false), config, given);
+        onNext("individual", buildCupParticipants("individual", own, cupSize, config), pilot ? "standard" : withStandRule(variant, false), config, given, venue);
       } else {
         commitTeams(teams);
         const own: Participant[] = teams.map((t) => ({ name: t.name, isBot: false, members: t.members.map(toMember) }));
-        onNext("team", buildCupParticipants("team", own, cupSize, config), variant, config, given);
+        onNext("team", buildCupParticipants("team", own, cupSize, config), variant, config, given, venue);
       }
       return;
     }
@@ -131,11 +139,11 @@ export function TournamentSetupScreen({
       commitPeople(people);
       const { botLevels } = splitPeople(people);
       const participants: Participant[] = people.map((p) => ({ name: p.name, isBot: p.isBot, botLevel: botLevels[p.name] }));
-      onNext("individual", participants, withStandRule(variant, false), undefined, given);
+      onNext("individual", participants, withStandRule(variant, false), undefined, given, venue);
     } else {
       commitTeams(teams);
       const participants: Participant[] = teams.map((t) => ({ name: t.name, isBot: false, members: t.members.map(toMember) }));
-      onNext("team", participants, variant, undefined, given);
+      onNext("team", participants, variant, undefined, given, venue);
     }
   }
 
@@ -194,6 +202,9 @@ export function TournamentSetupScreen({
             )}
           </>
         )}
+
+        <p className="section-label mb-2">STED</p>
+        <VenuePicker value={venue} onChange={setChosenVenue} />
 
         <button
           type="button"

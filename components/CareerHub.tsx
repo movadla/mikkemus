@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { DRILLS, UNLOCK_ROOM, levelCap, type DrillId } from "@/lib/drills";
-import { DrillList } from "./DrillList";
-import { LADDER, ROOM_MAX, STAGES, buyStage, dollars, hubPicture, topStep, isUnlocked, nextStage, startEvent, whyNot, whyNotBuy, type Career, type Tier } from "@/lib/career";
+import { DRILLS, UNLOCK_ROOM, levelCap } from "@/lib/drills";
+import { TrainingPanel, type TrainTarget } from "./TrainingPanel";
+import { LADDER, buyStage, dollars, hubPicture, topStep, isUnlocked, nextStage, startEvent, whyNot, whyNotBuy, type Career, type Tier } from "@/lib/career";
 import { cupColor } from "@/lib/botCup";
 import { TROPHY } from "@/lib/scenePalette";
 import { foilVars, frameOf } from "@/lib/materials";
@@ -23,7 +23,6 @@ import { markNewsSeen } from "@/lib/careerWorld";
 import { CareerHud } from "./CareerHud";
 import { RankBadge, TrophyArt } from "./CareerTrophy";
 import { CharacterFigure } from "./CharacterFigure";
-import { RankingList } from "./RankingList";
 import { GameChoice } from "./GameChoice";
 import { gameOf } from "@/lib/careerGame";
 import { CareerProfile, type ProfileTab } from "./CareerProfile";
@@ -39,9 +38,9 @@ import { Button } from "./ui/Button";
 import { Sheet } from "./ui/Sheet";
 import { FOCUS_RING } from "./ui/focus";
 
-type View = "home" | "rooms" | "road" | "profile" | "rank" | "inbox" | "season";
+type View = "home" | "rooms" | "road" | "profile" | "inbox" | "season";
 
-const TITLE: Record<Exclude<View, "home">, string> = { rooms: "Trening", road: "Turneringer", profile: "Profil", rank: "Rangering", inbox: "Meldinger", season: "Sesongen" };
+const TITLE: Record<Exclude<View, "home">, string> = { rooms: "Trening", road: "Turneringer", profile: "Profil", inbox: "Meldinger", season: "Sesongen" };
 
 /** Where the career is in its season: ten ticks, the weeks that are played filled in. */
 function SeasonStrip({ career, onOpen }: { career: Career; onOpen: () => void }) {
@@ -61,30 +60,19 @@ function SeasonStrip({ career, onOpen }: { career: Career; onOpen: () => void })
   );
 }
 
-/** Where the player is: the room is a place with a name and a step, so the picture behind everything reads as theirs. */
-function PlaceChip({ room }: { room: number }) {
-  return (
-    <span className="place-chip">
-      <HomeIcon className="w-4 h-4 shrink-0" />
-      Garasjen din
-      <em>· {STAGES[room].name}</em>
-    </span>
-  );
-}
-
 /** What a step gave, as a sentence: Maling og veggpaneler. */
 const listText = (items: string[]) => {
   const words = items.map((x, i) => (i === 0 ? x : x.charAt(0).toLowerCase() + x.slice(1)));
   return words.length > 1 ? `${words.slice(0, -1).join(", ")} og ${words[words.length - 1]}` : words[0] ?? "";
 };
 
-const ROOM_TITLE = { fontSize: "var(--text-num)", textTransform: "uppercase", letterSpacing: "0.04em", lineHeight: 1.05, color: "var(--color-cream)", textAlign: "center" } as const;
-
 /** The home of a career, made as simple as it goes: the room behind it, one big button, four round ones. Everything else is behind one of them. */
-export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDelete }: { career: Career; onBack: () => void; onPlay: () => void; onChallenge: () => void; onTrain: (id: DrillId) => void; commit: (c: Career) => void; onDelete: () => void }) {
+export function Hub({ career, onBack, onExit, onPlay, onChallenge, onTrain, commit, onDelete }: { career: Career; onBack: () => void; /** To the first page of the app. */ onExit: () => void; onPlay: () => void; onChallenge: () => void; onTrain: (t: TrainTarget) => void; commit: (c: Career) => void; onDelete: () => void }) {
   const [view, setView] = useState<View>("home");
   const [menu, setMenu] = useState(false);
   const [profileTab, setProfileTab] = useState<ProfileTab>("oversikt");
+  const [upgrade, setUpgrade] = useState(false);
+  const [confirmExit, setConfirmExit] = useState(false);
   const [settings, setSettings] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   // A room that has just changed: the step it came from (kept so it can be compared), the buy that is playing, and the way it is played.
@@ -214,6 +202,15 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
             <Button block onClick={onBack}>
               Alle karrierer
             </Button>
+            <Button
+              block
+              onClick={() => {
+                setMenu(false);
+                setConfirmExit(true);
+              }}
+            >
+              Til forsiden
+            </Button>
             <div className="menu-danger">
               <Button
                 variant="ghost"
@@ -236,6 +233,15 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
             {career.active ? "Gjelder fra neste turnering: den som pågår spilles ferdig slik den ble startet." : "Gjelder fra neste turnering."}
           </p>
         </Sheet>
+      )}
+      {confirmExit && (
+        <ConfirmDialog
+          message="Gå til forsiden? Karrieren din er lagret, og du kan fortsette når du vil."
+          buttons={[
+            { label: "Bli her", onClick: () => setConfirmExit(false), background: "var(--color-green)" },
+            { label: "Til forsiden", onClick: onExit, background: "var(--color-surface)" },
+          ]}
+        />
       )}
       {confirmDelete && (
         <ConfirmDialog
@@ -327,73 +333,54 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
             {sheets}
             <div className="screen-inner flex flex-col gap-3" style={{ minHeight: "calc(100dvh - 2rem)" }}>
               <CareerHud career={career} onBack={leaveRooms} title={TITLE.rooms} />
-              <div className="flex-1" style={{ minHeight: "28dvh" }} />
-              <div className="flex flex-col items-center gap-2">
-                <PlaceChip room={career.room} />
-                <div className="room-title-swap w-full">
-                  {playing && before !== null && (
-                    <p aria-hidden className="font-display room-text room-title-old" style={ROOM_TITLE}>
-                      {STAGES[before].name}
-                    </p>
-                  )}
-                  <p key={career.room} className={`font-display room-text ${playing ? "room-title-new" : ""}`} style={ROOM_TITLE}>
-                    {STAGES[career.room].name}
-                  </p>
+              <div className="flex-1" style={{ minHeight: "30dvh" }} />
+              {before !== null && before !== career.room && !playing && (
+                <div className="flex justify-center">
+                  <Button variant="ghost" onClick={() => setCompare((c) => !c)}>
+                    {compare ? "Lukk sammenligningen" : "Før og etter"}
+                  </Button>
                 </div>
-                <div className="pips10" role="img" aria-label={`Trinn ${career.room + 1} av ${ROOM_MAX + 1}`}>
-                  {STAGES.map((s, i) => (
-                    <i key={s.name} className={`${i <= career.room ? "on" : ""} ${playing && i === career.room ? "pip-new" : ""}`} />
-                  ))}
-                </div>
-              </div>
-              <div className="space-y-3 mt-3">
-                {before !== null && before !== career.room && !playing && (
-                  <div className="flex justify-center">
-                    <Button variant="ghost" onClick={() => setCompare((c) => !c)}>
-                      {compare ? "Lukk sammenligningen" : "Før og etter"}
-                    </Button>
-                  </div>
-                )}
-                {next && (
-                  <div className="room-title-swap">
-                    {playing && (
-                      <ul aria-hidden className="flex gap-2 justify-center flex-wrap">
-                        {STAGES[career.room].items.map((item) => (
-                          <li key={item} className="stage-chip stage-chip-old">
-                            {item}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                    <ul className="flex gap-2 justify-center flex-wrap" aria-label="Du får">
-                      {next.items.map((item, i) => (
-                        <li key={item} className={`stage-chip ${playing ? "stage-chip-new" : ""}`} style={{ "--i": `${(i * 0.12).toFixed(2)}s` } as React.CSSProperties}>
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {next && !compare && (
-                  <ul className="flex gap-2 justify-center flex-wrap" aria-label="Låser opp">
-                    <li className="stage-chip stage-chip-unlock">Nivå opp til {levelCap(career.room + 1)}</li>
-                    {DRILLS.filter((d) => UNLOCK_ROOM[d.id] === career.room + 1).map((d) => (
-                      <li key={d.id} className="stage-chip stage-chip-unlock">
-                        Åpner {d.name}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                {!compare && (
-                  <DrillList career={career} onTrain={onTrain} today={new Date().toISOString().slice(0, 10)} />
-                )}
-                <div className="sticky-play">
-                  <PlayButton label={next ? "KJØP" : "FERDIG"} sub={next ? (buyWhy ? `${dollars(next.price)} · ${buyWhy}` : dollars(next.price)) : "Drømmerommet er på plass"} disabled={!!buyWhy} onClick={buy} />
-                </div>
-              </div>
+              )}
+              {!compare && <TrainingPanel career={career} onTrain={onTrain} onUpgrade={() => setUpgrade(true)} today={new Date().toISOString().slice(0, 10)} />}
             </div>
           </div>
         </div>
+        {upgrade && (
+          <Sheet title={next ? `Oppgrader til ${next.name.toLowerCase()}` : "Drømmerommet"} onClose={() => setUpgrade(false)}>
+            {next ? (
+              <div className="space-y-3">
+                <ul className="flex gap-2 flex-wrap" aria-label="Du får">
+                  {next.items.map((item) => (
+                    <li key={item} className="stage-chip">
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+                <ul className="flex gap-2 flex-wrap" aria-label="Låser opp">
+                  <li className="stage-chip stage-chip-unlock">Stigen opp til nivå {levelCap(career.room + 1)}</li>
+                  {DRILLS.filter((d) => UNLOCK_ROOM[d.id] === career.room + 1).map((d) => (
+                    <li key={d.id} className="stage-chip stage-chip-unlock">
+                      Ny øvelse: {d.name}
+                    </li>
+                  ))}
+                </ul>
+                <PlayButton
+                  label="KJØP"
+                  sub={buyWhy ? `${dollars(next.price)} · ${buyWhy}` : dollars(next.price)}
+                  disabled={!!buyWhy}
+                  onClick={() => {
+                    setUpgrade(false);
+                    buy();
+                  }}
+                />
+              </div>
+            ) : (
+              <p className="info-line" style={{ paddingInline: 0 }}>
+                Drømmerommet er på plass.
+              </p>
+            )}
+          </Sheet>
+        )}
       </div>
     );
   }
@@ -406,11 +393,10 @@ export function Hub({ career, onBack, onPlay, onChallenge, onTrain, commit, onDe
         <div className="screen-inner flex flex-col gap-3" style={{ minHeight: "calc(100dvh - 2rem)" }}>
           <CareerHud career={career} onBack={view === "inbox" ? leaveNews : () => setView("home")} title={TITLE[view]} />
 
-          {view === "rank" && <RankingList career={career} />}
           {view === "inbox" && <CareerInbox career={career} commit={commit} onChallenge={onChallenge} onRoad={() => setView("road")} />}
           {view === "inbox" && <CareerNews career={career} />}
           {view === "season" && <SeasonScreen career={career} />}
-          {view === "profile" && <CareerProfile key={profileTab} career={career} tab={profileTab} onRank={() => go("rank")} />}
+          {view === "profile" && <CareerProfile key={profileTab} career={career} tab={profileTab} />}
 
           {view === "road" && (
             <>

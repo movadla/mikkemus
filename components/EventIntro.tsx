@@ -42,7 +42,7 @@ const CONFETTI = ["var(--color-cream)", "var(--color-gold-strong)", "var(--color
  * Grand Slam adds lasers and the world championship fireworks and the hardest blow. A tap anywhere takes it to the end at once, and the
  * button is there from the first second, so nothing here is needed to play.
  */
-export function EventIntro({ tier, player, character, onDone, label = "TREKK", line, plates, onBack, extra, partner }: { tier: Tier; player: string; /** The id of the player's character (lib/characters.ts). */ character?: string; onDone: () => void; /** The words on the button (the draw, for a tournament). */ label?: string; /** What stands by the player: who they play, and what comes next. */ line?: React.ReactNode; /** The three plates, when it is not a tournament of many (who plays, what it costs, what it pays). */ plates?: [string, string][]; /** A way out, for what can be turned down. */ onBack?: () => void; /** The field of the event (who is in it, and where the player stands), between the plates and the player. */ extra?: React.ReactNode; /** The partner of a team cup, who stands beside the player. */ partner?: string }) {
+export function EventIntro({ tier, player, character, onDone, label = "TREKK", line, plates, onBack, extra, partner, plain = false, backLabel = "Avslå" }: { tier: Tier; player: string; /** The id of the player's character (lib/characters.ts). */ character?: string; onDone: () => void; /** The words on the button (the draw, for a tournament). */ label?: string; /** What stands by the player: who they play, and what comes next. */ line?: React.ReactNode; /** The three plates, when it is not a tournament of many (who plays, what it costs, what it pays). */ plates?: [string, string][]; /** A way out, for what can be turned down. */ onBack?: () => void; /** The field of the event (who is in it, and where the player stands), between the plates and the player. */ extra?: React.ReactNode; /** The partner of a team cup, who stands beside the player. */ partner?: string; /** A tournament outside the career: no character beside the words, only the field (extra). */ plain?: boolean; /** The words of the way out (Avslå, for what can be turned down). */ backLabel?: string }) {
   // The crowd of the place swells as the scene comes up: the murmur of the pub, a hall filling, an arena roaring.
   useEffect(() => {
     careerSound(tier.scale <= 1 ? "crowd-1" : tier.scale <= 3 ? "crowd-2" : "crowd-3");
@@ -112,7 +112,7 @@ export function EventIntro({ tier, player, character, onDone, label = "TREKK", l
       ))}
       {s >= 5 && [[18, 22, 2.1], [78, 30, 2.5], [48, 16, 2.9], [30, 52, 3.2]].map(([x, y, d], i) => <span key={i} className="ev-fw" aria-hidden style={{ left: `${x}%`, top: `${y}%`, "--wd": `${d}s` } as React.CSSProperties} />)}
       <div className="ev-inner">
-        <p className="ev-kick">{tier.stage}</p>
+        {(tier as { key?: string }).key && <p className="ev-kick">{tier.stage}</p>}
         <div className="ev-cup">
           <TrophyArt kind={tier.id} bare variant={(tier as { key?: string }).key} />
         </div>
@@ -137,18 +137,20 @@ export function EventIntro({ tier, player, character, onDone, label = "TREKK", l
           ))}
         </ul>
         {extra}
-        <p className="ev-you">
-          <span className="ev-pair">
-            <CharacterFace id={character} pose="kast" px={64} />
-            {partner && <Avatar name={partner} bot px={64} />}
-          </span>
-          <span>{line ?? <b>{partner ? `${player} og ${partner}` : player}</b>}</span>
-        </p>
+        {!plain && (
+          <p className="ev-you">
+            <span className="ev-pair">
+              <CharacterFace id={character} pose="kast" px={64} />
+              {partner && <Avatar name={partner} bot px={64} />}
+            </span>
+            <span>{line ?? <b>{partner ? `${player} og ${partner}` : player}</b>}</span>
+          </p>
+        )}
         <div className="ev-go" onClick={(e) => e.stopPropagation()}>
           <PlayButton label={label} onClick={onDone} />
           {onBack && (
             <button type="button" className="ev-back tactile" onClick={onBack}>
-              Avslå
+              {backLabel}
             </button>
           )}
         </div>

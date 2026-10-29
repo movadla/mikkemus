@@ -79,9 +79,28 @@ export function passed(r: DrillResult): boolean {
 }
 
 /** The reward for the drill of the day. */
-export const DAILY_REWARD = 50;
+export const DAILY_REWARD = 100;
 
 const hashOf = (s: string) => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
+
+/** The ladder of training: a hundred levels, each passed by making enough with three darts. Each level that is passed pays once. */
+export const CLIMB_MAX = 100;
+export const CLIMB_REWARD = 50;
+
+/** What three darts must make to pass a level: 40 at the first, and the most there is (180) at the hundredth. */
+export const climbTarget = (level: number) => Math.round(40 + 140 * ((clamp(level, 1, CLIMB_MAX) - 1) / (CLIMB_MAX - 1)));
+
+/** The level the player is on (101 when all of them are passed). */
+export const climbLevel = (career: Career) => clamp(career.climb?.level ?? 1, 1, CLIMB_MAX + 1);
+
+/** Whether the level can be tried now: the room lets the player climb ten levels for each of its steps. */
+export const climbOpen = (career: Career) => climbLevel(career) <= Math.min(CLIMB_MAX, levelCap(career.room));
+
+/** Three darts have made this much: when it is enough for the level, the player moves up and is paid for it. */
+export function applyClimb(career: Career, score: number): Career {
+  if (!climbOpen(career) || score < climbTarget(climbLevel(career))) return career;
+  return { ...career, money: career.money + CLIMB_REWARD, climb: { level: climbLevel(career) + 1 } };
+}
 
 /** The drill of a day: one of those the room has opened, the same for the whole day. */
 export function dailyDrill(career: Career, day: string): DrillId {

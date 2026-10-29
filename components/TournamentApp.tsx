@@ -41,6 +41,10 @@ import { KnockoutOverview } from "./KnockoutOverview";
 import { MikkeMusApp } from "./MikkeMusApp";
 import { TournamentHistoryScreen } from "./TournamentHistoryScreen";
 import { TournamentSetupScreen } from "./TournamentSetupScreen";
+import { TournamentOpening } from "./TournamentOpening";
+import { RoomBackdrop } from "./RoomBackdrop";
+import { picturesFor } from "./eventPictures";
+import { defaultVenue, saveVenue, venueOf, venueOfTournament, type VenueId } from "@/lib/venues";
 import { TournamentOverviewScreen } from "./TournamentOverviewScreen";
 
 /**
@@ -75,7 +79,7 @@ function AutoDone({ onDone }: { onDone: () => void }) {
   return null;
 }
 
-type Screen = "loading" | "setup" | "draw" | "overview" | "match" | "final" | "bulloff" | "eliminated" | "champion" | "history";
+type Screen = "loading" | "setup" | "opening" | "draw" | "overview" | "match" | "final" | "bulloff" | "eliminated" | "champion" | "history";
 
 /** Finds the tournament match a resumed single-match session belongs to, by matching its two
  *  player names — lets a mid-match refresh resume correctly without needing separate persisted
@@ -92,7 +96,26 @@ function findResumableMatch(tournament: Tournament): TournamentMatch | null {
   );
 }
 
-export function TournamentApp({ onExitToHome, career }: { onExitToHome: () => void; career?: CareerHooks }) {
+/**
+ * A tournament outside the career is played in a place (lib/venues.ts): while one is set, its picture from inside lies behind the draw, the bracket and
+ * the cards before the matches, as in the career. The place is told by the tournament inside.
+ */
+export function TournamentApp(props: { onExitToHome: () => void; career?: CareerHooks }) {
+  const [venue, setVenue] = useState<VenueId | null>(null);
+  const v = venue ? venueOf(venue) : null;
+  const inside = !props.career && v ? picturesFor({ id: v.tier, key: v.key }) : undefined;
+  // The tournament keeps its place in the tree whether or not there is a picture behind it, so choosing the place does not start it over.
+  return (
+    <>
+      {inside && <RoomBackdrop stage={0} src={inside.inside} focus={inside.insideFocus} clear />}
+      <div className={inside ? "room-over" : undefined}>
+        <TournamentInner {...props} onVenue={setVenue} />
+      </div>
+    </>
+  );
+}
+
+function TournamentInner({ onExitToHome, career, onVenue }: { onExitToHome: () => void; career?: CareerHooks; onVenue: (v: VenueId | null) => void }) {
   const roster = useRoster();
   const [screen, setScreen] = useState<Screen>("loading");
   const [tournament, setTournament] = useState<Tournament | null>(null);
@@ -101,6 +124,7 @@ export function TournamentApp({ onExitToHome, career }: { onExitToHome: () => vo
   const [pendingVariant, setPendingVariant] = useState<GameVariant>("standard");
   const [pendingCup, setPendingCup] = useState<CupConfig | null>(null);
   const [pendingName, setPendingName] = useState("");
+  const [pendingVenue, setPendingVenue] = useState<VenueId | null>(null);
   const [currentMatch, setCurrentMatch] = useState<TournamentMatch | null>(null);
   // The match that just ended, so the overview can show what it did to the bracket. Kept only until
   // the next match starts — it is about the moment after a result, not a permanent setting. A
@@ -160,6 +184,7 @@ export function TournamentApp({ onExitToHome, career }: { onExitToHome: () => vo
       }
       const t = result.tournament;
       setTournament(t);
+      onVenue(venueOfTournament(t));
       const resumable = findResumableMatch(t);
       // A match of the pilot that ended level and whose bull-offs were not all thrown: pick up at the bull-off.
       const saved = loadPendingTies();
@@ -207,6 +232,7 @@ export function TournamentApp({ onExitToHome, career }: { onExitToHome: () => vo
     const id = newTournamentId();
     const made = createKnockout(pendingMode, order, id, new Date().toISOString(), pendingVariant, pendingCup ?? undefined);
     const created = pendingName ? { ...made, name: pendingName } : made;
+    if (!career) saveVenue(id, pendingVenue ?? defaultVenue(created.cup?.kind, order.length));
     setTournament(created);
     setJustPlayedId(null);
     setElsewhereIds([]);
@@ -217,7 +243,7 @@ export function TournamentApp({ onExitToHome, career }: { onExitToHome: () => vo
   }
 
   /** Ly Pilotturnering (lib/pilot.ts): seeded by strength and started at once, there is no draw to make. The heats of bots only are decided. */
-  async function startPilot(participants: Participant[], variant: GameVariant, cup: CupConfig, name?: string) {
+  async function startPilot(participants: Participant[], variant: GameVariant, cup: CupConfig, name?: string, venue?: VenueId) {
     if (submitting) return;
     setSubmitting(true);
     const rules = RULES[baseOf(variant)];
@@ -225,6 +251,8 @@ export function TournamentApp({ onExitToHome, career }: { onExitToHome: () => vo
     const order = seedByStrength(participants, (n) => strength.get(n) ?? 0.5);
     const id = newTournamentId();
     const made = createPilot("individual", order, id, new Date().toISOString(), variant, cup);
+    saveVenue(id, venue ?? defaultVenue(cup.kind, participants.length));
+    if (venue) onVenue(venue);
     const { tournament: started, decided } = playPilotBots(name ? { ...made, name } : made);
     setPendingMode("individual");
     setPendingParticipants(participants);
@@ -240,17 +268,21 @@ export function TournamentApp({ onExitToHome, career }: { onExitToHome: () => vo
     setSubmitting(false);
   }
 
-  function handleSetupNext(mode: TournamentMode, participants: Participant[], variant: GameVariant, cup?: CupConfig, name?: string) {
+  function handleSetupNext(mode: TournamentMode, participants: Participant[], variant: GameVariant, cup?: CupConfig, name?: string, venue?: VenueId) {
     if (cup?.kind === "open" && mode === "individual") {
-      void startPilot(participants, variant, cup, name);
+      void startPilot(participants, variant, cup, name, venue);
       return;
     }
+    // The place is chosen (or fits the cup or the size): its picture lies behind everything from here, and the opening comes first.
+    const place = venue ?? defaultVenue(cup?.kind, participants.length);
+    setPendingVenue(place);
+    onVenue(place);
     setPendingName(name ?? "");
     setPendingMode(mode);
     setPendingParticipants(participants);
     setPendingVariant(variant);
     setPendingCup(cup ?? null);
-    setScreen("draw");
+    setScreen("opening");
   }
 
   /** A finished tournament, played again by the same people: back to the setup screen with
@@ -437,8 +469,13 @@ export function TournamentApp({ onExitToHome, career }: { onExitToHome: () => vo
         initialVariant={pendingVariant}
         initialCup={pendingCup}
         initialName={pendingName}
+        initialVenue={pendingVenue}
       />
     );
+  }
+
+  if (screen === "opening" && pendingMode && pendingParticipants && pendingVenue) {
+    return <TournamentOpening venue={pendingVenue} name={pendingName} mode={pendingMode} participants={pendingParticipants} cupName={pendingCup?.name} trophy={pendingCup?.trophy} onDone={() => setScreen("draw")} onBack={() => setScreen("setup")} />;
   }
 
   if (screen === "draw" && pendingMode && pendingParticipants) {

@@ -15,7 +15,7 @@ import { winnerOf as highstrikerWinner, newGame as newHighstriker } from "@/lib/
 import { DEFAULT_LIVES, newGame as newLava, stateOf as lavaState } from "@/lib/lava";
 import { useRoster } from "@/lib/storage";
 import { DRILL_ROUNDS, sessionFrom } from "@/lib/training";
-import { applyDrill, dailyOf, drillLevel, drillOf, goalLine, goalOf, levelCap, passed, type DrillId, type HitsDrill } from "@/lib/drills";
+import { CLIMB_MAX, CLIMB_REWARD, applyClimb, climbLevel, climbOpen, climbTarget, applyDrill, dailyOf, drillLevel, drillOf, goalLine, goalOf, levelCap, passed, type DrillId, type HitsDrill } from "@/lib/drills";
 import { careerSound } from "@/lib/uiSound";
 import { levelLabel, oneDecimal } from "./careerFormat";
 import { CoinBurst } from "./CoinBurst";
@@ -30,6 +30,7 @@ import { Trophy } from "./Trophy";
 import { RankBadge, TrophyArt } from "./CareerTrophy";
 import { CharacterFace, CharacterFigure } from "./CharacterFigure";
 import { OpponentPortrait } from "./OpponentCard";
+import type { TrainTarget } from "./TrainingPanel";
 import { EventIntro } from "./EventIntro";
 import { picturesFor } from "./eventPictures";
 import { CareerFaceContext } from "./ui/Avatar";
@@ -493,10 +494,10 @@ export function Result({ career, a, onDone }: { career: Career; a: ActiveEvent; 
 }
 
 /** A training session: fifteen rounds at the treble 20 written in, and then the level, before and after. */
-export function TrainingPlay(props: { career: Career; commit: (c: Career) => void; onHub: () => void; drill: DrillId }) {
+export function TrainingPlay(props: { career: Career; commit: (c: Career) => void; onHub: () => void; drill: TrainTarget }) {
   return (
     <OverRoom stage={props.career.room} dim={60} blur={5}>
-      {drillOf(props.drill).kind === "hits" ? <HitsFlow {...props} /> : <TrainingFlow {...props} />}
+      {props.drill === "stige" ? <ClimbFlow {...props} /> : drillOf(props.drill).kind === "hits" ? <HitsFlow {...props} drill={props.drill} /> : <TrainingFlow {...props} />}
     </OverRoom>
   );
 }
@@ -520,6 +521,68 @@ function DrillDone({ career, before, after, ok, onHub, bonus = 0, streak = 0 }: 
       {held && <p style={{ color: "var(--color-muted)" }}>Rommet tillater nivå {levelCap(career.room)}. Bygg ut rommet for å komme videre.</p>}
       <PlayButton label="OK" onClick={onHub} />
     </>
+  );
+}
+
+/** The ladder: one round of three darts at a time, written in as the total; it is passed when the total is enough for the level, and then the next level is on. */
+function ClimbFlow({ career, commit, onHub }: { career: Career; commit: (c: Career) => void; onHub: () => void }) {
+  const level = climbLevel(career);
+  const target = climbTarget(level);
+  const [last, setLast] = useState<number | null>(null);
+  const [passedLevel, setPassedLevel] = useState<number | null>(null);
+  const submit = (score: number) => {
+    const next = applyClimb(career, score);
+    if (next === career) {
+      setLast(score);
+      return;
+    }
+    commit(next);
+    setPassedLevel(level);
+    setLast(null);
+  };
+  if (passedLevel !== null) {
+    const now = climbLevel(career);
+    return (
+      <div className="animate-screen-enter screen">
+        <div className="screen-inner flex flex-col items-center justify-center text-center gap-3" style={{ minHeight: "calc(100dvh - 2rem)" }}>
+          <p className="font-display" style={{ fontSize: "var(--text-num)", color: "var(--color-green)" }}>
+            Nivå {passedLevel} klart
+          </p>
+          <p className="tabular" style={{ fontSize: "var(--text-title)", color: "var(--color-gold-strong)", fontWeight: 800 }}>
+            +{dollars(CLIMB_REWARD)}
+          </p>
+          {now > CLIMB_MAX ? <p style={{ color: "var(--color-text-2)" }}>Alle {CLIMB_MAX} nivåene er klare.</p> : !climbOpen(career) && <p style={{ color: "var(--color-muted)" }}>Rommet tillater nivå {levelCap(career.room)}. Bygg ut rommet for å komme videre.</p>}
+          {now <= CLIMB_MAX && climbOpen(career) && <PlayButton label="NESTE NIVÅ" onClick={() => setPassedLevel(null)} />}
+          <Button variant="ghost" onClick={onHub}>
+            Ferdig
+          </Button>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="animate-screen-push screen">
+      <div className="screen-inner flex flex-col gap-3" style={{ minHeight: "calc(100dvh - 2rem)" }}>
+        <div className="flex items-center gap-3">
+          <BackArrow onClick={onHub} />
+          <h1 className="font-display flex-1" style={{ fontSize: "var(--text-num)", color: "var(--color-cream)", lineHeight: 1 }}>
+            Nivå {level}
+          </h1>
+          <span className="tabular" style={{ fontSize: "var(--text-title)", color: "var(--color-gold-strong)", fontWeight: 800 }}>
+            {target}
+          </span>
+        </div>
+        <p style={{ color: "var(--color-text-2)" }}>Få minst {target} poeng på tre piler.</p>
+        {last !== null && (
+          <p role="status" className="tabular" style={{ color: "var(--color-red)", fontWeight: 700 }}>
+            Du fikk {last}. Prøv igjen.
+          </p>
+        )}
+        <div className="mt-auto">
+          <ScoreKeypad onSubmit={submit} onUndo={() => setLast(null)} canUndo={last !== null} line={() => <span style={{ color: "var(--color-text-2)" }}>Summen av tre piler</span>} />
+        </div>
+      </div>
+    </div>
   );
 }
 

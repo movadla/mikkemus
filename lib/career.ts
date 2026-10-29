@@ -256,6 +256,8 @@ export type Career = {
   drills?: Record<string, { level: number; passes: number; tries: number }>;
   /** The drill of the day and the streak of days it has been passed (lib/drills.ts). Absent on a career from before there was one. */
   daily?: { day: string; done: boolean; streak: number; last?: string };
+  /** The ladder of training: the level the player is on (1 to 100; 101 when it is all climbed). Absent on a career from before there was one: level 1. */
+  climb?: { level: number };
   /** How far the room has come: its step, 0 (as it was when the career began) to 9. */
   room: number;
   /** A challenge that is waiting, or has been played and not yet taken in. */

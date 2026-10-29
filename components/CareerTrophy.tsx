@@ -17,7 +17,7 @@ export const INVITE_TROPHY_PHOTO: Record<string, string> = { wc: "/career/trophi
  * text next to it.
  */
 export function TrophyArt({ kind, bare = false, tilt = false, className = "", style, variant }: { kind: TierId; bare?: boolean; tilt?: boolean; className?: string; style?: CSSProperties; /** The key or the trophy name of an invitation: its cup is not the one of the step it stands on. */ variant?: string }) {
-  const photo = variant !== undefined ? INVITE_TROPHY_PHOTO[variant] : TROPHY_PHOTO[kind];
+  const photo = (variant !== undefined ? INVITE_TROPHY_PHOTO[variant] : undefined) ?? TROPHY_PHOTO[kind];
   const id = useId().replace(/[^a-zA-Z0-9]/g, "");
   const html = useMemo(() => trophySvg(kind, `t${id}_`, bare), [kind, id, bare]);
   const el = useRef<HTMLSpanElement>(null);

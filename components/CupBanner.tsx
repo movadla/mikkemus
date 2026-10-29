@@ -1,34 +1,33 @@
+import type { CupKind } from "@/lib/botCup";
 import { cupColor, type CupConfig } from "@/lib/botCup";
-import { CupEmblem } from "./ui/CupEmblem";
+import type { TierId } from "@/lib/career";
+import { TIER_LOOK, foilVars } from "@/lib/materials";
+import { TrophyArt } from "./CareerTrophy";
+
+/** The step of the career a cup stands on, for its trophy and its metal (a European championship is a Grand Slam in looks). */
+const TIER_OF: Record<CupKind, TierId> = { vm: "vm", em: "gs", gs: "gs", nm: "nm", open: "lu", lu: "lu", region: "region" };
 
 /**
- * The title card of a cup, the same on the draw, the overview and the big screen: the cup's emblem in its own colour, its name,
- * and the trophy it is played for, on a stripe of that colour. A tournament that is not a cup has none.
+ * The title card of a cup, the same on the draw, the overview and the big screen: its trophy (the photographed one where there is one) standing
+ * a little out of the card, its name in the metal of the cup, and the trophy it is played for, on a stripe in the colour of the cup.
+ * A tournament that is not a cup has none.
  */
 export function CupBanner({ cup, name, large = false }: { cup: Pick<CupConfig, "kind" | "name" | "trophy">; name?: string; large?: boolean }) {
   const colour = cupColor(cup.kind);
+  const tier = TIER_OF[cup.kind];
+  const title = name || cup.name;
   return (
-    <div
-      className="edge flex items-center gap-3 mb-4"
-      style={
-        {
-          padding: large ? "1rem 1.5rem" : "0.75rem 1rem",
-          borderRadius: "var(--radius-m)",
-          "--edge-fill-image": `linear-gradient(90deg, color-mix(in srgb, ${colour} 20%, var(--color-surface)), var(--color-surface) 75%)`,
-          "--edge-accent": colour,
-          borderLeft: `6px solid ${colour}`,
-          boxShadow: "var(--elevation-1)",
-        } as React.CSSProperties
-      }
-    >
-      <span style={{ color: colour }}>
-        <CupEmblem kind={cup.kind} className={large ? "w-12 h-12" : "w-8 h-8"} />
+    <div className={`cup-banner ${large ? "cup-banner-large" : ""}`} style={{ "--cup": colour, "--tint": TIER_LOOK[tier].tint } as React.CSSProperties}>
+      <span className="cup-banner-trophy" aria-hidden>
+        <TrophyArt kind={tier} bare />
       </span>
       <div className="min-w-0">
-        <p className="font-display truncate" style={{ color: "var(--color-cream)", fontSize: large ? "var(--text-num)" : "var(--text-title)", lineHeight: 1.1 }}>
-          {name || cup.name}
+        <p className="cup-banner-name font-display truncate">
+          <span className="foil" data-t={title} style={foilVars(tier) as React.CSSProperties}>
+            {title}
+          </span>
         </p>
-        <p style={{ color: colour, fontSize: large ? "var(--text-body)" : "var(--text-small)", fontWeight: 600 }}>{cup.trophy}</p>
+        <p className="cup-banner-sub truncate">{cup.trophy}</p>
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { newCareer, type Career } from "./career";
-import { DAILY_REWARD, DRILLS, LEVEL_MAX, applyDrill, dailyDrill, dailyOf, drillLevel, goalLine, goalOf, isDrillOpen, levelCap, passed, type DrillId } from "./drills";
+import { CLIMB_MAX, CLIMB_REWARD, DAILY_REWARD, DRILLS, LEVEL_MAX, applyClimb, applyDrill, climbLevel, climbOpen, climbTarget, dailyDrill, dailyOf, drillLevel, goalLine, goalOf, isDrillOpen, levelCap, passed, type DrillId } from "./drills";
 
 const AT = "2026-10-28T20:00:00.000Z";
 const fresh = (): Career => newCareer("Lars", "dyktig", AT);
@@ -125,5 +125,47 @@ describe("the drill of the day", () => {
     const scores = g.kind === "score" ? Array(g.rounds).fill(g.average + 1) : Array(g.attempts).fill(g.need);
     const after = applyDrill(k, { id: other.id, level: 1, scores }, "2026-10-29T12:00:00.000Z");
     expect(after.money).toBe(k.money);
+  });
+});
+
+describe("the ladder of training", () => {
+  it("asks for more with every level: 40 at the first, the most there is (180) at the hundredth", () => {
+    expect(climbTarget(1)).toBe(40);
+    expect(climbTarget(100)).toBe(180);
+    let last = 0;
+    for (let l = 1; l <= CLIMB_MAX; l++) {
+      expect(climbTarget(l)).toBeGreaterThanOrEqual(last);
+      last = climbTarget(l);
+    }
+  });
+
+  it("moves a level up and pays once when three darts make enough, and not when they do not", () => {
+    const c = { ...fresh(), room: 3 };
+    expect(climbLevel(c)).toBe(1);
+    const miss = applyClimb(c, 39);
+    expect(miss).toBe(c);
+    const pass = applyClimb(c, 40);
+    expect(climbLevel(pass)).toBe(2);
+    expect(pass.money).toBe(c.money + CLIMB_REWARD);
+    // More than enough counts the same.
+    expect(climbLevel(applyClimb(c, 180))).toBe(2);
+  });
+
+  it("stops at what the room lets the player climb: ten levels for each step of it", () => {
+    const top = { ...fresh(), room: 1, climb: { level: 20 } };
+    expect(climbOpen(top)).toBe(true);
+    const passed20 = applyClimb(top, 180);
+    expect(climbLevel(passed20)).toBe(21);
+    expect(climbOpen(passed20)).toBe(false);
+    // Nothing is paid for a level the room does not allow yet, and a better room opens it.
+    expect(applyClimb(passed20, 180)).toBe(passed20);
+    expect(climbOpen({ ...passed20, room: 2 })).toBe(true);
+  });
+
+  it("ends at a hundred", () => {
+    const end = { ...fresh(), room: 9, climb: { level: 100 } };
+    const done = applyClimb(end, 180);
+    expect(climbLevel(done)).toBe(101);
+    expect(climbOpen(done)).toBe(false);
   });
 });

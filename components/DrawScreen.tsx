@@ -235,18 +235,18 @@ export function DrawScreen({
             </div>
           </div>
         )}
-        {career && career.me && !drawing && (
+        {((career && career.me) || (!career && order.some((p) => (p.members ? p.members.every((m) => m.isBot) : p.isBot)))) && !drawing && (
           <div className="mb-4" aria-label="Favoritter">
             <p className="section-label mb-2">FAVORITTER</p>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-2 fav-compact">
               {order
-                .filter((p) => (p.members ? p.name !== career.player : p.isBot))
+                .filter((p) => (p.members ? (career ? p.name !== career.player : p.members.every((m) => m.isBot)) : p.isBot))
                 .map((p) => ({ p, med: p.members ? p.members.reduce((s, m) => s + medOfLevel(m.skill ?? 4), 0) / p.members.length : opponentOf(p.name).med }))
                 .sort((x, y) => x.med - y.med)
                 .slice(0, 3)
                 .map(({ p }) => (
                   <div key={p.name} className="text-center min-w-0">
-                    {p.members ? <TeamPortrait members={p.members.map((m) => m.name)} label={`Se ${p.name}`} onClick={() => setProfileFor(p.name)} /> : <OpponentPortrait name={p.name} onClick={() => setProfileFor(p.name)} />}
+                    {p.members ? <TeamPortrait members={p.members.map((m) => m.name)} label={`Se ${p.name}`} onClick={career?.me ? () => setProfileFor(p.name) : undefined} /> : <OpponentPortrait name={p.name} onClick={career?.me ? () => setProfileFor(p.name) : undefined} />}
                     <span className="block truncate font-display mt-1" style={{ fontSize: "var(--text-small)", color: "var(--color-cream)" }}>
                       {p.name}
                     </span>
@@ -257,7 +257,7 @@ export function DrawScreen({
           </div>
         )}
         {career ? (
-          <div className="grid grid-cols-2 gap-2 mb-4" aria-label="Trekningen">
+          <div className="draw-lines mb-4" aria-label="Trekningen">
             {pairs.map((p, i) => {
               const up = i < revealed;
               const mine = p.a === career.player || p.b === career.player;
@@ -289,7 +289,7 @@ export function DrawScreen({
         ) : (
         <div className="space-y-2 mb-4">
           {pairs.map((p, i) => (
-            <div key={`${round}-${i}`} className={`flex items-center gap-2 rounded-xl p-2 ${i === revealed - 1 && drawing ? "draw-flash" : ""}`} style={{ "--draw": colour, background: "var(--color-panel)", border: "1px solid var(--color-border)" } as React.CSSProperties}>
+            <div key={`${round}-${i}`} className={`draw-row flex items-center gap-2 rounded-xl p-2 ${i === revealed - 1 && drawing ? "draw-flash" : ""}`} style={{ "--draw": colour, background: "var(--color-panel)", border: "1px solid var(--color-border)" } as React.CSSProperties}>
               {slot(p.a, i < revealed)}
               <span className="font-display" style={{ color: "var(--color-muted)", opacity: i < revealed ? 1 : 0 }}>
                 mot
