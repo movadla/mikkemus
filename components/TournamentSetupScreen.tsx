@@ -10,6 +10,7 @@ import { PlayerPicker } from "./PlayerPicker";
 import { RulesPicker } from "./RulesPicker";
 import { ScreenTop } from "./ScreenTop";
 import { CupDetails, CupSizePicker, CupTypePicker, type CupChoice } from "./CupOptions";
+import { useRoster } from "@/lib/storage";
 import { ModeToggle, commitPeople, commitTeams } from "./SetupScreen";
 import { StepStrip } from "./StepStrip";
 import { TextField } from "./ui/TextField";
@@ -71,9 +72,9 @@ export function TournamentSetupScreen({
   const [mode, setMode] = useState<TournamentMode>(initialMode ?? "individual");
   const [variant, setVariant] = useState<GameVariant>(initialVariant);
   const [name, setName] = useState(initialName);
+  // The players the house has: the teams of bots in a team tournament are made of them.
+  const roster = useRoster();
   const [moreOpen, setMoreOpen] = useState(false);
-  // Which cup and where it is played are behind one row; a cup against bots has more to choose, so it starts open.
-  const [detailsOpen, setDetailsOpen] = useState(!!initialCup);
   // A cup against bots keeps only the house's own entrants: the bots are made again when the cup is.
   const ownOf = (list: Participant[] | null) => (initialCup && list ? list.filter((p) => (p.members ? p.members.some((m) => !m.isBot) : !p.isBot)) : list);
   const [people, setPeople] = useState<Person[]>(() => (initialMode === "individual" && initialParticipants ? peopleFromParticipants(ownOf(initialParticipants) ?? []) : []));
@@ -109,7 +110,8 @@ export function TournamentSetupScreen({
   const trimmedName = name.trim();
   // The place is the one that fits the cup (or the size) until one is chosen; choosing is only how it looks.
   const [chosenVenue, setChosenVenue] = useState<VenueId | null>(initialVenue);
-  const venue: VenueId = chosenVenue ?? defaultVenue(cupMode ? cup.kind : undefined, cupMode ? cupSize : ownCount);
+  // A cup against bots is played where the cup is played (Ally Pally for the world championship): nothing to choose. Otherwise the chosen place, or the one that fits.
+  const venue: VenueId = cupMode ? defaultVenue(cup.kind, cupSize) : (chosenVenue ?? defaultVenue(undefined, ownCount));
 
   function handleNext() {
     if (problem) return;
@@ -124,7 +126,7 @@ export function TournamentSetupScreen({
       } else {
         commitTeams(teams);
         const own: Participant[] = teams.map((t) => ({ name: t.name, isBot: false, members: t.members.map(toMember) }));
-        onNext("team", buildCupParticipants("team", own, cupSize, config), variant, config, given, venue);
+        onNext("team", buildCupParticipants("team", own, cupSize, config, roster.filter((r) => r.kind !== "team").map((r) => r.name)), variant, config, given, venue);
       }
       return;
     }
@@ -157,7 +159,7 @@ export function TournamentSetupScreen({
         <StepStrip step={0} />
 
         {/* Who plays and what kind of tournament: two small choices on one line. */}
-        <div className="grid grid-cols-2 gap-3 mb-4">
+        <div className="grid items-center gap-2 mb-4" style={{ gridTemplateColumns: "minmax(0, 1fr) auto minmax(0, 1fr)" }}>
           <ModeToggle
             compact
             label="Hvem spiller"
@@ -168,13 +170,14 @@ export function TournamentSetupScreen({
               { value: "team", label: "Lag" },
             ]}
           />
+          {/* Two different choices: a line between them. */}
+          <span aria-hidden style={{ width: 2, height: "1.9rem", borderRadius: 2, background: "var(--color-muted)", opacity: 0.55 }} />
           <ModeToggle
             compact
             label="Type turnering"
             value={cupMode ? "cup" : "plain"}
             onChange={(v) => {
               setCupMode(v === "cup");
-              if (v === "cup") setDetailsOpen(true);
             }}
             options={[
               { value: "plain", label: "Vanlig" },
@@ -189,38 +192,28 @@ export function TournamentSetupScreen({
           <PlayerPicker people={people} onChange={setPeople} botsAllowed={botsAllowed && !cupMode} />
         )}
 
-        {/* The cup and the place in one row, that opens: most nights nothing here changes. */}
-        <button
-          type="button"
-          onClick={() => setDetailsOpen((o) => !o)}
-          aria-expanded={detailsOpen}
-          className={`tactile flat w-full px-1 flex items-center justify-between gap-3 text-left mt-4 ${FOCUS_RING}`}
-          style={{ minHeight: "var(--control)", background: "transparent", borderTop: "1px solid var(--color-border)", borderBottom: "1px solid var(--color-border)" }}
-        >
-          <span className="min-w-0 truncate" style={{ color: "var(--color-cream)", fontWeight: 600, fontSize: "var(--text-body)" }}>{cupMode ? `${cupType(cup.kind).name} · ${cupSize}` : "Sted"}</span>
-          <span className="shrink-0" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
-            {venueOf(venue).name} <span aria-hidden>{detailsOpen ? "⌃" : "›"}</span>
-          </span>
-        </button>
-        {detailsOpen && (
-          <div className="mt-3 mb-3">
-            {cupMode && (
-              <>
-                <CupTypePicker value={{ ...cup, size: cupSize }} onChange={setCup} maxSize={maxSize} />
-                {cupType(cup.kind).sizes.length > 1 ? (
-                  <>
-                    <Label>ANTALL</Label>
-                    <CupSizePicker value={{ ...cup, size: cupSize }} onChange={setCup} own={ownCount} maxSize={maxSize} />
-                  </>
-                ) : (
-                  ownCount >= cupSize && <p className="mb-6" style={{ color: "var(--color-red)", fontSize: "var(--text-small)" }}>For mange</p>
-                )}
-              </>
-            )}
-            <Label>STED</Label>
-            <VenuePicker value={venue} onChange={setChosenVenue} />
-          </div>
-        )}
+        {/* The cup (for a tournament against bots) and the place are always on the screen, with what is chosen marked in each. */}
+        <div className="mt-4 mb-3">
+          {cupMode && (
+            <>
+              <CupTypePicker value={{ ...cup, size: cupSize }} onChange={setCup} maxSize={maxSize} />
+              {mode === "team" || cupType(cup.kind).sizes.length > 1 ? (
+                <>
+                  <Label>ANTALL</Label>
+                  <CupSizePicker value={{ ...cup, size: cupSize }} onChange={setCup} own={ownCount} maxSize={maxSize} any={mode === "team"} />
+                </>
+              ) : (
+                ownCount >= cupSize && <p className="mb-6" style={{ color: "var(--color-red)", fontSize: "var(--text-small)" }}>For mange</p>
+              )}
+            </>
+          )}
+          {!cupMode && (
+            <>
+              <Label>STED · {venueOf(venue).name.toUpperCase()}</Label>
+              <VenuePicker value={venue} onChange={setChosenVenue} />
+            </>
+          )}
+        </div>
 
         <button
           type="button"

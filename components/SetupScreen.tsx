@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { VenuePicker } from "./VenuePicker";
+import { venueOf, type VenueId } from "@/lib/venues";
 import { ensurePlayer } from "@/lib/storage";
 import type { BotLevel, TeamMember } from "@/lib/botLevels";
 import { RULES, baseOf, botsSupported, withStandRule, type GameVariant } from "@/lib/rules";
@@ -83,7 +85,9 @@ export function SetupScreen({
     /** Played for fun: nothing from the match is written to the statistics. */
     statsOff?: boolean,
     /** Advanced: every dart keyed in by hand as the bed it hit, a miss included. */
-    exactEntry?: boolean
+    exactEntry?: boolean,
+    /** Where the match is played (Ly unless changed under Avanserte innstillinger): its cup is on the winner screen. */
+    venue?: VenueId
   ) => void;
   onHome?: () => void;
   /** Overridden by other modes (e.g. Bull-duell) that reuse this same player picker. */
@@ -103,6 +107,7 @@ export function SetupScreen({
   // on screen, and keying in every dart.
   const [advanced, setAdvanced] = useState(false);
   const [exactEntry, setExactEntry] = useState(false);
+  const [venue, setVenue] = useState<VenueId>("lu");
 
   // The longer games have no bots — see botsSupported. Bots already added when the length is
   // changed are not removed behind the user's back; the start button waits until they are.
@@ -119,7 +124,7 @@ export function SetupScreen({
     commitPeople(people);
     const { players, botLevels, guestPlayers } = splitPeople(people);
     // The stand rule belongs to team play; a lone player has no one to hand over to.
-    onStart(players, botLevels, undefined, guestPlayers, withStandRule(variant, false), statsOff, exactEntry);
+    onStart(players, botLevels, undefined, guestPlayers, withStandRule(variant, false), statsOff, exactEntry, venue);
   }
 
   function startTeamGame() {
@@ -136,7 +141,8 @@ export function SetupScreen({
       undefined,
       variant,
       statsOff,
-      exactEntry
+      exactEntry,
+      venue
     );
   }
 
@@ -155,6 +161,7 @@ export function SetupScreen({
             setExactEntry(false);
             setVariant("standard");
             setStatsOff(false);
+            setVenue("lu");
           }
         }}
       />
@@ -173,6 +180,13 @@ export function SetupScreen({
       {advanced && (
         // Played without a trace in the statistics.
         <div className="w-full">{noStatsToggle}</div>
+      )}
+      {advanced && variantSelectable && (
+        // The place the match is played in: its cup is on the winner screen when the match is won.
+        <div className="w-full pt-1 pb-1 text-left">
+          <p className="section-label mb-2">STED · {venueOf(venue).name.toUpperCase()}</p>
+          <VenuePicker value={venue} onChange={setVenue} />
+        </div>
       )}
       {advanced && (
         <SwitchRow label="Legg inn hver pil for hånd" hint="Velg hva hver pil traff" checked={exactEntry} onChange={setExactEntry} />

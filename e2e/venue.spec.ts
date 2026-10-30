@@ -18,9 +18,7 @@ test.describe("sted for turneringen", () => {
     await openApp(page, "dark");
     await page.getByRole("button", { name: "Turnering" }).first().click();
     await addPlayers(page, ["Lars", "Vadla", "Moen", "Hans"]);
-    // The place is behind one row: it says where, and opens to choose another.
-    await expect(page.getByRole("button", { name: /^Sted.*Ly/ })).toBeVisible();
-    await page.getByRole("button", { name: /^Sted/ }).click();
+    // The place is on the screen, with the one chosen marked.
     const places = page.getByRole("radiogroup", { name: "Sted" });
     // Four players fit a pub; another place can be picked.
     await expect(places.getByRole("radio", { name: /^Ly/ })).toBeChecked();
@@ -54,9 +52,9 @@ test.describe("sted for turneringen", () => {
     await expect(page.getByRole("radio", { name: /Ly-cupen|Regionmesterskapet|Norgesmesterskapet|Grand Slam|VM i dart|Ly Pilotturnering/ })).toHaveCount(6);
     await expect(page.getByRole("radio", { name: /EM i dart/ })).toHaveCount(0);
     await page.getByRole("radio", { name: /Grand Slam/ }).click();
-    // A cup against bots opens the choices at once; the place follows the cup, and the row says which.
-    await expect(page.getByRole("button", { name: /Grand Slam · \d+.*Civic Hall/ })).toBeVisible();
-    await expect(page.getByRole("radiogroup", { name: "Sted" }).getByRole("radio", { name: /Civic Hall/ })).toBeChecked();
+    // A cup against bots has its choices on the screen; the place follows the cup.
+    // The place belongs to the cup: there is nothing to choose, and the opening says where it is played.
+    await expect(page.getByRole("radiogroup", { name: "Sted" })).toHaveCount(0);
     await page.getByRole("button", { name: /^Neste · \d+ spillere?$/ }).click();
     await expect(page.getByRole("heading", { name: "Grand Slam" })).toBeVisible();
     await page.getByRole("button", { name: "TREKK" }).click({ timeout: 10_000 });
@@ -64,5 +62,18 @@ test.describe("sted for turneringen", () => {
     // Three favourites, each a portrait with a name, and no ranking number under them.
     await expect(page.getByLabel("Favoritter").locator("img").first()).toBeVisible();
     await expect(page.getByLabel("Favoritter").getByText(/^#\d+/)).toHaveCount(0);
+  });
+
+  test("enkeltkamp: stedet velges under Avanserte innstillinger (Ly som standard), og følger kampen", async ({ page }) => {
+    await openApp(page, "dark");
+    await page.getByRole("button", { name: "Ny kamp" }).click();
+    await addPlayers(page, ["Lars", "Vadla"]);
+    await page.getByRole("switch", { name: /Avanserte innstillinger/ }).click();
+    const places = page.getByRole("radiogroup", { name: "Sted" });
+    await expect(places.getByRole("radio", { name: /^Ly/ })).toBeChecked();
+    await places.getByRole("radio", { name: /Civic Hall/ }).click();
+    await page.getByRole("button", { name: /Start/ }).first().click();
+    // The place is kept with the match, so the cup of the place is on the winner screen after a reload too.
+    await expect.poll(async () => page.evaluate(() => JSON.parse(localStorage.getItem("mikke-mus-active-match") ?? "{}").venue)).toBe("gs");
   });
 });

@@ -2,7 +2,9 @@
 
 import { useEffect, useRef } from "react";
 import { BOT_LEVELS, BOT_LEVEL_PICKABLE, type BotLevel } from "@/lib/botLevels";
-import { CUP_TYPES, cupColor, cupType, type CupKind } from "@/lib/botCup";
+import { CUP_SIZES, CUP_TYPES, cupColor, cupType, type CupKind } from "@/lib/botCup";
+import { VENUES, venueForCup } from "@/lib/venues";
+import { picturesFor } from "./eventPictures";
 import { CupEmblem } from "./ui/CupEmblem";
 import { LevelBadge } from "./LevelBadge";
 import { Chip } from "./ui/Chip";
@@ -26,6 +28,9 @@ export function CupTypePicker({ value, onChange, maxSize }: { value: CupChoice; 
     <div ref={box} className="cup-posters mb-6" role="radiogroup" aria-label="Turnering">
       {[...CUP_TYPES].filter((t) => !t.retired).sort((a, b) => LADDER_ORDER.indexOf(a.kind) - LADDER_ORDER.indexOf(b.kind)).map((t) => {
         const selected = t.kind === value.kind;
+        // The place the cup is played in is fixed by the cup (Ally Pally for the world championship), and its picture is behind the card.
+        const place = VENUES.find((v) => v.id === venueForCup(t.kind));
+        const pic = place ? picturesFor({ id: place.tier, key: place.key })?.outside : undefined;
         return (
           <button
             key={t.kind}
@@ -34,15 +39,15 @@ export function CupTypePicker({ value, onChange, maxSize }: { value: CupChoice; 
             aria-checked={selected}
             onClick={() => onChange({ ...value, kind: t.kind, size: Math.min(t.defaultSize, maxSize) })}
             className={`cup-poster tactile ${FOCUS_RING}`}
-            style={{ "--cup": cupColor(t.kind) } as React.CSSProperties}
+            style={{ "--cup": cupColor(t.kind), ...(pic ? { "--pic": `url(${pic})` } : {}) } as React.CSSProperties}
           >
             <span className="cup-poster-emblem">
-              <CupEmblem kind={t.kind} className="w-14 h-14" />
+              <CupEmblem kind={t.kind} className="w-8 h-8" />
             </span>
-            <span className="font-display" style={{ color: "var(--color-cream)", fontSize: "var(--text-title)", lineHeight: 1.1 }}>
+            <span className="font-display cup-poster-name">
               {t.name}
             </span>
-            <span style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>{t.trophy}</span>
+            <span className="cup-poster-trophy">{t.trophy}</span>
           </button>
         );
       })}
@@ -51,8 +56,8 @@ export function CupTypePicker({ value, onChange, maxSize }: { value: CupChoice; 
 }
 
 /** How many take part, with the one line that matters: how many bots that makes. */
-export function CupSizePicker({ value, onChange, own, maxSize }: { value: CupChoice; onChange: (v: CupChoice) => void; own: number; maxSize: number }) {
-  const sizes = cupType(value.kind).sizes.filter((n) => n <= maxSize);
+export function CupSizePicker({ value, onChange, own, maxSize, any = false }: { value: CupChoice; onChange: (v: CupChoice) => void; own: number; maxSize: number; /** Every size, whichever cup it is: for teams. */ any?: boolean }) {
+  const sizes = (any ? CUP_SIZES : cupType(value.kind).sizes).filter((n) => n <= maxSize);
   return (
     <div className="mb-6">
       <div className="grid grid-cols-3 gap-2 mb-2">
@@ -63,7 +68,7 @@ export function CupSizePicker({ value, onChange, own, maxSize }: { value: CupCho
             aria-pressed={n === value.size}
             onClick={() => onChange({ ...value, size: n })}
             className={`tactile rounded-lg font-display tabular ${FOCUS_RING}`}
-            style={{ minHeight: "var(--control-lg)", fontSize: "var(--text-num)", background: n === value.size ? "var(--teal-soft)" : "var(--color-surface)", color: n === value.size ? "var(--color-teal)" : "var(--color-cream)", border: n === value.size ? "1px solid var(--color-teal)" : "1px solid var(--color-border)" }}
+            style={{ minHeight: "2.4rem", fontSize: "var(--text-body)", background: n === value.size ? "var(--color-teal)" : "var(--color-surface)", color: n === value.size ? "var(--color-bg)" : "var(--color-cream)", fontWeight: n === value.size ? 700 : 400, border: n === value.size ? "2px solid var(--color-teal)" : "1px solid var(--color-border)" }}
           >
             {n}
           </button>

@@ -1,6 +1,7 @@
 "use client";
 
 import { VENUES, type VenueId } from "@/lib/venues";
+import { CheckIcon } from "./icons";
 import { picturesFor } from "./eventPictures";
 
 /**
@@ -17,6 +18,11 @@ export function VenuePicker({ value, onChange }: { value: VenueId; onChange: (v:
             {pics && (
               // eslint-disable-next-line @next/next/no-img-element -- one fixed picture from public/career
               <img src={pics.outside} alt="" draggable={false} style={{ objectPosition: pics.outsideFocus }} />
+            )}
+            {value === v.id && (
+              <span className="venue-check" aria-hidden>
+                <CheckIcon className="w-3.5 h-3.5" />
+              </span>
             )}
             <span className="venue-name">
               <b>{v.name}</b>

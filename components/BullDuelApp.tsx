@@ -19,8 +19,8 @@ import {
 } from "@/lib/bullDuel";
 import { sectorAt } from "@/lib/dartboard";
 import { announce } from "@/lib/announcer";
-import { careerSound } from "@/lib/uiSound";
-import { crowdForStreak, playCrowd, playFanfare, playHitStreakSound, playMatchDartSound, playStreakFanfare, playWalkOnTune, playWinBoom, primeAudio } from "@/lib/fanfare";
+import { winCheer } from "@/lib/uiSound";
+import { crowdForStreak, playCrowd, playHitStreakSound, playMatchDartSound, playStreakFanfare, playWalkOnTune, playWinBoom, primeAudio } from "@/lib/fanfare";
 import { emitFx } from "@/lib/fxBus";
 import { fxFlags, getFxLevel, useFxLevel } from "@/lib/fxLevel";
 import { haptics } from "@/lib/haptics";
@@ -346,8 +346,7 @@ export function BullDuelApp({ onExitToHome }: { onExitToHome: () => void }) {
       playWinBoom();
       setDiving(true);
     } else {
-      playFanfare();
-      careerSound("cheer");
+      winCheer();
       setScreen("winner");
     }
     /* eslint-enable react-hooks/set-state-in-effect */
@@ -464,8 +463,7 @@ export function BullDuelApp({ onExitToHome }: { onExitToHome: () => void }) {
       <WinDive
         onDone={() => {
           setDiving(false);
-          playFanfare();
-          careerSound("cheer");
+          winCheer();
           setScreen("winner");
         }}
       />

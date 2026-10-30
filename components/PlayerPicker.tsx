@@ -121,7 +121,7 @@ export function PlayerPicker({
                       ) : (
                         <Avatar name={person.name} photo={photo} px={40} bot={person.isBot} state="active" />
                       )}
-                      <span aria-hidden className="tabular rounded-full flex items-center justify-center absolute" style={{ top: -4, right: -6, width: "1.1rem", height: "1.1rem", background: "var(--color-teal)", color: "var(--color-bg)", fontSize: "0.65rem", fontWeight: 700 }}>
+                      <span aria-hidden className="tabular rounded-full flex items-center justify-center absolute" style={{ top: -4, right: -6, width: "1.1rem", height: "1.1rem", background: "var(--color-teal)", color: "var(--color-bg)", fontSize: "0.75rem", fontWeight: 700 }}>
                         {i + 1}
                       </span>
                     </span>
@@ -157,7 +157,7 @@ export function PlayerPicker({
             );
           })}
           {(hiddenCount > 0 || more) && known.length > SHOWN && (
-            <li className="min-w-0">
+            <li className="min-w-0 col-span-full">
               <button
                 type="button"
                 onClick={() => setMore((m) => !m)}

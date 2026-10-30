@@ -1,4 +1,5 @@
 import type { HitRecord, PlayerProgress, Step, TurnAggregate, TurnResult } from "./game";
+import type { VenueId } from "./venues";
 import type { BotLevel, TeamMember } from "./botLevels";
 import type { GameVariant } from "./rules";
 import type { TurnAction, TurnStart } from "./turnResolution";
@@ -34,6 +35,8 @@ export type ActiveMatchSnapshot = {
   teamRosters: Record<string, TeamMember[]>;
   teamMemberIdx: Record<string, number>;
   guestPlayers: Record<string, true>;
+  /** The place a single match is played in (lib/venues.ts), chosen under Avanserte innstillinger: its cup is on the winner screen. Absent: Ly. */
+  venue?: VenueId;
   /**
    * The match's accumulating statistics. All optional, and all absent from snapshots saved
    * before they were persisted at all — restore falls back to empty rather than migrating.

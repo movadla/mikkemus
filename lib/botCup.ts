@@ -188,12 +188,6 @@ const FIRST_NAMES_POOL = [
   "Andy Jenkins", "Mark Walsh", "Brian Woods",
 ];
 
-const TEAM_NAMES_POOL = [
-  "Treble Trouble", "Bull Busters", "Oche Outlaws", "Double Dutch", "Flight Club", "Checkout Kings", "Tungsten Titans", "Arrow Heads",
-  "Madhouse Mafia", "Bullseye Bandits", "Skarpe Piler", "Oche Rockets", "Triple Threat", "Sisal Saints", "Dart Vaders", "Nordlys Nine",
-  "Barrel Rollers", "Grand Gutta", "Mikkel og Mus", "De Gode Gamle",
-];
-
 /** `count` names from the pool in an order of the cup's own, none of them taken. */
 export function pickNames(pool: string[], count: number, taken: string[], seed: string): string[] {
   const lower = taken.map((t) => t.trim().toLowerCase());
@@ -214,9 +208,11 @@ export const MAX_CUP_SIZE = 128;
 
 /**
  * Everyone in the cup: the house's own entrants first (people alone, or teams), then the bots to make `size`. Bots get names
- * of their own — people for the individual cup, teams of two named people for the team cup — and a skill each.
+ * of their own — people for the individual cup, teams of two named people for the team cup — and a skill each. A team of bots is made of
+ * players that exist (`known`: the names the house has, those not already in the cup, and then real names from the pool when they run out)
+ * and is called after them: "Hans og Vadla".
  */
-export function buildCupParticipants(mode: TournamentMode, own: Participant[], size: number, cup: CupConfig): Participant[] {
+export function buildCupParticipants(mode: TournamentMode, own: Participant[], size: number, cup: CupConfig, known: string[] = []): Participant[] {
   const botCount = Math.max(0, Math.min(MAX_CUP_SIZE, size) - own.length);
   const taken = own.flatMap((p) => [p.name, ...(p.members ?? []).map((m) => m.name)]);
   const asBot = (name: string): { name: string; isBot: true; botLevel: BotLevel; skill: number } => {
@@ -228,13 +224,22 @@ export function buildCupParticipants(mode: TournamentMode, own: Participant[], s
     const bots = pickNames(FIRST_NAMES_POOL, botCount, taken, `${cup.seed}|people`).map(asBot);
     return [...own, ...bots];
   }
-  const teamNames = pickNames(TEAM_NAMES_POOL, botCount, taken, `${cup.seed}|teams`);
-  const memberNames = pickNames(FIRST_NAMES_POOL, botCount * 2, [...taken, ...teamNames], `${cup.seed}|members`);
-  const bots: Participant[] = teamNames.map((name, i) => ({
-    name,
-    isBot: false,
-    members: [memberNames[i * 2], memberNames[i * 2 + 1]].map((m): TeamMember => asBot(m)),
-  }));
+  const need = botCount * 2;
+  const lowerTaken = taken.map((t) => t.trim().toLowerCase());
+  const fromHouse = known
+    .filter((n, i, all) => !lowerTaken.includes(n.trim().toLowerCase()) && all.findIndex((m) => m.toLowerCase() === n.toLowerCase()) === i)
+    .sort((a, b) => unit(`${cup.seed}|house|${a}`) - unit(`${cup.seed}|house|${b}`))
+    .slice(0, need);
+  const memberNames = [...fromHouse, ...pickNames(FIRST_NAMES_POOL, need - fromHouse.length, [...taken, ...fromHouse], `${cup.seed}|members`)];
+  const first = (n: string) => n.trim().split(/\s+/)[0];
+  const used = own.map((p) => p.name.toLowerCase());
+  const bots: Participant[] = Array.from({ length: botCount }, (_, i) => {
+    const pair = [memberNames[i * 2], memberNames[i * 2 + 1]];
+    let name = `${first(pair[0])} og ${first(pair[1])}`;
+    for (let k = 2; used.includes(name.toLowerCase()); k++) name = `${first(pair[0])} og ${first(pair[1])} ${k}`;
+    used.push(name.toLowerCase());
+    return { name, isBot: false, members: pair.map((m): TeamMember => asBot(m)) };
+  });
   return [...own, ...bots];
 }
 

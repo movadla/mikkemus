@@ -84,6 +84,8 @@ const SOUND_FILES: Record<CareerSoundKind, string> = {
 };
 const SOUND_VOLUME: Record<CareerSoundKind, number> = { coin: 0.6, unlock: 0.7, "crowd-1": 0.5, "crowd-2": 0.6, "crowd-3": 0.7, cheer: 0.8 };
 /** A recording that is longer than the moment it is for is faded out after this long (ms): the cheer is 16 seconds long, and a win needs about six. */
+/** How much of the start of the cheer is left out (seconds). */
+const CHEER_SKIP_S = 1;
 const SOUND_LIMIT_MS: Partial<Record<CareerSoundKind, number>> = { cheer: 6000 };
 /** Whether a file was found for a sound: not asked about until the first time it is wanted. */
 const soundFound = new Map<CareerSoundKind, boolean>();
@@ -100,6 +102,7 @@ export function careerSound(kind: CareerSoundKind): void {
   try {
     const audio = new Audio(`/career/sounds/${SOUND_FILES[kind]}.mp3`);
     audio.volume = SOUND_VOLUME[kind];
+    if (kind === "cheer") audio.currentTime = CHEER_SKIP_S;
     void audio.play().then(
       () => {
         soundFound.set(kind, true);
@@ -114,6 +117,27 @@ export function careerSound(kind: CareerSoundKind): void {
   } catch {
     soundFound.set(kind, false);
     playCareerSound(kind);
+  }
+}
+
+/**
+ * The crowd that cheers for a win (a match, a tournament). Unlike the other career sounds it is heard in every level of effects, as the
+ * fanfare is; only "Lyd i appen" turns it off.
+ */
+export function winCheer(): void {
+  if (!getUiSound() || typeof Audio === "undefined") return;
+  try {
+    const audio = effectEl ?? new Audio();
+    audio.src = "/career/sounds/cheer.mp3";
+    // The clip starts slowly: the first second is left out.
+    audio.currentTime = CHEER_SKIP_S;
+    audio.volume = SOUND_VOLUME.cheer;
+    void audio.play().then(
+      () => fadeOutAfter(audio, SOUND_LIMIT_MS.cheer ?? 6000),
+      () => {},
+    );
+  } catch {
+    // A cheer that cannot be played is not worth an error.
   }
 }
 
@@ -139,16 +163,33 @@ function fadeOutAfter(audio: HTMLAudioElement, ms: number): void {
  * opening is left. One song at a time, so an opening that is drawn twice (a development build does that) does not play it twice.
  * ------------------------------------------------------------------------------------------------------------------------------- */
 const INTRO_VOLUME = 0.6;
+const SILENCE = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
+let musicEl: HTMLAudioElement | null = null;
+let effectEl: HTMLAudioElement | null = null;
+
+/**
+ * A phone (iOS above all) lets a page start a sound only from a touch. The opening and the win come a moment after the touch, so two players are
+ * made at the first touch of the page and played in silence once: they are then free to play what is asked of them later.
+ */
+function unlockPlayers(): void {
+  if (musicEl || typeof Audio === "undefined") return;
+  musicEl = new Audio();
+  effectEl = new Audio();
+  for (const el of [musicEl, effectEl]) {
+    el.src = SILENCE;
+    void el.play().then(() => el.pause()).catch(() => {});
+  }
+}
+if (typeof window !== "undefined") window.addEventListener("pointerdown", unlockPlayers, { once: true, capture: true });
 let introAudio: HTMLAudioElement | null = null;
 let introTrack = "";
 /** The song of each opening: the world championship and the Grand Slam have their own, every other tournament the first. */
 export type IntroTrack = "intro" | "intro-vm" | "intro-gs";
 let introFade: ReturnType<typeof setInterval> | null = null;
 
-/** Starts the music of an opening, on the same terms as the other sounds (Party and up, and the setting). Returns what ends it: it fades out over a second. */
+/** Starts the music of an opening (heard in every level of effects; only "Lyd i appen" turns it off). Returns what ends it: it fades out over a second. */
 export function startIntroMusic(track: IntroTrack = "intro"): () => void {
-  const level = getFxLevel();
-  if ((level !== "party" && level !== "full") || !getUiSound() || typeof Audio === "undefined") return () => {};
+  if (!getUiSound() || typeof Audio === "undefined") return () => {};
   // Still playing from a moment ago (it was being turned down): it is turned up again, not started over.
   if (introFade) clearInterval(introFade);
   introFade = null;
@@ -159,7 +200,9 @@ export function startIntroMusic(track: IntroTrack = "intro"): () => void {
     introAudio?.pause();
     try {
       introTrack = track;
-      introAudio = new Audio(`/sounds/${track}.mp3`);
+      introAudio = musicEl ?? new Audio();
+      introAudio.src = `/sounds/${track}.mp3`;
+      introAudio.currentTime = 0;
       introAudio.volume = INTRO_VOLUME;
       introAudio.loop = true;
       void introAudio.play().catch(() => {

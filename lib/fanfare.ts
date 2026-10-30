@@ -273,7 +273,7 @@ export function playWinBoom() {
 /** The recording of a dart landing (public/sounds/dart-hit.mp3). Null until asked for; false when there is no file, and the synthesizer is used. */
 let tapRecording: HTMLAudioElement | null | false = null;
 /** How much of the start of the recording is left out (seconds). */
-const TAP_SKIP_S = 0.15;
+const TAP_SKIP_S = 0.25;
 
 /** Plays the recording of a dart for a tap, a little higher for each dart of the turn. Returns false when there is no recording to play. */
 function playTapRecording(dartInTurn: number): boolean {
@@ -290,7 +290,7 @@ function playTapRecording(dartInTurn: number): boolean {
     const one = tapRecording.cloneNode() as HTMLAudioElement;
     one.volume = 0.8;
     one.playbackRate = [1, 1.06, 1.12][Math.max(0, Math.min(2, Math.round(dartInTurn) - 1))];
-    // The recording starts slowly: the first 0.15 s are skipped, so the sound lands with the tap.
+    // The recording starts slowly: the first 0.25 s are skipped, so the sound lands with the tap.
     one.currentTime = TAP_SKIP_S;
     void one.play().catch(() => {
       tapRecording = false;

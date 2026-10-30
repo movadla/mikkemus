@@ -134,7 +134,6 @@ export function DrawScreen({
         <Avatar name={name} bot px={26} />
       </span>
     );
-  const seedNo = (name: string): number | null => (mode === "seeded" ? order.findIndex((p) => p.name === name) + 1 : null);
   const slot = (name: string | null, shown: boolean) =>
     name ? (
       <button
@@ -154,7 +153,6 @@ export function DrawScreen({
       >
         <span className="min-w-0 truncate">
           {name}
-          {seedNo(name) !== null && <span style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}> ({seedNo(name)})</span>}
         </span>
       </button>
     ) : (
@@ -185,7 +183,7 @@ export function DrawScreen({
               aria-checked={mode === m}
               onClick={() => choose(m)}
               className={`tactile flex-1 rounded-lg font-medium ${FOCUS_RING}`}
-              style={{ minHeight: "var(--control)", background: mode === m ? "var(--teal-soft)" : "var(--color-surface)", color: mode === m ? "var(--color-teal)" : "var(--color-muted)", border: mode === m ? "1px solid var(--color-teal)" : "1px solid var(--color-border)" }}
+              style={{ minHeight: "var(--control)", background: mode === m ? "var(--color-teal)" : "var(--color-surface)", color: mode === m ? "var(--color-bg)" : "var(--color-cream)", fontWeight: mode === m ? 700 : 500, border: mode === m ? "2px solid var(--color-teal)" : "1px solid var(--color-border)" }}
             >
               {m === "seeded" ? "Seedet" : "Tilfeldig"}
             </button>
@@ -276,7 +274,6 @@ export function DrawScreen({
                       {p.a && who(p.a)}
                       <span className="draw-nm">
                         {p.a ?? "Walkover"}
-                        {seedNo(p.a ?? "") ? <span style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}> ({seedNo(p.a ?? "")})</span> : null}
                       </span>
                     </span>
                     <span style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>mot</span>
@@ -284,7 +281,6 @@ export function DrawScreen({
                       {p.b && who(p.b)}
                       <span className="draw-nm">
                         {p.b ?? "Walkover"}
-                        {seedNo(p.b ?? "") ? <span style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}> ({seedNo(p.b ?? "")})</span> : null}
                       </span>
                     </span>
                   </div>
@@ -316,7 +312,7 @@ export function DrawScreen({
         )}
         {!drawing && !career && (
           <div className="mb-4">
-            <MiniBracket pairs={pairs} accent={colour} seedOf={seedNo} />
+            <MiniBracket pairs={pairs} accent={colour} />
           </div>
         )}
         {mode === "open" && (

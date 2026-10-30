@@ -21,6 +21,8 @@ import { generateConfetti, generateConfettiRain } from "@/lib/confetti";
 import { DartboardHeatmap } from "./DartboardHeatmap";
 import { ShirtRain } from "./ShirtRain";
 import { Trophy } from "./Trophy";
+import { TrophyArt } from "./CareerTrophy";
+import { venueOf, type VenueId } from "@/lib/venues";
 import { TimeMachine } from "./TimeMachine";
 import { RatingCard } from "./RatingCard";
 import { ReplayCard } from "./ReplayCard";
@@ -87,7 +89,10 @@ export function WinnerScreen({
   progressByPlayer,
   winnerKit = null,
   oddsHistory = [],
+  venue,
 }: {
+  /** The place a single match was played in: the cup of the place is shown under the winner. */
+  venue?: VenueId;
   winner: string;
   players: string[];
   stats: Record<string, TurnAggregate>;
@@ -414,6 +419,18 @@ export function WinnerScreen({
             </div>
             </div>
           </ViewTransition>
+        )}
+
+        {venue && !compact && (
+          // A single match played in a place has the cup of the place to win: it stands under the name of the winner.
+          <div className="animate-winner-pop mx-auto mb-6 flex flex-col items-center gap-1" aria-label={`${venueOf(venue).name}-pokalen`}>
+            <span style={{ width: "6.5rem", display: "block" }}>
+              <TrophyArt kind={venueOf(venue).tier} bare variant={venueOf(venue).key} />
+            </span>
+            <p className="font-display" style={{ color: "var(--color-gold-strong)", fontSize: "var(--text-title)" }}>
+              {venueOf(venue).name}-pokalen
+            </p>
+          </div>
         )}
 
         {newRecords.length > 0 && (

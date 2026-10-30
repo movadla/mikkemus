@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { generateConfettiRain } from "@/lib/confetti";
-import { playFanfare } from "@/lib/fanfare";
 import { fxFlags, useFxLevel } from "@/lib/fxLevel";
 import { lavaResult } from "@/lib/gameResults";
 import { useRecordResult } from "@/lib/gameResultsStorage";
@@ -28,7 +27,7 @@ import {
 import { splitPeople, type Person } from "@/lib/people";
 import { individualSetupProblem, setupSummary } from "@/lib/setupProblem";
 import { useRoster } from "@/lib/storage";
-import { careerSound, uiSound } from "@/lib/uiSound";
+import { uiSound, winCheer } from "@/lib/uiSound";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { Hearts } from "./Hearts";
 import { MinusIcon, PlusIcon } from "./icons";
@@ -149,8 +148,7 @@ export function LavaGameScreen({
   const rain = useMemo(() => (winner && fx.confetti ? generateConfettiRain(fx.bigConfetti ? 60 : 36) : []), [winner, fx.confetti, fx.bigConfetti]);
 
   useEffect(() => {
-    if (winner && fx.confetti) playFanfare();
-    if (winner) careerSound("cheer");
+    if (winner) winCheer();
   }, [winner, fx.confetti]);
 
   function pick(section: number) {

@@ -53,8 +53,9 @@ import type { OddsRow } from "./OddsBar";
 import { logOddsMatch, type OddsSnapshot } from "@/lib/oddsLog";
 import { useShowOdds } from "@/lib/oddsSetting";
 import { haptics } from "@/lib/haptics";
-import { careerSound, uiSound } from "@/lib/uiSound";
-import { crowdForStreak, playCrowd, playFanfare, playHitStreakSound, playStreakFanfare, playMatchDartSound, playTapSound, playWalkOnTune, playWinBoom, primeAudio, warmAudio } from "@/lib/fanfare";
+import { uiSound, winCheer } from "@/lib/uiSound";
+import type { VenueId } from "@/lib/venues";
+import { crowdForStreak, playCrowd, playHitStreakSound, playStreakFanfare, playMatchDartSound, playTapSound, playWalkOnTune, playWinBoom, primeAudio, warmAudio } from "@/lib/fanfare";
 import { fxFlags, getFxLevel, useFxLevel } from "@/lib/fxLevel";
 import { ChalkboardScreen } from "./ChalkboardScreen";
 import { classifyThrow, formatSectorLabel, parseSector } from "@/lib/scoliaMapping";
@@ -426,6 +427,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   // Advanced entry: every dart is keyed in by hand as the bed it hit (a miss included), so the match knows where all of them
   // landed. Chosen under Avanserte innstillinger before the start. A ref as well as state for the same reason as skipStats.
   const exactEntryRef = useRef(false);
+  // The place of a single match, chosen under Avanserte innstillinger (Ly unless it is changed): its cup is on the winner screen.
+  const [matchVenue, setMatchVenue] = useState<VenueId>("lu");
   const [exactEntry, setExactEntryState] = useState(false);
   const setExactEntry = (v: boolean) => {
     exactEntryRef.current = v;
@@ -655,6 +658,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       setScreen(restored.screen);
       setSkipStats(restored.skipStats ?? false);
       setExactEntry(restored.exactEntry ?? false);
+      setMatchVenue(restored.venue ?? "lu");
       setPlayers(restored.players);
       writeProgress(restored.progress);
       setCurrentIdx(restored.currentIdx);
@@ -749,6 +753,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       matchId: matchIdRef.current,
       skipStats,
       exactEntry,
+      venue: matchVenue,
       players,
       progress,
       currentIdx,
@@ -794,6 +799,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     variant,
     skipStats,
     exactEntry,
+    matchVenue,
     players,
     progress,
     currentIdx,
@@ -1389,10 +1395,12 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     startGuestPlayers: Record<string, true> = {},
     startVariant: GameVariant = "standard",
     startStatsOff = false,
-    startExactEntry = false
+    startExactEntry = false,
+    startVenue: VenueId = "lu"
   ) {
     setSkipStats(startStatsOff);
     setExactEntry(startExactEntry);
+    setMatchVenue(startVenue);
     // A new match starts with a freshly calibrated board. It used to be done by hand with «Kalibrer» before every match: the
     // board can still be part-way through the last visit (a match is won on the first or second dart), and would then count the
     // first throws of the next match against it. Only with a board that is up, so nothing is sent to one that is not.
@@ -2654,9 +2662,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         playWinBoom();
         setDiving(true);
       } else {
-        // No dive to land from, so the win is announced on the spot.
-        playFanfare();
-        careerSound("cheer");
+        // No dive to land from, so the win is announced on the spot, by the crowd (no fanfare).
+        winCheer();
       }
       // Reaching the winner screen must never depend on stats persistence succeeding —
       // see abortGame's identical guard for why.
@@ -2759,7 +2766,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
    *  WinnerScreen call site below). */
   function rematch() {
     flushMatchResults();
-    startGame(players, botLevels, teamRosters, guestPlayers, variant, skipStatsRef.current, exactEntryRef.current);
+    startGame(players, botLevels, teamRosters, guestPlayers, variant, skipStatsRef.current, exactEntryRef.current, matchVenue);
   }
 
   /**
@@ -2815,8 +2822,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         <WinDive
           onDone={() => {
             setDiving(false);
-            playFanfare();
-            careerSound("cheer");
+            winCheer();
           }}
         />
       );
@@ -2833,6 +2839,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         progressByPlayer={progress}
         winnerKit={kits[winner] ?? null}
         oddsHistory={showOdds ? oddsHistory : []}
+        venue={onMatchComplete ? undefined : matchVenue}
         onHome={onMatchComplete ? playAgain : goHome}
         homeLabel={onMatchComplete ? "Til turnering" : "Hjem"}
         onPlayAgain={onMatchComplete ? undefined : rematch}

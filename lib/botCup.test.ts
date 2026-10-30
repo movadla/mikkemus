@@ -166,3 +166,31 @@ describe("the bots of Ly Pilotturnering", () => {
     expect(other.has("6")).toBe(false);
   });
 });
+
+describe("the teams of bots", () => {
+  const cup = makeCup("vm", "4", true, 7);
+  const own: Participant[] = [{ name: "Vadla og Hans", isBot: false, members: [{ name: "Vadla", isBot: false }, { name: "Hans", isBot: false }] }];
+
+  it("are made of players the house has, and called after them", () => {
+    const known = ["Vadla", "Hans", "Moen", "Lars", "Monge", "Vegard", "John", "Duncan"];
+    const all = buildCupParticipants("team", own, 4, cup, known);
+    const bots = all.slice(1);
+    expect(bots).toHaveLength(3);
+    const used = bots.flatMap((b) => b.members!.map((m) => m.name));
+    // Six names are needed and the house has six that are free: all of them are from the house, none is one of the player's own.
+    for (const n of used) expect(known).toContain(n);
+    expect(used).not.toContain("Vadla");
+    expect(used).not.toContain("Hans");
+    expect(new Set(used).size).toBe(6);
+    for (const b of bots) expect(b.name).toBe(b.members!.map((m) => m.name.split(" ")[0]).join(" og "));
+  });
+
+  it("run out of the house's players and go on with real names, each once", () => {
+    const all = buildCupParticipants("team", own, 8, cup, ["Moen", "Lars"]);
+    const used = all.slice(1).flatMap((b) => b.members!.map((m) => m.name));
+    expect(used).toHaveLength(14);
+    expect(new Set(used).size).toBe(14);
+    expect(used).toContain("Moen");
+    expect(used).toContain("Lars");
+  });
+});

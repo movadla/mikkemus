@@ -1,7 +1,7 @@
 "use client";
 
 import { ViewTransition, useEffect, useState } from "react";
-import { careerSound } from "@/lib/uiSound";
+import { winCheer } from "@/lib/uiSound";
 import { awards, isHouseName, outIn, roadOf, undoableMatch } from "@/lib/knockout";
 import { isPilot, undoablePilotMatch } from "@/lib/pilot";
 import { fxFlags, useFxLevel } from "@/lib/fxLevel";
@@ -51,7 +51,7 @@ export function ChampionScreen({
   // The crowd cheers for the winner of a cup, once, when it has just been won (not when an old cup is opened from the cabinet, and not in the career, whose pay-out screen has its own).
   const cheers = !onClose && homeLabel === "Til forsiden";
   useEffect(() => {
-    if (cheers) careerSound("cheer");
+    if (cheers) winCheer();
   }, [cheers]);
   const winner = tournament.winner ?? "";
   const winnerPhoto = useRoster().find((r) => r.name === winner)?.photo;

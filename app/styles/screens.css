@@ -1617,3 +1617,31 @@ html[data-fx="full"] .hs-last {
 .grid-rule-left { border-left: 1px solid var(--color-hairline); }
 .action-buttons .glossy { box-shadow: none; filter: none; border-radius: 14px; min-height: 3.4rem; }
 .action-buttons .glossy:hover:not(:disabled) { transform: none; filter: brightness(1.04); box-shadow: none; }
+
+/* What is chosen is marked in more than a colour: a check, a heavier frame, and the others stepped back. */
+.venue-tile[aria-checked="false"] { opacity: 0.72; }
+.venue-tile[aria-checked="true"] { border: 3px solid var(--color-teal); box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-teal) 28%, transparent); }
+.venue-check { position: absolute; top: 0.3rem; right: 0.3rem; z-index: 2; width: 1.35rem; height: 1.35rem; border-radius: 50%; display: grid; place-items: center; background: var(--color-teal); color: #fff; font-size: 0.8rem; font-weight: 800; line-height: 1; }
+.cup-poster { position: relative; }
+.cup-poster[aria-checked="true"]::after { content: "✓"; position: absolute; top: 0.5rem; right: 0.6rem; width: 1.4rem; height: 1.4rem; border-radius: 50%; display: grid; place-items: center; background: var(--cup); color: #fff; font-size: 0.85rem; font-weight: 800; line-height: 1; }
+.cup-poster[aria-checked="false"] { opacity: 0.7; }
+
+/* The cups against bots: small cards with the picture of their place behind a dark fade, and white writing on it. */
+.cup-posters { margin-bottom: 1rem; }
+.cup-poster {
+  flex: 0 0 min(58%, 12rem);
+  min-height: 5.6rem;
+  padding: 0.55rem 0.7rem;
+  gap: 0.1rem;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0.78)), var(--pic, none), linear-gradient(165deg, color-mix(in srgb, var(--cup) 26%, var(--color-surface)), var(--color-surface) 75%);
+  background-size: cover;
+  background-position: center;
+  overflow: hidden;
+}
+.cup-poster-emblem { color: color-mix(in srgb, var(--cup) 55%, white); filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.6)); }
+
+/* The names of a draw fit their boxes: they wrap to a second line instead of being cut off, in a size that holds the longest names. */
+.draw-name .draw-nm { white-space: normal; text-overflow: clip; overflow-wrap: anywhere; line-height: 1.12; font-size: 0.82rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+.cup-poster-name { color: #fff; font-size: var(--text-small); line-height: 1.15; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7); }
+.cup-poster-trophy { color: rgba(255, 255, 255, 0.85); font-size: var(--text-micro); text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7); }
