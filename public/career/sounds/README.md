@@ -12,3 +12,7 @@ Legg lydfilene her, som MP3, med disse navnene. Mangler en fil, lager appen lyde
 | `cheer.mp3` | Du vinner en turnering |
 
 Lydene spilles bare i modusene Party og Full party, og bare når «Lyd i appen» er på (som resten av lydene).
+
+## Kilder
+
+- `cheer.mp3`: «Crowd Cheering» av u_xg7ssi08yr, hentet fra Pixabay (https://pixabay.com/sound-effects/people-crowd-cheering-379666/), Pixabays Content License (fri bruk, ingen kreditering kreves). Opptaket er 16 sekunder; appen spiller de første seks og tones så ut.

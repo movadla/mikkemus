@@ -83,6 +83,8 @@ const SOUND_FILES: Record<CareerSoundKind, string> = {
   cheer: "cheer",
 };
 const SOUND_VOLUME: Record<CareerSoundKind, number> = { coin: 0.6, unlock: 0.7, "crowd-1": 0.5, "crowd-2": 0.6, "crowd-3": 0.7, cheer: 0.8 };
+/** A recording that is longer than the moment it is for is faded out after this long (ms): the cheer is 16 seconds long, and a win needs about six. */
+const SOUND_LIMIT_MS: Partial<Record<CareerSoundKind, number>> = { cheer: 6000 };
 /** Whether a file was found for a sound: not asked about until the first time it is wanted. */
 const soundFound = new Map<CareerSoundKind, boolean>();
 
@@ -99,7 +101,11 @@ export function careerSound(kind: CareerSoundKind): void {
     const audio = new Audio(`/career/sounds/${SOUND_FILES[kind]}.mp3`);
     audio.volume = SOUND_VOLUME[kind];
     void audio.play().then(
-      () => soundFound.set(kind, true),
+      () => {
+        soundFound.set(kind, true);
+        const limit = SOUND_LIMIT_MS[kind];
+        if (limit) fadeOutAfter(audio, limit);
+      },
       () => {
         soundFound.set(kind, false);
         playCareerSound(kind);
@@ -109,4 +115,21 @@ export function careerSound(kind: CareerSoundKind): void {
     soundFound.set(kind, false);
     playCareerSound(kind);
   }
+}
+
+/** Lets a sound play for `ms`, then turns it down over a second and stops it. */
+function fadeOutAfter(audio: HTMLAudioElement, ms: number): void {
+  const start = audio.volume;
+  setTimeout(() => {
+    const steps = 10;
+    let i = 0;
+    const timer = setInterval(() => {
+      i += 1;
+      audio.volume = Math.max(0, start * (1 - i / steps));
+      if (i >= steps || audio.ended) {
+        clearInterval(timer);
+        audio.pause();
+      }
+    }, 100);
+  }, ms);
 }
