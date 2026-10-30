@@ -194,8 +194,8 @@ export function TournamentSetupScreen({
           type="button"
           onClick={() => setDetailsOpen((o) => !o)}
           aria-expanded={detailsOpen}
-          className={`tactile w-full rounded-lg px-4 flex items-center justify-between gap-3 text-left mt-4 mb-3 ${FOCUS_RING}`}
-          style={{ minHeight: "var(--control)", background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+          className={`tactile flat w-full px-1 flex items-center justify-between gap-3 text-left mt-4 ${FOCUS_RING}`}
+          style={{ minHeight: "var(--control)", background: "transparent", borderTop: "1px solid var(--color-border)", borderBottom: "1px solid var(--color-border)" }}
         >
           <span className="min-w-0 truncate" style={{ color: "var(--color-cream)", fontWeight: 600, fontSize: "var(--text-body)" }}>{cupMode ? `${cupType(cup.kind).name} · ${cupSize}` : "Sted"}</span>
           <span className="shrink-0" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
@@ -203,7 +203,7 @@ export function TournamentSetupScreen({
           </span>
         </button>
         {detailsOpen && (
-          <div className="mb-3">
+          <div className="mt-3 mb-3">
             {cupMode && (
               <>
                 <CupTypePicker value={{ ...cup, size: cupSize }} onChange={setCup} maxSize={maxSize} />
@@ -226,8 +226,8 @@ export function TournamentSetupScreen({
           type="button"
           onClick={() => setMoreOpen((o) => !o)}
           aria-expanded={moreOpen}
-          className={`tactile w-full rounded-lg px-4 flex items-center justify-between gap-3 text-left mb-4 ${FOCUS_RING}`}
-          style={{ minHeight: "var(--control)", background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+          className={`tactile flat w-full px-1 flex items-center justify-between gap-3 text-left mb-4 ${FOCUS_RING}`}
+          style={{ minHeight: "var(--control)", background: "transparent", borderBottom: "1px solid var(--color-border)" }}
         >
           <span style={{ color: "var(--color-cream)", fontWeight: 600, fontSize: "var(--text-body)" }}>Flere valg</span>
           <span aria-hidden style={{ color: "var(--color-muted)" }}>{moreOpen ? "⌃" : "›"}</span>

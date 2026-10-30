@@ -1214,7 +1214,15 @@ export function GameScreen({
         {players.length >= 5 && (
           <div className="scroll-hint-right absolute top-0 right-0 bottom-0 w-8 z-20 pointer-events-none" aria-hidden />
         )}
-        {!compactLandscape && thrower && <div className="shrink-0"><ThrowerBar key={turnToken} thrower={thrower} team={throwerTeam} kit={throwerTeam ? kits[throwerTeam.name] : null} stood={throwerStood} run={throwerRun} round={activePlayer ? Math.floor((dartsThrown[activePlayer] ?? 0) / 3) + 1 : undefined} fire={fxFire} animate={throwerAnimate} onPickMate={choiceInteractive && !rewound ? setSwitchTo : undefined} onOpen={!rewound && !limited ? () => setSheetOpen(true) : undefined} flush /></div>}
+        {!compactLandscape && thrower && <div className="shrink-0">
+          <ThrowerBar key={turnToken} thrower={thrower} team={throwerTeam} kit={throwerTeam ? kits[throwerTeam.name] : null} stood={throwerStood} run={throwerRun} darts={activePlayer ? (dartsThrown[activePlayer] ?? 0) + dartsThisTurn : undefined} fire={fxFire} animate={throwerAnimate} onPickMate={choiceInteractive && !rewound ? setSwitchTo : undefined} onOpen={!rewound && !limited ? () => setSheetOpen(true) : undefined} flush />
+          {/* The three darts of this turn sit right under the name, where the eye already is. */}
+          {!rewound && (
+            <div className="shot-strip">
+              <ShotIndicator shots={turnShots} onEdit={shotsEditable ? setEditingShot : undefined} highlight={shotHighlight} />
+            </div>
+          )}
+        </div>}
         <div className="flex-1 min-h-0 w-full overflow-x-auto overflow-y-auto">
           <div
             className="game-grid grid h-full"
@@ -1245,7 +1253,7 @@ export function GameScreen({
                   key={p}
                   data-col-active={isActive ? "" : undefined}
                   data-col-player={p}
-                  className={`player-head relative flex flex-col items-center justify-center gap-1.5 p-2 pb-2.5 text-center transition-colors duration-300 grid-rule-left ${isActive ? "column-active" : ""}`}
+                  className={`player-head relative flex flex-col items-center justify-center gap-1.5 p-2 pt-[1.45rem] pb-2.5 text-center transition-colors duration-300 grid-rule-left ${isActive ? "column-active" : ""}`}
                   style={{
                     borderBottom: isActive ? `2px solid ${accent}` : "2px solid var(--color-border)",
                   }}
@@ -1498,7 +1506,6 @@ export function GameScreen({
       <div className="action-bar shrink-0 mt-3 -mx-4 px-4 pt-2 pb-1">
         {!rewound && !compactLandscape && (
           <div className="max-w-3xl mx-auto w-full mb-1">
-            <ShotIndicator shots={turnShots} onEdit={shotsEditable ? setEditingShot : undefined} highlight={shotHighlight} />
             {(showChoiceBox || showStandBox) && <div className="mt-2">{choiceBox(false)}</div>}
             {choicePrompt && !showChoiceBox && (
               <p role="status" className="text-center mt-1" style={{ color: "var(--color-gold-strong)", fontSize: "var(--text-small)", fontWeight: 600 }}>

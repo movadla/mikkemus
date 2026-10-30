@@ -1594,3 +1594,9 @@ html[data-fx="full"] .hs-last {
   }
 }
 
+
+/* Flat controls: names, text actions and settings rows have no shadow; the shadow is for what is chosen and for the one main button. */
+.tactile.flat, .tactile.flat:active { box-shadow: none !important; }
+
+/* The three darts of the turn, in the card of the thrower: centred, a hairline under them, the same ground as the name above. */
+.shot-strip { display: flex; justify-content: center; padding: 0.35rem 0 0.2rem; background: var(--color-surface); border-bottom: 1px solid var(--color-hairline); }

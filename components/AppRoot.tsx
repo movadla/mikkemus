@@ -14,7 +14,6 @@ import { BullseyeIcon, DartIcon, FlameIcon, GridIcon, HeartIcon, KeypadIcon, Tro
 import { RulesIntro } from "./RulesIntro";
 import { ScoliaDot, summarizeScolia } from "./ScoliaStatusBadge";
 import { SkeletonRows } from "./ui/Skeleton";
-import { TonightCard } from "./TonightCard";
 import { Welcome, hasBeenWelcomed, markWelcomed } from "./Welcome";
 import { BottomNav } from "./ui/BottomNav";
 import { Wordmark } from "./ui/BrandMark";
@@ -205,7 +204,6 @@ export function AppRoot() {
 
         </div>
 
-        <TonightCard />
       </div>
       <BottomNav current="spill" onTurnering={tournamentsOn ? () => setMode("tournament") : undefined} />
     </div>

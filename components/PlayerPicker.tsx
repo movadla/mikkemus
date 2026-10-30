@@ -4,22 +4,17 @@ import { useMemo, useState } from "react";
 import { useRoster } from "@/lib/storage";
 import { BOT_LEVEL_PICKABLE, botDisplayName, type BotLevel } from "@/lib/botLevels";
 import { nextBotName, sameName, type Person } from "@/lib/people";
-import { filterNames, readUsage, sortByRecent } from "@/lib/recentPlayers";
+import { readUsage, sortByRecent } from "@/lib/recentPlayers";
 import { BotIcon, CloseIcon, GuestIcon } from "./icons";
 import { LevelBadge } from "./LevelBadge";
 import { Avatar } from "./ui/Avatar";
-import { SearchField, TextField } from "./ui/TextField";
+import { TextField } from "./ui/TextField";
 
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
 
-/** A search box only earns its place once the list is long enough to need one. */
-const SEARCH_FROM = 12;
-
 /** How many of the known players are shown before "Flere spillere": the ones with the most matches. */
-const SHOWN = 8;
-
-const addButton = "tactile flex-1 rounded-lg text-sm font-medium flex items-center justify-center gap-2";
+const SHOWN = 6;
 
 /**
  * Who is in: one list of everyone known, as tiles in two columns, where a tap puts someone in the
@@ -48,7 +43,6 @@ export function PlayerPicker({
 }) {
   const [adding, setAdding] = useState<"player" | "guest" | "bot" | null>(null);
   const [nameInput, setNameInput] = useState("");
-  const [query, setQuery] = useState("");
   const [more, setMore] = useState(false);
   const [error, setError] = useState("");
   const roster = useRoster();
@@ -58,11 +52,10 @@ export function PlayerPicker({
     return sortByRecent(names, readUsage());
   }, [roster, hidden]);
   const extra = people.filter((p) => !known.some((n) => sameName(n, p.name)));
-  // The ones who are in are a row of their own at the top; the list under it holds the rest: the eight with the most matches, and the others behind one button (a search shows them all).
+  // The ones who are in are a row of their own at the top; the list under it holds the rest: the six with the most matches, and the others behind one button.
   const unpicked = known.filter((n) => !people.some((p) => sameName(p.name, n)));
   const top = useMemo(() => new Set([...unpicked].sort((a, b) => (roster.find((r) => sameName(r.name, b))?.matchesPlayed ?? 0) - (roster.find((r) => sameName(r.name, a))?.matchesPlayed ?? 0) || known.indexOf(a) - known.indexOf(b)).slice(0, SHOWN)), [unpicked, known, roster]);
-  const searching = query.trim() !== "";
-  const listed = filterNames(unpicked, query).filter((n) => more || searching || top.has(n));
+  const listed = unpicked.filter((n) => more || top.has(n));
   const hiddenCount = unpicked.length - listed.length;
   // Under the field for a new name: the players who are known already with that spelling, so a name that is there is tapped, not typed again.
   const typed = nameInput.trim();
@@ -107,12 +100,6 @@ export function PlayerPicker({
 
   return (
     <div className="mb-4">
-      {known.length >= SEARCH_FROM && (
-        <div className="mb-4">
-          <SearchField value={query} onChange={setQuery} label="Søk etter spiller" />
-        </div>
-      )}
-
       {people.length > 0 && (
         <div className="mb-3" role="group" aria-label="Med">
           <p className="section-label mb-1.5">MED ({people.length})</p>
@@ -122,7 +109,7 @@ export function PlayerPicker({
               const botBlocked = person.isBot && !botsAllowed;
               return (
                 <li key={person.name}>
-                  <button type="button" onClick={() => toggle(person)} aria-label={`Ta ut ${person.name}, nummer ${i + 1}`} className={`tactile relative flex flex-col items-center gap-0.5 ${FOCUS_RING}`} style={{ width: "3.6rem" }}>
+                  <button type="button" onClick={() => toggle(person)} aria-label={`Ta ut ${person.name}, nummer ${i + 1}`} className={`tactile flat relative flex flex-col items-center gap-0.5 ${FOCUS_RING}`} style={{ width: "3.6rem" }}>
                     <span className="relative">
                       {person.isGuest ? (
                         <span aria-hidden className="rounded-full flex items-center justify-center" style={{ width: 40, height: 40, background: "var(--color-cell)", border: "1.5px dashed var(--color-border)" }}>
@@ -146,71 +133,52 @@ export function PlayerPicker({
         </div>
       )}
 
-      {shown.length > 0 && (
-        <div className="grid grid-cols-2 gap-2" role="group" aria-label="Spillere">
-          {shown.map((person) => {
-            const photo = roster.find((r) => sameName(r.name, person.name))?.photo;
-            return (
+      {/* The ones who can be picked are small name tags with a plus, not boxes: a person is one kind of thing, an action another. */}
+      {(shown.length > 0 || hiddenCount > 0) && (
+        <ul className="flex flex-wrap gap-x-2 gap-y-2" role="group" aria-label="Spillere">
+          {shown.map((person) => (
+            <li key={person.name}>
               <button
-                key={person.name}
                 type="button"
                 aria-pressed={false}
                 onClick={() => toggle(person)}
-                className={`tactile relative flex items-center gap-2 px-2 py-1.5 rounded-xl text-left ${FOCUS_RING}`}
-                style={{ minHeight: "2.75rem", background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+                className={`tactile flat inline-flex items-center gap-1.5 rounded-md px-2.5 ${FOCUS_RING}`}
+                style={{ minHeight: "2.25rem", background: "transparent", border: "1px solid var(--color-border)", color: "var(--color-cream)", fontSize: "var(--text-small)" }}
               >
-                <Avatar name={person.name} photo={photo} size="s" px={28} />
-                <span className="flex-1 min-w-0 truncate" style={{ color: "var(--color-cream)", fontSize: "var(--text-body)" }}>
-                  {person.name}
-                </span>
+                <span aria-hidden style={{ color: "var(--color-teal)", fontWeight: 700 }}>+</span>
+                {person.name}
               </button>
-            );
-          })}
-        </div>
-      )}
-      {shown.length === 0 && query && (
-        <p style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>Ingen spillere heter noe slikt.</p>
-      )}
-      {!searching && (hiddenCount > 0 || more) && known.length > SHOWN && (
-        <button type="button" onClick={() => setMore((m) => !m)} aria-expanded={more} className={`tactile w-full rounded-lg mt-2 flex items-center justify-between px-4 ${FOCUS_RING}`} style={{ minHeight: "var(--control)", background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-cream)", fontWeight: 600, fontSize: "var(--text-body)" }}>
-          <span>{more ? "Færre spillere" : `Flere spillere (${hiddenCount})`}</span>
-          <span aria-hidden style={{ color: "var(--color-muted)" }}>{more ? "⌃" : "›"}</span>
-        </button>
+            </li>
+          ))}
+          {(hiddenCount > 0 || more) && known.length > SHOWN && (
+            <li>
+              <button
+                type="button"
+                onClick={() => setMore((m) => !m)}
+                aria-expanded={more}
+                className={`tactile flat inline-flex items-center rounded-md px-2.5 ${FOCUS_RING}`}
+                style={{ minHeight: "2.25rem", background: "transparent", border: "1px dashed var(--color-teal)", color: "var(--color-teal)", fontSize: "var(--text-small)", fontWeight: 600 }}
+              >
+                {more ? "Færre" : `Flere spillere (${hiddenCount})`}
+              </button>
+            </li>
+          )}
+        </ul>
       )}
       <div className="mt-4">
-      <div className="flex gap-2 mb-4">
-        <button
-          type="button"
-          onClick={() => open("player")}
-          aria-expanded={adding === "player"}
-          className={`${addButton} ${FOCUS_RING}`}
-          style={{ minHeight: "var(--control)", background: "var(--color-surface)", border: "1.5px dashed var(--color-teal)", color: "var(--color-teal)" }}
-        >
-          <span aria-hidden style={{ fontSize: "var(--text-body)", lineHeight: 1, fontWeight: 700 }}>
-            +
-          </span>
+      {/* What you do, not who you pick: text with a plus, in the accent colour, on one line. */}
+      <div className="flex flex-wrap gap-x-5 gap-y-1 mb-3">
+        <button type="button" onClick={() => open("player")} aria-expanded={adding === "player"} className={`tactile flat inline-flex items-center gap-1.5 ${FOCUS_RING}`} style={{ minHeight: "var(--control)", color: "var(--color-teal)", fontWeight: 700, fontSize: "var(--text-body)" }}>
+          <span aria-hidden>+</span>
           Ny spiller
         </button>
         {guests && (
-          <button
-            type="button"
-            onClick={() => open("guest")}
-            aria-expanded={adding === "guest"}
-            className={`${addButton} ${FOCUS_RING}`}
-            style={{ minHeight: "var(--control)", background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-cream)" }}
-          >
+          <button type="button" onClick={() => open("guest")} aria-expanded={adding === "guest"} className={`tactile flat inline-flex items-center gap-1.5 ${FOCUS_RING}`} style={{ minHeight: "var(--control)", color: "var(--color-teal)", fontWeight: 700, fontSize: "var(--text-body)" }}>
             <GuestIcon className="w-3.5 h-3.5" />
             Gjest
           </button>
         )}
-        <button
-          type="button"
-          onClick={() => open("bot")}
-          disabled={!botsAllowed}
-          aria-expanded={adding === "bot"}
-          className={`${addButton} ${FOCUS_RING}`}
-          style={{ minHeight: "var(--control)", background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-cream)", opacity: botsAllowed ? 1 : 0.4 }}
-        >
+        <button type="button" onClick={() => open("bot")} disabled={!botsAllowed} aria-expanded={adding === "bot"} className={`tactile flat inline-flex items-center gap-1.5 ${FOCUS_RING}`} style={{ minHeight: "var(--control)", color: "var(--color-teal)", fontWeight: 700, fontSize: "var(--text-body)", opacity: botsAllowed ? 1 : 0.4 }}>
           <BotIcon className="w-4 h-4" />
           Bot
         </button>
@@ -267,7 +235,7 @@ export function PlayerPicker({
                     setError("");
                     setAdding(null);
                   }}
-                  className={`tactile w-full flex items-center gap-2 px-3 text-left ${FOCUS_RING}`}
+                  className={`tactile flat w-full flex items-center gap-2 px-3 text-left ${FOCUS_RING}`}
                   style={{ minHeight: "var(--control)", color: "var(--color-cream)", opacity: inAlready ? 0.6 : 1 }}
                 >
                   <Avatar name={name} photo={photo} size="s" px={28} />

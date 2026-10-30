@@ -109,7 +109,7 @@ export function ThrowerBar({
   kit,
   stood,
   run = 0,
-  round,
+  darts,
   fire = false,
   animate,
   compact = false,
@@ -125,8 +125,8 @@ export function ThrowerBar({
   stood: boolean;
   /** Darts in a row that counted — shown from two up, so a lone hit is not announced. */
   run?: number;
-  /** The thrower's own round, counted from one: shown large on the right. */
-  round?: number;
+  /** The darts the thrower has used so far: a small number on the right. */
+  darts?: number;
   /** Flames round the picture while the run builds (Party and up). */
   fire?: boolean;
   animate: boolean;
@@ -209,15 +209,10 @@ export function ThrowerBar({
         )}
       </div>
       </Wrap>
-      {round !== undefined && !compact && (
-        <div className="shrink-0 text-right" aria-label={`Runde ${round}`}>
-          <span className="block" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)", letterSpacing: "0.14em", fontWeight: 600 }}>
-            RUNDE
-          </span>
-          <span className="num block" style={{ color: "var(--color-cream)", fontSize: "2.25rem", textShadow: "var(--shadow-text)" }}>
-            {round}
-          </span>
-        </div>
+      {darts !== undefined && !compact && (
+        <p className="shrink-0 self-start tabular whitespace-nowrap" aria-label={`${darts} piler brukt`} style={{ color: "var(--color-muted)", fontSize: "var(--text-small)", fontWeight: 600 }}>
+          Piler <b style={{ color: "var(--color-cream)" }}>{darts}</b>
+        </p>
       )}
       {mates.length > 0 && (
         <div className="flex items-end gap-2 shrink-0" aria-label={`Neste på laget: ${mates.map((m) => m.name).join(", ")}`}>
