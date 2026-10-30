@@ -3,8 +3,12 @@
  * double, the treble and both singles), and from then on a dart in it costs a life. A dart outside the sections (a miss) costs nothing.
  * Three darts a round. A life gone and no more left means out, and the round ends there. The last one standing wins.
  *
- * The sections are the twenty numbers and the bull (25 and 50 are the same section). The game is a list of darts in the order they were
- * thrown; everything else (who is up, what is lava, the lives) is worked out from it, so taking a dart back is taking the last one off.
+ * The sections are the twenty numbers and the bull (25 and 50 are the same section). With doubles and trebles on, the double and the treble of
+ * each number are sections of their own, apart from the number itself. When every section has been set on fire and there is still a game, one at
+ * random opens again as safe; when it is hit, another opens. The random is worked out from a seed kept with the game, so the same darts always give
+ * the same board, and taking a dart back puts it all back as it was.
+ * The game is a list of darts in the order they were thrown; everything else (who is up, what is lava, the lives) is worked out from it, so
+ * taking a dart back is taking the last one off.
  */
 export const DEFAULT_LIVES = 3;
 export const MIN_LIVES = 1;
@@ -16,11 +20,40 @@ export const MISS = 0;
 /** The sections of the board: 1 to 20, and the bull. */
 export const SECTIONS: number[] = [...Array.from({ length: 20 }, (_, i) => i + 1), BULL];
 
+/** Which sections there are: the numbers and the bull, or also the double and the treble of every number. */
+export type LavaFields = "numbers" | "all";
+/** A double is 100 and the number, a treble 200 and the number: 120 is D20, 220 is T20. */
+const NUMBERS = Array.from({ length: 20 }, (_, i) => i + 1);
+export const SECTIONS_ALL: number[] = [...SECTIONS, ...NUMBERS.map((n) => 100 + n), ...NUMBERS.map((n) => 200 + n)];
+export const sectionsFor = (fields: LavaFields | undefined): number[] => (fields === "all" ? SECTIONS_ALL : SECTIONS);
+/** The number a section is on, and which part of it: the number itself, its double or its treble. */
+export const fieldNumber = (section: number): number => (section >= 200 ? section - 200 : section >= 100 ? section - 100 : section);
+export const fieldKind = (section: number): "s" | "d" | "t" => (section >= 200 ? "t" : section >= 100 ? "d" : "s");
+/** The section a dart counts for, from what it is called ("T20", "D16", "20", "BULL"): the number alone unless doubles and trebles are on. */
+export function fieldOfLabel(label: string, section: number, fields: LavaFields | undefined): number {
+  if (fields !== "all" || section === MISS || section === BULL) return section;
+  const m = /^([TD])(\d{1,2})$/.exec(label);
+  if (!m) return section;
+  return (m[1] === "T" ? 200 : 100) + Number(m[2]);
+}
+
+/** A small seeded random: the same seed and the same count always give the same number from 0 to 1. */
+function random(seed: number, count: number): number {
+  let t = (seed + count * 0x6d2b79f5) | 0;
+  t = Math.imul(t ^ (t >>> 15), 1 | t);
+  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
+
 export type LavaGame = {
   lives: number;
   players: string[];
   /** Section hit by each dart, in order; MISS (0) is a dart that found none. */
   darts: number[];
+  /** Doubles and trebles as sections of their own. Without it (and in older games) the numbers and the bull are the sections. */
+  fields?: LavaFields;
+  /** What decides which section opens again when all have been set on fire. */
+  seed?: number;
 };
 
 /** What a dart did: nothing, set a section on fire, or hit one that was already burning. */
@@ -34,6 +67,8 @@ export type LavaDart = {
   knockedOut: boolean;
   /** Which dart of the round it was, from 0. */
   nth: number;
+  /** The section that opened again, as safe, because this dart set the last safe one on fire. */
+  opened?: number;
 };
 
 export type LavaState = {
@@ -50,14 +85,17 @@ export type LavaState = {
   winner: string | null;
 };
 
-export function newGame(lives: number, players: string[]): LavaGame {
-  return { lives: Math.max(MIN_LIVES, Math.min(MAX_LIVES, lives)), players, darts: [] };
+export function newGame(lives: number, players: string[], fields: LavaFields = "numbers"): LavaGame {
+  return { lives: Math.max(MIN_LIVES, Math.min(MAX_LIVES, lives)), players, darts: [], ...(fields === "all" ? { fields } : {}), seed: Math.floor(Math.random() * 2147483647) };
 }
 
 /** Works the game out from its darts. */
 export function stateOf(g: LavaGame): LavaState {
   const lives: Record<string, number> = Object.fromEntries(g.players.map((p) => [p, g.lives]));
   const burned = new Map<number, string>();
+  const everything = sectionsFor(g.fields);
+  const seed = g.seed ?? 1;
+  let reopened = 0;
   const log: LavaDart[] = [];
   let up = g.players[0];
   let thrown = 0;
@@ -87,6 +125,14 @@ export function stateOf(g: LavaGame): LavaState {
     }
     const knockedOut = outcome === "lava" && lives[up] <= 0;
     const dart: LavaDart = { player: up, section, outcome, knockedOut, nth: thrown };
+    // Every section on fire: one opens again at random (never the one that was just hit, if there is another), and so on for as long as the game goes.
+    if (outcome === "burn" && burned.size >= everything.length) {
+      const pool = everything.filter((s) => s !== section);
+      const pick = pool[Math.floor(random(seed, reopened) * pool.length)];
+      burned.delete(pick);
+      reopened += 1;
+      dart.opened = pick;
+    }
     log.push(dart);
     round.push(dart);
     thrown += 1;
@@ -122,7 +168,8 @@ export const isOut = (s: LavaState, player: string) => livesLeft(s, player) <= 0
 export const burnedBy = (s: LavaState, player: string) => [...s.burned.values()].filter((p) => p === player).length;
 
 /** How many sections are still safe. */
-export const safeLeft = (s: LavaState) => SECTIONS.length - s.burned.size;
+export const safeLeft = (s: LavaState, fields?: LavaFields) => sectionsFor(fields).length - s.burned.size;
 
-/** The label of a section: the number, or "Bull". */
-export const sectionLabel = (section: number) => (section === BULL ? "Bull" : section === MISS ? "Bom" : String(section));
+/** The label of a section: the number, "D20" or "T20", or "Bull". */
+export const sectionLabel = (section: number) =>
+  section === BULL ? "Bull" : section === MISS ? "Bom" : section >= 200 ? `T${section - 200}` : section >= 100 ? `D${section - 100}` : String(section);

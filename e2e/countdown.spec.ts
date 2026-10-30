@@ -48,8 +48,9 @@ test.describe("301 og 501", () => {
     // Lars from 301: 180, then 60 is Vadla's, then 121 left for Lars is out in three darts or fewer.
     await keys(page, "180");
     await keys(page, "60");
-    await expect(left(page, "Lars").getByRole("img", { name: /^Ut: T20/ })).toBeVisible();
-    await expect(left(page, "Vadla").getByRole("img", { name: /^Ut:/ })).toHaveCount(0);
+    // The way out is the line over the keypad, for the one who is up (Lars).
+    await expect(page.getByRole("img", { name: /^Ut: T20/ })).toBeVisible();
+    await expect(left(page, "Lars")).toHaveAttribute("aria-current", "true");
     // What is written shows what it would leave.
     await keys(page, "5");
     await expect(page.getByRole("status")).toContainText("116 igjen etter 5");

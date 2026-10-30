@@ -8,7 +8,7 @@ import { gaussianSample, sigmaForLevel } from "./botStrategy";
 import { checkoutsOf } from "./checkout";
 import { judge } from "./countdown";
 import { aimPointFor, sectorAt } from "./dartboard";
-import { BULL, MISS } from "./lava";
+import { BULL, MISS, fieldOfLabel, type LavaFields } from "./lava";
 import { formatSectorLabel, parseSector } from "./scoliaMapping";
 
 export type Aim = [number, number];
@@ -184,17 +184,20 @@ const lavaCandidates: Aim[] = (() => {
   return all;
 })();
 
+/** With doubles and trebles as sections too, the bot also considers aiming at them. */
+const lavaCandidatesAll: Aim[] = [...lavaCandidates, ...Array.from({ length: 20 }, (_, i) => [aimForLabel(`T${i + 1}`), aimForLabel(`D${i + 1}`)]).flat()];
+
 /**
  * Where a bot aims in Lava: the point where a dart is least likely to land in a section that is burning, weighing where it could land
  * with the spread of its level. A section not yet burning is worth a little, so of two as safe the one that sets more on fire wins.
  */
-export function chooseLavaAim(burned: ReadonlySet<number>, level: Skill): Aim {
+export function chooseLavaAim(burned: ReadonlySet<number>, level: Skill, fields?: LavaFields): Aim {
   let best: { aim: Aim; value: number } | null = null;
-  for (const aim of lavaCandidates) {
+  for (const aim of fields === "all" ? lavaCandidatesAll : lavaCandidates) {
     let value = 0;
     for (const d of landings(aim, level)) {
       if (d.section === MISS) continue;
-      value += burned.has(d.section) ? -3 : 0.25;
+      value += burned.has(fieldOfLabel(d.label, d.section, fields)) ? -3 : 0.25;
     }
     if (!best || value > best.value) best = { aim, value };
   }
@@ -202,6 +205,6 @@ export function chooseLavaAim(burned: ReadonlySet<number>, level: Skill): Aim {
 }
 
 /** One dart of Lava by a bot: the section it hit, or MISS. */
-export function botLavaDart(burned: ReadonlySet<number>, level: Skill, thrower: Thrower = throwAt): BotDart {
-  return thrower(chooseLavaAim(burned, level), level);
+export function botLavaDart(burned: ReadonlySet<number>, level: Skill, thrower: Thrower = throwAt, fields?: LavaFields): BotDart {
+  return thrower(chooseLavaAim(burned, level, fields), level);
 }

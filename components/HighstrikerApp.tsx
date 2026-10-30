@@ -30,6 +30,7 @@ import {
   type HighstrikerGame,
 } from "@/lib/highstriker";
 import { splitPeople, type Person } from "@/lib/people";
+import { useGameVenue } from "@/lib/gameVenue";
 import { individualSetupProblem, setupSummary } from "@/lib/setupProblem";
 import { useRoster } from "@/lib/storage";
 import { uiSound } from "@/lib/uiSound";
@@ -37,14 +38,17 @@ import { Bell } from "./Bell";
 import { useBotTurn } from "./useBotTurn";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { Hearts } from "./Hearts";
-import { MinusIcon, PlusIcon } from "./icons";
+import { MinusIcon, PlusIcon, UndoIcon } from "./icons";
 import { PlayerPicker } from "./PlayerPicker";
 import { ScoreKeypad } from "./ScoreKeypad";
+import { GameVenue, VenueSection } from "./GameVenue";
 import { ScreenTop } from "./ScreenTop";
 import { commitPeople } from "./SetupScreen";
 import { StickyAction } from "./StickyAction";
-import { VoiceSwitch } from "./VoiceSwitch";
+import { VoiceToggle } from "./VoiceSwitch";
 import { Avatar } from "./ui/Avatar";
+import { CountUp } from "./ui/CountUp";
+import { FOCUS_RING } from "./ui/focus";
 import { Button } from "./ui/Button";
 import { SwitchRow } from "./ui/Switch";
 
@@ -78,6 +82,7 @@ export function HighstrikerApp({ onExitToHome }: { onExitToHome: () => void }) {
   const [game, setGame] = useState<HighstrikerGame | null>(null);
   const [botLevels, setBotLevels] = useState<Record<string, BotLevel>>({});
   const photos = new Map(useRoster().map((r) => [r.name, r.photo]));
+  const [venue, setVenue] = useGameVenue("highstriker");
 
   if (!game) {
     const problem = (people.length > 0 && people.every((p) => p.isBot) ? "Velg minst én spiller" : individualSetupProblem(people.map((p) => p.name), false, 2)) || null;
@@ -112,6 +117,7 @@ export function HighstrikerApp({ onExitToHome }: { onExitToHome: () => void }) {
               </div>
             )}
           </div>
+          <VenueSection value={venue} onChange={setVenue} />
           <StickyAction
             onClick={() => {
               commitPeople(people);
@@ -130,7 +136,11 @@ export function HighstrikerApp({ onExitToHome }: { onExitToHome: () => void }) {
     );
   }
 
-  return <HighstrikerGameScreen game={game} setGame={setGame} botLevels={botLevels} photos={photos} onHome={onExitToHome} onNew={() => setGame(null)} />;
+  return (
+    <GameVenue venue={venue}>
+      <HighstrikerGameScreen game={game} setGame={setGame} botLevels={botLevels} photos={photos} onHome={onExitToHome} onNew={() => setGame(null)} />
+    </GameVenue>
+  );
 }
 
 export function HighstrikerGameScreen({
@@ -218,19 +228,35 @@ export function HighstrikerGameScreen({
           ))}
         </div>
         <div className="screen-inner relative z-10">
-          <div className="flex flex-col items-center text-center mb-4 mt-6">
-            <Bell ring size={30} />
-            <Avatar name={winner} photo={photos.get(winner)} px={112} state="winner" />
-            <p className="section-label mt-4">HIGHSTRIKER · SISTE I LIVE</p>
-            <h1 className="font-display" style={{ color: "var(--color-gold)", fontSize: "clamp(2.2rem, 11vw, 3.2rem)", lineHeight: 1.05 }}>
+          <div className="card-gold shadow-panel rounded-2xl text-center mb-4 mt-12 relative" style={{ padding: "3.4rem 1.25rem 1.1rem" }}>
+            <span className="absolute flex flex-col items-center" style={{ top: "-4.6rem", left: "50%", transform: "translateX(-50%)" }}>
+              <Bell ring size={30} />
+              <Avatar name={winner} photo={photos.get(winner)} px={104} state="winner" />
+            </span>
+            <p className="font-display" style={{ color: "var(--color-bg)", fontStyle: "italic", fontSize: "var(--text-body)", letterSpacing: "0.04em" }}>
+              Vinner
+            </p>
+            <h1 className="font-display" style={{ color: "var(--color-bg)", fontSize: "clamp(2.2rem, 11vw, 3rem)", lineHeight: 1.05 }}>
               {winner}
             </h1>
+            <p style={{ color: "var(--color-bg)", opacity: 0.8, fontSize: "var(--text-small)", fontWeight: 700, letterSpacing: "0.1em" }}>HIGHSTRIKER · SISTE I LIVE</p>
             <p className="mt-1">
               <Hearts total={game.lives} left={livesLeft(game, winner)} fresh={false} />
             </p>
-            <p className="mt-2 inline-block rounded-full px-3 py-1 font-bold" style={{ background: "var(--gold-soft)", color: "var(--color-gold-strong)", fontSize: "var(--text-small)", letterSpacing: "0.1em" }}>
-              BESTE RUNDE {bestOf(game, winner) ?? "–"}
-            </p>
+            <dl className="winner-figures grid grid-cols-3 gap-2 mt-3">
+              {[
+                { label: "HØYESTE", value: bestOf(game, winner) ?? 0, fmt: (n: number) => String(n) },
+                { label: "RUNDER", value: game.turns.filter((t) => t.player === winner).length, fmt: (n: number) => String(n) },
+                { label: "LIV IGJEN", value: livesLeft(game, winner), fmt: (n: number) => String(n) },
+              ].map((f) => (
+                <div key={f.label} className="winner-figure rounded-xl py-1.5">
+                  <dd className="font-display" style={{ color: "var(--color-bg)", fontSize: "var(--text-title)", lineHeight: 1.1 }}>
+                    <CountUp value={f.value} format={f.fmt} ms={1000} />
+                  </dd>
+                  <dt style={{ color: "var(--color-bg)", opacity: 0.7, fontSize: "var(--text-micro)", fontWeight: 700, letterSpacing: "0.12em" }}>{f.label}</dt>
+                </div>
+              ))}
+            </dl>
           </div>
           <div className="mb-5">
             <Stairs game={{ ...game, turns: game.turns.filter((t) => t.player === winner) }} height="5rem" count={8} />
@@ -278,6 +304,7 @@ export function HighstrikerGameScreen({
     );
   }
 
+  const order = [...game.players].sort((a, b) => Number(isOut(game, a)) - Number(isOut(game, b)));
   return (
     <div className="animate-screen-enter screen">
       {lastLife && fx.heat && <div className="hs-vignette" aria-hidden />}
@@ -290,13 +317,29 @@ export function HighstrikerGameScreen({
           ]}
         />
       )}
-      <div className="screen-inner">
-        <ScreenTop title="Highstriker" onBack={() => setConfirmExit(true)} backLabel={career ? "Gi opp" : "Avslutt kampen"} />
-        <p key={`${up}-${game.turns.length}`} className="turn-banner" aria-hidden>
-          {up} kaster
-        </p>
-        <ul className="space-y-2 mb-4" aria-label="Stilling">
-          {[...game.players].sort((a, b) => Number(isOut(game, a)) - Number(isOut(game, b))).map((p) => {
+      <div className="screen-inner hs-fill">
+        <ScreenTop
+          title="Highstriker"
+          onBack={() => setConfirmExit(true)}
+          backLabel={career ? "Gi opp" : "Avslutt kampen"}
+          right={
+            <span className="inline-flex items-center gap-2">
+              <button
+                type="button"
+                aria-label="Angre siste runde"
+                onClick={undo}
+                disabled={game.turns.length === 0}
+                className={`tactile inline-flex items-center justify-center ${FOCUS_RING}`}
+                style={{ width: "var(--control)", height: "var(--control)", borderRadius: "var(--radius-m)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)", opacity: game.turns.length === 0 ? 0.4 : 1 }}
+              >
+                <UndoIcon className="w-5 h-5" />
+              </button>
+              <VoiceToggle />
+            </span>
+          }
+        />
+        <ul className="hs-board" aria-label="Stilling" style={{ gridTemplateRows: order.map((p) => (p === up ? "1.6fr" : "1fr")).join(" ") }}>
+          {order.map((p) => {
             const active = p === up;
             const out = isOut(game, p);
             const left = livesLeft(game, p);
@@ -309,14 +352,7 @@ export function HighstrikerGameScreen({
               <li
                 key={p}
                 aria-current={active ? "true" : undefined}
-                className={`hs-card relative flex items-center gap-3 overflow-hidden ${out ? "hs-out" : ""} ${hit ? "hs-hit" : ""} ${active && !out ? "turn-lift" : ""} ${isLast ? "hs-last" : ""}`}
-                style={{
-                  padding: "0.625rem 0.875rem",
-                  borderRadius: "var(--radius-m)",
-                  background: active ? "color-mix(in srgb, var(--color-teal) 12%, var(--color-surface))" : "var(--color-surface)",
-                  border: active ? "2px solid var(--color-teal)" : "1px solid var(--color-border)",
-                  boxShadow: "var(--elevation-1)",
-                }}
+                className={`hs-card hs-row relative flex items-center gap-3 overflow-hidden ${active && !out ? "hs-row--up" : ""} ${out ? "hs-out" : ""} ${hit ? "hs-hit" : ""} ${active && !out ? "turn-lift" : ""} ${isLast ? "hs-last" : ""}`}
               >
                 {hit && <span key={game.turns.length} aria-hidden className="hs-flash" />}
                 {out && outTurn && (
@@ -324,12 +360,12 @@ export function HighstrikerGameScreen({
                     UTE
                   </span>
                 )}
-                <Avatar name={p} photo={photos.get(p)} size="m" state={active ? "active" : "idle"} bot={isBot(p)} />
+                <Avatar name={p} photo={photos.get(p)} px={active && !out ? 64 : 40} state={active ? "active" : "idle"} bot={isBot(p)} />
                 <div className="flex-1 min-w-0">
                   <p className="font-display truncate" style={{ fontSize: "var(--text-title)", lineHeight: 1.1 }}>
                     {p}
                   </p>
-                  <Hearts total={game.lives} left={left} fresh={hit} beat={isLast} />
+                  <Hearts total={game.lives} left={left} fresh={hit} beat={isLast} size={active && !out ? "w-7 h-7" : "w-4 h-4"} />
                   {isLast && <p className="last-label">SISTE LIV</p>}
                   {out && outTurn && (
                     <p style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>
@@ -337,81 +373,69 @@ export function HighstrikerGameScreen({
                     </p>
                   )}
                 </div>
-                <div className="text-right" style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>
-                  {out ? (
-                    <span className="sr-only">UTE</span>
-                  ) : (
-                    <>
-                      <span className="num block" style={{ fontSize: "2rem", color: "var(--color-cream)" }}>
-                        {mine ? mine.scored : "–"}
-                      </span>
-                      siste
-                    </>
-                  )}
-                </div>
+                {out ? (
+                  <span className="sr-only">UTE</span>
+                ) : (
+                  <span className="num hs-last-score" aria-label={mine ? `Siste runde: ${mine.scored}` : undefined}>
+                    {mine ? mine.scored : "–"}
+                  </span>
+                )}
               </li>
             );
           })}
         </ul>
 
-        <div className="hs-target flex items-stretch gap-4 mb-3" style={{ borderRadius: "var(--radius-m)", padding: "0.75rem 0.875rem", background: "var(--teal-soft)", border: "1px solid var(--teal-ring)" }}>
+        <div className="hs-target flex items-center gap-4" style={{ borderRadius: "var(--radius-m)", padding: "0.6rem 0.875rem", background: "var(--teal-soft)", border: "1px solid var(--teal-ring)" }}>
           <div className="hs-tower" aria-hidden>
             <div className="hs-bell-spot">
               <Bell key={passes ? "ring" : "idle"} ring={passes} size={26} />
             </div>
             <div className="hs-tower-clip">
-              <div className={`hs-tower-fill ${least !== null && !passes && typed !== "" ? "hs-tower-fill--short" : ""}`} style={{ height: `${towerShare(written, scale) * 100}%` }} />
+              <div className={`hs-tower-fill ${least !== null && !passes && typed !== "" ? "hs-tower-fill--short" : ""} ${passes ? "hs-tower-fill--pass" : ""}`} style={{ height: `${towerShare(written, scale) * 100}%` }} />
               {least !== null && <div className="hs-tower-mark" style={{ bottom: `${towerShare(least, scale) * 100}%` }} />}
             </div>
           </div>
           <div className="flex-1 min-w-0 flex flex-col justify-center">
             {least === null ? (
-              <>
-                <p className="section-label">FØRSTE RUNDE</p>
-                <p className="font-display" style={{ fontSize: "var(--text-title)", color: "var(--color-cream)" }}>
-                  {up} setter ribben, ingenting å slå
-                </p>
-              </>
+              <p className="font-display" style={{ fontSize: "clamp(1.6rem, 8vw, 2.2rem)", color: "var(--color-cream)", lineHeight: 1.1 }}>
+                Sett standarden
+              </p>
             ) : (
               <>
                 <p className="section-label">{up.toUpperCase()} MÅ HA MINST</p>
-                <p key={game.turns.length} className="num hs-target-number" style={{ fontSize: "3.5rem", color: "var(--color-cream)", lineHeight: 1 }}>
+                <p key={game.turns.length} className="num hs-target-number" style={{ color: "var(--color-cream)" }}>
                   {least}
-                </p>
-                <p style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>
-                  for å beholde livet · {last?.player} fikk {target}
                 </p>
               </>
             )}
-            <div className="mt-2">
-              <Stairs game={game} />
+            <div className="mt-1">
+              <Stairs game={game} height="2.2rem" count={6} />
             </div>
           </div>
         </div>
 
-        <div inert={botUp} style={{ opacity: botUp ? 0.45 : 1, transition: "opacity var(--pull)" }}>
-        <ScoreKeypad
-          onTyped={setTyped}
-          onSubmit={submit}
-          onUndo={undo}
-          canUndo={game.turns.length > 0}
-          line={(typed) => {
-            if (botUp) return <span style={{ color: "var(--color-muted)" }}>{up} kaster …</span>;
-            if (typed === "" && botNote) return <span style={{ color: "var(--color-muted)" }}>{botNote}</span>;
-            if (typed === "" || least === null) return <span style={{ color: "var(--color-muted)" }}>{up} kaster · skriv hva runden ble</span>;
-            const n = Number(typed);
-            return n >= least ? (
-              <span style={{ color: "var(--color-green)", fontWeight: 600 }}>{typed} holder · over {target}</span>
-            ) : (
-              <span style={{ color: "var(--color-red)", fontWeight: 600 }}>
-                {typed} er for lite · må ha {least}
-              </span>
-            );
-          }}
-        />
-        </div>
-        <div className="mt-3">
-          <VoiceSwitch />
+        <div className="hs-right">
+          <div className="hs-pad" inert={botUp} style={{ opacity: botUp ? 0.45 : 1, transition: "opacity var(--pull)" }}>
+            <ScoreKeypad
+              fill
+              onTyped={setTyped}
+              onSubmit={submit}
+              onUndo={undo}
+              canUndo={game.turns.length > 0}
+              tone={(typed) => {
+                if (typed === "" || least === null) return undefined;
+                return Number(typed) >= least ? "finish" : "bust";
+              }}
+              line={(typed) => {
+                if (botUp) return <span className="cd-note">{up} kaster …</span>;
+                if (typed === "" && botNote) return <span className="cd-note">{botNote}</span>;
+                if (typed === "" || least === null) return null;
+                const n = Number(typed);
+                // The colour of the number says it; the words are for a screen reader.
+                return <span className="sr-only">{n >= least ? `${typed} holder · over ${target}` : `${typed} er for lite · må ha ${least}`}</span>;
+              }}
+            />
+          </div>
         </div>
       </div>
     </div>

@@ -13,14 +13,13 @@ import { playFanfare } from "@/lib/fanfare";
 import { fxFlags, useFxLevel } from "@/lib/fxLevel";
 import { countdownResult } from "@/lib/gameResults";
 import { useRecordResult } from "@/lib/gameResultsStorage";
-import { TIER_LABEL, tierOf } from "@/lib/roundTier";
+import { tierOf } from "@/lib/roundTier";
 import {
   DARTS_PER_ROUND,
   averageOf,
   bestRoundOf,
   dartsOf,
   judge,
-  lastRoundOf,
   leaderOf,
   memberUp,
   newGame,
@@ -36,19 +35,23 @@ import {
 } from "@/lib/countdown";
 import { haptics } from "@/lib/haptics";
 import { splitPeople, type Person } from "@/lib/people";
+import { useGameVenue } from "@/lib/gameVenue";
 import { individualSetupProblem, setupSummary } from "@/lib/setupProblem";
 import { useRoster } from "@/lib/storage";
-import { CheckoutChips, checkoutLabel } from "./CheckoutChips";
+import { CheckoutChips } from "./CheckoutChips";
 import { useBotTurn } from "./useBotTurn";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { PlayerPicker } from "./PlayerPicker";
 import { RollingNumber } from "./RollingNumber";
 import { ScoreKeypad } from "./ScoreKeypad";
+import { GameVenue, VenueSection } from "./GameVenue";
 import { ScreenTop } from "./ScreenTop";
 import { commitPeople } from "./SetupScreen";
 import { StickyAction } from "./StickyAction";
-import { VoiceSwitch } from "./VoiceSwitch";
+import { VoiceToggle } from "./VoiceSwitch";
 import { Avatar } from "./ui/Avatar";
+import { CountUp } from "./ui/CountUp";
+import { UndoIcon } from "./icons";
 import { Button } from "./ui/Button";
 import { Segmented } from "./ui/Segmented";
 import { Sheet } from "./ui/Sheet";
@@ -69,6 +72,7 @@ export function CountdownApp({ onExitToHome }: { onExitToHome: () => void }) {
   const [game, setGame] = useState<CountdownGame | null>(null);
   const [botLevels, setBotLevels] = useState<Record<string, BotLevel>>({});
   const photos = new Map(useRoster().map((r) => [r.name, r.photo]));
+  const [venue, setVenue] = useGameVenue("countdown");
 
   if (!game) {
     const problem = (people.length > 0 && people.every((p) => p.isBot) ? "Velg minst én spiller" : individualSetupProblem(people.map((p) => p.name), false)) || null;
@@ -84,6 +88,7 @@ export function CountdownApp({ onExitToHome }: { onExitToHome: () => void }) {
           <div className="mt-4">
             <SwitchRow label="Dobbel ut" hint="Står det 1 igjen, er runden over streken" checked={doubleOut} onChange={setDoubleOut} />
           </div>
+          <VenueSection value={venue} onChange={setVenue} />
           <StickyAction
             onClick={() => {
               commitPeople(people);
@@ -102,7 +107,11 @@ export function CountdownApp({ onExitToHome }: { onExitToHome: () => void }) {
     );
   }
 
-  return <CountdownGameScreen game={game} setGame={setGame} botLevels={botLevels} photos={photos} onHome={onExitToHome} onNew={() => setGame(null)} />;
+  return (
+    <GameVenue venue={venue}>
+      <CountdownGameScreen game={game} setGame={setGame} botLevels={botLevels} photos={photos} onHome={onExitToHome} onNew={() => setGame(null)} />
+    </GameVenue>
+  );
 }
 
 /**
@@ -223,37 +232,38 @@ export function CountdownGameScreen({
           ))}
         </div>
         <div className="screen-inner relative z-10">
-          {/* On a picture of a room the lines have a dark panel behind them, so they can be read whatever is behind. */}
-          <div className="flex flex-col items-center text-center mb-4 mt-6" style={{ background: "color-mix(in srgb, var(--color-bg) 82%, transparent)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", borderRadius: "var(--radius-l)", padding: "1rem 0.75rem 1.1rem", border: "1px solid var(--color-border)" }}>
-            <Avatar name={winner} photo={photos.get(winner)} px={112} state="winner" />
-            <p className="section-label mt-4">{game.start} · VINNER</p>
-            <h1 className="font-display" style={{ color: "var(--color-gold)", fontSize: "clamp(2.2rem, 11vw, 3.2rem)", lineHeight: 1.05 }}>
+          <div className="card-gold shadow-panel rounded-2xl text-center mb-4 mt-8 relative" style={{ padding: "3.4rem 1.25rem 1.1rem" }}>
+            <span className="absolute" style={{ top: "-2.9rem", left: "50%", transform: "translateX(-50%)" }}>
+              <Avatar name={winner} photo={photos.get(winner)} px={104} state="winner" />
+            </span>
+            <p className="font-display" style={{ color: "var(--color-bg)", fontStyle: "italic", fontSize: "var(--text-body)", letterSpacing: "0.04em" }}>
+              Vinner · {game.start}
+            </p>
+            <h1 className="font-display" style={{ color: "var(--color-bg)", fontSize: "clamp(2.2rem, 11vw, 3rem)", lineHeight: 1.05 }}>
               {winner}
             </h1>
-            <p className="mt-1 inline-block rounded-full px-3 py-1 font-bold" style={{ background: "var(--gold-soft)", color: "var(--color-gold-strong)", fontSize: "var(--text-small)", letterSpacing: "0.1em" }}>
+            <p className="mt-1" style={{ color: "var(--color-bg)", opacity: 0.8, fontSize: "var(--text-small)", fontWeight: 700, letterSpacing: "0.1em" }}>
               UT PÅ {finalTurn.scored} · {finalTurn.darts} {finalTurn.darts === 1 ? "PIL" : "PILER"}
             </p>
-            <p className="mt-2" style={{ color: "var(--color-cream)", fontSize: "var(--text-body)" }}>
-              {darts} piler totalt · snitt {oneDecimal(averageOf(game, winner) ?? 0)}
-            </p>
+            <p style={{ color: "var(--color-bg)", opacity: 0.7, fontSize: "var(--text-small)" }}>{darts} piler totalt</p>
+            <dl className="winner-figures grid grid-cols-3 gap-2 mt-3">
+              {[
+                { label: "SNITT", value: Math.round((averageOf(game, winner) ?? 0) * 10), fmt: (n: number) => oneDecimal(n / 10) },
+                { label: "HØYESTE", value: bestRoundOf(game, winner), fmt: (n: number) => String(n) },
+                { label: "100+", value: tonsOf(game, winner), fmt: (n: number) => String(n) },
+              ].map((f) => (
+                <div key={f.label} className="winner-figure rounded-xl py-1.5">
+                  <dd className="font-display" style={{ color: "var(--color-bg)", fontSize: "var(--text-title)", lineHeight: 1.1 }}>
+                    <CountUp value={f.value} format={f.fmt} ms={1000} />
+                  </dd>
+                  <dt style={{ color: "var(--color-bg)", opacity: 0.7, fontSize: "var(--text-micro)", fontWeight: 700, letterSpacing: "0.12em" }}>{f.label}</dt>
+                </div>
+              ))}
+            </dl>
           </div>
-          <svg viewBox="0 0 200 40" preserveAspectRatio="none" className="w-full mb-3" style={{ height: "2.5rem" }} role="img" aria-label={`Rundene til ${winner}: ${rounds.join(", ")}`}>
+          <svg viewBox="0 0 200 40" preserveAspectRatio="none" className="w-full mb-4" style={{ height: "2.5rem" }} role="img" aria-label={`Rundene til ${winner}: ${rounds.join(", ")}`}>
             <polyline points={points} fill="none" stroke="var(--color-teal)" strokeWidth="2.4" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
           </svg>
-          <div className="grid grid-cols-3 gap-2 mb-5 text-center">
-            {[
-              [oneDecimal(averageOf(game, winner) ?? 0), "Snitt"],
-              [String(bestRoundOf(game, winner)), "Høyeste"],
-              [String(tonsOf(game, winner)), "100+"],
-            ].map(([v, l]) => (
-              <div key={l} style={{ padding: "0.5rem 0.25rem", borderRadius: "var(--radius-m)", background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
-                <span className="num block" style={{ fontSize: "var(--text-title)", color: "var(--color-cream)" }}>
-                  {v}
-                </span>
-                <span style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>{l}</span>
-              </div>
-            ))}
-          </div>
           <ul className="space-y-2 mb-6" aria-label="Resultat">
             {game.players.map((p) => (
               <li key={p} className="flex items-center gap-3" style={{ padding: "0.5rem 0.75rem", borderRadius: "var(--radius-m)", background: "var(--color-surface)", border: "1px solid var(--color-border)", boxShadow: "var(--elevation-1)" }}>
@@ -340,34 +350,63 @@ export function CountdownGameScreen({
           </div>
         </Sheet>
       )}
-      <div className="screen-inner">
-        <ScreenTop title={String(game.start)} onBack={() => setConfirmExit(true)} backLabel={career?.giveUp ? "Gi opp" : career ? "Pause" : "Avslutt kampen"} />
-        <p key={`${up}-${game.turns.length}`} className="turn-banner" aria-hidden>
-          {who} kaster{member ? ` for ${up}` : ""}
-        </p>
-        <ul className="space-y-3 mb-4" aria-label="Stilling">
+      <div className="screen-inner cd-fill">
+        <ScreenTop
+          title={String(game.start)}
+          onBack={() => setConfirmExit(true)}
+          backLabel={career?.giveUp ? "Gi opp" : career ? "Pause" : "Avslutt kampen"}
+          right={
+            <span className="inline-flex items-center gap-2">
+              <button
+                type="button"
+                aria-label="Angre siste runde"
+                onClick={undo}
+                disabled={game.turns.length === 0}
+                className={`tactile inline-flex items-center justify-center ${FOCUS_RING}`}
+                style={{ width: "var(--control)", height: "var(--control)", borderRadius: "var(--radius-m)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)", opacity: game.turns.length === 0 ? 0.4 : 1 }}
+              >
+                <UndoIcon className="w-5 h-5" />
+              </button>
+              <VoiceToggle />
+            </span>
+          }
+        />
+        {/* A team has a member up: who it is is said over the score. A lone player is the lit card. */}
+        {member && (
+          <p key={`${up}-${game.turns.length}`} className="turn-banner" aria-hidden>
+            {who} kaster for {up}
+          </p>
+        )}
+        <ul
+          className={`cd-board ${game.players.length === 2 ? "cd-board--duel" : game.players.length === 3 ? "cd-board--list" : "cd-board--grid"}`}
+          aria-label="Stilling"
+          style={
+            game.players.length === 2
+              ? { gridTemplateColumns: game.players.map((p) => (p === up ? "1.3fr" : "1fr")).join(" ") }
+              : game.players.length === 3
+                ? { gridTemplateRows: game.players.map((p) => (p === up ? "1.7fr" : "1fr")).join(" ") }
+                : (() => {
+                    // Four and more: two across, and the one who is up takes the larger share of the column and the row it is in.
+                    const at = Math.max(0, game.players.indexOf(up));
+                    const rows = Math.ceil(game.players.length / 2);
+                    return { gridTemplateColumns: at % 2 === 0 ? "1.25fr 1fr" : "1fr 1.25fr", gridTemplateRows: Array.from({ length: rows }, (_, r) => (r === Math.floor(at / 2) ? "1.35fr" : "1fr")).join(" ") };
+                  })()
+          }
+        >
           {game.players.map((p) => {
             const active = p === up;
-            const avg = averageOf(game, p);
-            const last = lastRoundOf(game, p);
             const mine = fresh?.player === p ? fresh : null;
-            const tier = last && !last.bust ? tierOf(last.scored) : "none";
             const togo = remainingOf(game, p);
             const pct = Math.max(0, Math.min(100, (togo / startOf(game, p)) * 100));
-            const hot = active && way !== null;
+            const ready = active && way !== null;
+            // The three rounds before: what the form is right now.
+            const recent = game.turns.filter((t) => t.player === p).slice(-3);
+            const big = game.players.length <= 3;
             return (
               <li
                 key={p}
                 aria-current={active ? "true" : undefined}
-                className={`relative flex items-center gap-3 ${active ? "turn-lift" : ""} ${hot ? "cd-hot" : ""}`}
-                style={{
-                  padding: "0.625rem 0.875rem",
-                  borderRadius: "var(--radius-m)",
-                  background: active ? "color-mix(in srgb, var(--color-teal) 12%, var(--color-surface))" : "var(--color-surface)",
-                  border: active ? "2px solid var(--color-teal)" : "1px solid var(--color-border)",
-                  boxShadow: "var(--elevation-1)",
-                  "--heat": way ? 4 - way.length : 0,
-                } as React.CSSProperties}
+                className={`cd-card ${active ? "cd-card--up turn-lift" : ""} ${ready ? "cd-ready" : ""} ${mine?.bust ? "cd-bust" : ""}`}
               >
                 {leader === p && <span className="lead-mark">LEDER</span>}
                 {mine && !mine.bust && (
@@ -385,62 +424,79 @@ export function CountdownGameScreen({
                     <span key={mine.n} className="glint" />
                   </span>
                 )}
-                <Avatar name={p} photo={photos.get(p)} size="m" state={active ? "active" : "idle"} bot={isBot(p)} />
-                <div className="flex-1 min-w-0">
-                  <p className="font-display truncate" style={{ fontSize: "var(--text-title)", lineHeight: 1.1 }}>
-                    {p}
-                  </p>
-                  {hot && way && (
-                    <div className="my-0.5">
-                      <p className="out-label">{checkoutLabel(way.length)}</p>
-                      <CheckoutChips way={way} />
-                    </div>
-                  )}
-                  <p className="truncate" style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>
-                    {game.rosters?.[p] && active ? `Nå: ${who}` : avg !== null ? `Snitt ${oneDecimal(avg)}` : "Ikke kastet"}
-                    {last ? ` · siste ${last.bust ? "over" : last.scored}` : ""}
-                    {tier !== "none" && <span className={`tier-chip tier-chip--${tier}`}>{TIER_LABEL[tier]}</span>}
-                  </p>
-                  <div className={`drain-bar ${togo < 170 ? "drain-bar--warm" : ""}`} aria-hidden>
-                    <i style={{ width: `${pct}%` }} />
+                <div className="cd-who">
+                  <Avatar name={p} photo={photos.get(p)} px={big ? (active ? 68 : 44) : active ? 46 : 32} state={active ? "active" : "idle"} bot={isBot(p)} />
+                  <div className="min-w-0">
+                    <p className="font-display truncate" style={{ fontSize: "var(--text-title)", lineHeight: 1.1 }}>
+                      {p}
+                    </p>
+                    {game.rosters?.[p] && active ? (
+                      <p className="cd-recent">
+                        <span>Nå: {who}</span>
+                      </p>
+                    ) : (
+                      recent.length > 0 && (
+                      <p className="cd-recent" aria-label={`Siste runder: ${recent.map((t) => (t.bust ? "over" : t.scored)).join(", ")}`}>
+                        {recent.map((t, i) => (
+                          <span key={`${game.turns.length}-${i}`} className={t.bust ? "cd-recent--bust" : undefined}>
+                            {t.bust ? "over" : t.scored}
+                          </span>
+                        ))}
+                      </p>
+                      )
+                    )}
                   </div>
                 </div>
                 {mine?.bust ? (
-                  <span key={mine.n} className="num bust-shake" style={{ fontSize: "2.5rem" }}>
+                  <span key={mine.n} className="num bust-shake cd-num">
                     {togo}
                   </span>
                 ) : (
-                  <RollingNumber value={togo} className="num" style={{ fontSize: "2.5rem", color: active ? "var(--color-cream)" : "var(--color-text-2)" }} />
+                  <RollingNumber value={togo} className="num cd-num" style={{ color: ready ? "var(--color-gold-strong)" : active ? "var(--color-cream)" : "var(--color-text-2)" }} />
                 )}
+                <div className={`drain-bar ${togo < 170 ? "drain-bar--warm" : ""}`} aria-hidden>
+                  <i style={{ width: `${pct}%` }} />
+                </div>
               </li>
             );
           })}
         </ul>
 
-        <div inert={botUp} style={{ opacity: botUp ? 0.45 : 1, transition: "opacity var(--pull)" }}>
-        <ScoreKeypad
-          onSubmit={submit}
-          onUndo={undo}
-          canUndo={game.turns.length > 0}
-          line={(typed) => {
-            if (botUp) return <span style={{ color: "var(--color-muted)" }}>{who} kaster …</span>;
-            if (typed === "" && botNote && !notice) return <span style={{ color: "var(--color-text-2)" }}>{botNote}</span>;
-            {/* The thrower is named over the board already: the line only says what to do. */}
-            if (typed === "") return <span style={{ color: notice ? "var(--color-red)" : "var(--color-muted)" }}>{notice || "Skriv hva runden ble"}</span>;
-            const n = Number(typed);
-            const verdict = judge(left, n, game.doubleOut);
-            if (verdict === "bust") return <span style={{ color: "var(--color-red)", fontWeight: 600 }}>{n} er over streken</span>;
-            if (verdict === "finish") return <span style={{ color: "var(--color-green)", fontWeight: 600 }}>{n} tar ut!</span>;
-            return (
-              <span style={{ color: "var(--color-teal-strong)", fontWeight: 600 }}>
-                {up} har {left - n} igjen etter {n}
-              </span>
-            );
-          }}
-        />
-        </div>
-        <div className="mt-3">
-          <VoiceSwitch />
+        <div className="cd-right">
+          {/* The way out, over the keypad, as large as the keys: only when there is one. */}
+          {way && (
+            <div className="cd-way-bar">
+              <span className="cd-way-label">UT</span>
+              <CheckoutChips way={way} />
+            </div>
+          )}
+          <div className="cd-pad" inert={botUp} style={{ opacity: botUp ? 0.45 : 1, transition: "opacity var(--pull)" }}>
+            <ScoreKeypad
+              fill
+              finishLabel="Ut!"
+              onSubmit={submit}
+              onUndo={undo}
+              canUndo={game.turns.length > 0}
+              tone={(typed) => {
+                if (typed === "") return undefined;
+                const verdict = judge(left, Number(typed), game.doubleOut);
+                return verdict === "bust" ? "bust" : verdict === "finish" ? "finish" : undefined;
+              }}
+              line={(typed) => {
+                if (botUp) return <span className="cd-note">{who} kaster …</span>;
+                if (typed === "" && botNote && !notice) return <span className="cd-note">{botNote}</span>;
+                if (typed === "") return notice ? <span className="cd-note" style={{ color: "var(--color-red)" }}>{notice}</span> : null;
+                const n = Number(typed);
+                const verdict = judge(left, n, game.doubleOut);
+                // What the number does is shown by its colour; the words are for a screen reader.
+                return (
+                  <span className="sr-only">
+                    {verdict === "bust" ? `${n} er over streken` : verdict === "finish" ? `${n} tar ut!` : `${up} har ${left - n} igjen etter ${n}`}
+                  </span>
+                );
+              }}
+            />
+          </div>
         </div>
       </div>
     </div>

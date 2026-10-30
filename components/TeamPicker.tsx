@@ -111,11 +111,11 @@ export function TeamPicker({ teams, onChange, botsAllowed }: { teams: PickedTeam
                       if (at !== -1) onChange(teams.filter((_, j) => j !== at));
                     }}
                     aria-label={`Ta ut ${t.name}, nummer ${i + 1}`}
-                    className={`tactile flat relative flex flex-col items-center gap-0.5 ${FOCUS_RING}`}
-                    style={{ width: "4.6rem" }}
+                    className={`team-chip tactile flat relative flex flex-col items-center gap-0.5 ${FOCUS_RING}`}
+                    style={{ width: "5.6rem" }}
                   >
                     <span className="relative">
-                      <TeamKit kit={homeKit(names)} size={40} />
+                      <TeamKit kit={homeKit(names)} size={52} />
                       <span aria-hidden className="tabular rounded-full flex items-center justify-center absolute" style={{ top: -4, right: -8, width: "1.1rem", height: "1.1rem", background: "var(--color-teal)", color: "var(--color-bg)", fontSize: "0.75rem", fontWeight: 700 }}>
                         {i + 1}
                       </span>
@@ -123,6 +123,11 @@ export function TeamPicker({ teams, onChange, botsAllowed }: { teams: PickedTeam
                     <span className="w-full truncate text-center" style={{ color: "var(--color-cream)", fontSize: "var(--text-micro)", fontWeight: 600 }}>
                       {t.name}
                     </span>
+                    {names.join(" og ") !== t.name && (
+                      <span className="w-full truncate text-center" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>
+                        {names.join(" · ")}
+                      </span>
+                    )}
                   </button>
                 </li>
               );

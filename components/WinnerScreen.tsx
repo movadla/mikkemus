@@ -3,6 +3,7 @@
 import { ViewTransition, startTransition, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { Avatar } from "./ui/Avatar";
+import { CountUp } from "./ui/CountUp";
 import { ChartFrame } from "./ui/ChartFrame";
 import { Segmented } from "./ui/Segmented";
 import { useAccess } from "@/lib/access";
@@ -330,7 +331,7 @@ export function WinnerScreen({
             {venue && !compact && (
               // A single match played in a place has the cup of the place to win: it stands on top, over the winner.
               <div className="animate-winner-pop mx-auto mb-2 flex flex-col items-center gap-1" aria-label={`${venueOf(venue).name}-pokalen`}>
-                <span style={{ width: "8.5rem", display: "block" }}>
+                <span className="trophy-shine" style={{ width: "5.5rem", display: "block" }}>
                   <TrophyArt kind={venueOf(venue).tier} bare variant={venueOf(venue).key} />
                 </span>
                 <p className="font-display" style={{ color: "var(--color-gold-strong)", fontSize: "var(--text-title)" }}>
@@ -372,8 +373,8 @@ export function WinnerScreen({
               {/* The winner's face is the headline, not a token next to their name — at 88px it was
                   smaller than the name under it. Its lower half overlaps the card below, so the
                   card's top padding has to clear the same 84px the negative margin pulls up. */}
-              <div className="relative z-30 flex justify-center" style={{ marginBottom: "-84px" }}>
-                <div className="relative" style={{ width: "168px", height: "168px" }}>
+              <div className="winner-face-wrap relative z-30 flex justify-center" style={{ marginBottom: "-84px" }}>
+                <div className="winner-face relative" style={{ width: "168px", height: "168px" }}>
                   <span
                     aria-hidden
                     className="animate-winner-shockwave absolute inset-0 rounded-full pointer-events-none"
@@ -401,7 +402,7 @@ export function WinnerScreen({
                   </div>
                 </div>
               </div>
-              <div className="animate-winner-pop card-gold shadow-panel relative z-20 rounded-2xl pt-24 pb-8 px-8 mb-6">
+              <div className="winner-card-body animate-winner-pop card-gold shadow-panel relative z-20 rounded-2xl pt-24 pb-5 px-6 mb-5">
                 <p
                   className="font-display"
                   style={{
@@ -420,12 +421,27 @@ export function WinnerScreen({
                 {/* xH belongs up here, not only in a card three scrolls down — it is the one number
                     that says whether the win was thrown or fell out of the sky. Omitted rather than
                     dashed when no dart could be judged; a "–" beside the headline reads as broken. */}
-                <p className="tabular" style={{ color: "var(--color-bg)", opacity: 0.7, fontSize: "var(--text-small)", marginTop: "0.4rem" }}>
-                  {/* Singular is reachable now that a leg won on the first dart of a turn counts one. */}
-                  {totalDarts(stats[winner])} {totalDarts(stats[winner]) === 1 ? "pil" : "piler"} brukt
-                  {winnerLuck !== null && <> · xH {formatLuck(winnerLuck)} /{" "}
-                {(stats[winner]?.hits ?? 0) - (preBankedByPlayer[winner]?.D ?? 0) - (preBankedByPlayer[winner]?.T ?? 0)}</>}
-                </p>
+                {winnerLuck !== null && (
+                  <p className="tabular" style={{ color: "var(--color-bg)", opacity: 0.7, fontSize: "var(--text-small)", marginTop: "0.4rem" }}>
+                    xH {formatLuck(winnerLuck)} /{" "}
+                    {(stats[winner]?.hits ?? 0) - (preBankedByPlayer[winner]?.D ?? 0) - (preBankedByPlayer[winner]?.T ?? 0)}
+                  </p>
+                )}
+                {/* The three figures of the match, counting up as the card comes in. */}
+                <dl className="winner-figures grid grid-cols-3 gap-2 mt-3">
+                  {[
+                    { label: "PILER", value: totalDarts(stats[winner]), fmt: (n: number) => String(n) },
+                    { label: "RUNDER", value: (turnLogByPlayer[winner] ?? []).filter(Boolean).length, fmt: (n: number) => String(n) },
+                    { label: "TREFF", value: treffPct(stats[winner]), fmt: (n: number) => `${n} %` },
+                  ].map((f) => (
+                    <div key={f.label} className="winner-figure rounded-xl py-1.5">
+                      <dd className="font-display" style={{ color: "var(--color-bg)", fontSize: "var(--text-title)", lineHeight: 1.1 }}>
+                        <CountUp value={f.value} format={f.fmt} ms={1000} />
+                      </dd>
+                      <dt style={{ color: "var(--color-bg)", opacity: 0.7, fontSize: "var(--text-micro)", fontWeight: 700, letterSpacing: "0.12em" }}>{f.label}</dt>
+                    </div>
+                  ))}
+                </dl>
               </div>
             </div>
             </div>

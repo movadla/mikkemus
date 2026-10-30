@@ -25,6 +25,8 @@ import {
   type LavaGame,
 } from "@/lib/lava";
 import { splitPeople, type Person } from "@/lib/people";
+import { fieldOfLabel } from "@/lib/lava";
+import { useGameVenue } from "@/lib/gameVenue";
 import { individualSetupProblem, setupSummary } from "@/lib/setupProblem";
 import { useRoster } from "@/lib/storage";
 import { uiSound } from "@/lib/uiSound";
@@ -33,6 +35,7 @@ import { Hearts } from "./Hearts";
 import { MinusIcon, PlusIcon } from "./icons";
 import { LavaBoard } from "./LavaBoard";
 import { PlayerPicker } from "./PlayerPicker";
+import { GameVenue, VenueSection } from "./GameVenue";
 import { ScreenTop } from "./ScreenTop";
 import { commitPeople } from "./SetupScreen";
 import { StickyAction } from "./StickyAction";
@@ -47,7 +50,7 @@ import { botDelayMs } from "@/lib/botSpeed";
 /** What the last dart did, in words: said under the board, and read out by the screen reader. */
 function describe(d: LavaDart): string {
   if (d.section === MISS) return `${d.player}: bom`;
-  if (d.outcome === "burn") return `${d.player}: ${sectionLabel(d.section)} er brent`;
+  if (d.outcome === "burn") return `${d.player}: ${sectionLabel(d.section)} er brent${d.opened !== undefined ? `. ${sectionLabel(d.opened)} er trygg igjen` : ""}`;
   return d.knockedOut ? `${d.player}: ${sectionLabel(d.section)} er lava, og det var siste liv` : `${d.player}: ${sectionLabel(d.section)} er lava, mister et liv`;
 }
 
@@ -59,9 +62,12 @@ export function LavaApp({ onExitToHome }: { onExitToHome: () => void }) {
   const [people, setPeople] = useState<Person[]>([]);
   const [advanced, setAdvanced] = useState(false);
   const [lives, setLives] = useState(DEFAULT_LIVES);
+  /** Doubles and trebles as sections of their own (under Avanserte innstillinger). */
+  const [rings, setRings] = useState(false);
   const [game, setGame] = useState<LavaGame | null>(null);
   const [botLevels, setBotLevels] = useState<Record<string, BotLevel>>({});
   const photos = new Map(useRoster().map((r) => [r.name, r.photo]));
+  const [venue, setVenue] = useGameVenue("lava");
 
   if (!game) {
     const problem = (people.length > 0 && people.every((p) => p.isBot) ? "Velg minst én spiller" : individualSetupProblem(people.map((p) => p.name), false, 2)) || null;
@@ -80,9 +86,13 @@ export function LavaApp({ onExitToHome }: { onExitToHome: () => void }) {
               checked={advanced}
               onChange={(on) => {
                 setAdvanced(on);
-                if (!on) setLives(DEFAULT_LIVES);
+                if (!on) {
+                  setLives(DEFAULT_LIVES);
+                  setRings(false);
+                }
               }}
             />
+            {advanced && <SwitchRow label="Doble og trippel" hint="Hver dobbel og trippel er et felt for seg" checked={rings} onChange={setRings} />}
             {advanced && (
               <div className="flex items-center justify-between gap-4 px-4" style={{ minHeight: "var(--control-lg)", borderRadius: "var(--radius-m)", background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
                 <span style={{ color: "var(--color-cream)", fontWeight: 600 }}>Liv hver</span>
@@ -96,15 +106,16 @@ export function LavaApp({ onExitToHome }: { onExitToHome: () => void }) {
               </div>
             )}
           </div>
+          <VenueSection value={venue} onChange={setVenue} />
           <StickyAction
             onClick={() => {
               commitPeople(people);
               const split = splitPeople(people);
               setBotLevels(split.botLevels);
-              setGame(newGame(lives, split.players));
+              setGame(newGame(lives, split.players, rings ? "all" : "numbers"));
             }}
             ready={!problem}
-            summary={setupSummary([`${people.length} spillere`, `${lives} liv`])}
+            summary={setupSummary([`${people.length} spillere`, `${lives} liv`, ...(rings ? ["doble og trippel"] : [])])}
             reason={problem}
           >
             Start kampen
@@ -114,7 +125,11 @@ export function LavaApp({ onExitToHome }: { onExitToHome: () => void }) {
     );
   }
 
-  return <LavaGameScreen game={game} setGame={setGame} botLevels={botLevels} photos={photos} onHome={onExitToHome} onNew={() => setGame(null)} />;
+  return (
+    <GameVenue venue={venue}>
+      <LavaGameScreen game={game} setGame={setGame} botLevels={botLevels} photos={photos} onHome={onExitToHome} onNew={() => setGame(null)} />
+    </GameVenue>
+  );
 }
 
 export function LavaGameScreen({
@@ -168,7 +183,10 @@ export function LavaGameScreen({
   }
 
   // A bot throws a dart at a time, with a pause that follows the bot speed in Innstillinger.
-  useBotTurn(botUp, game.darts.length, () => botDelayMs() + 250, () => pick(botLavaDart(new Set(state.burned.keys()), botLevels[up]).section));
+  useBotTurn(botUp, game.darts.length, () => botDelayMs() + 250, () => {
+    const d = botLavaDart(new Set(state.burned.keys()), botLevels[up], undefined, game.fields);
+    pick(fieldOfLabel(d.label, d.section, game.fields));
+  });
 
   function undo() {
     haptics.undo();
@@ -218,7 +236,7 @@ export function LavaGameScreen({
                 Fortsett
               </Button>
             ) : (
-              <Button block variant="primary" size="lg" onClick={() => setGame(newGame(game.lives, game.players))}>
+              <Button block variant="primary" size="lg" onClick={() => setGame(newGame(game.lives, game.players, game.fields))}>
                 Spill igjen
               </Button>
             )}
@@ -294,13 +312,13 @@ export function LavaGameScreen({
           })}
         </ul>
 
-        <LavaBoard burned={state.burned} effect={fresh?.dart ?? null} effectKey={fresh?.n ?? 0} darts={roundDarts} onPick={pick} disabled={botUp} big={big} />
+        <LavaBoard burned={state.burned} effect={fresh?.dart ?? null} effectKey={fresh?.n ?? 0} darts={roundDarts} onPick={pick} disabled={botUp} big={big} rings={game.fields === "all"} />
 
         <div role="status" aria-live="polite" className="text-center mt-3 mb-2" style={{ minHeight: "1.5rem", fontSize: "var(--text-body)", fontWeight: 600, color: fresh?.dart.outcome === "lava" ? "var(--color-red)" : "var(--color-cream)" }}>
           {message}
         </div>
         <p className="text-center mb-3" style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>
-          {up} · pil {Math.min(state.thrown + 1, DARTS_PER_ROUND)} av {DARTS_PER_ROUND} · {safeLeft(state)} felt er trygge
+          {up} · pil {Math.min(state.thrown + 1, DARTS_PER_ROUND)} av {DARTS_PER_ROUND} · {safeLeft(state, game.fields)} felt er trygge
         </p>
         <div className="grid grid-cols-2 gap-2">
           <Button block size="lg" onClick={() => pick(MISS)} disabled={botUp}>

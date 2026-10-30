@@ -68,6 +68,8 @@ const share = (r: Row, v: number) => (r.low ? 1 / v / (1 / r.a + 1 / r.b) : r.a 
  */
 export function LineupIntro({ sides, onDone }: { sides: LineupSide[]; onDone: () => void }) {
   const [grow, setGrow] = useState(false);
+  // A big screen (a TV, a laptop) gets larger cards, as the board does: read across a room.
+  const [big] = useState(() => typeof window !== "undefined" && window.matchMedia("(min-width: 1000px) and (min-height: 600px)").matches);
   // The cards come in once the faces are loaded and decoded (or after a short wait), so they never turn in empty and then jump to the finished card.
   const [ready, setReady] = useState(false);
   const rows = compareRows(sides);
@@ -134,14 +136,22 @@ export function LineupIntro({ sides, onDone }: { sides: LineupSide[]; onDone: ()
             <small style={{ display: "block", fontFamily: "var(--font-sans)", fontSize: "var(--text-micro)", letterSpacing: "0.14em", color: "var(--color-muted)" }}>SJANSE</small>
           </span>
         )}
-        <div className={s.chance !== undefined ? "mt-8" : "mt-4"}>{picture(s, s.kit ? 104 : 112)}</div>
-        <p className="font-display mt-3 w-full truncate" style={{ fontSize: "var(--text-num)", lineHeight: 1.05, color: "var(--color-cream)", letterSpacing: "0.02em", textShadow: "var(--shadow-text)" }}>
+        <div className={s.chance !== undefined ? "mt-8" : "mt-4"}>{picture(s, big ? (s.kit ? 150 : 160) : s.kit ? 104 : 112)}</div>
+        <p className="font-display mt-3 w-full truncate" style={{ fontSize: big ? "calc(var(--text-num) * 1.4)" : "var(--text-num)", lineHeight: 1.05, color: "var(--color-cream)", letterSpacing: "0.02em", textShadow: "var(--shadow-text)" }}>
           {s.name}
         </p>
+        {/* The people of a team, as small faces. Their names are only written when the team has a name of its own: «Lars og Per» says it already. */}
         {s.members && s.members.length > 0 && (
-          <p className="w-full truncate" style={{ color: "var(--color-text-2)", fontSize: "var(--text-micro)" }}>
-            {s.members.join(" og ")}
-          </p>
+          <div className="flex items-center justify-center gap-1.5 mt-1 w-full">
+            {s.members.map((m) => (
+              <Avatar key={m} name={m} px={big ? 32 : 26} />
+            ))}
+            {s.members.join(" og ") !== s.name && (
+              <span className="truncate" style={{ color: "var(--color-text-2)", fontSize: "var(--text-micro)" }}>
+                {s.members.join(" og ")}
+              </span>
+            )}
+          </div>
         )}
         {s.record && <p className="mt-auto" style={{ color: "var(--color-text-2)", fontSize: "var(--text-micro)" }}>{s.record}</p>}
         <span aria-hidden className="foil-sheen" />
@@ -165,7 +175,7 @@ export function LineupIntro({ sides, onDone }: { sides: LineupSide[]; onDone: ()
         />
       )}
       {two ? (
-        <div className="relative w-full px-4 flex flex-col items-center gap-5" style={{ maxWidth: "30rem", marginTop: "-6%" }}>
+        <div className="relative w-full px-4 flex flex-col items-center gap-5" style={{ maxWidth: big ? "min(40rem, 100%, 80vh)" : "30rem", marginTop: "-6%" }}>
           <div className="relative w-full grid grid-cols-2 gap-3">
             {sides.map(card)}
             <span

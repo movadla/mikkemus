@@ -30,7 +30,7 @@ test.describe("highstriker", () => {
   for (const theme of THEMES) {
     test(`sier hva runden må være, og tar et liv når den ikke holder (${theme})`, async ({ page }) => {
       await begin(page, theme);
-      await expect(page.getByText("Lars setter ribben")).toBeVisible();
+      await expect(page.getByText("Sett standarden")).toBeVisible();
       await keys(page, "60");
       // Vadla has to beat 60: at least 61.
       await expect(page.getByText("VADLA MÅ HA MINST")).toBeVisible();

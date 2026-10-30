@@ -1,6 +1,6 @@
 "use client";
 
-import { BULL, sectionLabel, type LavaDart } from "@/lib/lava";
+import { BULL, fieldKind, fieldNumber, sectionLabel, type LavaDart } from "@/lib/lava";
 
 /** Clockwise from the top, as on a real board (same order as lib/dartboard.ts). */
 const NUMBER_ORDER = [20, 1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16, 8, 11, 14, 9, 12, 5];
@@ -46,10 +46,28 @@ function bedPath(r0: number, r1: number, i: number): string {
   return `M ${ax} ${ay} A ${r1} ${r1} 0 0 1 ${bx} ${by} L ${cx} ${cy} A ${r0} ${r0} 0 0 0 ${dx} ${dy} Z`;
 }
 
+/** With doubles and trebles as sections: a wedge is four bands, the single (twice), the treble and the double. Without, one slab. */
+const BANDS_RINGS: [number, number, "s" | "t" | "d"][] = [
+  [R_SLAB_IN, 108, "s"],
+  [108, 144, "t"],
+  [144, 182, "s"],
+  [182, R_SLAB_OUT, "d"],
+];
+const BANDS_PLAIN: [number, number, "s" | "t" | "d"][] = [[R_SLAB_IN, R_SLAB_OUT, "s"]];
+
+/** The outline of a section (the bands it is made of, as one path). */
+function fieldPath(section: number, rings: boolean): string {
+  const i = NUMBER_ORDER.indexOf(fieldNumber(section));
+  const kind = fieldKind(section);
+  return (rings ? BANDS_RINGS.filter((b) => b[2] === kind) : BANDS_PLAIN).map(([a, b]) => bedPath(a, b, i)).join(" ");
+}
+
 /** Where a section is on the board: the middle of its slab. */
-function centreOf(section: number, radius = 130): [number, number] {
+function centreOf(section: number, radius = 130, rings = false): [number, number] {
   if (section === BULL) return [0, 0];
-  return pointAt(radius, NUMBER_ORDER.indexOf(section));
+  const kind = fieldKind(section);
+  const r = rings ? (kind === "d" ? 198 : kind === "t" ? 126 : radius) : radius;
+  return pointAt(r, NUMBER_ORDER.indexOf(fieldNumber(section)));
 }
 
 /**
@@ -66,6 +84,7 @@ export function LavaBoard({
   onPick,
   disabled,
   big,
+  rings = false,
 }: {
   burned: Map<number, string>;
   effect: LavaDart | null;
@@ -75,9 +94,13 @@ export function LavaBoard({
   disabled?: boolean;
   /** Party and up: the board shakes when a life goes, and there are embers drifting up. */
   big: boolean;
+  /** Doubles and trebles are sections of their own: the wedges are drawn in bands. */
+  rings?: boolean;
 }) {
   const hit = effect && effect.section !== 0 ? effect : null;
-  const [ex, ey] = hit ? centreOf(hit.section, 140) : [0, 0];
+  const [ex, ey] = hit ? centreOf(hit.section, 140, rings) : [0, 0];
+  const bands = rings ? BANDS_RINGS : BANDS_PLAIN;
+  const fieldIn = (n: number, kind: "s" | "t" | "d") => (kind === "t" ? 200 + n : kind === "d" ? 100 + n : n);
 
   return (
     <div className={`lava-stage ${hit?.outcome === "lava" ? "lava-stage--hit" : ""}`} key={hit?.outcome === "lava" ? `hit-${effectKey}` : "calm"}>
@@ -157,12 +180,14 @@ export function LavaBoard({
           ))}
           <g filter="url(#lava-grain)">
           {NUMBER_ORDER.map((n, i) => {
-            const gone = burned.has(n);
+            const numberGone = burned.has(n);
             const [tx, ty] = pointAt(R_NUMBER, i);
             return (
               <g key={n}>
-                <path d={bedPath(R_SLAB_IN, R_SLAB_OUT, i)} className={`lava-slab ${i % 2 ? "lava-slab--alt" : ""} ${gone ? "lava-slab--gone" : ""}`} />
-                <text x={tx} y={ty} textAnchor="middle" dominantBaseline="central" className={`lava-num ${gone ? "lava-num--burned" : ""}`}>
+                {bands.map(([r0, r1, kind], b) => (
+                  <path key={b} d={bedPath(r0, r1, i)} className={`lava-slab ${i % 2 ? "lava-slab--alt" : ""} ${burned.has(fieldIn(n, kind)) ? "lava-slab--gone" : ""} ${rings ? "lava-slab--band" : ""} ${kind !== "s" ? "lava-slab--ring" : ""}`} />
+                ))}
+                <text x={tx} y={ty} textAnchor="middle" dominantBaseline="central" className={`lava-num ${numberGone ? "lava-num--burned" : ""}`}>
                   {n}
                 </text>
               </g>
@@ -176,14 +201,14 @@ export function LavaBoard({
               <circle r={9} className="lava-bull-dot" />
             </g>
           )}
-          {NUMBER_ORDER.filter((n) => burned.has(n)).map((n) => (
-            <path key={`edge-${n}`} d={bedPath(R_SLAB_IN, R_SLAB_OUT, NUMBER_ORDER.indexOf(n))} className="lava-edge" aria-hidden />
+          {[...burned.keys()].filter((s) => s !== BULL).map((s) => (
+            <path key={`edge-${s}`} d={fieldPath(s, rings)} className="lava-edge" aria-hidden />
           ))}
           {burned.has(BULL) && <circle r={R_BULL} className="lava-edge" aria-hidden />}
 
           {hit?.outcome === "burn" && (
             <g key={`burn-${effectKey}`} aria-hidden>
-              {hit.section === BULL ? <circle r={R_BULL} className="lava-burst" /> : <path d={bedPath(R_SLAB_IN, R_SLAB_OUT, NUMBER_ORDER.indexOf(hit.section))} className="lava-burst" />}
+              {hit.section === BULL ? <circle r={R_BULL} className="lava-burst" /> : <path d={fieldPath(hit.section, rings)} className="lava-burst" />}
               <g transform={`translate(${ex} ${ey})`}>
                 {EMBERS.map((i) => {
                   const a = (i / EMBERS.length) * Math.PI * 2 + 0.3;
@@ -212,9 +237,16 @@ export function LavaBoard({
             </g>
           )}
 
+          {/* A section that opened again as safe: a pulse of cool light where it is. */}
+          {hit?.opened !== undefined && (
+            <g key={`open-${effectKey}`} aria-hidden>
+              {hit.opened === BULL ? <circle r={R_BULL} className="lava-reopen" /> : <path d={fieldPath(hit.opened, rings)} className="lava-reopen" />}
+            </g>
+          )}
+
           {darts.map((d, k) =>
             d.section === 0 ? null : (
-              <g key={`${k}-${d.section}`} transform={`translate(${centreOf(d.section, 160 - k * 18)[0]} ${centreOf(d.section, 160 - k * 18)[1]})`} aria-hidden>
+              <g key={`${k}-${d.section}`} transform={`translate(${centreOf(d.section, 160 - k * 18, rings)[0]} ${centreOf(d.section, 160 - k * 18, rings)[1]})`} aria-hidden>
                 <g className="lava-dart">
                   <path d="M -9 -9 L 9 9 M 9 -9 L -9 9" className={d.outcome === "lava" ? "lava-dart-mark lava-dart-mark--lava" : "lava-dart-mark"} />
                 </g>
@@ -222,24 +254,39 @@ export function LavaBoard({
             ),
           )}
 
-          {NUMBER_ORDER.map((n, i) => (
-            <path
-              key={`hit-${n}`}
-              d={bedPath(R_SLAB_IN - 6, R_HIT_OUT, i)}
-              className="lava-hit"
-              role="button"
-              tabIndex={disabled ? -1 : 0}
-              aria-label={burned.has(n) ? `${sectionLabel(n)}, lava` : sectionLabel(n)}
-              aria-disabled={disabled || undefined}
-              onClick={() => !disabled && onPick(n)}
-              onKeyDown={(e) => {
-                if (!disabled && (e.key === "Enter" || e.key === " ")) {
-                  e.preventDefault();
-                  onPick(n);
-                }
-              }}
-            />
-          ))}
+          {NUMBER_ORDER.map((n, i) =>
+            (rings
+              ? ([
+                  [R_SLAB_IN - 6, 108, "s", true],
+                  [108, 144, "t", false],
+                  [144, 182, "s", false],
+                  [182, R_HIT_OUT, "d", false],
+                ] as [number, number, "s" | "t" | "d", boolean][])
+              : ([[R_SLAB_IN - 6, R_HIT_OUT, "s", false]] as [number, number, "s" | "t" | "d", boolean][])
+            ).map(([r0, r1, kind, inner]) => {
+              const field = fieldIn(n, kind);
+              return (
+                <path
+                  key={`hit-${field}-${r0}`}
+                  d={bedPath(r0, r1, i)}
+                  className="lava-hit"
+                  role="button"
+                  // The inner single is the same section as the outer one: the outer carries the name.
+                  tabIndex={disabled || inner ? -1 : 0}
+                  aria-hidden={inner || undefined}
+                  aria-label={burned.has(field) ? `${sectionLabel(field)}, lava` : sectionLabel(field)}
+                  aria-disabled={disabled || undefined}
+                  onClick={() => !disabled && onPick(field)}
+                  onKeyDown={(e) => {
+                    if (!disabled && (e.key === "Enter" || e.key === " ")) {
+                      e.preventDefault();
+                      onPick(field);
+                    }
+                  }}
+                />
+              );
+            }),
+          )}
           <circle
             r={R_SLAB_IN - 6}
             className="lava-hit"

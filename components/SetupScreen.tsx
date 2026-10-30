@@ -220,7 +220,7 @@ export function SetupScreen({
 
         {mode === "individual" && (
           <>
-            <PlayerPicker people={people} onChange={setPeople} botsAllowed={botsAllowed} guests />
+            <PlayerPicker people={people} onChange={setPeople} botsAllowed={botsAllowed} guests matchCard />
             {variantSelectable && <div className="mt-4">{advancedSettings}</div>}
             <StickyAction
               onClick={startIndividualGame}

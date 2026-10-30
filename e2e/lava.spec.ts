@@ -3,7 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { PIN, THEMES, openApp } from "./helpers";
 
 /** Lava: a section that is hit is lava for everyone from then on, and a dart in it costs a life. */
-async function begin(page: Page, theme: "dark" | "light", lives?: number) {
+async function begin(page: Page, theme: "dark" | "light", lives?: number, rings = false) {
   await openApp(page, theme);
   await page.getByRole("button", { name: "Andre spill" }).click();
   await page.getByRole("button", { name: "Lava" }).click();
@@ -12,9 +12,10 @@ async function begin(page: Page, theme: "dark" | "light", lives?: number) {
     await page.getByPlaceholder("Spillernavn").fill(name);
     await page.getByRole("button", { name: "Legg til" }).click();
   }
-  if (lives) {
+  if (lives || rings) {
     await page.getByRole("switch", { name: /Avanserte innstillinger/ }).click();
-    for (let i = DEFAULT; i > lives; i--) await page.getByRole("button", { name: "Ett liv mindre" }).click();
+    if (rings) await page.getByRole("switch", { name: /Doble og trippel/ }).click();
+    for (let i = DEFAULT; lives && i > lives; i--) await page.getByRole("button", { name: "Ett liv mindre" }).click();
   }
   await page.getByRole("button", { name: "Start kampen" }).click();
 }
@@ -71,5 +72,20 @@ test.describe("Lava", () => {
     await page.screenshot({ path: "test-results/lava-winner.png" });
     await page.getByRole("button", { name: "Angre siste pil" }).click();
     await expect(page.getByRole("list", { name: "Stilling" })).toBeVisible();
+  });
+
+  test("med doble og trippel er hver dobbel og trippel et felt for seg", async ({ page }) => {
+    await begin(page, "dark", undefined, true);
+    await board(page).getByRole("button", { name: "T20", exact: true }).click();
+    await expect(status(page)).toContainText("Lars: T20 er brent");
+    // The number itself and its double are other sections: still safe.
+    await board(page).getByRole("button", { name: "20", exact: true }).click();
+    await expect(status(page)).toContainText("Lars: 20 er brent");
+    await board(page).getByRole("button", { name: "D20", exact: true }).click();
+    await expect(status(page)).toContainText("Lars: D20 er brent");
+    // A second dart in the treble is lava.
+    await board(page).getByRole("button", { name: "T20, lava" }).click();
+    await expect(status(page)).toContainText("T20 er lava");
+    await page.screenshot({ path: "test-results/lava-rings.png" });
   });
 });

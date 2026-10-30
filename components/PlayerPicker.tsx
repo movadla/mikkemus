@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { useRoster } from "@/lib/storage";
 import { BOT_LEVEL_PICKABLE, botDisplayName, type BotLevel } from "@/lib/botLevels";
 import { nextBotName, sameName, type Person } from "@/lib/people";
@@ -34,6 +34,7 @@ export function PlayerPicker({
   botsAllowed = true,
   guests = false,
   hidden = [],
+  matchCard = false,
 }: {
   people: Person[];
   onChange: (people: Person[]) => void;
@@ -43,6 +44,8 @@ export function PlayerPicker({
   guests?: boolean;
   /** Names not offered — people already on another team. */
   hidden?: string[];
+  /** Two who are in are shown as a match: two large faces with «MOT» between, and who throws first can be swapped. */
+  matchCard?: boolean;
 }) {
   const [adding, setAdding] = useState<"player" | "guest" | "bot" | null>(null);
   const [nameInput, setNameInput] = useState("");
@@ -106,6 +109,34 @@ export function PlayerPicker({
       {people.length > 0 && (
         <div className="mb-3" role="group" aria-label="Med">
           <p className="section-label mb-1.5">MED ({people.length})</p>
+          {matchCard && people.length === 2 ? (
+            <>
+              <div className="match-card">
+                {people.map((person, i) => {
+                  const photo = roster.find((r) => sameName(r.name, person.name))?.photo;
+                  return (
+                    <Fragment key={person.name}>
+                      {i === 1 && <span aria-hidden className="match-card-vs font-display">MOT</span>}
+                      <button type="button" onClick={() => toggle(person)} aria-label={`Ta ut ${person.name}, nummer ${i + 1}`} className={`match-card-side tactile flat ${FOCUS_RING}`}>
+                        <span className="match-card-tag">{i === 0 ? "KASTER FØRST" : "ANDRE"}</span>
+                        {person.isGuest ? (
+                          <span aria-hidden className="rounded-full flex items-center justify-center" style={{ width: 56, height: 56, background: "var(--color-cell)", border: "1.5px dashed var(--color-border)" }}>
+                            <GuestIcon className="w-5 h-5" />
+                          </span>
+                        ) : (
+                          <Avatar name={person.name} photo={photo} px={56} bot={person.isBot} state="active" />
+                        )}
+                        <span className="w-full truncate font-display" style={{ color: "var(--color-cream)", fontSize: "var(--text-body)", fontWeight: 700 }}>{person.name}</span>
+                      </button>
+                    </Fragment>
+                  );
+                })}
+              </div>
+              <button type="button" onClick={() => onChange([people[1], people[0]])} className={`tactile flat w-full flex items-center justify-center gap-1.5 mt-1 ${FOCUS_RING}`} style={{ minHeight: "2.4rem", color: "var(--color-teal)", fontSize: "var(--text-small)", fontWeight: 700 }}>
+                <span aria-hidden>⇄</span> Bytt hvem som starter
+              </button>
+            </>
+          ) : (
           <ul className="flex flex-wrap gap-x-2 gap-y-2.5">
             {people.map((person, i) => {
               const photo = roster.find((r) => sameName(r.name, person.name))?.photo;
@@ -133,6 +164,7 @@ export function PlayerPicker({
               );
             })}
           </ul>
+          )}
         </div>
       )}
 

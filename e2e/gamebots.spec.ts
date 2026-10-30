@@ -43,7 +43,8 @@ test.describe("boter i de andre spillene", () => {
     await expect(page.getByRole("status")).toContainText(/Littler: .*(=|over|tar ut)/);
     await expect(card(page, "Lars")).toHaveAttribute("aria-current", "true");
     // Taking back takes the bot's round and Lars's own.
-    await page.getByRole("group", { name: "Tastatur" }).getByRole("button", { name: /Angre|Slett/ }).first().click();
+    // Angre is a button of its own at the top of the board now; the key in the keypad only takes a digit back.
+    await page.getByRole("button", { name: "Angre siste runde" }).click();
     await expect(card(page, "Lars")).toContainText("301");
     await expect(card(page, "Littler")).toContainText("301");
     await expect(card(page, "Lars")).toHaveAttribute("aria-current", "true");

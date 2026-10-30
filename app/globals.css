@@ -656,7 +656,7 @@ button {
    makes the orientation useless for the game it is showing. Landscape has width to spare
    instead, so the buttons move to a column on the right and the whole board fits. Bounded by
    max-height. Up to 720 px high that is a phone sideways, a tablet or a laptop window: all of them have width to spare and not the height for a ten-row board stacked above its buttons. */
-@media (orientation: landscape) and (max-height: 720px) {
+@media (orientation: landscape) and (max-height: 720px), (orientation: landscape) and (min-width: 1000px) {
   /* Grid, not a wrapped flex row. Wrapping produced lines with no definite height, so the
      board collapsed and the page grew past the viewport instead — an explicit two-area grid
      over the root's own 100dvh gives the board a real height to divide among its ten rows. */
@@ -2323,6 +2323,32 @@ html[data-theme="light"] {
 @media (orientation: landscape) and (max-height: 720px) and (min-width: 900px) {
   .game-root {
     grid-template-columns: 2.6rem minmax(0, 1fr) minmax(22rem, 34rem) 3.6rem minmax(0, 1fr) 18rem;
+  }
+}
+
+/* A big screen: the sideways layout, but with everything sized for being read across a room: wider columns, names, row labels, the
+   three darts of the turn and the buttons. */
+@media (orientation: landscape) and (min-width: 1000px) {
+  .game-root {
+    grid-template-columns: 2.6rem minmax(0, 1fr) minmax(24rem, 50rem) 4.6rem minmax(0, 1fr) 20rem;
+    column-gap: 0.8rem;
+  }
+  .player-head > span > span > span,
+  .player-head > span > span {
+    font-size: clamp(0.9rem, 2.6vh, 1.6rem) !important;
+    padding-inline: 0.5rem !important;
+  }
+  .game-grid .motion-slam {
+    font-size: clamp(1rem, 3.2vh, 1.9rem) !important;
+  }
+  .action-buttons button {
+    padding: 0.8rem 0.4rem;
+    font-size: 1.15rem;
+  }
+  .shot-rail .shot-box {
+    width: 3.6rem !important;
+    height: 3.6rem !important;
+    font-size: 1.25rem !important;
   }
 }
 

@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from "react";
 
 /**
- * True on a phone turned sideways — the same condition as the landscape block in globals.css,
+ * True on a phone turned sideways, and on any wide screen (a laptop, a tablet, a TV) — the same condition as the landscape block in globals.css,
  * deliberately duplicated as one shared constant rather than guessed at in two places.
  *
  * The board gets about 34px of row height there, and a mark drawn on a square viewBox can
@@ -9,7 +9,7 @@ import { useSyncExternalStore } from "react";
  * FIT its box, so the glyph was using roughly a twentieth of a 590px-wide cell. Components
  * ask this to switch to the wide variant of the glyph instead.
  */
-const QUERY = "(orientation: landscape) and (max-height: 720px)";
+const QUERY = "(orientation: landscape) and (max-height: 720px), (orientation: landscape) and (min-width: 1000px)";
 
 function subscribe(onChange: () => void) {
   const mq = window.matchMedia(QUERY);

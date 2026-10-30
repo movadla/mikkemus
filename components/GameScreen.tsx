@@ -1237,7 +1237,7 @@ export function GameScreen({
               // cell to 275px around a 40px mark. On a phone the columns are narrower than the
               // cap anyway, so nothing changes there.
               gridTemplateColumns: compactLandscape
-                ? `clamp(48px, 9vh, 72px) repeat(${players.length}, minmax(0, clamp(4.5rem, 14vh, 8rem)))`
+                ? `clamp(48px, 10vh, 96px) repeat(${players.length}, minmax(0, clamp(4.5rem, 22vh, 15rem)))`
                 : `64px repeat(${players.length}, minmax(64px, 11rem))`,
               justifyContent: "center",
               // A floor, not a fixed height: rows still stretch to fill a tall portrait screen, but
