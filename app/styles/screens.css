@@ -1600,3 +1600,20 @@ html[data-fx="full"] .hs-last {
 
 /* The three darts of the turn, in the card of the thrower: centred, a hairline under them, the same ground as the name above. */
 .shot-strip { display: flex; justify-content: center; padding: 0.35rem 0 0.2rem; background: var(--color-surface); border-bottom: 1px solid var(--color-hairline); }
+
+/* The game board, smoothed: cells with one hairline edge and no drop shadow, the row you are on as a band with an edge, one thin line between columns, and a pair of buttons that match. States (the ring on the cell you are on, the gold of a closed row, the question) keep their own look. */
+.cell-tile:not(.cell-tile--active):not(.cell-tile--done):not(.cell-tile--choice):not(.cell-tile--preview) {
+  border-radius: 10px;
+  background: var(--color-cell);
+  box-shadow: inset 0 0 0 1px var(--color-hairline);
+}
+.cell-tile--open:not(.cell-tile--active):not(.cell-tile--done):not(.cell-tile--choice):not(.cell-tile--preview) { background: var(--color-cell-open-top); }
+.cell-tile--active { border-radius: 10px; box-shadow: 0 0 0 2px var(--color-teal); }
+.cell-tile--done { box-shadow: inset 0 0 0 1px rgba(217, 174, 79, 0.6); }
+.row-active { background: color-mix(in srgb, var(--color-teal) 10%, transparent); }
+.row-active-label { background: color-mix(in srgb, var(--color-teal) 14%, transparent) !important; box-shadow: inset 3px 0 0 var(--color-teal); }
+.row-active-label::after { display: none; }
+.grid-rule-top { border-top: 1px solid var(--color-hairline); }
+.grid-rule-left { border-left: 1px solid var(--color-hairline); }
+.action-buttons .glossy { box-shadow: none; filter: none; border-radius: 14px; min-height: 3.4rem; }
+.action-buttons .glossy:hover:not(:disabled) { transform: none; filter: brightness(1.04); box-shadow: none; }

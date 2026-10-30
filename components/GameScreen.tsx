@@ -352,16 +352,17 @@ function ShotIndicator({
               // Was 1.9rem, which read as three faint specks under the buttons — the landscape
               // rail showed how much the same boxes gain from size. The empty state gets a
               // dashed edge as well, so "nothing thrown yet" is a state rather than an absence.
-              width: "2.6rem",
-              height: "2.6rem",
+              width: "2.3rem",
+              height: "2.3rem",
               borderRadius: "50%",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               fontSize: "var(--text-small)",
               fontWeight: 700,
-              background: shot ? (shot.hit ? "var(--color-green)" : "var(--color-red)") : "var(--color-cell)",
-              border: "none",
+              // An empty dart is an open ring and fills with what was thrown: the ring says "not yet", the fill says what.
+              background: shot ? (shot.hit ? "var(--color-green)" : "var(--color-red)") : "transparent",
+              border: shot ? "none" : `1.5px solid ${i === next ? "var(--color-teal)" : "var(--color-border)"}`,
               color: "var(--color-cream)",
               padding: 0,
               cursor: editable ? "pointer" : "default",
@@ -371,10 +372,10 @@ function ShotIndicator({
                   : asked === "queued"
                     ? "0 0 0 2px color-mix(in srgb, var(--color-gold) 45%, transparent)"
                     : shot
-                      ? "var(--elevation-1)"
+                      ? "none"
                       : i === next
-                        ? "var(--elevation-0), 0 0 0 2px var(--teal-ring)"
-                        : "var(--elevation-0)",
+                        ? "0 0 0 3px color-mix(in srgb, var(--color-teal) 22%, transparent)"
+                        : "none",
             }}
           >
             {shot?.label ?? ""}
@@ -1265,7 +1266,6 @@ export function GameScreen({
                     style={{
                       color: "var(--color-muted)",
                       fontSize: "var(--text-micro)",
-                      background: "color-mix(in srgb, var(--shade) 25%, transparent)",
                       lineHeight: "1.35",
                     }}
                     title={`${dartsThrown[p] ?? 0} piler kastet`}
@@ -1285,9 +1285,8 @@ export function GameScreen({
                           fontSize: "var(--text-body)",
                           fontWeight: isActive ? 700 : 500,
                           background: isActive ? accent : "color-mix(in srgb, var(--light) 4%, transparent)",
-                          boxShadow: isActive
-                            ? "0 1px 0 color-mix(in srgb, var(--light) 30%, transparent) inset, 0 2px 8px color-mix(in srgb, var(--shade) 35%, transparent)"
-                            : "0 1px 0 color-mix(in srgb, var(--light) 5%, transparent) inset",
+                          // A flat fill for the one who is up, nothing round the others: no glow, no inset lip.
+                          boxShadow: "none",
                           "--glow-color": glowColor,
                         } as React.CSSProperties
                       }
@@ -1561,8 +1560,10 @@ export function GameScreen({
               {
                 "--btn-fill": "var(--color-surface)",
                 color: "var(--color-cream)",
-                border: "1px solid var(--color-border)",
-                opacity: canUndo ? 1 : 0.4,
+                // An open button with a clear edge: it is the other half of a pair with Bekreft, not a dimmed copy of it.
+                background: "transparent",
+                border: "1.5px solid var(--color-border)",
+                opacity: canUndo ? 1 : 0.5,
               } as React.CSSProperties
             }
           >
@@ -1574,7 +1575,7 @@ export function GameScreen({
             // While the question is on the screen, Bekreft has nothing to confirm yet: the
             // answer is what moves the turn on.
             disabled={showChoiceBox || showStandBox}
-            className={`glossy py-5 rounded-xl font-bold text-xl ${FOCUS_RING}`}
+            className={`glossy py-4 rounded-xl font-bold text-lg ${FOCUS_RING}`}
             style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", opacity: showChoiceBox || showStandBox ? 0.4 : 1 } as React.CSSProperties}
           >
             {pendingCount === 0 ? "Bekreft (bom)" : "Bekreft"}
