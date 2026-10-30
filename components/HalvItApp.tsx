@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { callOut } from "@/lib/announcer";
 import { generateConfettiRain } from "@/lib/confetti";
 import { fxFlags, useFxLevel } from "@/lib/fxLevel";
@@ -43,6 +43,7 @@ import { ScreenTop } from "./ScreenTop";
 import { commitPeople, commitTeams } from "./SetupScreen";
 import { SideAvatar } from "./SideAvatar";
 import { needsStart } from "@/lib/startChoice";
+import { startWakeLock } from "@/lib/wakeLock";
 import { StartChoice } from "./StartChoice";
 import { StickyAction } from "./StickyAction";
 import { VoiceToggle } from "./VoiceSwitch";
@@ -126,6 +127,8 @@ export function HalvItApp({ onExitToHome }: { onExitToHome: () => void }) {
 
 
 export function HalvItGameScreen({ game, setGame, photos, onHome, onNew, series }: { game: HalvItGame; setGame: (g: HalvItGame) => void; photos: Map<string, string | null | undefined>; onHome: () => void; onNew: () => void; /** A series (best of x) the game is one of. */ series?: SeriesWiring }) {
+  // The screen stays on while the game is up: a phone that locks between rounds loses the sound and the board.
+  useEffect(() => startWakeLock(), []);
   const [confirmExit, setConfirmExit] = useState(false);
   /** The throw just taken in, while what it did plays: set when one goes in, cleared when one is taken back. */
   const [fresh, setFresh] = useState<{ n: number; player: string; points: number; bom: boolean; pending: boolean } | null>(null);

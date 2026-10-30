@@ -50,6 +50,7 @@ import { GameVenue, VenueSection } from "./GameVenue";
 import { GameWho, type GameMode } from "./GameWho";
 import { SideAvatar } from "./SideAvatar";
 import { needsStart } from "@/lib/startChoice";
+import { startWakeLock } from "@/lib/wakeLock";
 import { StartChoice } from "./StartChoice";
 import { SeriesPicker, SeriesSummary, seriesLine } from "./SeriesPicker";
 import { ScreenTop } from "./ScreenTop";
@@ -252,6 +253,8 @@ export function HighstrikerGameScreen({
   }
 
   // A bot throws its round after a pause that follows the bot speed in Innstillinger.
+  // The screen stays on while the game is up: a phone that locks between rounds loses the sound and the board.
+  useEffect(() => startWakeLock(), []);
   // The first thing in a game: who starts. Asked once, before anything is thrown.
   const asking = needsStart(game, game.turns.length);
   useBotTurn(botUp && !asking, game.turns.length, () => botDelayMs() * 2 + 300, () => {
