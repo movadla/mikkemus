@@ -19,18 +19,23 @@ export function RulesPicker({
   onChange,
   teamPlay,
   labelAlign = "left",
+  part = "both",
 }: {
   variant: GameVariant;
   onChange: (next: GameVariant) => void;
   /** Whether the stand rule is on offer — it only means something when a team has several members. */
   teamPlay: boolean;
   labelAlign?: "center" | "left";
+  /** One of the two choices on its own (the single match sets them apart): the crosses or the stand rule. */
+  part?: "both" | "crosses" | "stand";
 }) {
   const base = baseOf(variant);
   const stand = hasStandRule(variant);
 
   return (
     <div className="mb-6">
+      {part !== "stand" && (
+        <>
       <p className={`section-label ${labelAlign === "center" ? "text-center " : ""}mb-2`}>KRYSS PER RAD</p>
       <div className="flex gap-2" role="radiogroup" aria-label="Kryss per rad">
         {VARIANT_ORDER.map((v) => {
@@ -61,14 +66,16 @@ export function RulesPicker({
           Teller ikke i statistikken
         </p>
       )}
+        </>
+      )}
 
-      {teamPlay && (
+      {teamPlay && part !== "crosses" && (
         <button
           type="button"
           role="switch"
           aria-checked={stand}
           onClick={() => onChange(withStandRule(variant, !stand))}
-          className={`tactile w-full mt-4 px-4 rounded-lg flex items-center justify-between gap-4 text-left ${FOCUS_RING}`}
+          className={`tactile w-full ${part === "both" ? "mt-4" : ""} px-4 rounded-lg flex items-center justify-between gap-4 text-left ${FOCUS_RING}`}
           style={{
             minHeight: "var(--control)",
             background: stand ? "var(--teal-soft)" : "var(--color-surface)",

@@ -19,7 +19,6 @@ import {
 } from "@/lib/bullDuel";
 import { sectorAt } from "@/lib/dartboard";
 import { announce } from "@/lib/announcer";
-import { winCheer } from "@/lib/uiSound";
 import { crowdForStreak, playCrowd, playHitStreakSound, playMatchDartSound, playStreakFanfare, playWalkOnTune, playWinBoom, primeAudio } from "@/lib/fanfare";
 import { emitFx } from "@/lib/fxBus";
 import { fxFlags, getFxLevel, useFxLevel } from "@/lib/fxLevel";
@@ -346,7 +345,6 @@ export function BullDuelApp({ onExitToHome }: { onExitToHome: () => void }) {
       playWinBoom();
       setDiving(true);
     } else {
-      winCheer();
       setScreen("winner");
     }
     /* eslint-enable react-hooks/set-state-in-effect */
@@ -463,7 +461,6 @@ export function BullDuelApp({ onExitToHome }: { onExitToHome: () => void }) {
       <WinDive
         onDone={() => {
           setDiving(false);
-          winCheer();
           setScreen("winner");
         }}
       />

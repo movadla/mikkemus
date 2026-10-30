@@ -79,11 +79,11 @@ export function Segmented<T extends string>({
               if (!selected) uiFeedback("pick");
               onChange(o.value);
             }}
-            className={`flex-1 inline-flex items-center justify-center gap-2 whitespace-nowrap font-semibold ${compact ? "px-2" : "px-4"} ${FOCUS_RING}`}
+            className={`${compact ? "flex-none" : "flex-1"} inline-flex items-center justify-center gap-2 whitespace-nowrap font-semibold ${compact ? "px-1.5" : "px-4"} ${FOCUS_RING}`}
             style={{
               minHeight: "var(--control)",
               borderRadius: "var(--radius-pill)",
-              fontSize: compact ? "var(--text-small)" : "var(--text-body)",
+              fontSize: compact ? "0.8rem" : "var(--text-body)",
               background: selected ? "var(--color-teal)" : "var(--color-surface)",
               color: selected ? "var(--color-bg)" : "var(--color-text-2)",
               border: selected ? "1px solid transparent" : "1px solid var(--color-border)",

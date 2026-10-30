@@ -32,7 +32,7 @@ import {
 import { splitPeople, type Person } from "@/lib/people";
 import { individualSetupProblem, setupSummary } from "@/lib/setupProblem";
 import { useRoster } from "@/lib/storage";
-import { uiSound, winCheer } from "@/lib/uiSound";
+import { uiSound } from "@/lib/uiSound";
 import { Bell } from "./Bell";
 import { useBotTurn } from "./useBotTurn";
 import { ConfirmDialog } from "./ConfirmDialog";
@@ -179,7 +179,6 @@ export function HighstrikerGameScreen({
 
   // The win is announced with the fanfare, where the level allows it.
   useEffect(() => {
-    if (winner) winCheer();
   }, [winner, fx.confetti]);
 
   function submit(scored: number, darts?: string) {

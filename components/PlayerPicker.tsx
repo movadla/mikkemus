@@ -14,7 +14,7 @@ const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
 
 /** The look of the three buttons that add someone: framed and tinted in the accent. */
-const ACTION: React.CSSProperties = { minHeight: "var(--control)", color: "var(--color-teal)", fontWeight: 700, fontSize: "var(--text-small)", background: "color-mix(in srgb, var(--color-teal) 7%, transparent)", border: "1px solid color-mix(in srgb, var(--color-teal) 45%, var(--color-border))" };
+export const ACTION: React.CSSProperties = { minHeight: "var(--control)", color: "var(--color-teal)", fontWeight: 700, fontSize: "var(--text-small)", background: "color-mix(in srgb, var(--color-teal) 7%, transparent)", border: "1px solid color-mix(in srgb, var(--color-teal) 45%, var(--color-border))" };
 
 /** How many of the known players are shown before "Flere spillere": the ones with the most matches. */
 const SHOWN = 6;

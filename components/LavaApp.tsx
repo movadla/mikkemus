@@ -27,7 +27,7 @@ import {
 import { splitPeople, type Person } from "@/lib/people";
 import { individualSetupProblem, setupSummary } from "@/lib/setupProblem";
 import { useRoster } from "@/lib/storage";
-import { uiSound, winCheer } from "@/lib/uiSound";
+import { uiSound } from "@/lib/uiSound";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { Hearts } from "./Hearts";
 import { MinusIcon, PlusIcon } from "./icons";
@@ -148,7 +148,6 @@ export function LavaGameScreen({
   const rain = useMemo(() => (winner && fx.confetti ? generateConfettiRain(fx.bigConfetti ? 60 : 36) : []), [winner, fx.confetti, fx.bigConfetti]);
 
   useEffect(() => {
-    if (winner) winCheer();
   }, [winner, fx.confetti]);
 
   function pick(section: number) {

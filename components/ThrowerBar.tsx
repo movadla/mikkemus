@@ -140,9 +140,10 @@ export function ThrowerBar({
 }) {
   // The rest of the team in the order they come up next, so the first of them is the next thrower.
   const mates = team ? team.members.map((_, i) => team.members[(team.activeIdx + 1 + i) % team.members.length]).slice(0, team.members.length - 1) : [];
-  const photoSize = compact ? 44 : 80;
+  // The card above the board is kept low so the whole board is on the screen (the bull too) without scrolling.
+  const photoSize = compact ? 44 : 56;
   const teamPhotoSize = compact ? 18 : 26;
-  const kitBadge = compact ? 26 : 40;
+  const kitBadge = compact ? 26 : 30;
   const Wrap: React.ElementType = onOpen ? "button" : "div";
 
   return (
@@ -159,7 +160,7 @@ export function ThrowerBar({
         border: flush ? "none" : `1px solid ${kit ? tint(kit.primary, 0.6) : "var(--color-border)"}`,
         borderBottom: flush ? "1px solid var(--color-hairline)" : undefined,
         borderLeft: `8px solid ${kit ? kit.primary : avatarAccent(team ? team.name : thrower.name)}`,
-        padding: compact ? "0.4rem 0.6rem" : "0.6rem 0.8rem",
+        padding: compact ? "0.4rem 0.6rem" : "0.35rem 0.7rem",
         boxShadow: flush ? "inset 0 1px 0 var(--rim)" : undefined,
       }}
     >
@@ -184,7 +185,7 @@ export function ThrowerBar({
         </p>
         <p
           className="truncate"
-          style={{ color: "var(--color-cream)", fontFamily: "var(--font-display)", fontSize: compact ? "var(--text-title)" : "var(--text-num)", lineHeight: 1.05 }}
+          style={{ color: "var(--color-cream)", fontFamily: "var(--font-display)", fontSize: "var(--text-title)", lineHeight: 1.05 }}
         >
           {thrower.name}
         </p>

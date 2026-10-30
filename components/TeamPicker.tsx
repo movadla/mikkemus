@@ -6,7 +6,7 @@ import { TEAMS_SHOWN, getTeamCardsSnapshot, rankByUse, subscribeTeamCards, withT
 import { firstKit, type Kit } from "@/lib/teamKit";
 import { TEAM_NAME_MAX, defaultTeamName, pairKey, savedTeamName, teamNameProblems } from "@/lib/teamNames";
 import { makeTeam, sharesMember, teamPeople, toNamedTeam, type PickedTeam, type Person } from "@/lib/people";
-import { PlayerPicker } from "./PlayerPicker";
+import { ACTION, PlayerPicker } from "./PlayerPicker";
 import { TeamKit } from "./TeamKit";
 
 const FOCUS_RING =
@@ -94,72 +94,94 @@ export function TeamPicker({ teams, onChange, botsAllowed }: { teams: PickedTeam
 
   return (
     <div className="mb-4">
-      {tiles.length > 0 && (
-        <div className="grid grid-cols-2 gap-2 mb-4" role="group" aria-label="Lag">
-          {shown.map((tile) => {
-            const order = pickedIndex(tile.members);
-            const selected = order !== -1;
-            // A team with a bot in it cannot be picked where bots are not allowed (a tournament, say).
-            const blocked = !selected && (teams.some((t) => sharesMember(t.members.map((m) => m.name), tile.members)) || (!!tile.bots && !botsAllowed));
-            return (
-              <button
-                key={keyOf(tile.members)}
-                type="button"
-                aria-pressed={selected}
-                disabled={blocked}
-                onClick={() => toggle(tile)}
-                className={`tactile flex items-center gap-2 pl-2 pr-2 rounded-lg text-left ${FOCUS_RING}`}
-                style={{
-                  minHeight: "var(--control-lg)",
-                  background: selected ? "var(--teal-soft)" : "var(--color-surface)",
-                  border: selected ? "1px solid var(--color-teal)" : "1px solid var(--color-border)",
-                  opacity: blocked ? 0.4 : 1,
-                }}
-              >
-                <TeamKit kit={tile.kit} size={28} />
-                <span className="flex-1 min-w-0">
-                  <span className="block truncate" style={{ color: selected ? "var(--color-cream)" : "var(--color-muted)", fontSize: "var(--text-body)", fontWeight: selected ? 600 : 400 }}>
-                    {tile.name}
-                  </span>
-                  <span className="block truncate" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>
-                    {tile.members.join(", ")}
-                  </span>
-                </span>
-                {selected && (
-                  <span
-                    className="tabular rounded-full shrink-0 flex items-center justify-center"
-                    style={{ width: "1.375rem", height: "1.375rem", background: "var(--color-teal)", color: "var(--color-bg)", fontSize: "var(--text-micro)", fontWeight: 700 }}
-                    aria-label={`nummer ${order + 1}`}
+      {/* The teams that are in: a row of their own, as with the players. A tap on one takes it out. */}
+      {teams.length > 0 && (
+        <div className="mb-3" role="group" aria-label="Med">
+          <p className="section-label mb-1.5">MED ({teams.length})</p>
+          <ul className="flex flex-wrap gap-x-2 gap-y-2.5">
+            {teams.map((t, i) => {
+              const names = t.members.map((m) => m.name);
+              return (
+                <li key={keyOf(names)}>
+                  <button
+                    type="button"
+                    aria-pressed
+                    onClick={() => {
+                      const at = pickedIndex(names);
+                      if (at !== -1) onChange(teams.filter((_, j) => j !== at));
+                    }}
+                    aria-label={`Ta ut ${t.name}, nummer ${i + 1}`}
+                    className={`tactile flat relative flex flex-col items-center gap-0.5 ${FOCUS_RING}`}
+                    style={{ width: "4.6rem" }}
                   >
-                    {order + 1}
-                  </span>
-                )}
-              </button>
-            );
-          })}
+                    <span className="relative">
+                      <TeamKit kit={homeKit(names)} size={40} />
+                      <span aria-hidden className="tabular rounded-full flex items-center justify-center absolute" style={{ top: -4, right: -8, width: "1.1rem", height: "1.1rem", background: "var(--color-teal)", color: "var(--color-bg)", fontSize: "0.75rem", fontWeight: 700 }}>
+                        {i + 1}
+                      </span>
+                    </span>
+                    <span className="w-full truncate text-center" style={{ color: "var(--color-cream)", fontSize: "var(--text-micro)", fontWeight: 600 }}>
+                      {t.name}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
         </div>
       )}
 
-      {tiles.length > TEAMS_SHOWN && (hidden > 0 || showAll) && (
-        <button
-          type="button"
-          onClick={() => setShowAll((v) => !v)}
-          aria-expanded={showAll}
-          className={`tactile w-full rounded-lg text-sm font-medium mb-4 ${FOCUS_RING}`}
-          style={{ minHeight: "var(--control)", background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-cream)" }}
-        >
-          {showAll ? "Færre" : `Mer (${hidden})`}
-        </button>
+      {/* The teams that can be picked: flat tiles with the shirt and the name, two to a line, and one dashed tile for the rest. */}
+      {(shown.some((t) => !t.picked) || hidden > 0 || showAll) && (
+        <ul className="grid grid-cols-2 gap-2 mb-4" role="group" aria-label="Lag">
+          {shown
+            .filter((tile) => !tile.picked)
+            .map((tile) => {
+              // A team with a bot in it cannot be picked where bots are not allowed (a tournament, say), nor one whose people are on a team already.
+              const blocked = teams.some((t) => sharesMember(t.members.map((m) => m.name), tile.members)) || (!!tile.bots && !botsAllowed);
+              return (
+                <li key={keyOf(tile.members)} className="min-w-0">
+                  <button
+                    type="button"
+                    aria-pressed={false}
+                    disabled={blocked}
+                    onClick={() => toggle(tile)}
+                    className={`tactile flat flex w-full items-center gap-2 rounded-lg pl-2 pr-2 text-left ${FOCUS_RING}`}
+                    style={{ minHeight: "2.9rem", background: "var(--color-surface)", border: "1px solid var(--color-border)", opacity: blocked ? 0.4 : 1 }}
+                  >
+                    <TeamKit kit={tile.kit} size={26} />
+                    <span className="flex-1 min-w-0">
+                      <span className="block truncate" style={{ color: "var(--color-cream)", fontSize: "var(--text-small)", fontWeight: 600, lineHeight: 1.2 }}>
+                        {tile.name}
+                      </span>
+                      <span className="block truncate" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)", lineHeight: 1.2 }}>
+                        {tile.members.join(", ")}
+                      </span>
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          {tiles.length > TEAMS_SHOWN && (hidden > 0 || showAll) && (
+            <li className="min-w-0 col-span-full">
+              <button
+                type="button"
+                onClick={() => setShowAll((v) => !v)}
+                aria-expanded={showAll}
+                aria-label={showAll ? "Færre lag" : `Flere lag (${hidden})`}
+                className={`tactile flat flex w-full items-center justify-center rounded-lg px-2 ${FOCUS_RING}`}
+                style={{ minHeight: "2.6rem", background: "transparent", border: "1px dashed var(--color-teal)", color: "var(--color-teal)", fontSize: "var(--text-small)", fontWeight: 700 }}
+              >
+                {showAll ? "Færre" : `+ ${hidden} flere`}
+              </button>
+            </li>
+          )}
+        </ul>
       )}
 
       {!composing && (
-        <button
-          type="button"
-          onClick={openComposer}
-          className={`tactile w-full rounded-lg text-sm font-medium flex items-center justify-center gap-2 ${FOCUS_RING}`}
-          style={{ minHeight: "var(--control)", background: "var(--color-surface)", border: "1.5px dashed var(--color-teal)", color: "var(--color-teal)" }}
-        >
-          <span aria-hidden style={{ fontSize: "var(--text-body)", lineHeight: 1, fontWeight: 700 }}>
+        <button type="button" onClick={openComposer} className={`tactile flat w-full rounded-lg flex items-center justify-center gap-1.5 ${FOCUS_RING}`} style={ACTION}>
+          <span aria-hidden style={{ fontSize: "1.1em", lineHeight: 1 }}>
             +
           </span>
           Nytt lag

@@ -165,10 +165,10 @@ export function SetupScreen({
           }
         }}
       />
-      {advanced && variantSelectable && (
-        // Kryss per rad, and in team play the stand rule: the game is three crosses unless this says otherwise.
+      {/* The order of the advanced settings: the stand rule (teams), animation and sound, crosses per row, the place, a dart at a time, and last the statistics. */}
+      {advanced && variantSelectable && mode === "team" && (
         <div className="w-full pt-2 text-left">
-          <RulesPicker variant={variant} onChange={setVariant} teamPlay={mode === "team"} />
+          <RulesPicker variant={variant} onChange={setVariant} teamPlay part="stand" />
         </div>
       )}
       {advanced && (
@@ -177,9 +177,10 @@ export function SetupScreen({
           <FxPicker />
         </div>
       )}
-      {advanced && (
-        // Played without a trace in the statistics.
-        <div className="w-full">{noStatsToggle}</div>
+      {advanced && variantSelectable && (
+        <div className="w-full pt-2 text-left">
+          <RulesPicker variant={variant} onChange={setVariant} teamPlay={false} part="crosses" />
+        </div>
       )}
       {advanced && variantSelectable && (
         // The place the match is played in: its cup is on the winner screen when the match is won.
@@ -190,6 +191,10 @@ export function SetupScreen({
       )}
       {advanced && (
         <SwitchRow label="Legg inn hver pil for hånd" hint="Velg hva hver pil traff" checked={exactEntry} onChange={setExactEntry} />
+      )}
+      {advanced && (
+        // Played without a trace in the statistics: last of the choices.
+        <div className="w-full">{noStatsToggle}</div>
       )}
     </div>
   );

@@ -10,7 +10,6 @@ import { undoThroughBots } from "@/lib/botTurns";
 import { checkoutsOf } from "@/lib/checkout";
 import { generateConfettiRain } from "@/lib/confetti";
 import { playFanfare } from "@/lib/fanfare";
-import { winCheer } from "@/lib/uiSound";
 import { fxFlags, useFxLevel } from "@/lib/fxLevel";
 import { countdownResult } from "@/lib/gameResults";
 import { useRecordResult } from "@/lib/gameResultsStorage";
@@ -151,7 +150,6 @@ export function CountdownGameScreen({
   const rain = useMemo(() => (winner && fx.confetti ? generateConfettiRain(fx.bigConfetti ? 60 : 36) : []), [winner, fx.confetti, fx.bigConfetti]);
 
   useEffect(() => {
-    if (winner) winCheer();
   }, [winner, fx.confetti]);
 
   // The 180 is on the screen for a moment and goes by itself.

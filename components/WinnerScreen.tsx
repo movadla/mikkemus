@@ -326,7 +326,18 @@ export function WinnerScreen({
           <ViewTransition name="winner-card" share="morph" default="none">
             <div>
             {/* The trophy rises above the winner; a team's own shirts rain instead of confetti cannons. */}
-            {fx.trophy && <Trophy cannons={!shirts} />}
+            {fx.trophy && !venue && <Trophy cannons={!shirts} />}
+            {venue && !compact && (
+              // A single match played in a place has the cup of the place to win: it stands on top, over the winner.
+              <div className="animate-winner-pop mx-auto mb-2 flex flex-col items-center gap-1" aria-label={`${venueOf(venue).name}-pokalen`}>
+                <span style={{ width: "8.5rem", display: "block" }}>
+                  <TrophyArt kind={venueOf(venue).tier} bare variant={venueOf(venue).key} />
+                </span>
+                <p className="font-display" style={{ color: "var(--color-gold-strong)", fontSize: "var(--text-title)" }}>
+                  {venueOf(venue).name}-pokalen
+                </p>
+              </div>
+            )}
             <div className="relative">
               <div
                 className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none"
@@ -419,18 +430,6 @@ export function WinnerScreen({
             </div>
             </div>
           </ViewTransition>
-        )}
-
-        {venue && !compact && (
-          // A single match played in a place has the cup of the place to win: it stands under the name of the winner.
-          <div className="animate-winner-pop mx-auto mb-6 flex flex-col items-center gap-1" aria-label={`${venueOf(venue).name}-pokalen`}>
-            <span style={{ width: "6.5rem", display: "block" }}>
-              <TrophyArt kind={venueOf(venue).tier} bare variant={venueOf(venue).key} />
-            </span>
-            <p className="font-display" style={{ color: "var(--color-gold-strong)", fontSize: "var(--text-title)" }}>
-              {venueOf(venue).name}-pokalen
-            </p>
-          </div>
         )}
 
         {newRecords.length > 0 && (

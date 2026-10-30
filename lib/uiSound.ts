@@ -84,8 +84,6 @@ const SOUND_FILES: Record<CareerSoundKind, string> = {
 };
 const SOUND_VOLUME: Record<CareerSoundKind, number> = { coin: 0.6, unlock: 0.7, "crowd-1": 0.5, "crowd-2": 0.6, "crowd-3": 0.7, cheer: 0.8 };
 /** A recording that is longer than the moment it is for is faded out after this long (ms): the cheer is 16 seconds long, and a win needs about six. */
-/** How much of the start of the cheer is left out (seconds). */
-const CHEER_SKIP_S = 1;
 const SOUND_LIMIT_MS: Partial<Record<CareerSoundKind, number>> = { cheer: 6000 };
 /** Whether a file was found for a sound: not asked about until the first time it is wanted. */
 const soundFound = new Map<CareerSoundKind, boolean>();
@@ -102,7 +100,6 @@ export function careerSound(kind: CareerSoundKind): void {
   try {
     const audio = new Audio(`/career/sounds/${SOUND_FILES[kind]}.mp3`);
     audio.volume = SOUND_VOLUME[kind];
-    if (kind === "cheer") audio.currentTime = CHEER_SKIP_S;
     void audio.play().then(
       () => {
         soundFound.set(kind, true);
@@ -117,27 +114,6 @@ export function careerSound(kind: CareerSoundKind): void {
   } catch {
     soundFound.set(kind, false);
     playCareerSound(kind);
-  }
-}
-
-/**
- * The crowd that cheers for a win (a match, a tournament). Unlike the other career sounds it is heard in every level of effects, as the
- * fanfare is; only "Lyd i appen" turns it off.
- */
-export function winCheer(): void {
-  if (!getUiSound() || typeof Audio === "undefined") return;
-  try {
-    const audio = effectEl ?? new Audio();
-    audio.src = "/career/sounds/cheer.mp3";
-    // The clip starts slowly: the first second is left out.
-    audio.currentTime = CHEER_SKIP_S;
-    audio.volume = SOUND_VOLUME.cheer;
-    void audio.play().then(
-      () => fadeOutAfter(audio, SOUND_LIMIT_MS.cheer ?? 6000),
-      () => {},
-    );
-  } catch {
-    // A cheer that cannot be played is not worth an error.
   }
 }
 

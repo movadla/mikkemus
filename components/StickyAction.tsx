@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
@@ -36,7 +37,10 @@ export function StickyAction({
   children: ReactNode;
 }) {
   const line = ready ? summary : reason ?? summary;
-  return (
+  // Drawn on the body: a screen that slides in has a stacking and positioning context of its own, and a bar fixed inside it sat at the foot of the
+  // whole screen (below the fold on a long one) instead of at the foot of the window.
+  if (typeof document === "undefined") return null;
+  return createPortal(
     <div
       className="sticky-action fixed left-0 right-0 bottom-0 z-30 px-4"
       style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom, 0px))", paddingTop: "2rem", background: "linear-gradient(to bottom, transparent, var(--color-bg) 45%)", pointerEvents: "none" }}
@@ -59,6 +63,7 @@ export function StickyAction({
         </button>
         {below && <div className="mt-1 flex justify-center">{below}</div>}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

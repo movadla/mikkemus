@@ -1645,3 +1645,31 @@ html[data-fx="full"] .hs-last {
 
 .cup-poster-name { color: #fff; font-size: var(--text-small); line-height: 1.15; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7); }
 .cup-poster-trophy { color: rgba(255, 255, 255, 0.85); font-size: var(--text-micro); text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7); }
+
+.shot-strip { padding: 0.25rem 0 0.15rem; }
+.shot-strip > div { margin-top: 0; }
+
+/* The draw, with some gloss: the pair is a raised panel with a lit top edge and a soft shadow, the names are small raised plates, and the road to the cup
+   has plates of the same kind. */
+.draw-row {
+  border-radius: 18px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-panel) 86%, white), var(--color-panel));
+  border: 1px solid color-mix(in srgb, var(--draw, var(--color-border)) 30%, var(--color-border));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 1px 2px rgba(0, 0, 0, 0.12), 0 16px 30px -18px rgba(0, 0, 0, 0.5);
+}
+.room-over .draw-row { background: linear-gradient(180deg, color-mix(in srgb, var(--color-panel) 84%, transparent), color-mix(in srgb, var(--color-panel) 68%, transparent)) !important; backdrop-filter: blur(10px) saturate(1.2); }
+.draw-slot {
+  border-radius: 13px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-cell) 70%, white), var(--color-cell));
+  border: 1px solid color-mix(in srgb, var(--color-border) 60%, white);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75), 0 1px 3px rgba(0, 0, 0, 0.14), 0 6px 12px -8px rgba(0, 0, 0, 0.35);
+  font-weight: 600;
+}
+.bracket-box {
+  border-radius: 10px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-surface) 82%, white), var(--color-surface));
+  border: 1px solid color-mix(in srgb, var(--color-border) 60%, white);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 1px 3px rgba(0, 0, 0, 0.16), 0 8px 14px -10px rgba(0, 0, 0, 0.4);
+}
+
+.draw-toggle-on { background: linear-gradient(180deg, color-mix(in srgb, var(--color-teal) 82%, white), var(--color-teal)); border: 2px solid var(--color-teal); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 8px 16px -8px var(--color-teal); }

@@ -140,11 +140,11 @@ export function DrawScreen({
         type="button"
         onClick={() => tap(name)}
         aria-pressed={picked !== null && order[picked].name === name}
-        className={`flex-1 min-w-0 overflow-hidden flex items-center text-left px-3 rounded-lg ${FOCUS_RING}`}
+        className={`draw-slot flex-1 min-w-0 overflow-hidden flex items-center text-left px-3 ${FOCUS_RING}`}
         style={{
           minHeight: "var(--control)",
-          background: picked !== null && order[picked].name === name ? "var(--teal-soft, color-mix(in srgb, var(--color-teal) 16%, transparent))" : "var(--color-cell)",
-          border: picked !== null && order[picked].name === name ? "1px solid var(--color-teal)" : "1px solid transparent",
+          // A name picked for a swap is lit in the accent; the others take their look from .draw-slot.
+          ...(picked !== null && order[picked].name === name ? { background: "color-mix(in srgb, var(--color-teal) 22%, var(--color-surface))", border: "2px solid var(--color-teal)" } : {}),
           color: "var(--color-cream)",
           opacity: shown ? 1 : 0,
           transform: shown ? "none" : "translateY(6px)",
@@ -168,7 +168,7 @@ export function DrawScreen({
         {career ? <StepStrip step={0} steps={["Trekning", "Turnering"]} /> : <StepStrip step={1} />}
         {cup && <CupBanner cup={cup} />}
         {summary && !career && (
-          <button type="button" onClick={onBack} className={`tactile w-full rounded-lg px-4 flex items-center justify-between gap-3 mb-4 ${FOCUS_RING}`} style={{ minHeight: "var(--control)", background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-cream)", fontSize: "var(--text-body)" }}>
+          <button type="button" onClick={onBack} className={`draw-slot tactile w-full px-4 flex items-center justify-between gap-3 mb-4 ${FOCUS_RING}`} style={{ minHeight: "var(--control)", color: "var(--color-cream)", fontSize: "var(--text-body)" }}>
             <span className="truncate">{summary}</span>
             <span style={{ color: "var(--color-teal)" }}>Endre</span>
           </button>
@@ -182,8 +182,8 @@ export function DrawScreen({
               role="radio"
               aria-checked={mode === m}
               onClick={() => choose(m)}
-              className={`tactile flex-1 rounded-lg font-medium ${FOCUS_RING}`}
-              style={{ minHeight: "var(--control)", background: mode === m ? "var(--color-teal)" : "var(--color-surface)", color: mode === m ? "var(--color-bg)" : "var(--color-cream)", fontWeight: mode === m ? 700 : 500, border: mode === m ? "2px solid var(--color-teal)" : "1px solid var(--color-border)" }}
+              className={`tactile flex-1 rounded-lg font-medium ${mode === m ? "draw-toggle-on" : "draw-slot"} ${FOCUS_RING}`}
+              style={{ minHeight: "var(--control)", color: mode === m ? "var(--color-bg)" : "var(--color-cream)", fontWeight: mode === m ? 700 : 500 }}
             >
               {m === "seeded" ? "Seedet" : "Tilfeldig"}
             </button>
@@ -291,7 +291,7 @@ export function DrawScreen({
         ) : (
         <div className="space-y-2 mb-4">
           {pairs.map((p, i) => (
-            <div key={`${round}-${i}`} className={`draw-row flex items-center gap-2 rounded-xl p-2 ${i === revealed - 1 && drawing ? "draw-flash" : ""}`} style={{ "--draw": colour, background: "var(--color-panel)", border: "1px solid var(--color-border)" } as React.CSSProperties}>
+            <div key={`${round}-${i}`} className={`draw-row flex items-center gap-2 p-2 ${i === revealed - 1 && drawing ? "draw-flash" : ""}`} style={{ "--draw": colour } as React.CSSProperties}>
               {slot(p.a, i < revealed)}
               <span className="font-display" style={{ color: "var(--color-muted)", opacity: i < revealed ? 1 : 0 }}>
                 mot

@@ -1,12 +1,16 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { CloseIcon } from "../icons";
 import { FOCUS_RING } from "./focus";
 
 /** A panel that comes up from the bottom over a dimmed screen, for what is done and then closed: editing, choosing, confirming. */
 export function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
-  return (
+  // Drawn on the body, not inside the screen that asked for it: a screen that slides in has a stacking context of its own, and a sheet inside it
+  // ended up under the bar along the bottom (the last button, Slett, was hidden behind it).
+  if (typeof document === "undefined") return null;
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
       role="dialog"
@@ -31,6 +35,7 @@ export function Sheet({ title, onClose, children }: { title: string; onClose: ()
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

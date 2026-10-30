@@ -352,8 +352,8 @@ function ShotIndicator({
               // Was 1.9rem, which read as three faint specks under the buttons — the landscape
               // rail showed how much the same boxes gain from size. The empty state gets a
               // dashed edge as well, so "nothing thrown yet" is a state rather than an absence.
-              width: "2.3rem",
-              height: "2.3rem",
+              width: "1.9rem",
+              height: "1.9rem",
               borderRadius: "50%",
               display: "flex",
               alignItems: "center",
@@ -1254,7 +1254,7 @@ export function GameScreen({
                   key={p}
                   data-col-active={isActive ? "" : undefined}
                   data-col-player={p}
-                  className={`player-head relative flex flex-col items-center justify-center gap-1.5 p-2 pt-[1.45rem] pb-2.5 text-center transition-colors duration-300 grid-rule-left ${isActive ? "column-active" : ""}`}
+                  className={`player-head relative flex flex-col items-center justify-center gap-1.5 p-1.5 pt-[1.3rem] pb-2 text-center transition-colors duration-300 grid-rule-left ${isActive ? "column-active" : ""}`}
                   style={{
                     borderBottom: isActive ? `2px solid ${accent}` : "2px solid var(--color-border)",
                   }}
@@ -1521,10 +1521,10 @@ export function GameScreen({
           </div>
         )}
         {recordChase && (
-          <div className="max-w-3xl mx-auto w-full mb-3" role="img" aria-label={recordChase.slack >= 0 ? `Rekordsjanse: ${recordChase.left} piler å gå` : "Rekorden er utenfor rekkevidde"}>
-            <div className="flex justify-between" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)", letterSpacing: "0.06em" }}>
-              <span className="truncate">REKORD {recordChase.record} PILER · {recordChase.holder.toUpperCase()}</span>
-              <span>{recordChase.slack >= 0 ? `${recordChase.left} ${recordChase.left === 1 ? "pil" : "piler"} å gå` : "utenfor rekkevidde"}</span>
+          <div className="max-w-3xl mx-auto w-full mb-3" role="img" aria-label={recordChase.slack >= 0 ? `Rekord ${recordChase.record} piler, ${recordChase.left} ${recordChase.left === 1 ? "pil" : "piler"} igjen` : "Rekorden er utenfor rekkevidde"}>
+            <div className="flex justify-between gap-3 whitespace-nowrap" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
+              <span>Rekord: {recordChase.record} piler</span>
+              <span>{recordChase.slack >= 0 ? `${recordChase.left} ${recordChase.left === 1 ? "pil" : "piler"} igjen` : "utenfor rekkevidde"}</span>
             </div>
             <div className="rounded-full overflow-hidden" style={{ height: "0.3rem", marginTop: "0.2rem", background: "var(--color-cell)" }}>
               <div

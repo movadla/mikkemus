@@ -40,8 +40,8 @@ export function MiniBracket({ pairs, accent }: { pairs: { a: string | null; b: s
             return (
               <div
                 key={`${c}-${i}`}
-                className="absolute flex flex-col overflow-hidden"
-                style={{ left: x(c), top: cy(c, i) - h / 2, width: w, height: h, borderRadius: "var(--radius-s)", background: "var(--color-surface)", border: "1px solid var(--color-border)", boxShadow: "var(--elevation-1)", fontSize: "0.75rem", color: "var(--color-cream)" }}
+                className="bracket-box absolute flex flex-col overflow-hidden"
+                style={{ left: x(c), top: cy(c, i) - h / 2, width: w, height: h, fontSize: "0.75rem", color: "var(--color-cream)" }}
               >
                 {[pair?.a, pair?.b].map((n, k) => (
                   <span key={k} className="flex-1 flex items-center px-1.5 truncate" style={{ borderTop: k === 1 ? "1px solid var(--color-border)" : undefined, color: pair && n === null ? "var(--color-muted)" : undefined, fontStyle: pair && n === null ? "italic" : undefined }}>

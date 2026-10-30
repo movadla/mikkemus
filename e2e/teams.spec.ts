@@ -17,16 +17,17 @@ test.describe("lag på kamp", () => {
     await page.getByRole("radio", { name: "Lag" }).click();
 
     const group = page.getByRole("group", { name: "Lag" });
-    await expect(group.getByRole("button")).toHaveCount(4);
+    // Four teams and the dashed tile for the rest.
+    await expect(group.getByRole("button")).toHaveCount(5);
     await expect(group.getByRole("button", { name: /Lars og Per/ })).toBeVisible();
     await expect(group.getByRole("button", { name: /Anne og Knut/ })).toHaveCount(0);
 
-    await page.getByRole("button", { name: "Mer (2)" }).click();
-    await expect(group.getByRole("button")).toHaveCount(6);
+    await page.getByRole("button", { name: "Flere lag (2)" }).click();
+    await expect(group.getByRole("button")).toHaveCount(7);
     await expect(group.getByRole("button", { name: /Anne og Knut/ })).toBeVisible();
 
-    await page.getByRole("button", { name: "Færre" }).click();
-    await expect(group.getByRole("button")).toHaveCount(4);
+    await page.getByRole("button", { name: "Færre lag" }).click();
+    await expect(group.getByRole("button")).toHaveCount(5);
   });
 
   test("et lag som er valgt blir stående, selv om det ikke er blant de fire", async ({ page }) => {
@@ -37,11 +38,12 @@ test.describe("lag på kamp", () => {
     await openApp(page, "dark");
     await page.getByRole("button", { name: "Ny kamp" }).click();
     await page.getByRole("radio", { name: "Lag" }).click();
-    await page.getByRole("button", { name: "Mer (1)" }).click();
+    await page.getByRole("button", { name: "Flere lag (1)" }).click();
     const group = page.getByRole("group", { name: "Lag" });
     await group.getByRole("button", { name: /Siv og Bjørn/ }).click();
-    await page.getByRole("button", { name: "Færre" }).click();
-    await expect(group.getByRole("button", { name: /Siv og Bjørn/ })).toBeVisible();
-    await expect(group.getByRole("button")).toHaveCount(5);
+    // The team that is in moves up to its own row, and stays there whichever four are shown.
+    await page.getByRole("button", { name: "Færre lag" }).click();
+    await expect(page.getByRole("group", { name: "Med" }).getByRole("button", { name: /Siv og Bjørn/ })).toBeVisible();
+    await expect(group.getByRole("button")).toHaveCount(4);
   });
 });
