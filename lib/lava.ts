@@ -49,6 +49,8 @@ function random(seed: number, count: number): number {
 export type LavaMember = { name: string; isBot: boolean; botLevel?: number };
 
 export type LavaGame = {
+  /** Who was chosen to start, when it was asked: the sides are in the order they throw from then on. */
+  firstUp?: string;
   lives: number;
   players: string[];
   /** Section hit by each dart, in order; MISS (0) is a dart that found none. */

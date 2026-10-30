@@ -22,6 +22,8 @@ export type HighstrikerTurn = {
 };
 
 export type HighstrikerGame = {
+  /** Who was chosen to start, when it was asked: the sides are in the order they throw from then on. */
+  firstUp?: string;
   lives: number;
   players: string[];
   turns: HighstrikerTurn[];

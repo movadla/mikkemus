@@ -26,6 +26,8 @@ export type CountdownTurn = {
 };
 
 export type CountdownGame = {
+  /** Who was chosen to start, when it was asked: the sides are in the order they throw from then on. */
+  firstUp?: string;
   start: CountdownStart;
   /** The finish has to be a double, so that what is left on 1 can never be finished. */
   doubleOut: boolean;

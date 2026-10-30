@@ -53,6 +53,8 @@ export type HalvItEntry = {
 };
 
 export type HalvItGame = {
+  /** Who was chosen to start, when it was asked: the sides are in the order they throw from then on. */
+  firstUp?: string;
   players: string[];
   entries: HalvItEntry[];
   /** The people of the sides that are teams. A team has one score; its members throw a round each, in turn. */

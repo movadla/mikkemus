@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { PIN, openApp } from "./helpers";
+import { PIN, openApp, startMatch } from "./helpers";
 
 /** Killer: et tall hver, tre treff på det for å bli killer, og så tar killeren liv fra de andre. */
 async function begin(page: Page) {
@@ -11,7 +11,7 @@ async function begin(page: Page) {
     await page.getByPlaceholder("Spillernavn").fill(name);
     await page.getByRole("button", { name: "Legg til" }).click();
   }
-  await page.getByRole("button", { name: "Start kampen" }).click();
+  await startMatch(page);
 }
 const board = (page: Page) => page.getByRole("group", { name: /Brettet/ });
 const status = (page: Page) => page.getByRole("status");

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { PIN, openApp } from "./helpers";
+import { PIN, openApp, startMatch } from "./helpers";
 
 /** The bots in 301 / 501, Highstriker and Lava: they are picked like in the other games, and throw by themselves when it is their turn. */
 async function begin(page: Page, game: "301 / 501" | "Highstriker" | "Lava") {
@@ -15,7 +15,7 @@ async function begin(page: Page, game: "301 / 501" | "Highstriker" | "Lava") {
   await page.locator("div.grid-cols-3 button").first().click();
   if (game === "301 / 501") await page.getByRole("radio", { name: "301" }).click();
 }
-const start = (page: Page) => page.getByRole("button", { name: "Start kampen" }).click();
+const start = (page: Page) => startMatch(page);
 const keys = async (page: Page, digits: string) => {
   for (const d of digits) await page.getByRole("group", { name: "Tastatur" }).getByRole("button", { name: d, exact: true }).click();
 };

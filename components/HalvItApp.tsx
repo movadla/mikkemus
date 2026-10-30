@@ -42,6 +42,8 @@ import { SeriesPicker, SeriesSummary, seriesLine } from "./SeriesPicker";
 import { ScreenTop } from "./ScreenTop";
 import { commitPeople, commitTeams } from "./SetupScreen";
 import { SideAvatar } from "./SideAvatar";
+import { needsStart } from "@/lib/startChoice";
+import { StartChoice } from "./StartChoice";
 import { StickyAction } from "./StickyAction";
 import { VoiceToggle } from "./VoiceSwitch";
 import { Button } from "./ui/Button";
@@ -251,8 +253,11 @@ export function HalvItGameScreen({ game, setGame, photos, onHome, onNew, series 
           ? { gridTemplateRows: game.players.map((p) => (p === up ? "1.7fr" : "1fr")).join(" ") }
           : { gridTemplateColumns: gridAt % 2 === 0 ? "1.25fr 1fr" : "1fr 1.25fr", gridTemplateRows: Array.from({ length: Math.ceil(count / 2) }, (_, r) => (r === Math.floor(gridAt / 2) ? "1.35fr" : "1fr")).join(" ") };
 
+  // The first thing in a game: who starts. Asked once, before anything is thrown.
+  const asking = needsStart(game, game.entries.length);
   return (
     <div className="animate-screen-enter screen">
+      {asking && <StartChoice game={game} setGame={setGame} photos={photos} />}
       {confirmExit && (
         <ConfirmDialog
           message="Avslutte kampen?"

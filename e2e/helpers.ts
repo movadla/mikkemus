@@ -62,3 +62,15 @@ export async function startPast(page: Page) {
     await expect(cards).toBeHidden();
   }
 }
+
+/** Starts the match, and picks the first side in «Hvem starter?» when a game asks (the main match does not). */
+export async function startMatch(page: Page) {
+  await page.getByRole("button", { name: "Start kampen" }).click();
+  await chooseStarter(page);
+}
+
+/** Answers «Hvem starter?» with the first side, if it is asked. */
+export async function chooseStarter(page: Page) {
+  const ask = page.getByRole("dialog", { name: /starter\?$/ });
+  if (await ask.isVisible({ timeout: 1500 }).catch(() => false)) await ask.getByRole("list", { name: "Hvem starter" }).getByRole("button").first().click();
+}

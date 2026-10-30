@@ -120,6 +120,13 @@ export function updateNightMatch(id: string, patch: Partial<NightMatch>): void {
   void write("match", m.id, m.at, m);
 }
 
+/** Takes an evening away with all its matches, for good: from Kveldsscore only, what the statistics and the other lists keep is not touched. */
+export function deleteEvening(id: string): void {
+  const matchIds = snap.matches.filter((m) => m.evening === id).map((m) => m.id);
+  set({ evenings: snap.evenings.filter((e) => e.id !== id), matches: snap.matches.filter((m) => m.evening !== id) });
+  if (supabase) void supabase.from("night_scores").delete().in("id", [id, ...matchIds]).then(({ error }) => error && console.warn("Kunne ikke slette kvelden:", error.message));
+}
+
 /** Takes a match away for good: for a win that was undone, which was never a result. */
 export function removeNightMatch(id: string): void {
   if (!snap.matches.some((m) => m.id === id)) return;

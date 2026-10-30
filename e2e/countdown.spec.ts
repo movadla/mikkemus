@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { PIN, THEMES, openApp } from "./helpers";
+import { PIN, THEMES, openApp, startMatch } from "./helpers";
 
 /** 301 and 501: only what each round made is written in, and a round that can only be what it says goes in by itself. */
 async function begin(page: Page, theme: "dark" | "light") {
@@ -13,7 +13,7 @@ async function begin(page: Page, theme: "dark" | "light") {
     await page.getByRole("button", { name: "Legg til" }).click();
   }
   await page.getByRole("radio", { name: "301" }).click();
-  await page.getByRole("button", { name: "Start kampen" }).click();
+  await startMatch(page);
 }
 const keys = async (page: Page, digits: string) => {
   for (const d of digits) await page.getByRole("group", { name: "Tastatur" }).getByRole("button", { name: d, exact: true }).click();

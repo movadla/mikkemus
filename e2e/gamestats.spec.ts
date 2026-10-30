@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { PIN, openApp } from "./helpers";
+import { PIN, openApp, startMatch } from "./helpers";
 
 /** Andre spill under Statistikk: the tab is there once 301/501, Highstriker or Lava has been played, and a finished game writes its result. */
 const result = (id: string, game: string, winner: string, loser: string) => ({
@@ -63,7 +63,7 @@ test.describe("statistikk for de andre spillene", () => {
       await page.getByRole("button", { name: "Legg til" }).click();
     }
     await page.getByRole("radio", { name: "301" }).click();
-    await page.getByRole("button", { name: "Start kampen" }).click();
+    await startMatch(page);
     const keys = async (digits: string) => {
       for (const d of digits) await page.getByRole("group", { name: "Tastatur" }).getByRole("button", { name: d, exact: true }).click();
     };

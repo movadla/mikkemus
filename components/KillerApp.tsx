@@ -43,6 +43,8 @@ import { SeriesPicker, SeriesSummary, seriesLine } from "./SeriesPicker";
 import { ScreenTop } from "./ScreenTop";
 import { commitPeople, commitTeams } from "./SetupScreen";
 import { SideAvatar } from "./SideAvatar";
+import { needsStart } from "@/lib/startChoice";
+import { StartChoice } from "./StartChoice";
 import { StickyAction } from "./StickyAction";
 import { VoiceToggle } from "./VoiceSwitch";
 import { Button } from "./ui/Button";
@@ -305,8 +307,11 @@ export function KillerGameScreen({ game, setGame, photos, onHome, onNew, series 
   }
 
   const message = fresh ? describe(fresh.dart) : phase === "claim" ? `${who} kaster én pil for å få et tall` : `${who} kaster`;
+  // The first thing in a game: who starts. Asked once, before anything is thrown.
+  const asking = needsStart(game, game.darts.length);
   return (
     <div className="animate-screen-enter screen">
+      {asking && <StartChoice game={game} setGame={setGame} photos={photos} />}
       {confirmExit && (
         <ConfirmDialog
           message="Avslutte kampen?"

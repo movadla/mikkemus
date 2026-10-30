@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { PIN, openApp } from "./helpers";
+import { PIN, openApp, startMatch } from "./helpers";
 
 /** Lag i 301/501, Highstriker og Lava: ett lag har én poengsum eller de samme livene, og medlemmene kaster en runde hver, etter tur. */
 const NAMES = ["Lars og Per", "Ola og Kari"];
@@ -14,7 +14,7 @@ async function begin(page: Page, game: string) {
   await page.getByRole("radio", { name: "Lag" }).click();
   const group = page.getByRole("group", { name: "Lag" });
   for (const n of NAMES) await group.getByRole("button", { name: new RegExp(n) }).click();
-  await page.getByRole("button", { name: "Start kampen" }).click();
+  await startMatch(page);
 }
 const keys = async (page: Page, digits: string) => {
   for (const d of digits) await page.getByRole("group", { name: "Tastatur" }).getByRole("button", { name: d, exact: true }).click();

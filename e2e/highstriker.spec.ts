@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { PIN, THEMES, openApp } from "./helpers";
+import { PIN, THEMES, openApp, startMatch } from "./helpers";
 
 /** Highstriker: every round has to beat the one before, and a life goes when it does not. */
 async function begin(page: Page, theme: "dark" | "light", lives?: number, players = ["Lars", "Vadla"]) {
@@ -17,7 +17,7 @@ async function begin(page: Page, theme: "dark" | "light", lives?: number, player
     for (let n = 3; n > lives; n--) await page.getByRole("button", { name: "Ett liv mindre" }).click();
     for (let n = 3; n < lives; n++) await page.getByRole("button", { name: "Ett liv mer" }).click();
   }
-  await page.getByRole("button", { name: "Start kampen" }).click();
+  await startMatch(page);
 }
 const keys = async (page: Page, digits: string) => {
   for (const d of digits) await page.getByRole("group", { name: "Tastatur" }).getByRole("button", { name: d, exact: true }).click();

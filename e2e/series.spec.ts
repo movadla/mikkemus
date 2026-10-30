@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { PIN, openApp } from "./helpers";
+import { PIN, chooseStarter, openApp, startMatch } from "./helpers";
 
 /** Best av x: den som vinner flest spill først vinner serien, og serien er én kamp i Kveldsscore. */
 const keys = async (page: Page, d: string) => {
@@ -29,12 +29,13 @@ test.describe("best av x", () => {
     await page.getByRole("switch", { name: /Avanserte innstillinger/ }).click();
     await page.getByRole("radiogroup", { name: "Best av" }).getByRole("radio", { name: "3" }).click();
     await expect(page.getByText("Den som vinner 2 spill først")).toBeVisible();
-    await page.getByRole("button", { name: "Start kampen" }).click();
+    await startMatch(page);
     await expect(page.getByText("Best av 3 · Lars 0–0 Vadla")).toBeVisible();
     await lars_wins(page);
     // One game each way is not enough: the series goes on.
     await expect(page.getByText("Serien: Lars 1–0 Vadla")).toBeVisible();
     await page.getByRole("button", { name: "Neste kamp" }).click();
+    await chooseStarter(page);
     await expect(page.getByText("Best av 3 · Lars 1–0 Vadla")).toBeVisible();
     await lars_wins(page);
     await expect(page.getByText(/Lars vant serien \(best av 3\) · Lars 2–0 Vadla/)).toBeVisible();

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { PIN, openApp } from "./helpers";
+import { PIN, openApp, startMatch } from "./helpers";
 
 /** Kveldsscore: kampene kommer inn av seg selv, tabellen gir ett poeng for en seier, og en kamp kan overstyres, slettes og legges inn for hånd. */
 async function playMatch(page: Page) {
@@ -11,7 +11,7 @@ async function playMatch(page: Page) {
     await page.getByRole("button", { name: "Legg til" }).click();
   }
   await page.getByRole("radio", { name: "301" }).click();
-  await page.getByRole("button", { name: "Start kampen" }).click();
+  await startMatch(page);
   const keys = async (d: string) => {
     for (const c of d) await page.getByRole("group", { name: "Tastatur" }).getByRole("button", { name: c, exact: true }).click();
   };
@@ -66,5 +66,27 @@ test.describe("Kveldsscore", () => {
     await add.getByRole("button", { name: "Legg til", exact: true }).last().click();
     await expect(lines.getByRole("button").first()).toContainText("Hans vs. Erlend");
     await expect(lines.getByRole("button").first()).toContainText("Manuell");
+  });
+
+  test("reglene står på siden, og en kveld kan slettes", async ({ page }) => {
+    await openApp(page, "dark");
+    await playMatch(page);
+    await page.getByRole("button", { name: "Til forsiden" }).click();
+    await page.getByRole("link", { name: /Kveldsscore/ }).click();
+    await expect(page.getByRole("list", { name: "Tabell" }).getByRole("listitem")).toHaveCount(2);
+    await page.getByRole("button", { name: "Regler for Kveldsscore" }).click();
+    const rules = page.getByRole("dialog", { name: "Regler for Kveldsscore" });
+    await expect(rules).toContainText("begge på laget ett poeng hver");
+    await expect(rules).toContainText("3, 2 og 1 poeng");
+    await rules.getByRole("button", { name: "Lukk" }).last().click();
+    // Deleting the evening takes the matches with it, after a question.
+    await page.getByRole("button", { name: "Slett kvelden" }).click();
+    await expect(page.getByRole("alertdialog").or(page.getByRole("dialog")).getByText(/Slette kvelden med 1 kamp/)).toBeVisible();
+    await page.getByRole("button", { name: "Behold" }).click();
+    await expect(page.getByRole("list", { name: "Tabell" })).toBeVisible();
+    await page.getByRole("button", { name: "Slett kvelden" }).click();
+    await page.getByRole("button", { name: "Slett kvelden" }).first().click();
+    await expect(page.getByText("Ingen kamper i kveld ennå")).toBeVisible();
+    await expect(page.getByRole("list", { name: "Tabell" })).toHaveCount(0);
   });
 });

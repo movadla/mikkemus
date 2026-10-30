@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { PIN, THEMES, openApp } from "./helpers";
+import { PIN, THEMES, openApp, startMatch } from "./helpers";
 
 /** Lava: a section that is hit is lava for everyone from then on, and a dart in it costs a life. */
 async function begin(page: Page, theme: "dark" | "light", lives?: number, rings = false) {
@@ -17,7 +17,7 @@ async function begin(page: Page, theme: "dark" | "light", lives?: number, rings 
     if (rings) await page.getByRole("switch", { name: /Doble og trippel/ }).click();
     for (let i = DEFAULT; lives && i > lives; i--) await page.getByRole("button", { name: "Ett liv mindre" }).click();
   }
-  await page.getByRole("button", { name: "Start kampen" }).click();
+  await startMatch(page);
 }
 const DEFAULT = 3;
 const board = (page: Page) => page.getByRole("group", { name: /Brettet/ });

@@ -22,6 +22,8 @@ export const HITS_TO_KILLER = 3;
 export type KillerMember = { name: string; isBot: boolean; botLevel?: number };
 
 export type KillerGame = {
+  /** Who was chosen to start, when it was asked: the sides are in the order they throw from then on. */
+  firstUp?: string;
   lives: number;
   players: string[];
   /** The section each dart hit, in order; MISS (0) is a dart that found none. */

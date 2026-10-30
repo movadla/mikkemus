@@ -42,6 +42,8 @@ import { LavaBoard } from "./LavaBoard";
 import { GameVenue, VenueSection } from "./GameVenue";
 import { GameWho, type GameMode } from "./GameWho";
 import { SideAvatar } from "./SideAvatar";
+import { needsStart } from "@/lib/startChoice";
+import { StartChoice } from "./StartChoice";
 import { SeriesPicker, SeriesSummary, seriesLine } from "./SeriesPicker";
 import { ScreenTop } from "./ScreenTop";
 import { commitPeople, commitTeams } from "./SetupScreen";
@@ -222,7 +224,9 @@ export function LavaGameScreen({
   }
 
   // A bot throws a dart at a time, with a pause that follows the bot speed in Innstillinger.
-  useBotTurn(botUp, game.darts.length, () => botDelayMs() + 250, () => {
+  // The first thing in a game: who starts. Asked once, before anything is thrown.
+  const asking = needsStart(game, game.darts.length);
+  useBotTurn(botUp && !asking, game.darts.length, () => botDelayMs() + 250, () => {
     const d = botLavaDart(new Set(state.burned.keys()), member ? member.botLevel ?? medOfLevel(4) : botLevels[up], undefined, game.fields);
     pick(fieldOfLabel(d.label, d.section, game.fields));
   });
@@ -314,6 +318,7 @@ export function LavaGameScreen({
 
   return (
     <div className="animate-screen-enter screen">
+      {asking && <StartChoice game={game} setGame={setGame} photos={photos} isBot={isBot} />}
       {confirmExit && (
         <ConfirmDialog
           message={career ? "Gi opp utfordringen?" : "Avslutte kampen?"}

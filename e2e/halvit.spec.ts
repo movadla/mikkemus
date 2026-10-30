@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { PIN, openApp } from "./helpers";
+import { PIN, openApp, startMatch } from "./helpers";
 
 /** Halv It: ti runder med hvert sitt mål. Treff og poengene legges til, bom og hele poengsummen halveres (rundet opp). */
 async function begin(page: Page, players = ["Lars", "Vadla"]) {
@@ -11,7 +11,7 @@ async function begin(page: Page, players = ["Lars", "Vadla"]) {
     await page.getByPlaceholder("Spillernavn").fill(name);
     await page.getByRole("button", { name: "Legg til" }).click();
   }
-  await page.getByRole("button", { name: "Start kampen" }).click();
+  await startMatch(page);
 }
 const keys = async (page: Page, digits: string) => {
   for (const d of digits) await page.getByRole("group", { name: "Tastatur" }).getByRole("button", { name: d, exact: true }).click();
@@ -67,7 +67,7 @@ test.describe("Halv It", () => {
     await page.getByRole("radio", { name: "Lag" }).click();
     const group = page.getByRole("group", { name: "Lag" });
     for (const n of ["Lars og Per", "Ola og Kari"]) await group.getByRole("button", { name: new RegExp(n) }).click();
-    await page.getByRole("button", { name: "Start kampen" }).click();
+    await startMatch(page);
     await expect(side(page, "Lars og Per")).toContainText("Nå: Lars");
     await keys(page, "40");
     await page.getByRole("button", { name: "Bekreft" }).click();
@@ -89,7 +89,7 @@ test.describe("Halv It", () => {
     for (const n of ["Lars og Per", "Ola og Kari"]) await group.getByRole("button", { name: new RegExp(n) }).click();
     await page.getByRole("switch", { name: /Avanserte innstillinger/ }).click();
     await page.getByRole("switch", { name: /Begge kaster hver runde/ }).click();
-    await page.getByRole("button", { name: "Start kampen" }).click();
+    await startMatch(page);
     await expect(side(page, "Lars og Per")).toContainText("Nå: Lars (1 av 2)");
     await keys(page, "20");
     await page.getByRole("button", { name: "Bekreft" }).click();

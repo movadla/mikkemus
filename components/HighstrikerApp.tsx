@@ -49,6 +49,8 @@ import { ScoreKeypad } from "./ScoreKeypad";
 import { GameVenue, VenueSection } from "./GameVenue";
 import { GameWho, type GameMode } from "./GameWho";
 import { SideAvatar } from "./SideAvatar";
+import { needsStart } from "@/lib/startChoice";
+import { StartChoice } from "./StartChoice";
 import { SeriesPicker, SeriesSummary, seriesLine } from "./SeriesPicker";
 import { ScreenTop } from "./ScreenTop";
 import { commitPeople, commitTeams } from "./SetupScreen";
@@ -250,7 +252,9 @@ export function HighstrikerGameScreen({
   }
 
   // A bot throws its round after a pause that follows the bot speed in Innstillinger.
-  useBotTurn(botUp, game.turns.length, () => botDelayMs() * 2 + 300, () => {
+  // The first thing in a game: who starts. Asked once, before anything is thrown.
+  const asking = needsStart(game, game.turns.length);
+  useBotTurn(botUp && !asking, game.turns.length, () => botDelayMs() * 2 + 300, () => {
     const r = botHighstrikerRound(least, member ? member.botLevel ?? medOfLevel(4) : botLevels[up]);
     submit(r.scored, r.labels.join(" · "));
   });
@@ -357,6 +361,7 @@ export function HighstrikerGameScreen({
   const order = [...game.players].sort((a, b) => Number(isOut(game, a)) - Number(isOut(game, b)));
   return (
     <div className="animate-screen-enter screen">
+      {asking && <StartChoice game={game} setGame={setGame} photos={photos} isBot={isBot} />}
       {lastLife && fx.heat && <div className="hs-vignette" aria-hidden />}
       {confirmExit && (
         <ConfirmDialog

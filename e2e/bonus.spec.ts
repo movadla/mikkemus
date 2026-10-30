@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { PIN, openApp } from "./helpers";
+import { PIN, openApp, startMatch } from "./helpers";
 
 /** Ekstrapoeng i Kveldsscore for 180, tre i bull og utsjekk på 100 eller mer, valgt under Avanserte innstillinger. */
 const keys = async (page: Page, d: string) => {
@@ -21,7 +21,7 @@ test.describe("ekstrapoeng", () => {
     await page.getByRole("radio", { name: "301" }).click();
     await page.getByRole("switch", { name: /Avanserte innstillinger/ }).click();
     for (const label of ["180", "Tre i bull", "Utsjekk på 100 eller mer"]) await page.getByRole("switch", { name: new RegExp(`^${label}`) }).click();
-    await page.getByRole("button", { name: "Start kampen" }).click();
+    await startMatch(page);
     // 180 by Lars, then Vadla 150: asked whether it was three bulls.
     await keys(page, "180");
     await keys(page, "150");

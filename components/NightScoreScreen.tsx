@@ -23,7 +23,7 @@ import {
   type NightMatch,
   type NightSide,
 } from "@/lib/nightScore";
-import { currentEvening, recordNightMatch, startNewEvening, updateNightMatch, useNightScore, type NewNightMatch } from "@/lib/nightScoreStorage";
+import { currentEvening, deleteEvening, recordNightMatch, startNewEvening, updateNightMatch, useNightScore, type NewNightMatch } from "@/lib/nightScoreStorage";
 import type { PickedTeam, Person } from "@/lib/people";
 import { useRoster } from "@/lib/storage";
 import { ConfirmDialog } from "./ConfirmDialog";
@@ -76,6 +76,8 @@ export function NightScoreScreen() {
   const [open, setOpen] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [confirmNew, setConfirmNew] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [rules, setRules] = useState(false);
   const [undo, setUndo] = useState<string | null>(null);
   const suggestions = useSuggestions(night.matches);
   const photos = new Map(roster.map((r) => [r.name, r.photo]));
@@ -124,6 +126,24 @@ export function NightScoreScreen() {
                 },
                 background: "var(--color-teal)",
                 color: "var(--color-bg)",
+              },
+            ]}
+          />
+        )}
+
+        {confirmDelete && evening && (
+          <ConfirmDialog
+            message={`Slette kvelden med ${live.length} ${live.length === 1 ? "kamp" : "kamper"}? Det kan ikke angres. Statistikken til spillerne blir som den er.`}
+            buttons={[
+              { label: "Behold", onClick: () => setConfirmDelete(false), background: "var(--color-green)" },
+              {
+                label: "Slett kvelden",
+                onClick: () => {
+                  setConfirmDelete(false);
+                  setChosen(null);
+                  deleteEvening(evening.id);
+                },
+                background: "var(--color-red)",
               },
             ]}
           />
@@ -225,6 +245,11 @@ export function NightScoreScreen() {
             </Button>
           </div>
         )}
+        <div className="mt-3">
+          <button type="button" onClick={() => setRules(true)} className={`tactile flex items-center justify-center w-full rounded-lg ${FOCUS_RING}`} style={{ minHeight: "var(--control)", color: "var(--color-teal)", fontWeight: 700, fontSize: "var(--text-small)" }}>
+            Regler for Kveldsscore
+          </button>
+        </div>
         {history && (
           <div className="mt-3">
             <Link href={history} className={`tactile flex items-center justify-center rounded-lg ${FOCUS_RING}`} style={{ minHeight: "var(--control)", color: "var(--color-teal)", fontWeight: 700, fontSize: "var(--text-small)" }}>
@@ -234,6 +259,14 @@ export function NightScoreScreen() {
         )}
       </div>
 
+      {evening && (
+        <div className="screen-inner mt-6">
+          <button type="button" onClick={() => setConfirmDelete(true)} className={`tactile flex items-center justify-center w-full rounded-lg ${FOCUS_RING}`} style={{ minHeight: "var(--control)", color: "var(--color-red)", fontWeight: 700, fontSize: "var(--text-small)", background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
+            Slett kvelden
+          </button>
+        </div>
+      )}
+      {rules && <RulesSheet onClose={() => setRules(false)} />}
       {openMatch && (
         <MatchSheet
           m={openMatch}
@@ -263,6 +296,33 @@ export function NightScoreScreen() {
         </div>
       )}
     </div>
+  );
+}
+
+const RULES: { title: string; text: string }[] = [
+  { title: "Poeng", text: "Den som vinner en kamp mellom to får ett poeng. I lagspill får begge på laget ett poeng hver." },
+  { title: "Tre eller flere", text: "Er det tre eller flere i en kamp, gir plassene 3, 2 og 1 poeng (først, nummer to og nummer tre). Resten får ingenting." },
+  { title: "Uavgjort", text: "Er en kamp uavgjort, får ingen poeng." },
+  { title: "Best av x", text: "Spilles det en serie (best av 3, 5 eller 7), er hele serien én kamp. Den som vinner flest spill først vinner serien og får poenget." },
+  { title: "Ekstrapoeng", text: "Er ekstrapoeng slått på under Avanserte innstillinger, gir 180, tre i bull og utsjekk på 100 eller mer ett poeng mer til den som gjorde det, uansett hvem som vant." },
+  { title: "Hvilke kamper", text: "Bare kamper der alle er mennesker teller. Kamper mot boter kommer ikke med." },
+  { title: "Kvelden", text: "En kveld varer til du trykker «Ny kveld». Kampene kommer inn av seg selv når de er ferdige, i alle spill." },
+  { title: "Rette og slette", text: "Du kan overstyre vinneren (eller velge uavgjort), legge inn en kamp for hånd og slette en kamp eller hele kvelden. Det rører ikke statistikken til spillerne." },
+];
+
+/** The rules of Kveldsscore: how the points are counted. */
+function RulesSheet({ onClose }: { onClose: () => void }) {
+  return (
+    <Sheet title="Regler for Kveldsscore" onClose={onClose}>
+      <dl className="space-y-3">
+        {RULES.map((r) => (
+          <div key={r.title}>
+            <dt className="section-label mb-0.5">{r.title.toUpperCase()}</dt>
+            <dd style={{ color: "var(--color-cream)", fontSize: "var(--text-body)", lineHeight: 1.45 }}>{r.text}</dd>
+          </div>
+        ))}
+      </dl>
+    </Sheet>
   );
 }
 
