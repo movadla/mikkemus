@@ -4039,13 +4039,13 @@ button.season-strip { min-height: 2.75rem; padding-block: 0; }
 
 /* The places to play in, as a row of pictures. */
 .venue-row { display: flex; gap: 0.6rem; overflow-x: auto; padding: 0.2rem 0.1rem 0.8rem; margin-bottom: 0.6rem; scroll-snap-type: x proximity; }
-.venue-tile { display: grid; grid-template-rows: 4.2rem auto; flex: 0 0 9rem; padding: 0; border-radius: var(--radius-m); overflow: hidden; border: 2px solid var(--color-border); background: var(--color-surface); text-align: left; scroll-snap-align: start; }
+.venue-tile { display: grid; grid-template-rows: 4.2rem auto; flex: 0 0 9.4rem; padding: 0; border-radius: var(--radius-m); overflow: hidden; border: 2px solid var(--color-border); background: var(--color-surface); text-align: left; scroll-snap-align: start; }
 .venue-tile[aria-checked="true"] { border-color: var(--color-teal); box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-teal) 40%, transparent); }
 .venue-tile img { width: 100%; height: 100%; object-fit: cover; }
 .venue-name { display: grid; padding: 0.3rem 0.5rem 0.4rem; color: var(--color-cream); }
-.venue-name b { font-size: var(--text-body); line-height: 1.2; font-weight: 700; }
+.venue-name b { font-size: 0.8rem; line-height: 1.2; font-weight: 700; white-space: nowrap; }
 .venue-name small { font-size: 0.68rem; color: var(--color-text-2); line-height: 1.2; }
-.venue-name b { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; min-height: 2.4em; }
+
 
 /* The field of a tournament outside the career, in its opening: the faces in a row. */
 .ev-faces { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem; padding: 0; margin: 0; list-style: none; }
