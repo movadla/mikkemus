@@ -33,7 +33,7 @@ import {
 import { splitPeople, type Person } from "@/lib/people";
 import { individualSetupProblem, setupSummary } from "@/lib/setupProblem";
 import { useRoster } from "@/lib/storage";
-import { uiSound } from "@/lib/uiSound";
+import { careerSound, uiSound } from "@/lib/uiSound";
 import { Bell } from "./Bell";
 import { useBotTurn } from "./useBotTurn";
 import { ConfirmDialog } from "./ConfirmDialog";
@@ -181,6 +181,7 @@ export function HighstrikerGameScreen({
   // The win is announced with the fanfare, where the level allows it.
   useEffect(() => {
     if (winner && fx.confetti) playFanfare();
+    if (winner) careerSound("cheer");
   }, [winner, fx.confetti]);
 
   function submit(scored: number, darts?: string) {

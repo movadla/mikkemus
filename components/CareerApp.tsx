@@ -549,6 +549,7 @@ function Play({ career, commit, onHub }: { career: Career; commit: (c: Career) =
         onDone={() => setIntro(false)}
         extra={<FieldPreview career={career} field={a.entrants} />}
         plain
+        music
         {...(team
           ? {
               plates: [["Lag", String(tier.size)], ["Innskudd", tier.fee === 0 ? "Gratis" : dollars(tier.fee)], ["Til vinneren", dollars(tier.prizes.winner ?? 0)]] as [string, string][],

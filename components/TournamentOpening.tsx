@@ -25,6 +25,7 @@ export function TournamentOpening({ venue, name, mode, participants, cupName, tr
       tier={tier}
       player=""
       plain
+      music
       label="TREKK"
       onDone={onDone}
       onBack={onBack}

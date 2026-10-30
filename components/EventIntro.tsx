@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { careerSound } from "@/lib/uiSound";
+import { careerSound, startIntroMusic } from "@/lib/uiSound";
 import type { Tier } from "@/lib/career";
 import { dollars } from "@/lib/career";
 import { PUB, STAGE, TROPHY } from "@/lib/scenePalette";
@@ -42,11 +42,13 @@ const CONFETTI = ["var(--color-cream)", "var(--color-gold-strong)", "var(--color
  * Grand Slam adds lasers and the world championship fireworks and the hardest blow. A tap anywhere takes it to the end at once, and the
  * button is there from the first second, so nothing here is needed to play.
  */
-export function EventIntro({ tier, player, character, onDone, label = "TREKK", line, plates, onBack, extra, partner, plain = false, backLabel = "Avslå", cup = true }: { tier: Tier; player: string; /** Whether the cup of the event falls in over the name: not for a duel, which has none to win. */ cup?: boolean; /** The id of the player's character (lib/characters.ts). */ character?: string; onDone: () => void; /** The words on the button (the draw, for a tournament). */ label?: string; /** What stands by the player: who they play, and what comes next. */ line?: React.ReactNode; /** The three plates, when it is not a tournament of many (who plays, what it costs, what it pays). */ plates?: [string, string][]; /** A way out, for what can be turned down. */ onBack?: () => void; /** The field of the event (who is in it, and where the player stands), between the plates and the player. */ extra?: React.ReactNode; /** The partner of a team cup, who stands beside the player. */ partner?: string; /** A tournament outside the career: no character beside the words, only the field (extra). */ plain?: boolean; /** The words of the way out (Avslå, for what can be turned down). */ backLabel?: string }) {
+export function EventIntro({ tier, player, character, onDone, label = "TREKK", line, plates, onBack, extra, partner, plain = false, backLabel = "Avslå", cup = true, music = false }: { /** The song of a tournament plays while the opening is up. */ music?: boolean; tier: Tier; player: string; /** Whether the cup of the event falls in over the name: not for a duel, which has none to win. */ cup?: boolean; /** The id of the player's character (lib/characters.ts). */ character?: string; onDone: () => void; /** The words on the button (the draw, for a tournament). */ label?: string; /** What stands by the player: who they play, and what comes next. */ line?: React.ReactNode; /** The three plates, when it is not a tournament of many (who plays, what it costs, what it pays). */ plates?: [string, string][]; /** A way out, for what can be turned down. */ onBack?: () => void; /** The field of the event (who is in it, and where the player stands), between the plates and the player. */ extra?: React.ReactNode; /** The partner of a team cup, who stands beside the player. */ partner?: string; /** A tournament outside the career: no character beside the words, only the field (extra). */ plain?: boolean; /** The words of the way out (Avslå, for what can be turned down). */ backLabel?: string }) {
   // The crowd of the place swells as the scene comes up: the murmur of the pub, a hall filling, an arena roaring.
   useEffect(() => {
     careerSound(tier.scale <= 1 ? "crowd-1" : tier.scale <= 3 ? "crowd-2" : "crowd-3");
   }, [tier.scale]);
+  // The music of a tournament's opening, from when it comes up until it is left.
+  useEffect(() => (music ? startIntroMusic(tier.id === "vm" ? "intro-vm" : tier.id === "gs" ? "intro-gs" : "intro") : undefined), [music, tier.id]);
   const [skip, setSkip] = useState(false);
   // The first time an event is opened the whole show plays; after that it is quick (the button is there at once, and a tap still skips).
   const seenKey = (tier as { key?: string }).key ?? tier.id;

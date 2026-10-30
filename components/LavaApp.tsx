@@ -28,7 +28,7 @@ import {
 import { splitPeople, type Person } from "@/lib/people";
 import { individualSetupProblem, setupSummary } from "@/lib/setupProblem";
 import { useRoster } from "@/lib/storage";
-import { uiSound } from "@/lib/uiSound";
+import { careerSound, uiSound } from "@/lib/uiSound";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { Hearts } from "./Hearts";
 import { MinusIcon, PlusIcon } from "./icons";
@@ -150,6 +150,7 @@ export function LavaGameScreen({
 
   useEffect(() => {
     if (winner && fx.confetti) playFanfare();
+    if (winner) careerSound("cheer");
   }, [winner, fx.confetti]);
 
   function pick(section: number) {

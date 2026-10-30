@@ -4,8 +4,8 @@ import { createContext, useContext } from "react";
 import type { AccessLevel } from "./pin";
 
 /**
- * What the code a device was let in with allows (lib/pin.ts). The limited code plays, sets up and adds people and bots, but
- * deletes no team or player and sees no statistics, seeding, records, betting or big screen. Pages are shut in PinGate by
+ * What the code a device was let in with allows (lib/pin.ts). The limited code plays (single matches, tournaments and the other games),
+ * sets up and adds people and bots, but deletes no team or player, has no Karriere, and sees no statistics, seeding, records, betting or big screen. Pages are shut in PinGate by
  * the paths below; buttons and links to them, and the deleting, are left out where they are drawn, using `useAccess`.
  */
 const AccessContext = createContext<AccessLevel>("full");

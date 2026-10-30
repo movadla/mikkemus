@@ -130,12 +130,13 @@ export function AppRoot() {
   if (mode === "single") return <MikkeMusApp onExitToHome={() => setMode("home")} />;
   if (mode === "tournament") return <TournamentApp onExitToHome={() => setMode("home")} />;
   if (mode === "bullduel") return <BullDuelApp onExitToHome={() => setMode("home")} />;
-  if (mode === "lava" && !limited) return <LavaApp onExitToHome={() => setMode("home")} />;
-  if (mode === "highstriker" && !limited) return <HighstrikerApp onExitToHome={() => setMode("home")} />;
-  if (mode === "countdown" && !limited) return <CountdownApp onExitToHome={() => setMode("home")} />;
+  if (mode === "lava") return <LavaApp onExitToHome={() => setMode("home")} />;
+  if (mode === "highstriker") return <HighstrikerApp onExitToHome={() => setMode("home")} />;
+  if (mode === "countdown") return <CountdownApp onExitToHome={() => setMode("home")} />;
   if (mode === "career" && !limited) return <CareerApp onExitToHome={() => setMode("home")} />;
 
-  const tournamentsOn = !limited && (TOURNAMENTS_OFFERED || hasActiveTournament);
+  // Tournaments and the other games are open to the limited code too; Karriere is for the full code only.
+  const tournamentsOn = TOURNAMENTS_OFFERED || hasActiveTournament;
   const resume = matchUnderway ? { title: matchUnderway.join(" mot "), label: "Kamp pågår", go: () => setMode("single") } : tournamentsOn && hasActiveTournament ? { title: "Turnering", label: "Pågår", go: () => setMode("tournament") } : null;
 
   return (
@@ -177,18 +178,17 @@ export function AppRoot() {
         {/* The hero is already Enkeltkamp when nothing is under way, so its tile is only there when the hero is something else. */}
         {/* One tile has the whole row, as it should look; two or three share it. */}
         {(() => {
-          // 301/501 is for the full code only.
-          const tiles = (resume ? 1 : 0) + (tournamentsOn ? 1 : 0) + 1 + (limited ? 0 : 1);
+          const tiles = (resume ? 1 : 0) + (tournamentsOn ? 1 : 0) + 2;
           return (
             <div className={`grid gap-2 mb-6 ${tiles === 1 ? "grid-cols-1" : tiles === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
               {resume && <Tile icon={<DartIcon className="w-6 h-6" />} label="Enkeltkamp" onClick={() => setMode("single")} />}
               {tournamentsOn && <Tile icon={<TrophyIcon className="w-6 h-6" />} label="Turnering" onClick={() => setMode("tournament")} />}
               <Tile wide={tiles === 1} icon={<BullseyeIcon className="w-6 h-6" />} label="Bull-duell" onClick={() => setMode("bullduel")} />
-              {!limited && <Tile icon={<GridIcon className="w-6 h-6" />} label="Andre spill" onClick={() => setMoreOpen((o) => !o)} expanded={moreOpen} controls="andre-spill" />}
+              <Tile icon={<GridIcon className="w-6 h-6" />} label="Andre spill" onClick={() => setMoreOpen((o) => !o)} expanded={moreOpen} controls="andre-spill" />
             </div>
           );
         })()}
-        {!limited && moreOpen && (
+        {moreOpen && (
           <div id="andre-spill" className="grid grid-cols-3 gap-2 mb-6 -mt-4 animate-screen-enter" role="group" aria-label="Andre spill">
             <Tile icon={<KeypadIcon className="w-6 h-6" />} label="301 / 501" onClick={() => setMode("countdown")} />
             <Tile icon={<HeartIcon className="w-6 h-6" />} label="Highstriker" onClick={() => setMode("highstriker")} />

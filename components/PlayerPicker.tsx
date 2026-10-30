@@ -13,6 +13,9 @@ import { TextField } from "./ui/TextField";
 const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
 
+/** The look of the three buttons that add someone: framed and tinted in the accent. */
+const ACTION: React.CSSProperties = { minHeight: "var(--control)", color: "var(--color-teal)", fontWeight: 700, fontSize: "var(--text-small)", background: "color-mix(in srgb, var(--color-teal) 7%, transparent)", border: "1px solid color-mix(in srgb, var(--color-teal) 45%, var(--color-border))" };
+
 /** How many of the known players are shown before "Flere spillere": the ones with the most matches. */
 const SHOWN = 6;
 
@@ -135,50 +138,54 @@ export function PlayerPicker({
 
       {/* The ones who can be picked are small name tags with a plus, not boxes: a person is one kind of thing, an action another. */}
       {(shown.length > 0 || hiddenCount > 0) && (
-        <ul className="flex flex-wrap gap-x-2 gap-y-2" role="group" aria-label="Spillere">
-          {shown.map((person) => (
-            <li key={person.name}>
-              <button
-                type="button"
-                aria-pressed={false}
-                onClick={() => toggle(person)}
-                className={`tactile flat inline-flex items-center gap-1.5 rounded-md px-2.5 ${FOCUS_RING}`}
-                style={{ minHeight: "2.25rem", background: "transparent", border: "1px solid var(--color-border)", color: "var(--color-cream)", fontSize: "var(--text-small)" }}
-              >
-                <span aria-hidden style={{ color: "var(--color-teal)", fontWeight: 700 }}>+</span>
-                {person.name}
-              </button>
-            </li>
-          ))}
+        <ul className="grid grid-cols-3 gap-2" role="group" aria-label="Spillere">
+          {shown.map((person) => {
+            const photo = roster.find((r) => sameName(r.name, person.name))?.photo;
+            return (
+              <li key={person.name} className="min-w-0">
+                <button
+                  type="button"
+                  aria-pressed={false}
+                  onClick={() => toggle(person)}
+                  className={`tactile flat flex w-full items-center gap-1.5 rounded-lg pl-1.5 pr-2 ${FOCUS_RING}`}
+                  style={{ minHeight: "2.6rem", background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-cream)", fontSize: "var(--text-small)" }}
+                >
+                  <Avatar name={person.name} photo={photo} px={26} />
+                  <span className="min-w-0 truncate">{person.name}</span>
+                </button>
+              </li>
+            );
+          })}
           {(hiddenCount > 0 || more) && known.length > SHOWN && (
-            <li>
+            <li className="min-w-0">
               <button
                 type="button"
                 onClick={() => setMore((m) => !m)}
                 aria-expanded={more}
-                className={`tactile flat inline-flex items-center rounded-md px-2.5 ${FOCUS_RING}`}
-                style={{ minHeight: "2.25rem", background: "transparent", border: "1px dashed var(--color-teal)", color: "var(--color-teal)", fontSize: "var(--text-small)", fontWeight: 600 }}
+                aria-label={more ? "Færre spillere" : `Flere spillere (${hiddenCount})`}
+                className={`tactile flat flex w-full items-center justify-center rounded-lg px-2 ${FOCUS_RING}`}
+                style={{ minHeight: "2.6rem", background: "transparent", border: "1px dashed var(--color-teal)", color: "var(--color-teal)", fontSize: "var(--text-small)", fontWeight: 700 }}
               >
-                {more ? "Færre" : `Flere spillere (${hiddenCount})`}
+                {more ? "Færre" : `+ ${hiddenCount} flere`}
               </button>
             </li>
           )}
         </ul>
       )}
       <div className="mt-4">
-      {/* What you do, not who you pick: text with a plus, in the accent colour, on one line. */}
-      <div className="flex flex-wrap gap-x-5 gap-y-1 mb-3">
-        <button type="button" onClick={() => open("player")} aria-expanded={adding === "player"} className={`tactile flat inline-flex items-center gap-1.5 ${FOCUS_RING}`} style={{ minHeight: "var(--control)", color: "var(--color-teal)", fontWeight: 700, fontSize: "var(--text-body)" }}>
-          <span aria-hidden>+</span>
+      {/* What you do, not who you pick: three framed buttons of equal width, tinted in the accent, so they read as actions and not as players. */}
+      <div className="grid gap-2 mb-3" style={{ gridTemplateColumns: `repeat(${guests ? 3 : 2}, minmax(0, 1fr))` }}>
+        <button type="button" onClick={() => open("player")} aria-expanded={adding === "player"} className={`tactile flat flex items-center justify-center gap-1.5 rounded-lg ${FOCUS_RING}`} style={ACTION}>
+          <span aria-hidden style={{ fontSize: "1.1em", lineHeight: 1 }}>+</span>
           Ny spiller
         </button>
         {guests && (
-          <button type="button" onClick={() => open("guest")} aria-expanded={adding === "guest"} className={`tactile flat inline-flex items-center gap-1.5 ${FOCUS_RING}`} style={{ minHeight: "var(--control)", color: "var(--color-teal)", fontWeight: 700, fontSize: "var(--text-body)" }}>
+          <button type="button" onClick={() => open("guest")} aria-expanded={adding === "guest"} className={`tactile flat flex items-center justify-center gap-1.5 rounded-lg ${FOCUS_RING}`} style={ACTION}>
             <GuestIcon className="w-3.5 h-3.5" />
             Gjest
           </button>
         )}
-        <button type="button" onClick={() => open("bot")} disabled={!botsAllowed} aria-expanded={adding === "bot"} className={`tactile flat inline-flex items-center gap-1.5 ${FOCUS_RING}`} style={{ minHeight: "var(--control)", color: "var(--color-teal)", fontWeight: 700, fontSize: "var(--text-body)", opacity: botsAllowed ? 1 : 0.4 }}>
+        <button type="button" onClick={() => open("bot")} disabled={!botsAllowed} aria-expanded={adding === "bot"} className={`tactile flat flex items-center justify-center gap-1.5 rounded-lg ${FOCUS_RING}`} style={{ ...ACTION, opacity: botsAllowed ? 1 : 0.4 }}>
           <BotIcon className="w-4 h-4" />
           Bot
         </button>

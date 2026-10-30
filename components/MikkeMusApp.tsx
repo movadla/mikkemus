@@ -53,7 +53,7 @@ import type { OddsRow } from "./OddsBar";
 import { logOddsMatch, type OddsSnapshot } from "@/lib/oddsLog";
 import { useShowOdds } from "@/lib/oddsSetting";
 import { haptics } from "@/lib/haptics";
-import { uiSound } from "@/lib/uiSound";
+import { careerSound, uiSound } from "@/lib/uiSound";
 import { crowdForStreak, playCrowd, playFanfare, playHitStreakSound, playStreakFanfare, playMatchDartSound, playTapSound, playWalkOnTune, playWinBoom, primeAudio, warmAudio } from "@/lib/fanfare";
 import { fxFlags, getFxLevel, useFxLevel } from "@/lib/fxLevel";
 import { ChalkboardScreen } from "./ChalkboardScreen";
@@ -2656,6 +2656,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       } else {
         // No dive to land from, so the win is announced on the spot.
         playFanfare();
+        careerSound("cheer");
       }
       // Reaching the winner screen must never depend on stats persistence succeeding —
       // see abortGame's identical guard for why.
@@ -2815,6 +2816,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
           onDone={() => {
             setDiving(false);
             playFanfare();
+            careerSound("cheer");
           }}
         />
       );

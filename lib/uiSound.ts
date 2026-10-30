@@ -133,3 +133,55 @@ function fadeOutAfter(audio: HTMLAudioElement, ms: number): void {
     }, 100);
   }, ms);
 }
+
+/* ---------------------------------------------------------------------------------------------------------------------------------
+ * The music of a tournament's opening (public/sounds/intro.mp3): it starts when the opening comes up and is turned down and stopped when the
+ * opening is left. One song at a time, so an opening that is drawn twice (a development build does that) does not play it twice.
+ * ------------------------------------------------------------------------------------------------------------------------------- */
+const INTRO_VOLUME = 0.6;
+let introAudio: HTMLAudioElement | null = null;
+let introTrack = "";
+/** The song of each opening: the world championship and the Grand Slam have their own, every other tournament the first. */
+export type IntroTrack = "intro" | "intro-vm" | "intro-gs";
+let introFade: ReturnType<typeof setInterval> | null = null;
+
+/** Starts the music of an opening, on the same terms as the other sounds (Party and up, and the setting). Returns what ends it: it fades out over a second. */
+export function startIntroMusic(track: IntroTrack = "intro"): () => void {
+  const level = getFxLevel();
+  if ((level !== "party" && level !== "full") || !getUiSound() || typeof Audio === "undefined") return () => {};
+  // Still playing from a moment ago (it was being turned down): it is turned up again, not started over.
+  if (introFade) clearInterval(introFade);
+  introFade = null;
+  if (introAudio && !introAudio.paused && introTrack === track) {
+    introAudio.volume = INTRO_VOLUME;
+  } else {
+    // Another song was still being turned down: it is stopped now.
+    introAudio?.pause();
+    try {
+      introTrack = track;
+      introAudio = new Audio(`/sounds/${track}.mp3`);
+      introAudio.volume = INTRO_VOLUME;
+      introAudio.loop = true;
+      void introAudio.play().catch(() => {
+        introAudio = null;
+      });
+    } catch {
+      introAudio = null;
+    }
+  }
+  const mine = introAudio;
+  return () => {
+    if (!mine || mine !== introAudio) return;
+    let i = 0;
+    introFade = setInterval(() => {
+      i += 1;
+      mine.volume = Math.max(0, INTRO_VOLUME * (1 - i / 10));
+      if (i >= 10) {
+        if (introFade) clearInterval(introFade);
+        introFade = null;
+        mine.pause();
+        if (introAudio === mine) introAudio = null;
+      }
+    }, 100);
+  };
+}
