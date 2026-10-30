@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { announce } from "@/lib/announcer";
 import { cupColor } from "@/lib/botCup";
 import type { Place } from "@/lib/career";
 import { TIER_LOOK, foilVars } from "@/lib/materials";
@@ -50,6 +51,12 @@ export function MatchIntro({ tournament, match, player, me, level, opponentLevel
   const med = medOfLevel(opponentLevel);
   // A cup of teams: both sides are two faces, and the profile is of the two of them.
   const theirs = tournament.participants.find((p) => p.name === opponent)?.members;
+  // The entrance: before a semi-final and a final the two are called out by the voice of the app, and the screen says it is a big one.
+  const big = !match.isBronzeMatch && (match.bracketRoundSize ?? 99) <= 2;
+  const round = bracketRoundLabel(match.bracketRoundSize ?? 1, match.isBronzeMatch);
+  useEffect(() => {
+    if (big) announce(`${round}! ${player}, mot ${opponent}!`);
+  }, [big, round, player, opponent]);
   return (
     <div className="animate-screen-enter screen cup-lamp" style={{ "--cup": colour } as React.CSSProperties}>
       <div className="screen-inner flex flex-col" style={{ minHeight: "calc(100dvh - 2rem)", gap: "0.9rem" }}>
@@ -63,9 +70,15 @@ export function MatchIntro({ tournament, match, player, me, level, opponentLevel
                 <TrophyArt kind={tier} bare />
               </span>
             )}
-            {bracketRoundLabel(match.bracketRoundSize ?? 1, match.isBronzeMatch).toUpperCase()}
+            {round.toUpperCase()}
           </p>
         </div>
+        {big && (
+          <p className="entrance" style={{ "--cup": colour } as React.CSSProperties}>
+            <span>Mine damer og herrer</span>
+            <b className="font-display">{round}</b>
+          </p>
+        )}
         <div className="flex items-start justify-center gap-3 w-full text-center">
           <div className="final-left" style={{ flex: "1 1 0", minWidth: 0, maxWidth: "9.5rem" }}>
             {me.members ? <TeamPortrait members={me.members} me={{ name: me.members[0], character: me.character }} metal="gold" label={me.name} /> : <MePortrait me={me} />}

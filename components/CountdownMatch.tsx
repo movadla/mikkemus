@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import type { TurnAggregate } from "@/lib/game";
 import type { BotLevel, TeamMember } from "@/lib/botLevels";
-import { dartsOf, newGame, winnerOf, type CountdownStart } from "@/lib/countdown";
+import { dartsOf, newGame, roundsOf, winnerOf, type CountdownStart } from "@/lib/countdown";
 import { useRoster } from "@/lib/storage";
 import { CountdownGameScreen } from "./CountdownApp";
 
@@ -38,7 +38,8 @@ export function CountdownMatch({ players, botLevels, teamRosters, start, doubleO
           const winner = winnerOf(game);
           if (!winner) return;
           const placements = [winner, ...players.filter((p) => p !== winner)];
-          onDone({ winner, placements, stats: Object.fromEntries(players.map((p) => [p, stat(dartsOf(game, p))])) });
+          const last = game.turns[game.turns.length - 1];
+          onDone({ winner, placements, stats: Object.fromEntries(players.map((p) => [p, { ...stat(dartsOf(game, p)), rounds: roundsOf(game, p), ...(p === winner && last ? { checkout: last.scored } : {}) }])) });
         },
       }}
     />

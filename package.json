@@ -12,6 +12,8 @@
     "test": "vitest run",
     "test:visual": "playwright test e2e/visual.spec.ts",
     "test:visual:update": "playwright test e2e/visual.spec.ts --update-snapshots",
+    "test:visual:career": "playwright test e2e/career-visual.spec.ts",
+    "test:visual:career:update": "playwright test e2e/career-visual.spec.ts --update-snapshots",
     "test:a11y": "playwright test e2e/a11y.spec.ts",
     "check:room": "tsx scripts/check-room-pictures.ts"
   },

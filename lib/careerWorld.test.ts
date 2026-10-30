@@ -469,7 +469,8 @@ describe("a cup of teams", () => {
     const people = [c.player, team.mine.partner, ...team.others.flatMap((o) => o.members)];
     expect(new Set(people).size).toBe(people.length);
     expect(team.others).toHaveLength(7);
-    expect(team.mine.name).toBe(`${c.player} og ${team.mine.partner}`);
+    // A partner with two names (a rookie) is called by the first one, as the other pairs are.
+    expect(team.mine.name).toBe(`${c.player} og ${team.mine.partner.split(" ")[0]}`);
   });
 
   it.each(["wc", "pair"])("makes %s a cup of eight teams, with the player's team in it, played as 501 or 301", (key) => {
@@ -497,5 +498,20 @@ describe("a cup of teams", () => {
     expect(lifeOf(left).news.some((n) => n.kind === "you" && n.headline.startsWith(opened.active!.invite!.team!.mine.name))).toBe(true);
     // A cup of teams has no record against a person.
     expect(left.rivals ?? {}).toEqual({});
+  });
+});
+
+describe("the rival's match of the season", () => {
+  it("comes in week 6 of every season, from the rival, in 501 for three times an ordinary stake, and is news in the strip only by its week", () => {
+    const c = withLife(fresh(), { week: 5 });
+    const next = advanceWeek(c);
+    const m = lifeOf(next).inbox.find((x) => x.title === "Rivalkampen");
+    expect(m).toBeDefined();
+    expect(m!.from).toEqual({ name: rivalOf(c).name, role: "Rival" });
+    expect(m!.offer).toMatchObject({ kind: "challenge", game: "501", opponent: { name: rivalOf(c).name } });
+    const later = advanceWeek(withLife(fresh(), { week: 5 + WEEKS_PER_SEASON }));
+    expect(lifeOf(later).inbox.some((x) => x.title === "Rivalkampen")).toBe(true);
+    const other = advanceWeek(withLife(fresh(), { week: 3 }));
+    expect(lifeOf(other).inbox.some((x) => x.title === "Rivalkampen")).toBe(false);
   });
 });

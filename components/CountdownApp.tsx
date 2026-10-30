@@ -222,7 +222,8 @@ export function CountdownGameScreen({
           ))}
         </div>
         <div className="screen-inner relative z-10">
-          <div className="flex flex-col items-center text-center mb-4 mt-6">
+          {/* On a picture of a room the lines have a dark panel behind them, so they can be read whatever is behind. */}
+          <div className="flex flex-col items-center text-center mb-4 mt-6" style={{ background: "color-mix(in srgb, var(--color-bg) 82%, transparent)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", borderRadius: "var(--radius-l)", padding: "1rem 0.75rem 1.1rem", border: "1px solid var(--color-border)" }}>
             <Avatar name={winner} photo={photos.get(winner)} px={112} state="winner" />
             <p className="section-label mt-4">{game.start} · VINNER</p>
             <h1 className="font-display" style={{ color: "var(--color-gold)", fontSize: "clamp(2.2rem, 11vw, 3.2rem)", lineHeight: 1.05 }}>
@@ -231,7 +232,7 @@ export function CountdownGameScreen({
             <p className="mt-1 inline-block rounded-full px-3 py-1 font-bold" style={{ background: "var(--gold-soft)", color: "var(--color-gold-strong)", fontSize: "var(--text-small)", letterSpacing: "0.1em" }}>
               UT PÅ {finalTurn.scored} · {finalTurn.darts} {finalTurn.darts === 1 ? "PIL" : "PILER"}
             </p>
-            <p className="mt-2" style={{ color: "var(--color-text-2)", fontSize: "var(--text-body)" }}>
+            <p className="mt-2" style={{ color: "var(--color-cream)", fontSize: "var(--text-body)" }}>
               {darts} piler totalt · snitt {oneDecimal(averageOf(game, winner) ?? 0)}
             </p>
           </div>

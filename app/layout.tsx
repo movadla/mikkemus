@@ -7,6 +7,9 @@ import { PinGate } from "@/components/PinGate";
 import { TextureSetting } from "@/components/TextureSetting";
 import { THEME_BOOT } from "@/lib/theme";
 import "./globals.css";
+// The rest of the styles, in the order they were in globals.css: the screens of the games, then the career.
+import "./styles/screens.css";
+import "./styles/career.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

@@ -455,3 +455,20 @@ describe("trophies", () => {
     expect(second.trophies.map((t) => t.at)).toEqual(["2026-10-29T20:00:00.000Z", AT]);
   });
 });
+
+describe("the fields of the Norwegian events", () => {
+  it("are Norwegian in Region and NM, with the people of Ly in them; the international names come in from the Grand Slam", async () => {
+    const { fieldNames: names, TIERS: tiers } = await import("./career");
+    const { opponentOf } = await import("./opponents");
+    for (const seed of [1, 2, 3]) {
+      const region = names(tiers.region, "Lars", seed, 15);
+      const nm = names(tiers.nm, "Lars", seed, 15);
+      expect(region).toHaveLength(15);
+      expect(nm).toHaveLength(15);
+      expect(new Set(region).size).toBe(15);
+      for (const n of [...region, ...nm]) expect(opponentOf(n).nat).toBe("NOR");
+      expect(region.filter((n) => ["Dave", "Chris Bell", "Guro", "Kjetil", "Bent", "Dan"].includes(n)).length).toBeGreaterThan(0);
+      expect(names(tiers.gs, "Lars", seed, 15).some((n) => opponentOf(n).nat !== "NOR")).toBe(true);
+    }
+  });
+});

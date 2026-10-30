@@ -1,0 +1,1596 @@
+/* The shared pieces of the screens: glass, the tournament screens, Lava, Highstriker and the other games (moved out of globals.css, in the same order). */
+
+/* One glass for what floats: sheets, dialogs and the entry of darts. The page shows through a little, blurred, behind a thin light edge. */
+.glass {
+  background: var(--glass-strong);
+  -webkit-backdrop-filter: blur(22px) saturate(1.3);
+  backdrop-filter: blur(22px) saturate(1.3);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--elevation-3);
+}
+
+/* The scrim behind a floating panel blurs what is under it a little, so the panel reads as nearer. */
+.scrim-blur {
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass {
+    background: var(--color-surface);
+  }
+}
+
+/* An edge that is a gradient (light along the top left, the accent along the bottom right), as on a metal card. The fill is
+   --edge-fill (a colour) or --edge-fill-image (a gradient); the accent is --edge-accent. */
+.edge {
+  border: 1px solid transparent;
+  background:
+    var(--edge-fill-image, linear-gradient(var(--edge-fill, var(--color-surface)), var(--edge-fill, var(--color-surface)))) padding-box,
+    linear-gradient(150deg, var(--edge-1) 0%, transparent 36%, color-mix(in srgb, var(--edge-accent, var(--color-hairline)) 70%, transparent) 100%) border-box;
+  background-origin: border-box;
+}
+
+/* A gleam across the card when it is pressed (Party and up): the element .sheen inside it slides over. */
+.sheen {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, 0.16) 50%, transparent 62%);
+  transform: translateX(-130%);
+}
+
+html[data-fx="party"] .edge-sheen:active .sheen,
+html[data-fx="full"] .edge-sheen:active .sheen {
+  transform: translateX(130%);
+  transition: transform 700ms var(--ease-standard);
+}
+
+/* -- theme packs: Pub and Midnatt --
+   Dark themes only (Dag stays Dag): the same tokens as Mørk with another ground and another accent, chosen in Innstillinger and put on the
+   page as html[data-pack]. "Teal" is the name of the everyday accent, whichever colour it has in a pack; gold stays the earned colour. */
+html[data-pack="pub"]:not([data-theme="light"]) {
+  --color-bg: #15100c;
+  --color-panel: #1e1610;
+  --color-surface: #2a1f16;
+  --color-surface-2: #34271c;
+  --color-cell: #3a2b1e;
+  --color-cell-done: #5a4626;
+  --color-cell-done-top: #5a4626;
+  --color-cell-done-bottom: #3f3118;
+  --color-cell-open-top: #3f2f20;
+  --color-cell-open-bottom: #3a2b1e;
+  --color-border: rgba(255, 235, 200, 0.1);
+  --color-hairline: rgba(255, 235, 200, 0.17);
+  --color-teal: #e5956b;
+  --color-teal-strong: #f4b896;
+  --color-teal-deep: #b8683f;
+  --teal-soft: rgba(229, 149, 107, 0.13);
+  --teal-ring: rgba(229, 149, 107, 0.38);
+  --glow-teal: 0 0 0 2px var(--color-teal), 0 0 26px rgba(229, 149, 107, 0.4);
+  --color-cream: #f3e7d3;
+  --color-text-2: #d6c6ac;
+  --color-muted: #b09a7c;
+  --color-label: #b09a7c;
+  --page-glow: #2a1d12;
+  --page-lamp: rgba(229, 149, 107, 0.16);
+  --shadow-rgb: 8, 4, 1;
+  --glass: rgba(30, 22, 16, 0.66);
+  --glass-strong: rgba(26, 19, 13, 0.88);
+  --glass-border: rgba(255, 235, 200, 0.14);
+}
+
+html[data-pack="midnatt"]:not([data-theme="light"]) {
+  --color-bg: #0a0e17;
+  --color-panel: #0f1624;
+  --color-surface: #131c2e;
+  --color-surface-2: #19243a;
+  --color-cell: #1b2740;
+  --color-border: rgba(180, 205, 255, 0.1);
+  --color-hairline: rgba(180, 205, 255, 0.17);
+  --color-teal: #8db2ff;
+  --color-teal-strong: #b7ceff;
+  --color-teal-deep: #5f8cf0;
+  --teal-soft: rgba(141, 178, 255, 0.13);
+  --teal-ring: rgba(141, 178, 255, 0.38);
+  --glow-teal: 0 0 0 2px var(--color-teal), 0 0 26px rgba(141, 178, 255, 0.4);
+  --color-cream: #eaf0ff;
+  --color-text-2: #c4d0ea;
+  --color-muted: #8d9bb8;
+  --color-label: #8d9bb8;
+  --page-glow: #131f3a;
+  --page-lamp: rgba(141, 178, 255, 0.16);
+  --shadow-rgb: 1, 3, 12;
+  --glass: rgba(15, 22, 36, 0.66);
+  --glass-strong: rgba(13, 19, 32, 0.88);
+  --glass-border: rgba(180, 205, 255, 0.14);
+}
+
+/* The pack choice in Innstillinger: a round ground with the accent as a dot, whatever the page is wearing now. */
+.pack-swatch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.14), var(--elevation-1);
+}
+.pack-swatch i {
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 50%;
+}
+.pack-swatch[data-pack="studio"] { background: radial-gradient(circle at 50% 0%, #1a2a1f, #0c110e 70%); }
+.pack-swatch[data-pack="studio"] i { background: #34c3d2; }
+.pack-swatch[data-pack="pub"] { background: radial-gradient(circle at 50% 0%, #2a1d12, #15100c 70%); }
+.pack-swatch[data-pack="pub"] i { background: #e5956b; }
+.pack-swatch[data-pack="midnatt"] { background: radial-gradient(circle at 50% 0%, #131f3a, #0a0e17 70%); }
+.pack-swatch[data-pack="midnatt"] i { background: #8db2ff; }
+
+/* Tabs that say they can be scrolled: the edge with more behind it fades out. */
+.seg-fade-right { -webkit-mask-image: linear-gradient(90deg, #000 82%, transparent); mask-image: linear-gradient(90deg, #000 82%, transparent); }
+.seg-fade-left { -webkit-mask-image: linear-gradient(270deg, #000 82%, transparent); mask-image: linear-gradient(270deg, #000 82%, transparent); }
+.seg-fade-both { -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 82%, transparent); mask-image: linear-gradient(90deg, transparent, #000 12%, #000 82%, transparent); }
+
+/* The bar along the bottom: on a phone a pill of glass that floats over the page, with a bubble behind the place you are in. At the side, on a wide screen, it is a rail. */
+.bottom-nav {
+  pointer-events: none;
+  padding: 0 0.75rem calc(0.5rem + env(safe-area-inset-bottom, 0px));
+}
+.bottom-nav-pill {
+  pointer-events: auto;
+  padding: 0.25rem;
+  gap: 0.125rem;
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(18px) saturate(1.3);
+  backdrop-filter: blur(18px) saturate(1.3);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--elevation-3);
+}
+@media (min-width: 768px) {
+  .bottom-nav {
+    padding: 0;
+    pointer-events: auto;
+    background: var(--glass);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+  }
+  .bottom-nav-pill {
+    background: transparent;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0;
+  }
+}
+
+/* The title at the top of a page stays when the list goes under it, in the same glass as the sheets and the bar below. */
+.screen-top {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  margin: -1rem -1rem 1rem;
+  padding: calc(1rem + env(safe-area-inset-top, 0px)) 1rem 0.5rem;
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(16px) saturate(1.3);
+  backdrop-filter: blur(16px) saturate(1.3);
+  border-bottom: 1px solid var(--glass-border);
+  box-shadow: 0 10px 22px -16px rgba(var(--shadow-rgb), 0.9);
+}
+
+/* A player's page takes the colour that is theirs: a wash from the top that fades into the page. */
+.profile-mood {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--pc) 36%, var(--color-bg)), transparent 28rem);
+}
+
+/* The place you are in on the bottom bar is a filled icon, the others are lines. */
+.bottom-nav [aria-current="page"] svg {
+  fill: currentColor;
+  fill-opacity: 0.22;
+}
+
+.fx-demo > .flex-1 {
+  flex-basis: 9rem;
+}
+
+/* -- the strip of stages, in glass: a tick for what is played, a pill with a name for where you are, a number for what is to come -- */
+.stage-strip {
+  display: flex;
+  align-items: center;
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0.625rem 0.75rem;
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(16px) saturate(1.3);
+  backdrop-filter: blur(16px) saturate(1.3);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-l);
+  box-shadow: var(--elevation-2);
+}
+.stage-strip li {
+  display: flex;
+  align-items: center;
+  flex: 1 1 0;
+  min-width: 0;
+  color: var(--color-muted);
+  font-size: var(--text-small);
+}
+.stage-strip li:first-child {
+  flex: 0 0 auto;
+}
+.stage-strip li + li::before {
+  content: "";
+  flex: 1;
+  min-width: 0.375rem;
+  height: 2px;
+  margin: 0 0.375rem;
+  background: var(--color-hairline);
+}
+.stage-strip li[data-state="done"]::before,
+.stage-strip li[data-state="now"]::before {
+  background: var(--stage);
+}
+.stage-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex: none;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.stage-mark i {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.375rem;
+  height: 1.375rem;
+  border-radius: 50%;
+  font-style: normal;
+  font-size: var(--text-micro);
+  font-weight: 700;
+  background: var(--color-cell);
+  box-shadow: inset 0 0 0 1px var(--color-hairline);
+}
+.stage-strip li[data-state="done"] .stage-mark i {
+  background: var(--stage);
+  color: var(--color-bg);
+  box-shadow: none;
+}
+.stage-strip li[data-state="now"] .stage-mark {
+  padding: 0.125rem 0.75rem 0.125rem 0.125rem;
+  border-radius: var(--radius-pill);
+  color: var(--color-cream);
+  background: color-mix(in srgb, var(--stage) 18%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--stage) 55%, transparent);
+}
+.stage-strip li[data-state="now"] .stage-mark i {
+  background: var(--stage);
+  color: var(--color-bg);
+  box-shadow: none;
+}
+.stage-strip-large {
+  padding: 1rem 1.5rem;
+}
+.stage-strip-large li {
+  font-size: var(--text-body);
+}
+.stage-strip-large .stage-mark i {
+  width: 2rem;
+  height: 2rem;
+  font-size: var(--text-body);
+}
+
+/* A tournament screen takes the light of its cup: a lamp over the top in the cup's own colour. */
+.cup-lamp {
+  background: radial-gradient(120% 40rem at 50% -6rem, color-mix(in srgb, var(--cup) 24%, transparent), transparent 70%);
+}
+
+/* The seeding as a medal: a round badge with the number in it. */
+.seed-medal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1;
+  color: var(--color-cream);
+  background: radial-gradient(circle at 35% 28%, var(--color-surface-2), var(--color-cell) 78%);
+  box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 3.5px var(--color-muted), var(--shadow-avatar);
+}
+
+/* The ball that is drawn: a gold ball with the number of the pair in it. */
+.draw-ball {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--color-bg);
+  background: var(--gradient-gold);
+  box-shadow: var(--shadow-avatar);
+}
+
+/* A match of the pilot's course: a box with the colour of its lane along the top, portraits for the places that are filled and round shadows for those that are not. */
+.lane-box {
+  list-style: none;
+  padding: 0.75rem;
+  background: var(--color-surface);
+  border: 1px solid color-mix(in srgb, var(--lane) 40%, var(--color-border));
+  border-top: 3px solid var(--lane);
+  border-radius: var(--radius-m);
+  box-shadow: var(--elevation-1);
+}
+.lane-box[data-next] {
+  border-color: var(--color-teal);
+  border-top-color: var(--color-teal);
+  box-shadow: var(--elevation-1), 0 0 0 1px var(--color-teal);
+}
+.lane-ghost {
+  flex: none;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  border: 1.5px dashed var(--color-hairline);
+}
+.lane-ghost-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  min-width: 1.5rem;
+  padding: 0 0.375rem;
+  border-radius: var(--radius-pill);
+  color: var(--color-text-2);
+  font-size: var(--text-micro);
+  font-weight: 700;
+  font-style: normal;
+}
+
+/* Where the places of a match lead: a thin bar in the colour of the lane, and the chips that say which colour is which. */
+.route-row {
+  position: relative;
+}
+.route-row[data-tone] {
+  padding-left: 0.5rem;
+}
+.route-row[data-tone]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.125rem;
+  bottom: 0.125rem;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--route);
+}
+.route-row[data-tone="teal"],
+.route-chip[data-tone="teal"] {
+  --route: var(--color-teal);
+}
+.route-row[data-tone="bronze"],
+.route-chip[data-tone="bronze"] {
+  --route: var(--color-bronze);
+}
+.route-row[data-tone="gold"],
+.route-chip[data-tone="gold"] {
+  --route: var(--color-gold);
+}
+.route-row[data-tone="muted"],
+.route-chip[data-tone="muted"] {
+  --route: var(--color-muted);
+}
+.route-chip {
+  padding: 0.125rem 0.625rem;
+  border-radius: var(--radius-pill);
+  font-size: var(--text-small);
+  font-weight: 700;
+  color: var(--color-cream);
+  background: color-mix(in srgb, var(--route) 16%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--route) 55%, transparent);
+}
+.route-chip span {
+  font-weight: 500;
+  color: var(--color-text-2);
+}
+
+/* The road to the title as a line with a dot for every match; the last, the final, is gold. */
+.road-tl {
+  position: relative;
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.road-tl::before {
+  content: "";
+  position: absolute;
+  left: 0.3125rem;
+  top: 0.5rem;
+  bottom: 0.5rem;
+  width: 2px;
+  background: var(--color-hairline);
+}
+.road-tl li {
+  position: relative;
+}
+.road-dot {
+  position: absolute;
+  left: -1.5rem;
+  top: 0.5rem;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  background: var(--color-teal);
+  box-shadow: 0 0 0 3px var(--teal-soft);
+}
+.road-tl li[data-final] .road-dot {
+  background: var(--color-gold);
+  box-shadow: 0 0 0 3px var(--gold-soft);
+}
+.road-tl li[data-final] span {
+  color: var(--color-gold-strong) !important;
+  font-weight: 600;
+}
+
+/* The last results along the bottom of the big screen. */
+.result-ticker {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 2.5rem;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  padding: 0.75rem 2rem;
+  overflow: hidden;
+  white-space: nowrap;
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  border-top: 1px solid var(--glass-border);
+  color: var(--color-text-2);
+  font-size: var(--text-title);
+}
+.result-ticker-label {
+  flex: none;
+  color: var(--color-teal);
+  font-size: var(--text-small);
+  font-weight: 700;
+  letter-spacing: 0.16em;
+}
+.result-ticker-item b {
+  color: var(--color-cream);
+}
+
+/* -- Highstriker: the lives, and what happens when one goes -- */
+.heart {
+  display: inline-flex;
+  color: var(--color-red);
+}
+.heart--lost {
+  color: var(--color-muted);
+  opacity: 0.45;
+}
+
+/* The life that was just lost: it swells, cracks sideways and falls away to an outline. */
+.heart--fresh {
+  animation: heart-break 900ms var(--ease-standard) both;
+}
+@keyframes heart-break {
+  0% {
+    transform: scale(1);
+    color: var(--color-red);
+  }
+  25% {
+    transform: scale(1.7) rotate(-8deg);
+    color: var(--color-red);
+  }
+  45% {
+    transform: scale(1.7) rotate(8deg);
+  }
+  100% {
+    transform: translateY(0.4rem) scale(0.9);
+    color: var(--color-muted);
+    opacity: 0.45;
+  }
+}
+
+/* A card that took a hit flashes red once. In Party and up the whole card shakes as well. */
+.hs-flash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: var(--color-red);
+  opacity: 0;
+  animation: hs-flash 700ms ease-out both;
+}
+@keyframes hs-flash {
+  0% {
+    opacity: 0.55;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+html[data-fx="party"] .hs-hit,
+html[data-fx="full"] .hs-hit {
+  animation: hs-shake 520ms ease-in-out both;
+}
+@keyframes hs-shake {
+  0%, 100% { transform: translateX(0); }
+  15% { transform: translateX(-0.5rem) rotate(-0.6deg); }
+  35% { transform: translateX(0.5rem) rotate(0.6deg); }
+  55% { transform: translateX(-0.35rem); }
+  75% { transform: translateX(0.25rem); }
+}
+
+/* Someone who is out: grey, and they slide back a little. */
+.hs-out {
+  filter: grayscale(1);
+  opacity: 0.55;
+  transition: opacity var(--duration-base) var(--ease-standard), filter var(--duration-base) var(--ease-standard);
+}
+
+/* The number to beat is new every round, and it lands. */
+.hs-target-number {
+  animation: hs-target 420ms var(--ease-standard) both;
+}
+@keyframes hs-target {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heart--fresh,
+  .hs-flash,
+  .hs-hit,
+  .hs-target-number {
+    animation: none !important;
+  }
+  .heart--fresh {
+    color: var(--color-muted);
+    opacity: 0.45;
+  }
+}
+
+/* -- Lava: a pool of lava with a slab of stone over each section; a section that is hit sinks and stays gone -- */
+.lava-stage {
+  position: relative;
+  overflow: hidden;
+  padding: 0;
+  border-radius: var(--radius-l);
+  background: radial-gradient(ellipse at 50% 45%, #2a1208 0%, #150a06 60%, #0b0605 100%);
+  border: 1px solid rgba(255, 120, 40, 0.28);
+  box-shadow: var(--elevation-2), inset 0 0 60px rgba(0, 0, 0, 0.7);
+}
+.lava-board {
+  position: relative;
+  width: min(100%, 30rem);
+  aspect-ratio: 1;
+  margin-inline: auto;
+}
+.lava-glow {
+  position: absolute;
+  inset: -4%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 110, 20, 0.55) 0%, rgba(255, 70, 10, 0.18) 55%, transparent 72%);
+}
+.lava-pool {
+  position: absolute;
+  inset: 11.6%;
+  border-radius: 50%;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 50%, #fff0a0 0%, #ffb02e 22%, #ff6a14 45%, #c8310a 72%, #6e1505 100%);
+  box-shadow: inset 0 0 36px rgba(60, 8, 0, 0.85);
+}
+html[data-fx="party"] .lava-glow,
+html[data-fx="full"] .lava-glow {
+  animation: lava-breathe 4.2s ease-in-out infinite;
+}
+@keyframes lava-breathe {
+  0%, 100% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+}
+.lava-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  touch-action: manipulation;
+}
+.lava-rim {
+  fill: none;
+  stroke: #1c120d;
+  stroke-width: 26;
+}
+.lava-slab {
+  fill: #4a4540;
+  stroke: #1a130f;
+  stroke-width: 3;
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 720ms cubic-bezier(0.5, 0, 0.9, 0.4), opacity 720ms ease-in, filter 720ms ease-in;
+  filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.55));
+}
+.lava-slab--alt {
+  fill: #3a3631;
+}
+.lava-slab--bull {
+  fill: #5a534b;
+}
+/* A section that has caught fire: the slab tips, sinks into the lava and is gone. */
+.lava-slab--gone {
+  transform: scale(0.78) rotate(4deg);
+  opacity: 0;
+  filter: brightness(2.2) drop-shadow(0 0 10px rgba(255, 140, 30, 0.9));
+  pointer-events: none;
+}
+.lava-num {
+  fill: #e9dcc6;
+  font-family: var(--font-display), serif;
+  font-size: 26px;
+  paint-order: stroke;
+  stroke: #1a130f;
+  stroke-width: 4;
+  pointer-events: none;
+}
+.lava-num--bull {
+  font-size: 30px;
+  fill: #ffd9a0;
+}
+.lava-num--burned {
+  fill: #ffb25a;
+}
+.lava-hit {
+  fill: transparent;
+  cursor: pointer;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.lava-hit:hover {
+  fill: rgba(255, 255, 255, 0.07);
+}
+.lava-hit:focus-visible {
+  fill: rgba(255, 255, 255, 0.16);
+  stroke: var(--color-cream);
+  stroke-width: 3;
+}
+.lava-hit[aria-disabled="true"] {
+  cursor: default;
+}
+
+/* A section that caught fire throws embers; one that was already lava sends a ring out and shakes the board. */
+.lava-ember {
+  fill: #ffd25a;
+  opacity: 0;
+  animation: lava-ember 900ms ease-out both;
+}
+@keyframes lava-ember {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--dx), var(--dy)) scale(0.2);
+  }
+}
+.lava-shock {
+  fill: none;
+  stroke: #ff5a3c;
+  stroke-width: 8;
+  opacity: 0;
+  animation: lava-shock 800ms ease-out both;
+}
+.lava-shock--late {
+  animation-delay: 140ms;
+  stroke: #ffd25a;
+  stroke-width: 4;
+}
+@keyframes lava-shock {
+  0% {
+    opacity: 0.95;
+    transform: scale(0.6);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(9);
+  }
+}
+.lava-dart {
+  animation: lava-dart-in 260ms var(--ease-standard) both;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+@keyframes lava-dart-in {
+  0% {
+    opacity: 0;
+    transform: scale(3);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.lava-dart-mark {
+  fill: none;
+  stroke: #f7efe0;
+  stroke-width: 5;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.9));
+}
+.lava-dart-mark--lava {
+  stroke: #ff5a3c;
+}
+html[data-fx="party"] .lava-stage--hit,
+html[data-fx="full"] .lava-stage--hit {
+  animation: hs-shake 520ms ease-in-out both;
+}
+.lava-stage--hit::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: var(--color-red);
+  opacity: 0;
+  animation: hs-flash 700ms ease-out both;
+}
+
+/* Embers drifting up the stage, in Party and up. */
+.lava-drift {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.lava-drift span {
+  position: absolute;
+  bottom: -6px;
+  left: var(--x);
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #ffb03a;
+  box-shadow: 0 0 8px 2px rgba(255, 140, 30, 0.8);
+  opacity: 0;
+  animation: lava-rise var(--t) linear var(--d) infinite;
+}
+@keyframes lava-rise {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0);
+  }
+  15% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(1.2rem, -26rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lava-tex,
+  .lava-glow,
+  .lava-drift span,
+  .lava-ember,
+  .lava-shock,
+  .lava-dart,
+  .lava-stage--hit,
+  .lava-stage--hit::after {
+    animation: none !important;
+  }
+  .lava-slab {
+    transition: none;
+  }
+  .lava-drift {
+    display: none;
+  }
+}
+
+/* -- Lava, the finish: real lava texture, glowing edges, cracks in the rock, bubbles, and a bigger moment for a burn and for a hit -- */
+.lava-glow {
+  inset: 2%;
+}
+.lava-board {
+  transform: scale(1.07);
+}
+.lava-tex {
+  position: absolute;
+  inset: -30%;
+  mix-blend-mode: screen;
+  will-change: transform;
+}
+.lava-tex svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.lava-tex--a {
+  opacity: 0.95;
+  mix-blend-mode: normal;
+}
+.lava-tex--b {
+  opacity: 0.55;
+}
+html[data-fx="party"] .lava-tex--a,
+html[data-fx="full"] .lava-tex--a {
+  animation: lava-turn 70s linear infinite;
+}
+html[data-fx="party"] .lava-tex--b,
+html[data-fx="full"] .lava-tex--b {
+  animation: lava-turn 46s linear infinite reverse;
+}
+@keyframes lava-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.lava-pool {
+  background: radial-gradient(circle at 50% 50%, #ffe27a 0%, #ff8a1f 30%, #c8310a 62%, #5a1004 100%);
+}
+/* A dark skin over the edge of the pool, so it looks deep. */
+.lava-pool::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle, transparent 55%, rgba(30, 4, 0, 0.55) 85%, rgba(15, 2, 0, 0.9) 100%);
+}
+.lava-bubbles {
+  position: absolute;
+  inset: 11.6%;
+  border-radius: 50%;
+  overflow: hidden;
+  pointer-events: none;
+}
+.lava-bubbles span {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: var(--s);
+  height: var(--s);
+  border-radius: 50%;
+  border: 2px solid rgba(255, 235, 150, 0.9);
+  background: radial-gradient(circle at 35% 30%, rgba(255, 250, 200, 0.9), rgba(255, 170, 40, 0.2) 70%);
+  opacity: 0;
+  animation: lava-bubble var(--t) ease-in-out var(--d) infinite;
+}
+@keyframes lava-bubble {
+  0%, 62% {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+  78% {
+    opacity: 0.95;
+    transform: scale(1);
+  }
+  86% {
+    opacity: 0.9;
+    transform: scale(1.25);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.7);
+  }
+}
+.lava-rim {
+  stroke: #120b08;
+  stroke-width: 34;
+}
+.lava-rim-edge {
+  fill: none;
+  stroke: #ff7a1f;
+  stroke-width: 3;
+  opacity: 0.7;
+  filter: drop-shadow(0 0 7px #ff6a14);
+}
+.lava-crack {
+  fill: none;
+  stroke: #ff9a2e;
+  stroke-width: 3.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 5px #ff6a14);
+  opacity: 0.85;
+}
+.lava-crack--thin {
+  stroke-width: 1.8;
+  opacity: 0.7;
+}
+html[data-fx="party"] .lava-crack,
+html[data-fx="full"] .lava-crack {
+  animation: lava-flicker 3.4s ease-in-out infinite;
+  animation-delay: var(--d, 0s);
+}
+@keyframes lava-flicker {
+  0%, 100% {
+    opacity: 0.55;
+  }
+  35% {
+    opacity: 1;
+  }
+  60% {
+    opacity: 0.7;
+  }
+  80% {
+    opacity: 0.95;
+  }
+}
+/* The glowing frame left where a slab has gone. */
+.lava-edge {
+  fill: none;
+  stroke: #ffc15a;
+  stroke-width: 4;
+  stroke-linejoin: round;
+  opacity: 0;
+  animation: lava-edge-in 900ms ease-out 260ms forwards;
+  filter: drop-shadow(0 0 7px #ff7a1f);
+  pointer-events: none;
+}
+@keyframes lava-edge-in {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0.85;
+  }
+}
+html[data-fx="party"] .lava-edge,
+html[data-fx="full"] .lava-edge {
+  animation: lava-edge-in 900ms ease-out 260ms forwards, lava-flicker 2.6s ease-in-out 1200ms infinite;
+}
+/* The slab that goes: a white-hot flash in the shape of the section, then the glow settles. */
+.lava-burst {
+  fill: #fff3b0;
+  opacity: 0;
+  mix-blend-mode: screen;
+  pointer-events: none;
+  animation: lava-burst 700ms ease-out both;
+}
+@keyframes lava-burst {
+  0% {
+    opacity: 0.95;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.lava-ember {
+  fill: #ffd25a;
+  filter: drop-shadow(0 0 4px #ff8a1f);
+  animation-duration: 1100ms;
+}
+.lava-ember--big {
+  fill: #fff0a0;
+}
+.lava-drop {
+  fill: #ff6a3c;
+  filter: drop-shadow(0 0 5px #ff3a10);
+  opacity: 0;
+  animation: lava-drop 1000ms cubic-bezier(0.2, 0.7, 0.4, 1) both;
+}
+@keyframes lava-drop {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+  55% {
+    opacity: 1;
+    transform: translate(var(--dx), var(--dy)) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(var(--dx) * 1.15), calc(var(--dy) + 90px)) scale(0.4);
+  }
+}
+.lava-slam {
+  fill: #fff3d0;
+  stroke: #c8200a;
+  stroke-width: 9;
+  paint-order: stroke;
+  font-family: var(--font-display), serif;
+  font-size: 92px;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+  transform-box: fill-box;
+  transform-origin: center;
+  opacity: 0;
+  animation: lava-slam 1100ms var(--ease-standard) both;
+}
+@keyframes lava-slam {
+  0% {
+    opacity: 0;
+    transform: scale(2.6) rotate(-6deg);
+  }
+  18% {
+    opacity: 1;
+    transform: scale(1) rotate(-3deg);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1.04) rotate(-3deg);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.2) rotate(-3deg);
+  }
+}
+.lava-bull-ring {
+  fill: none;
+  stroke: #ffd9a0;
+  stroke-width: 4;
+  pointer-events: none;
+}
+.lava-bull-dot {
+  fill: #c8310a;
+  pointer-events: none;
+}
+/* The player whose round it is: the card breathes red. */
+html[data-fx="party"] .lava-turn,
+html[data-fx="full"] .lava-turn {
+  animation: lava-turn-glow 2.4s ease-in-out infinite;
+}
+@keyframes lava-turn-glow {
+  0%, 100% {
+    box-shadow: var(--elevation-1), 0 0 0 0 rgba(240, 90, 60, 0);
+  }
+  50% {
+    box-shadow: var(--elevation-1), 0 0 16px 2px rgba(240, 90, 60, 0.45);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lava-bubbles,
+  .lava-crack,
+  .lava-edge,
+  .lava-burst,
+  .lava-drop,
+  .lava-slam,
+  .lava-turn {
+    animation: none !important;
+  }
+  .lava-edge {
+    opacity: 0.85;
+  }
+  .lava-bubbles {
+    display: none;
+  }
+}
+
+/* -- 301 / 501 and Highstriker: the number that rolls, the finish in colour, big rounds, bust, the tower, the stairs and the last life -- */
+
+/* A round that went in: what it took off flies up from the number and goes. */
+.delta-chip {
+  position: absolute;
+  right: 0.75rem;
+  top: 0.15rem;
+  z-index: 2;
+  pointer-events: none;
+  padding: 0.05rem 0.55rem;
+  border-radius: var(--radius-pill);
+  font-weight: 700;
+  font-size: var(--text-small);
+  color: var(--color-green);
+  background: color-mix(in srgb, var(--color-green) 18%, var(--color-surface));
+  opacity: 0;
+  animation: delta-fly 1500ms ease-out both;
+}
+@keyframes delta-fly {
+  0% { opacity: 0; transform: translateY(0.9rem) scale(0.7); }
+  18% { opacity: 1; transform: translateY(0) scale(1.1); }
+  60% { opacity: 1; transform: translateY(-0.2rem) scale(1); }
+  100% { opacity: 0; transform: translateY(-0.9rem); }
+}
+
+/* The strip under a name: how much of the start is left. It turns warm under 170, where a finish is in sight. */
+.drain-bar {
+  height: 6px;
+  margin-top: 0.3rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-cell);
+  overflow: hidden;
+}
+.drain-bar > i {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(90deg, var(--color-teal-deep), var(--color-teal));
+  transition: width 700ms var(--ease-standard), background 400ms var(--ease-standard);
+}
+.drain-bar--warm > i {
+  background: linear-gradient(90deg, var(--color-gold), var(--color-red));
+}
+.lead-mark {
+  position: absolute;
+  top: -0.55rem;
+  left: 1rem;
+  z-index: 2;
+  padding: 0.05rem 0.5rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--color-bg);
+  background: var(--color-gold-deep);
+}
+
+/* The way out as darts in colour. */
+.dart-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-s);
+  border: 1px solid var(--color-border);
+  background: var(--color-cell);
+  font-weight: 700;
+  font-size: var(--text-small);
+  font-variant-numeric: tabular-nums;
+  animation: dart-chip-in 420ms var(--ease-standard) both;
+}
+.dart-chip--t { color: var(--color-teal-strong); border-color: var(--teal-ring); background: var(--teal-soft); }
+.dart-chip--d { color: #f7a091; border-color: color-mix(in srgb, var(--color-red) 50%, transparent); background: color-mix(in srgb, var(--color-red) 14%, transparent); }
+.dart-chip--b { color: var(--color-gold-strong); border-color: var(--gold-ring); background: var(--gold-soft); }
+@keyframes dart-chip-in {
+  0% { opacity: 0; transform: translateY(0.4rem) scale(0.8); }
+  100% { opacity: 1; transform: none; }
+}
+.out-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--color-red);
+}
+/* A card with a way out glows: the fewer darts it takes, the warmer. */
+.cd-hot { border-color: var(--color-red) !important; }
+html[data-fx="party"] .cd-hot,
+html[data-fx="full"] .cd-hot {
+  animation: cd-hot 2.4s ease-in-out infinite;
+}
+@keyframes cd-hot {
+  0%, 100% { box-shadow: var(--elevation-1), 0 0 0 0 rgba(240, 114, 94, 0); }
+  50% { box-shadow: var(--elevation-1), 0 0 calc(10px + var(--heat, 1) * 6px) 2px rgba(240, 114, 94, calc(0.2 + var(--heat, 1) * 0.12)); }
+}
+
+/* The tier of a round on the card. */
+.tier-chip {
+  display: inline-block;
+  margin-left: 0.35rem;
+  padding: 0 0.45rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  animation: tier-pop 600ms var(--ease-standard) both;
+}
+.tier-chip--ton { color: var(--color-teal-strong); background: var(--teal-soft); }
+.tier-chip--big { color: var(--color-gold-strong); background: var(--gold-soft); }
+.tier-chip--max { color: #fff3d0; background: var(--color-red); }
+@keyframes tier-pop {
+  0% { transform: scale(0.4); opacity: 0; }
+  60% { transform: scale(1.25); opacity: 1; }
+  100% { transform: scale(1); }
+}
+.glint {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 30%, rgba(255, 235, 170, 0.45) 50%, transparent 70%);
+  transform: translateX(-100%);
+  animation: glint 900ms ease-out both;
+}
+@keyframes glint { to { transform: translateX(100%); } }
+
+/* 180: the whole screen. */
+.round-slam {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 50%, rgba(240, 114, 94, 0.32), rgba(8, 5, 4, 0.55) 70%);
+  animation: slam-bg 1800ms ease-out both;
+}
+.round-slam .rays {
+  position: absolute;
+  inset: -50%;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 200, 80, 0.22) 0 6deg, transparent 6deg 18deg);
+  animation: slam-rays 6s linear infinite;
+}
+.round-slam .num {
+  position: relative;
+  font-family: var(--font-display), serif;
+  font-weight: 700;
+  font-size: clamp(6rem, 34vw, 11rem);
+  line-height: 1;
+  color: #fff3d0;
+  -webkit-text-stroke: 4px #c8200a;
+  paint-order: stroke fill;
+  animation: slam-num 1800ms var(--ease-standard) both;
+}
+.round-slam .cap {
+  position: relative;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  font-size: var(--text-small);
+  color: var(--color-gold-strong);
+}
+@keyframes slam-bg { 0% { opacity: 0; } 10% { opacity: 1; } 75% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes slam-rays { to { transform: rotate(360deg); } }
+@keyframes slam-num {
+  0% { opacity: 0; transform: scale(3) rotate(-8deg); }
+  14% { opacity: 1; transform: scale(1) rotate(-3deg); }
+  22% { transform: scale(1.06) rotate(-3deg); }
+  75% { opacity: 1; transform: scale(1.02) rotate(-3deg); }
+  100% { opacity: 0; transform: scale(1.25) rotate(-3deg); }
+}
+
+/* Over the line: the number shakes, goes red and is stamped. */
+.bust-shake {
+  display: inline-block;
+  animation: bust-shake 700ms ease-in-out both;
+  color: var(--color-red);
+}
+@keyframes bust-shake {
+  0%, 100% { transform: none; }
+  15% { transform: translateX(-0.45rem); }
+  30% { transform: translateX(0.45rem); }
+  45% { transform: translateX(-0.3rem); }
+  60% { transform: translateX(0.25rem); }
+}
+.stamp {
+  position: absolute;
+  right: 0.6rem;
+  top: 0.35rem;
+  z-index: 2;
+  pointer-events: none;
+  font-family: var(--font-display), serif;
+  font-weight: 700;
+  font-size: 1.15rem;
+  letter-spacing: 0.08em;
+  color: var(--color-red);
+  border: 2px solid var(--color-red);
+  border-radius: var(--radius-s);
+  padding: 0 0.5rem;
+  transform: rotate(-9deg);
+  animation: stamp-in 520ms var(--ease-standard) both;
+}
+@keyframes stamp-in {
+  0% { opacity: 0; transform: rotate(-9deg) scale(2.6); }
+  60% { opacity: 1; transform: rotate(-9deg) scale(0.94); }
+  100% { opacity: 1; transform: rotate(-9deg) scale(1); }
+}
+
+/* Whose round it is: the line slides in and the card lifts. */
+.turn-banner {
+  text-align: center;
+  font-family: var(--font-display), serif;
+  font-weight: 700;
+  font-size: var(--text-title);
+  min-height: 1.8rem;
+  margin-bottom: 0.5rem;
+  animation: turn-banner 1500ms var(--ease-standard) both;
+}
+@keyframes turn-banner {
+  0% { opacity: 0; transform: translateX(-1.5rem); }
+  14%, 70% { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: translateX(1.5rem); }
+}
+.turn-lift {
+  transform: translateY(-3px) scale(1.015);
+  box-shadow: var(--elevation-2), 0 0 0 4px var(--teal-soft) !important;
+  transition: transform 420ms var(--ease-standard), box-shadow 420ms var(--ease-standard);
+}
+
+/* Highstriker: the tower with the bell. */
+.hs-tower {
+  position: relative;
+  width: 3.4rem;
+  height: 11rem;
+  flex: none;
+  margin-top: 1.4rem;
+  border-radius: 1.7rem 1.7rem 0.6rem 0.6rem;
+  background: var(--color-panel);
+  border: 1px solid var(--color-border);
+}
+.hs-tower-clip {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+}
+.hs-tower-fill {
+  position: absolute;
+  left: 0.35rem;
+  right: 0.35rem;
+  bottom: 0;
+  border-radius: 1.4rem 1.4rem 0.4rem 0.4rem;
+  background: linear-gradient(0deg, var(--color-red), var(--color-gold) 62%, #7fd89a);
+  transition: height 420ms var(--ease-standard);
+}
+.hs-tower-fill--short {
+  background: linear-gradient(0deg, var(--color-red), #d9754a);
+}
+.hs-tower-mark {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--color-cream);
+  box-shadow: 0 0 8px rgba(244, 240, 231, 0.7);
+}
+.hs-bell-spot {
+  position: absolute;
+  left: 50%;
+  top: -1.3rem;
+  margin-left: -0.8rem;
+}
+.hs-bell {
+  display: inline-block;
+  border-radius: 50% 50% 4px 4px;
+  background: radial-gradient(circle at 35% 30%, var(--color-gold-strong), var(--color-gold-deep));
+  transform-origin: 50% 0;
+}
+.hs-bell--ring {
+  animation: hs-bell 1200ms ease-in-out both;
+}
+@keyframes hs-bell {
+  0% { transform: none; }
+  10% { transform: rotate(24deg); }
+  25% { transform: rotate(-20deg); }
+  40% { transform: rotate(14deg); }
+  55% { transform: rotate(-9deg); }
+  75% { transform: rotate(4deg); }
+  100% { transform: none; }
+}
+
+/* The rounds that have gone up, as steps. */
+.hs-stairs {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.3rem;
+  height: 6rem;
+}
+.hs-step {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  border-radius: 0.5rem 0.5rem 0.2rem 0.2rem;
+  background: linear-gradient(180deg, var(--color-teal), var(--color-teal-deep));
+  color: #05201f;
+  font-weight: 700;
+  font-size: 0.75rem;
+  padding-top: 0.15rem;
+  transform-origin: bottom;
+  animation: hs-step 480ms var(--ease-standard) both;
+}
+.hs-step--bad {
+  background: repeating-linear-gradient(135deg, var(--color-red) 0 6px, #d85f4b 6px 12px);
+  color: #2a0b06;
+}
+.hs-step--best {
+  background: linear-gradient(180deg, var(--color-gold-strong), var(--color-gold-deep));
+}
+@keyframes hs-step {
+  0% { transform: scaleY(0); }
+  100% { transform: scaleY(1); }
+}
+
+/* The last life: the heart beats, the card pulses and the edge of the screen goes red. */
+.heart--beat {
+  animation: heart-beat 1.2s ease-in-out infinite;
+}
+@keyframes heart-beat {
+  0%, 100% { transform: scale(1); }
+  20% { transform: scale(1.35); }
+  40% { transform: scale(1); }
+  55% { transform: scale(1.2); }
+}
+.hs-last {
+  border-color: var(--color-red) !important;
+}
+html[data-fx="party"] .hs-last,
+html[data-fx="full"] .hs-last {
+  animation: cd-hot 1.2s ease-in-out infinite;
+}
+.hs-vignette {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  pointer-events: none;
+  box-shadow: inset 0 0 90px 8px rgba(240, 114, 94, 0.4);
+  animation: hs-vig 2.4s ease-in-out infinite;
+}
+@keyframes hs-vig { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+.last-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--color-red);
+}
+
+/* Out: the stamp slaps on. */
+.hs-stamp {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  margin-top: -0.9rem;
+  z-index: 2;
+  font-family: var(--font-display), serif;
+  font-weight: 700;
+  font-size: 1.2rem;
+  letter-spacing: 0.1em;
+  color: var(--color-red);
+  border: 2px solid var(--color-red);
+  border-radius: var(--radius-s);
+  padding: 0 0.55rem;
+  animation: hs-slap 520ms var(--ease-standard) both;
+}
+@keyframes hs-slap {
+  0% { opacity: 0; transform: rotate(-12deg) scale(2.6); }
+  60% { opacity: 1; transform: rotate(-12deg) scale(0.94); }
+  100% { opacity: 1; transform: rotate(-12deg) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .delta-chip,
+  .dart-chip,
+  .cd-hot,
+  .tier-chip,
+  .glint,
+  .round-slam,
+  .round-slam .rays,
+  .round-slam .num,
+  .bust-shake,
+  .stamp,
+  .turn-banner,
+  .hs-bell--ring,
+  .hs-step,
+  .heart--beat,
+  .hs-last,
+  .hs-vignette,
+  .hs-stamp {
+    animation: none !important;
+  }
+  .delta-chip,
+  .glint,
+  .round-slam {
+    display: none;
+  }
+  .drain-bar > i,
+  .hs-tower-fill,
+  .turn-lift {
+    transition: none;
+  }
+}
+
+/* The scene before a cup of the career: it grows with the event (data-scale 1 to 5). */
+.intro-stage {
+  position: relative;
+  overflow: hidden;
+}
+.intro-rise {
+  opacity: 0;
+  animation: intro-rise 0.6s var(--ease-out, ease-out) var(--d, 0s) forwards;
+}
+@keyframes intro-rise {
+  from {
+    opacity: 0;
+    transform: translateY(0.9rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.intro-zoom {
+  animation: intro-zoom 2.4s ease-out both;
+}
+@keyframes intro-zoom {
+  from {
+    opacity: 0;
+    transform: scale(1.08);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.intro-emblem {
+  animation: intro-pop 0.8s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+@keyframes intro-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.4) rotate(-12deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.intro-ring {
+  position: absolute;
+  inset: -0.9rem;
+  border-radius: 50%;
+  border: 2px solid var(--cup);
+  opacity: 0;
+  animation: intro-ring 1.8s ease-out 0.5s infinite;
+}
+@keyframes intro-ring {
+  from {
+    opacity: 0.7;
+    transform: scale(0.7);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.6);
+  }
+}
+/* Spotlights that sweep over the stage: two cones of the cup's colour, turning slowly. */
+.intro-beams {
+  position: absolute;
+  inset: -40% -40% auto -40%;
+  height: 120%;
+  background: conic-gradient(from 0deg at 50% 0%, transparent 0 8%, color-mix(in srgb, var(--cup) calc(var(--beam, 0.3) * 100%), transparent) 10% 14%, transparent 16% 34%, color-mix(in srgb, var(--cup) calc(var(--beam, 0.3) * 100%), transparent) 36% 40%, transparent 42% 100%);
+  transform-origin: 50% 0%;
+  animation: intro-sweep 9s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+@keyframes intro-sweep {
+  from {
+    transform: rotate(-14deg);
+  }
+  to {
+    transform: rotate(14deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .intro-rise,
+  .intro-zoom,
+  .intro-emblem {
+    animation: none;
+    opacity: 1;
+  }
+  .intro-ring,
+  .intro-beams {
+    animation: none;
+  }
+  .intro-ring {
+    display: none;
+  }
+}
+

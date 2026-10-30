@@ -1,0 +1,4214 @@
+/* The career: its pictures, home, training, tournaments, profile, openings and results (moved out of globals.css, in the same order). */
+
+/* Movement in the pictures of the career's events. Each class is one thing that moves; SVG parts turn about their own middle. */
+.sc-sway,
+.sc-wave,
+.sc-laser-l,
+.sc-laser-r,
+.sc-sweep-a,
+.sc-sweep-b,
+.sc-burst,
+.sc-meridian,
+.sc-drift,
+.sc-pulse,
+.sc-twinkle {
+  transform-box: fill-box;
+}
+.sc-sway {
+  transform-origin: 50% 0%;
+  animation: sc-sway 3.2s ease-in-out infinite alternate;
+}
+@keyframes sc-sway {
+  from {
+    transform: rotate(-5deg);
+  }
+  to {
+    transform: rotate(5deg);
+  }
+}
+.sc-wave {
+  transform-origin: 0% 100%;
+  animation: sc-wave 1.4s ease-in-out infinite alternate;
+}
+@keyframes sc-wave {
+  from {
+    transform: rotate(-7deg);
+  }
+  to {
+    transform: rotate(7deg);
+  }
+}
+.sc-pulse {
+  animation: sc-pulse 3.6s ease-in-out infinite alternate;
+}
+@keyframes sc-pulse {
+  from {
+    opacity: 0.12;
+  }
+  to {
+    opacity: 0.34;
+  }
+}
+.sc-twinkle {
+  animation: sc-twinkle 1.6s ease-in-out infinite alternate;
+}
+@keyframes sc-twinkle {
+  from {
+    opacity: 0.25;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.sc-sweep-a {
+  transform-origin: 50% 0%;
+  animation: sc-sweep 5s ease-in-out infinite alternate;
+}
+.sc-sweep-b {
+  transform-origin: 50% 0%;
+  animation: sc-sweep 5s ease-in-out -2.5s infinite alternate-reverse;
+}
+@keyframes sc-sweep {
+  from {
+    transform: rotate(-22deg);
+  }
+  to {
+    transform: rotate(22deg);
+  }
+}
+.sc-laser-l {
+  transform-origin: 0% 0%;
+  animation: sc-laser 2.6s ease-in-out infinite alternate;
+}
+.sc-laser-r {
+  transform-origin: 100% 0%;
+  animation: sc-laser 2.6s ease-in-out infinite alternate-reverse;
+}
+@keyframes sc-laser {
+  from {
+    transform: rotate(-9deg);
+    opacity: 0.35;
+  }
+  to {
+    transform: rotate(9deg);
+    opacity: 1;
+  }
+}
+.sc-drift {
+  animation: sc-drift 6s ease-in-out infinite alternate;
+}
+@keyframes sc-drift {
+  from {
+    transform: translateX(-14px);
+  }
+  to {
+    transform: translateX(14px);
+  }
+}
+.sc-burst {
+  transform-origin: 50% 50%;
+  opacity: 0;
+  animation: sc-burst 3.4s ease-out infinite;
+}
+@keyframes sc-burst {
+  0% {
+    opacity: 1;
+    transform: scale(0.1);
+  }
+  45% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.35);
+  }
+}
+.sc-rays {
+  animation: sc-spin 40s linear infinite;
+}
+@keyframes sc-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.sc-meridian {
+  transform-origin: 50% 50%;
+  animation: sc-meridian 3.6s linear infinite;
+}
+@keyframes sc-meridian {
+  from {
+    transform: scaleX(1);
+  }
+  25% {
+    transform: scaleX(0.02);
+  }
+  50% {
+    transform: scaleX(-1);
+  }
+  75% {
+    transform: scaleX(-0.02);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sc-sway,
+  .sc-wave,
+  .sc-pulse,
+  .sc-twinkle,
+  .sc-sweep-a,
+  .sc-sweep-b,
+  .sc-laser-l,
+  .sc-laser-r,
+  .sc-drift,
+  .sc-burst,
+  .sc-rays,
+  .sc-meridian {
+    animation: none;
+  }
+  .sc-burst {
+    opacity: 0.8;
+  }
+}
+
+/* More for the bigger events: the title that slams in, the emblem badge on the picture, and the black bars of a film opening. */
+.intro-slam {
+  opacity: 0;
+  animation: intro-slam 0.7s cubic-bezier(0.2, 1.3, 0.4, 1) var(--d, 0s) forwards;
+}
+@keyframes intro-slam {
+  from {
+    opacity: 0;
+    transform: scale(1.6);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+.intro-badge {
+  position: absolute;
+  top: 0.6rem;
+  left: 0.6rem;
+  display: inline-flex;
+  padding: 0.35rem;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--color-bg) 70%, transparent);
+  border: 1px solid currentColor;
+}
+.intro-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 22%;
+  background: #000;
+  z-index: 20;
+  pointer-events: none;
+  animation: intro-bar 1.4s ease-in-out 0.2s forwards;
+}
+.intro-bar-top {
+  top: 0;
+}
+.intro-bar-bottom {
+  bottom: 0;
+}
+.intro-bar-top {
+  --to: -100%;
+}
+.intro-bar-bottom {
+  --to: 100%;
+}
+@keyframes intro-bar {
+  to {
+    transform: translateY(var(--to));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .intro-slam {
+    animation: none;
+    opacity: 1;
+  }
+  .intro-bar {
+    display: none;
+  }
+}
+
+/* The moment before a final of the career. */
+.final-stage {
+  position: relative;
+  overflow: hidden;
+}
+.final-beam {
+  position: absolute;
+  inset: -10% 20% auto 20%;
+  height: 90%;
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--cup) 45%, transparent), transparent);
+  clip-path: polygon(40% 0, 60% 0, 100% 100%, 0 100%);
+  opacity: 0;
+  animation: final-beam 1.2s ease-out 0.2s forwards;
+  pointer-events: none;
+}
+@keyframes final-beam {
+  to {
+    opacity: 0.55;
+  }
+}
+.final-emblem {
+  opacity: 0;
+  animation: intro-pop 0.8s cubic-bezier(0.2, 1.4, 0.4, 1) 0.3s forwards;
+}
+.final-title {
+  opacity: 0;
+  animation: intro-slam 0.8s cubic-bezier(0.2, 1.3, 0.4, 1) 0.6s forwards;
+}
+.final-left,
+.final-right {
+  opacity: 0;
+  animation: final-in-left 0.8s cubic-bezier(0.2, 0.9, 0.3, 1) 1s forwards;
+}
+.final-right {
+  animation-name: final-in-right;
+}
+@keyframes final-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-60%);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes final-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(60%);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.final-vs {
+  opacity: 0;
+  animation: intro-slam 0.5s ease-out 1.5s forwards;
+}
+.final-fade {
+  opacity: 0;
+  animation: intro-rise 0.6s ease-out var(--d, 0s) forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .final-beam,
+  .final-emblem,
+  .final-title,
+  .final-left,
+  .final-right,
+  .final-vs,
+  .final-fade {
+    animation: none;
+    opacity: 1;
+  }
+  .final-beam {
+    opacity: 0.4;
+  }
+}
+
+/* What was just bought for the home arena flashes in the picture. */
+.arena-pop {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: arena-pop 1.4s ease-out;
+}
+@keyframes arena-pop {
+  0% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  25% {
+    transform: scale(1.06);
+    filter: brightness(2.2) drop-shadow(0 0 10px var(--color-gold));
+  }
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .arena-pop {
+    animation: none;
+  }
+}
+
+/* The tournaments button of the career breathes when something is open that has not been entered. */
+.tab-pulse {
+  animation: tab-pulse 2.4s ease-in-out infinite;
+}
+@keyframes tab-pulse {
+  50% {
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--color-teal) 28%, transparent), var(--elevation-3);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tab-pulse {
+    animation: none;
+  }
+}
+
+/* The road from the pub to the world championship: a line down the left with a round node for each step. */
+.career-road {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.career-road-node {
+  position: relative;
+  display: flex;
+  gap: 0.75rem;
+  padding-bottom: 0.75rem;
+}
+.career-road-node::before {
+  content: "";
+  position: absolute;
+  left: 1.4rem;
+  top: 2.8rem;
+  bottom: -0.2rem;
+  width: 2px;
+  background: var(--color-border);
+}
+.career-road-node:last-child::before {
+  display: none;
+}
+.career-road-dot {
+  position: relative;
+  z-index: 1;
+  flex: none;
+  width: 2.8rem;
+  height: 2.8rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 2px solid var(--color-border);
+  background: var(--color-bg);
+}
+
+/* The draw of the career: the pairs are cards that are face down until their turn, then turn over; the player's own is lit in gold. */
+.draw-card {
+  position: relative;
+  aspect-ratio: 5 / 3;
+  perspective: 700px;
+}
+.draw-card-back,
+.draw-card-front {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-m);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transition: transform 0.6s cubic-bezier(0.3, 0.8, 0.3, 1);
+}
+.draw-card-back {
+  background: repeating-linear-gradient(45deg, var(--color-surface), var(--color-surface) 6px, var(--color-cell) 6px 12px);
+  border: 1px solid color-mix(in srgb, var(--draw) 45%, var(--color-border));
+}
+.draw-card-front {
+  transform: rotateY(180deg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  padding: 0.4rem;
+  background: var(--color-panel);
+  border: 1px solid var(--color-border);
+  color: var(--color-cream);
+  font-size: var(--text-body);
+  line-height: 1.2;
+}
+.draw-card[data-up="true"] .draw-card-back {
+  transform: rotateY(-180deg);
+}
+.draw-card[data-up="true"] .draw-card-front {
+  transform: rotateY(0);
+}
+.draw-card[data-mine="true"] .draw-card-front {
+  border-color: var(--color-gold);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--color-gold) 40%, transparent);
+  background: color-mix(in srgb, var(--color-gold) 10%, var(--color-panel));
+}
+.draw-card-me {
+  position: absolute;
+  top: 0.3rem;
+  right: 0.4rem;
+  font-size: var(--text-micro);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--color-gold-strong);
+}
+@media (prefers-reduced-motion: reduce) {
+  .draw-card-back,
+  .draw-card-front {
+    transition: none;
+  }
+}
+
+/* Coins that fly up to the balance when money arrives. */
+.coin-burst {
+  position: fixed;
+  left: 50%;
+  top: 62%;
+  width: 0;
+  height: 0;
+  z-index: 45;
+  pointer-events: none;
+}
+.coin-burst-coin {
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--color-gold-strong);
+  opacity: 0;
+  animation: coin-fly 1.5s cubic-bezier(0.2, 0.7, 0.3, 1) var(--d, 0s) forwards;
+}
+@keyframes coin-fly {
+  0% {
+    opacity: 0;
+    transform: translate(var(--dx), 0) scale(0.5) rotate(0);
+  }
+  15% {
+    opacity: 1;
+  }
+  60% {
+    opacity: 1;
+    transform: translate(calc(var(--dx) * 0.4), -40vh) scale(1) rotate(var(--rot));
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-18vw, -62vh) scale(0.5) rotate(calc(var(--rot) * 2));
+  }
+}
+/* The money chip pops when it grows, with the amount floating up from it. */
+.hud-pop {
+  animation: hud-pop 0.9s ease-out;
+}
+@keyframes hud-pop {
+  30% {
+    transform: scale(1.18);
+    box-shadow: 0 0 14px color-mix(in srgb, var(--color-gold) 55%, transparent);
+  }
+}
+.hud-delta {
+  position: absolute;
+  left: 50%;
+  top: -0.2rem;
+  font-weight: 800;
+  font-size: var(--text-small);
+  color: var(--color-green);
+  white-space: nowrap;
+  pointer-events: none;
+  animation: hud-delta 1.4s ease-out forwards;
+}
+@keyframes hud-delta {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 0);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -1.6rem);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .coin-burst-coin,
+  .hud-pop,
+  .hud-delta {
+    animation: none;
+  }
+  .coin-burst {
+    display: none;
+  }
+  .hud-delta {
+    opacity: 1;
+  }
+}
+
+/* The banner for a step of the road that has just opened: it comes up after the pay-out has been read. */
+.unlock-banner {
+  padding: 0.7rem 0.9rem;
+  border-radius: var(--radius-m);
+  border: 1px solid currentColor;
+  background: color-mix(in srgb, currentColor 10%, var(--color-surface));
+  opacity: 0;
+  animation: unlock-in 0.6s cubic-bezier(0.2, 1.2, 0.4, 1) 1.4s forwards;
+}
+@keyframes unlock-in {
+  from {
+    opacity: 0;
+    transform: translateY(1.2rem) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .unlock-banner {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+/* The beams behind a trophy end in a soft edge instead of a box. */
+.trophy-soft {
+  -webkit-mask-image: radial-gradient(ellipse 70% 80% at 50% 62%, #000 40%, transparent 78%);
+  mask-image: radial-gradient(ellipse 70% 80% at 50% 62%, #000 40%, transparent 78%);
+}
+
+/* Dust that drifts in the light of the room. */
+.home-dust {
+  animation: home-dust 7s ease-in-out infinite alternate;
+}
+@keyframes home-dust {
+  from {
+    transform: translate(0, 0);
+    opacity: 0.2;
+  }
+  to {
+    transform: translate(10px, -14px);
+    opacity: 0.7;
+  }
+}
+/* The main button of the home screen catches the light now and then. */
+.career-hero .glossy {
+  position: relative;
+  overflow: hidden;
+}
+.career-hero .glossy::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -60%;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  transform: skewX(-20deg);
+  animation: cta-shine 5s ease-in-out 1.5s infinite;
+  pointer-events: none;
+}
+@keyframes cta-shine {
+  0%,
+  60% {
+    left: -60%;
+  }
+  100% {
+    left: 130%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-dust,
+  .career-hero .glossy::after {
+    animation: none;
+  }
+  .career-hero .glossy::after {
+    display: none;
+  }
+}
+
+/* The career, made simple: one big button, four round ones, a room that fills what is left. */
+.career-home {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: calc(100dvh - 2rem);
+  padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
+}
+.career-home-room {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1rem;
+  min-height: 13rem;
+}
+.career-home-room > svg {
+  box-shadow: var(--elevation-2);
+}
+.play-btn {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  gap: 0.1rem;
+  width: 100%;
+  padding: 0.8rem 1rem;
+  border: 0;
+  border-radius: var(--radius-l);
+  text-align: center;
+  color: #04201f;
+  background: linear-gradient(#52d3df, #2aa7b6);
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--color-teal) 35%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+.play-btn strong {
+  font-family: var(--font-display);
+  font-size: var(--text-num);
+  line-height: 1;
+  letter-spacing: 0.05em;
+  font-weight: 800;
+}
+.play-btn small {
+  font-size: var(--text-micro);
+  font-weight: 600;
+  opacity: 0.8;
+}
+.play-btn-gold {
+  color: #261a04;
+  background: linear-gradient(#ecc66a, #c8962f);
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--color-gold) 35%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+.play-btn::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -60%;
+  width: 40%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  transform: skewX(-20deg);
+  animation: cta-shine 5s ease-in-out 1.5s infinite;
+  pointer-events: none;
+}
+.play-btn:disabled {
+  filter: grayscale(0.8);
+  opacity: 0.55;
+}
+.round4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+}
+.round-btn {
+  display: grid;
+  justify-items: center;
+  gap: 0.3rem;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  color: var(--color-text-2);
+  min-width: 0;
+}
+.round-btn-disc {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 3.4rem;
+  height: 3.4rem;
+  border-radius: 50%;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--elevation-2);
+  color: var(--color-cream);
+}
+.round-btn-disc svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+.round-btn-dot {
+  position: absolute;
+  top: -0.15rem;
+  right: -0.15rem;
+  width: 0.9rem;
+  height: 0.9rem;
+  border-radius: 50%;
+  background: var(--color-red);
+  border: 2px solid var(--color-bg);
+  animation: dot-bob 1.6s ease-in-out infinite;
+}
+@keyframes dot-bob {
+  50% {
+    transform: translateY(-2px) scale(1.12);
+  }
+}
+.round-btn-label {
+  font-size: var(--text-micro);
+  font-weight: 600;
+}
+/* The hand that shows the one thing to press the first time. */
+.tip-pointer {
+  position: absolute;
+  z-index: 5;
+  right: 1.1rem;
+  bottom: calc(100% + 0.3rem);
+  display: grid;
+  justify-items: end;
+  gap: 0.1rem;
+  pointer-events: none;
+  animation: tip-bob 1.2s ease-in-out infinite;
+}
+.tip-pointer span {
+  padding: 0.2rem 0.7rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-teal);
+  color: #04201f;
+  font-weight: 800;
+  font-size: var(--text-small);
+  white-space: nowrap;
+}
+.tip-pointer i {
+  margin-right: 1.2rem;
+  width: 0;
+  height: 0;
+  border-left: 0.45rem solid transparent;
+  border-right: 0.45rem solid transparent;
+  border-top: 0.55rem solid var(--color-teal);
+}
+@keyframes tip-bob {
+  50% {
+    transform: translateY(-6px);
+  }
+}
+/* The one goal: a star, a bar and a number. */
+.goal-strip {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  font-size: var(--text-small);
+}
+@media (prefers-reduced-motion: reduce) {
+  .play-btn::after,
+  .round-btn-dot,
+  .tip-pointer {
+    animation: none;
+  }
+  .play-btn::after {
+    display: none;
+  }
+}
+
+/* The room: tiles with an icon, three dots for the steps and the price as a button. */
+.room-tile {
+  list-style: none;
+  display: grid;
+  justify-items: center;
+  gap: 0.4rem;
+  padding: 0.75rem 0.6rem;
+  border-radius: var(--radius-m);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  text-align: center;
+}
+.room-tile-wide {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-align: left;
+}
+.room-tile-ico {
+  display: grid;
+  place-items: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: var(--radius-m);
+  background: var(--color-cell);
+  color: var(--color-cream);
+}
+.room-tile-ico svg {
+  width: 1.4rem;
+  height: 1.4rem;
+}
+.pips {
+  display: inline-flex;
+  gap: 0.3rem;
+}
+.pips i {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: var(--color-cell);
+  border: 1px solid var(--color-border);
+}
+.pips i.on {
+  background: var(--color-gold);
+  border-color: var(--color-gold);
+}
+.buy-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  min-width: 5rem;
+  min-height: var(--control);
+  padding: 0 0.9rem;
+  border: 0;
+  border-radius: var(--radius-m);
+  font-weight: 800;
+  font-size: var(--text-body);
+  font-variant-numeric: tabular-nums;
+  color: #04201f;
+  background: linear-gradient(#52d3df, #2aa7b6);
+}
+.room-tile:not(.room-tile-wide) > .buy-btn {
+  width: 100%;
+}
+.buy-btn-off {
+  background: var(--color-cell);
+  color: var(--color-muted);
+  border: 1px solid var(--color-border);
+}
+.buy-btn-full {
+  background: transparent;
+  color: var(--color-gold-strong);
+  border: 1px solid color-mix(in srgb, var(--color-gold) 45%, transparent);
+}
+/* A row of the road: the node, the short name and the first prize. */
+.road-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-m);
+  background: transparent;
+  border: 1px solid transparent;
+  box-shadow: none;
+  text-align: left;
+}
+.road-row-on {
+  background: var(--color-surface);
+  border-color: var(--cup);
+}
+
+.room-tile-wide > .buy-btn {
+  width: auto;
+}
+
+/* A choice among a few, as a row: the name on the left and the stake on the right. Not the main button, so it does not glow. */
+.pick-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 4rem;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-l);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--elevation-1);
+}
+.pick-row:disabled {
+  opacity: 0.45;
+}
+
+/* ---- The career, polished: a deeper ground, buttons with a lit top and a foot, and numbers that line up. ---- */
+.career-skin {
+  background:
+    radial-gradient(120% 46% at 50% -6%, color-mix(in srgb, var(--color-teal) 24%, transparent), transparent 72%),
+    radial-gradient(90% 36% at 50% 106%, color-mix(in srgb, var(--color-gold) 11%, transparent), transparent 72%),
+    var(--color-bg);
+}
+.career-skin h1,
+.career-skin h2,
+.career-skin h3 {
+  text-wrap: balance;
+}
+.career-skin p {
+  text-wrap: pretty;
+}
+/* The main button: lit on top, a darker foot like the edge of a key, a shadow in its own colour, and it gives when pressed. */
+.play-btn {
+  border-radius: 1.15rem;
+  background: linear-gradient(180deg, #86e6ee 0%, #3bc8d6 46%, #1f98a8 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.2),
+    0 2px 4px rgba(0, 0, 0, 0.4),
+    0 14px 26px -8px color-mix(in srgb, var(--color-teal) 60%, transparent);
+  transition:
+    transform var(--duration-instant) var(--ease-standard),
+    box-shadow var(--duration-instant) var(--ease-standard),
+    filter var(--duration-instant) var(--ease-standard);
+}
+.play-btn strong {
+  font-size: clamp(1.6rem, 8vw, 2rem);
+  letter-spacing: 0.07em;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+.play-btn small {
+  text-wrap: balance;
+  line-height: 1.25;
+  opacity: 0.85;
+}
+.play-btn:active:not(:disabled) {
+  transform: translateY(2px) scale(0.99);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.2),
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    0 6px 14px -8px color-mix(in srgb, var(--color-teal) 60%, transparent);
+}
+@media (hover: hover) {
+  .play-btn:hover:not(:disabled) {
+    filter: brightness(1.05);
+  }
+}
+.play-btn-gold {
+  background: linear-gradient(180deg, #f6d985 0%, #dcb04f 46%, #b8862e 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.22),
+    0 2px 4px rgba(0, 0, 0, 0.4),
+    0 14px 26px -8px color-mix(in srgb, var(--color-gold) 60%, transparent);
+}
+.play-btn:disabled {
+  filter: grayscale(0.85) brightness(0.8);
+  opacity: 0.6;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+/* The round buttons: a disc with a soft light from above and a thin edge. */
+.round-btn-disc {
+  background:
+    radial-gradient(circle at 32% 24%, rgba(255, 255, 255, 0.16), transparent 58%),
+    var(--color-surface);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.07),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.25),
+    0 2px 4px rgba(0, 0, 0, 0.4),
+    0 10px 18px -8px rgba(0, 0, 0, 0.7);
+  transition: transform var(--duration-instant) var(--ease-standard);
+}
+.round-btn:active .round-btn-disc {
+  transform: translateY(2px) scale(0.95);
+}
+.round-btn-label {
+  color: var(--color-text-2);
+  letter-spacing: 0.02em;
+}
+/* The price buttons and the rows to pick from share the same lit top and foot. */
+.buy-btn {
+  background: linear-gradient(180deg, #86e6ee 0%, #3bc8d6 46%, #1f98a8 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.2),
+    0 6px 12px -6px color-mix(in srgb, var(--color-teal) 55%, transparent);
+}
+.buy-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.buy-btn-off {
+  box-shadow: none;
+}
+.pick-row {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-surface) 92%, white), var(--color-surface));
+}
+.pick-row:active:not(:disabled) {
+  transform: scale(0.985);
+}
+/* The chips at the top, and the goal. */
+.goal-strip,
+.career-skin [role="group"][aria-label="Status"] > span:not(.hud-delta) {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 4px 10px -6px rgba(0, 0, 0, 0.7);
+}
+.goal-strip span span[style*="gold"] {
+  background-image: linear-gradient(90deg, var(--color-gold), color-mix(in srgb, var(--color-gold) 70%, white));
+  box-shadow: 0 0 8px color-mix(in srgb, var(--color-gold) 45%, transparent);
+}
+.room-tile {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-surface) 94%, white), var(--color-surface));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 6px 14px -10px rgba(0, 0, 0, 0.8);
+}
+.road-row-on {
+  box-shadow: 0 0 0 1px var(--cup), 0 8px 20px -10px var(--cup);
+}
+
+/* A button that cannot be pressed yet reads as a locked door, not as a faded one: a flat dark face with the word in a calm colour. */
+.play-btn:disabled {
+  background: var(--color-surface);
+  color: var(--color-text-2);
+  filter: none;
+  opacity: 1;
+  border: 1px solid var(--color-border);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+.play-btn:disabled strong {
+  text-shadow: none;
+}
+.play-btn:disabled small {
+  opacity: 1;
+  color: var(--color-muted);
+}
+.play-btn:disabled::after {
+  display: none;
+}
+/* A price that cannot be paid yet is a flat grey button with a lock, whatever the lit one above it looks like. */
+.buy-btn.buy-btn-off,
+.buy-btn:disabled {
+  background: var(--color-cell);
+  color: var(--color-text-2);
+  border: 1px solid var(--color-border);
+  box-shadow: none;
+}
+
+/* ---- The room as a picture: behind every screen at home, and big in the room screen. ---- */
+.room-picture {
+  position: relative;
+  overflow: hidden;
+  background: #000;
+  border-radius: var(--radius-l);
+}
+.room-picture-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.room-fade-in {
+  animation: room-fade 0.95s ease both;
+}
+@keyframes room-fade {
+  from {
+    opacity: 0;
+    transform: scale(1.05);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.room-flash {
+  position: absolute;
+  inset: 0;
+  background: #fff6d8;
+  opacity: 0;
+  pointer-events: none;
+  animation: room-flash 0.9s ease-out;
+}
+@keyframes room-flash {
+  0% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.room-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  background: #050807;
+  pointer-events: none;
+}
+.room-backdrop-img {
+  position: absolute;
+  inset: -5%;
+  width: 110%;
+  height: 110%;
+  object-fit: cover;
+  object-position: 50% 42%;
+  /* A little softer and less coloured than it is, and faded out at the top and the foot, so it melts into the dark of the app instead of filling the screen edge to edge. */
+  filter: blur(var(--blur, 0px)) saturate(0.82);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 2%, #000 30%, #000 58%, transparent 96%);
+  mask-image: linear-gradient(to bottom, transparent 2%, #000 30%, #000 58%, transparent 96%);
+  animation: room-drift 26s ease-in-out infinite alternate;
+}
+@keyframes room-drift {
+  from {
+    transform: scale(1) translate(0, 0);
+  }
+  to {
+    transform: scale(1.06) translate(-1.2%, -0.8%);
+  }
+}
+.room-backdrop-shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, #050807 calc((var(--dim) + 28) * 1%), transparent) 0%,
+    color-mix(in srgb, #050807 calc(var(--dim) * 1%), transparent) 26%,
+    color-mix(in srgb, #050807 calc(var(--dim) * 1%), transparent) 52%,
+    color-mix(in srgb, #050807 calc((var(--dim) + 40) * 1%), transparent) 100%
+  );
+  /* A vignette: the sides go dark too, so the picture is a glow in the middle of the screen and not a frame of it. */
+  box-shadow: inset 0 0 90px 30px #050807;
+}
+/* The lamp of the room breathes a little: a warm light that comes and goes over the picture. */
+.room-backdrop-light {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(60% 40% at 50% 30%, rgba(255, 214, 140, 0.55), transparent 70%);
+  mix-blend-mode: soft-light;
+  opacity: 0.25;
+  animation: room-breathe 7s ease-in-out infinite alternate;
+}
+@keyframes room-breathe {
+  from {
+    opacity: 0.1;
+  }
+  to {
+    opacity: 0.4;
+  }
+}
+.room-over {
+  position: relative;
+  z-index: 1;
+}
+/* On top of the room, what would be flat becomes glass, so it can be read on any picture. */
+.room-over .goal-strip,
+.room-over .road-row-glass,
+.room-over .room-tile,
+.room-over .pick-row,
+.room-over [role="group"][aria-label="Status"] > span:not(.hud-delta) {
+  background: color-mix(in srgb, var(--color-surface) 62%, transparent);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+.room-over .round-btn-disc {
+  background: color-mix(in srgb, var(--color-surface) 72%, transparent);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+.room-over .screen-top,
+.room-text {
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.85);
+}
+/* The screen comes up piece by piece: the main button and the round ones rise in a beat after each other. */
+.rise-in {
+  opacity: 0;
+  animation: rise-in 0.55s cubic-bezier(0.2, 0.9, 0.3, 1) var(--d, 0s) forwards;
+}
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .room-backdrop-img,
+  .room-backdrop-light,
+  .room-fade-in,
+  .room-flash,
+  .rise-in {
+    animation: none;
+  }
+  .rise-in {
+    opacity: 1;
+  }
+}
+
+/* The room screen: the picture as a card in the proportions of the pictures, ten dots for the steps, and what the next step adds as small chips. */
+.room-card {
+  aspect-ratio: 5 / 6;
+  max-height: 46dvh;
+  width: 100%;
+  margin-inline: auto;
+  box-shadow: 0 18px 40px -14px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+.pips10 {
+  display: flex;
+  justify-content: center;
+  gap: 0.35rem;
+}
+.pips10 i {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: var(--color-cell);
+  border: 1px solid var(--color-border);
+}
+.pips10 i.on {
+  background: var(--color-gold);
+  border-color: var(--color-gold);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--color-gold) 60%, transparent);
+}
+.stage-chip {
+  list-style: none;
+  padding: 0.25rem 0.8rem;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--color-surface) 70%, transparent);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-2);
+  font-size: var(--text-small);
+  font-weight: 600;
+}
+/* The reset caps pictures at the width of their box; these are laid over their box and a little beyond it, so the cap goes. */
+.room-backdrop-img,
+.room-picture-img {
+  max-width: none;
+}
+
+/* A tournament as a card: the emblem, the name with where it stands, what it takes and costs, and the first prize. */
+.tourney-card {
+  display: grid;
+  grid-template-columns: 2.6rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.65rem 0.8rem;
+  border-radius: var(--radius-m);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-surface) 94%, white), var(--color-surface));
+  border: 1px solid var(--color-border);
+}
+.room-over .tourney-card {
+  background: color-mix(in srgb, var(--color-surface) 62%, transparent);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+.tourney-card-on {
+  border-color: var(--cup);
+  box-shadow: 0 0 0 1px var(--cup), 0 10px 24px -12px var(--cup);
+}
+.tourney-emblem {
+  display: grid;
+  place-items: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  background: var(--color-bg);
+}
+.tourney-state {
+  padding: 0.05rem 0.5rem;
+  border-radius: var(--radius-pill);
+  font-size: var(--text-micro);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+}
+.tourney-state-åpen {
+  color: var(--color-teal);
+  background: color-mix(in srgb, var(--color-teal) 14%, transparent);
+  border-color: color-mix(in srgb, var(--color-teal) 40%, transparent);
+}
+.tourney-state-kvalifisert {
+  color: var(--color-green);
+  background: color-mix(in srgb, var(--color-green) 14%, transparent);
+  border-color: color-mix(in srgb, var(--color-green) 40%, transparent);
+}
+.tourney-state-pågår {
+  color: var(--color-gold-strong);
+  background: color-mix(in srgb, var(--color-gold) 14%, transparent);
+  border-color: color-mix(in srgb, var(--color-gold) 40%, transparent);
+}
+.tourney-state-låst {
+  color: var(--color-muted);
+  background: color-mix(in srgb, white 6%, transparent);
+  border-color: var(--color-border);
+}
+
+/* The main button of a long screen stays at the foot of it, with a fade behind it, so it is there however far the list goes. */
+.sticky-play {
+  position: sticky;
+  bottom: 0;
+  padding-block: 0.5rem calc(0.5rem + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(to bottom, transparent, color-mix(in srgb, #050807 70%, transparent) 40%);
+}
+
+/* ---- Visual lift: the room as a place, the buy as an event, the start of an event as an opening. ---- */
+
+/* A clearer room on the home screen: sharp, bright at the dartboard and dark at the edges and the foot, so the buttons can still be read. */
+.room-backdrop-clear .room-backdrop-img {
+  filter: saturate(0.95);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 22%, #000 62%, transparent 98%);
+  mask-image: linear-gradient(to bottom, transparent 0%, #000 22%, #000 62%, transparent 98%);
+}
+.room-backdrop-clear .room-backdrop-shade {
+  background: radial-gradient(75% 48% at 50% 36%, transparent 0%, rgba(5, 8, 7, 0.34) 70%, rgba(5, 8, 7, 0.72) 100%), linear-gradient(to bottom, rgba(5, 8, 7, 0.5), transparent 18%, transparent 56%, rgba(5, 8, 7, 0.82));
+}
+.place-chip {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  max-width: 100%;
+  padding: 0.3rem 0.8rem 0.3rem 0.6rem;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, #0d1512 55%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-gold) 45%, transparent);
+  color: var(--color-gold-strong);
+  font-size: var(--text-micro);
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  backdrop-filter: blur(6px);
+}
+.place-chip em {
+  font-style: normal;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-cream);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  opacity: 0.88;
+}
+.trophy-shelf {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  width: fit-content;
+  margin-top: 0.5rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 3px solid #6c4a2c;
+}
+.trophy-shelf svg {
+  width: 1.4rem;
+  height: 1.6rem;
+  filter: drop-shadow(0 0 6px currentColor);
+}
+.trophy-shelf-new {
+  animation: rb-shelf-glow 2.4s ease-out 1;
+}
+@keyframes rb-shelf-glow {
+  0% {
+    filter: brightness(2.2);
+  }
+  100% {
+    filter: none;
+  }
+}
+.room-news {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.9rem;
+  border-radius: var(--radius-m);
+  background: color-mix(in srgb, #0d1512 90%, transparent);
+  border: 1px solid var(--color-gold);
+  color: var(--color-cream);
+  font-size: var(--text-small);
+  font-weight: 700;
+  box-shadow: 0 0 24px color-mix(in srgb, var(--color-gold) 30%, transparent);
+  animation: rb-news-in 0.5s cubic-bezier(0.2, 1.3, 0.4, 1) both, rb-news-out 0.6s ease-in 4.4s forwards;
+}
+.room-news b {
+  color: var(--color-gold-strong);
+}
+@keyframes rb-news-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.9);
+  }
+}
+@keyframes rb-news-out {
+  to {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+/* A ring where the dartboard hangs in the new pictures (the middle of the screen, a little above): it pulses until the toast goes. */
+.room-news-ring {
+  position: fixed;
+  z-index: 1;
+  left: 50%;
+  top: 17dvh;
+  width: 9.5rem;
+  height: 9.5rem;
+  margin-left: -4.75rem;
+  border-radius: 50%;
+  border: 2px solid var(--color-gold-strong);
+  box-shadow: 0 0 30px color-mix(in srgb, var(--color-gold-strong) 55%, transparent), inset 0 0 30px color-mix(in srgb, var(--color-gold-strong) 35%, transparent);
+  pointer-events: none;
+  animation: rb-ring 2.2s ease-in-out 2, rb-news-out 0.6s ease-in 4.4s forwards;
+}
+@keyframes rb-ring {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1.04);
+  }
+}
+
+/* The room screen: the picture from the top of the screen, large, and under it the name of the step. */
+.room-hero-ground {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background: #050807;
+}
+.room-hero {
+  position: fixed;
+  z-index: 0;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 74dvh;
+  overflow: hidden;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(to bottom, #000 62%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 62%, transparent 100%);
+}
+.room-hero-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: cover;
+  object-position: 50% 42%;
+}
+.room-hero-top {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 6rem;
+  background: linear-gradient(rgba(5, 8, 7, 0.8), transparent);
+}
+.room-hero-slider {
+  position: fixed;
+  z-index: 3;
+  left: 0;
+  width: 100%;
+  top: 16dvh;
+  height: 36dvh;
+  opacity: 0;
+  cursor: ew-resize;
+}
+.room-hero-edge {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 4px;
+  z-index: 4;
+  background: linear-gradient(transparent, #fff 20%, #fff 80%, transparent);
+  box-shadow: 0 0 22px 8px rgba(255, 236, 170, 0.85);
+  opacity: 0;
+}
+.room-hero-edge-on {
+  opacity: 1;
+}
+.room-hero-flash {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  background: #fff7dc;
+  opacity: 0;
+}
+.room-hero-dust {
+  position: absolute;
+  z-index: 5;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #d8cdb8;
+  opacity: 0;
+}
+.room-hero-stamp {
+  position: absolute;
+  z-index: 6;
+  left: -10px;
+  bottom: 22%;
+  transform: translateX(-130%) rotate(-4deg);
+  background: linear-gradient(#f6dc8a, #d9ae4f);
+  color: #2b1d05;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  font-size: var(--text-small);
+  padding: 0.4rem 1.2rem 0.4rem 1.5rem;
+  border-radius: 0 0.5rem 0.5rem 0;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+  animation: rb-stamp 0.55s calc(var(--rv, 1.3s) + 0.05s) cubic-bezier(0.2, 1.2, 0.4, 1) forwards;
+}
+.room-hero-tag {
+  position: absolute;
+  z-index: 5;
+  top: 5.5rem;
+  font-size: var(--text-micro);
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  padding: 0.2rem 0.5rem;
+  border-radius: 0.4rem;
+  background: rgba(0, 0, 0, 0.6);
+}
+.room-hero-tag-l {
+  left: 1rem;
+  color: #7be0ea;
+}
+.room-hero-tag-r {
+  right: 1rem;
+  color: #f1c96a;
+}
+@keyframes rb-stamp {
+  0% {
+    transform: translateX(-130%) rotate(-4deg);
+  }
+  70% {
+    transform: translateX(6px) rotate(-4deg);
+  }
+  100% {
+    transform: translateX(0) rotate(-4deg);
+  }
+}
+.room-buy[data-playing] .room-hero-new {
+  animation: rb-settle 1.2s 0.3s ease-out;
+}
+@keyframes rb-settle {
+  from {
+    transform: scale(1.06);
+  }
+  to {
+    transform: none;
+  }
+}
+/* The sweep of light that uncovers the new room. */
+.room-buy[data-playing][data-mode="wipe"] .room-hero-old {
+  animation: rb-wipe 1s 0.3s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+}
+.room-buy[data-playing][data-mode="wipe"] .room-hero-edge {
+  animation: rb-edge 1s 0.3s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+}
+.room-buy[data-playing][data-mode="wipe"] .room-hero-flash {
+  animation: rb-flash 0.6s 1.1s ease-out;
+}
+@keyframes rb-wipe {
+  from {
+    clip-path: inset(0 0 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 100%);
+  }
+}
+@keyframes rb-edge {
+  0% {
+    opacity: 1;
+    left: 0;
+  }
+  95% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    left: 100%;
+  }
+}
+@keyframes rb-flash {
+  0% {
+    opacity: 0.95;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+/* The lights go out, it knocks, dust whirls, and the lights come on in the new room. */
+.room-buy[data-playing][data-mode="lights"] .room-hero-old {
+  animation: rb-dark 0.5s ease-in forwards;
+}
+.room-buy[data-playing][data-mode="lights"] .room-hero-new {
+  opacity: 0;
+  animation: rb-on 0.9s 1.1s ease-out forwards;
+}
+.room-buy[data-playing][data-mode="lights"] .room-hero {
+  animation: rb-shake 0.5s 0.5s linear;
+}
+.room-buy[data-playing][data-mode="lights"] .room-hero-dust {
+  animation: rb-dust 1s var(--dd) ease-out forwards;
+}
+.room-buy[data-playing][data-mode="lights"] .room-hero-flash {
+  animation: rb-flash 0.5s 1.05s ease-out;
+}
+@keyframes rb-dark {
+  to {
+    filter: brightness(0.05);
+  }
+}
+@keyframes rb-on {
+  0% {
+    opacity: 1;
+    filter: brightness(2.6);
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    filter: brightness(1);
+    transform: none;
+  }
+}
+@keyframes rb-shake {
+  0%,
+  100% {
+    transform: translate(0);
+  }
+  15% {
+    transform: translate(-3px, 2px);
+  }
+  30% {
+    transform: translate(3px, -2px);
+  }
+  45% {
+    transform: translate(-2px, -3px);
+  }
+  60% {
+    transform: translate(3px, 2px);
+  }
+  80% {
+    transform: translate(-1px, 1px);
+  }
+}
+@keyframes rb-dust {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0);
+  }
+  20% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--ux), var(--uy));
+  }
+}
+/* What comes after the room is in place. */
+.room-title-swap {
+  display: grid;
+}
+.room-title-swap > * {
+  grid-area: 1 / 1;
+}
+.room-title-old {
+  animation: rb-out 0.3s calc(var(--rv, 1.3s) - 0.1s) ease-in forwards;
+}
+.room-title-new {
+  opacity: 0;
+  animation: rb-slam 0.5s var(--rv, 1.3s) cubic-bezier(0.2, 1.3, 0.4, 1) forwards;
+}
+.stage-chip-new {
+  opacity: 0;
+  animation: rb-pop 0.4s calc(var(--rv, 1.3s) + var(--i, 0s)) cubic-bezier(0.2, 1.4, 0.4, 1) forwards;
+}
+.stage-chip-old {
+  animation: rb-out 0.3s calc(var(--rv, 1.3s) - 0.1s) ease-in forwards;
+}
+.pips10 i.pip-new {
+  animation: rb-pip 0.5s calc(var(--rv, 1.3s) + 0.1s) ease-out both;
+}
+.room-buy[data-playing] .play-btn:not(:disabled) {
+  animation: rb-press 0.35s ease-out;
+}
+@keyframes rb-out {
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+@keyframes rb-slam {
+  0% {
+    opacity: 0;
+    transform: scale(1.5);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes rb-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.4) translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes rb-pip {
+  0% {
+    background: var(--color-cell);
+  }
+  40% {
+    background: #fff3b0;
+    transform: scale(1.8);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes rb-press {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(0.95);
+    filter: brightness(1.15);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.coin-fly {
+  position: fixed;
+  z-index: 60;
+  width: 0.9rem;
+  height: 0.9rem;
+  margin: -0.45rem 0 0 -0.45rem;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff3b0, #e0a82e 60%, #9a6a10);
+  pointer-events: none;
+  opacity: 0;
+  animation: rb-fly 0.9s var(--cd) cubic-bezier(0.5, 0, 0.75, 0.4) forwards;
+}
+@keyframes rb-fly {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.6);
+  }
+  12% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--dx), var(--dy)) scale(1);
+  }
+}
+/* A sum that goes out of the balance falls out under the chip instead of lying over the figure. */
+.hud-delta-out {
+  top: calc(100% + 0.1rem);
+  animation-name: hud-delta-out;
+}
+@keyframes hud-delta-out {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -0.4rem);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, 0.9rem);
+  }
+}
+
+/* The start of an event: the colour of the event spreads from the button, then lights sweep, the cup falls, the name slams, the facts slide in. */
+.launch-iris {
+  position: fixed;
+  z-index: 70;
+  left: var(--ox, 50%);
+  top: var(--oy, 80%);
+  width: 4rem;
+  height: 4rem;
+  margin: -2rem 0 0 -2rem;
+  border-radius: 50%;
+  background: var(--c);
+  transform: scale(0);
+  pointer-events: none;
+  animation: ev-iris 0.4s cubic-bezier(0.6, 0, 0.3, 1) forwards;
+}
+@keyframes ev-iris {
+  to {
+    transform: scale(48);
+  }
+}
+.ev {
+  --b: 0.15s;
+  position: relative;
+  overflow: hidden;
+  min-height: 100dvh;
+  background: linear-gradient(var(--top), var(--bot));
+}
+.ev-from {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  background: var(--c);
+  pointer-events: none;
+  animation: ev-from 0.5s ease-out forwards;
+}
+@keyframes ev-from {
+  to {
+    opacity: 0;
+  }
+}
+.ev-scene {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 46%;
+  opacity: 0.32;
+  -webkit-mask-image: linear-gradient(#000, transparent);
+  mask-image: linear-gradient(#000, transparent);
+  pointer-events: none;
+}
+.ev-inner {
+  position: relative;
+  z-index: 5;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.9rem;
+  padding: 1.2rem;
+  text-align: center;
+  animation: ev-shake 0.5s calc(var(--b) + 1.3s) linear;
+}
+@keyframes ev-shake {
+  0%,
+  100% {
+    transform: translate(0);
+  }
+  15% {
+    transform: translate(calc(var(--sh) * -1), var(--sh));
+  }
+  30% {
+    transform: translate(var(--sh), calc(var(--sh) * -1));
+  }
+  45% {
+    transform: translate(calc(var(--sh) * -1), calc(var(--sh) * -1));
+  }
+  60% {
+    transform: translate(var(--sh), var(--sh));
+  }
+  80% {
+    transform: translate(calc(var(--sh) * -0.4), 0);
+  }
+}
+.ev-beam {
+  position: absolute;
+  top: -40px;
+  width: 7.5rem;
+  height: 120dvh;
+  left: calc(var(--x) - 3.75rem);
+  transform-origin: 50% 0;
+  background: linear-gradient(color-mix(in srgb, var(--beam) calc(var(--bo) * 100%), transparent), transparent 85%);
+  clip-path: polygon(40% 0, 60% 0, 100% 100%, 0 100%);
+  mix-blend-mode: screen;
+  filter: blur(3px);
+  opacity: 0;
+  z-index: 1;
+  animation: ev-sweep 3.4s var(--b) ease-in-out infinite alternate, ev-show 0.6s var(--b) forwards;
+}
+@keyframes ev-sweep {
+  from {
+    transform: rotate(calc(var(--a) * -1));
+  }
+  to {
+    transform: rotate(var(--a));
+  }
+}
+@keyframes ev-show {
+  to {
+    opacity: 1;
+  }
+}
+.ev-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  background: #000;
+  z-index: 8;
+  animation: ev-barin 0.6s var(--b) ease-out forwards;
+}
+.ev-bar-t {
+  top: 0;
+}
+.ev-bar-b {
+  bottom: 0;
+}
+@keyframes ev-barin {
+  to {
+    height: 4rem;
+  }
+}
+.ev-kick {
+  position: relative;
+  z-index: 2;
+  margin-bottom: 0.5rem;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.9);
+  font-size: var(--text-small);
+  font-weight: 800;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--c);
+  opacity: 0;
+  animation: ev-kick 0.9s calc(var(--b) + 0.3s) ease-out forwards;
+}
+@keyframes ev-kick {
+  0% {
+    opacity: 0;
+    letter-spacing: 0.8em;
+  }
+  100% {
+    opacity: 1;
+    letter-spacing: 0.3em;
+  }
+}
+.ev-cup {
+  width: 4.6rem;
+  height: 4.6rem;
+  color: var(--c);
+  opacity: 0;
+  filter: drop-shadow(0 0 16px var(--c));
+  animation: ev-drop 0.7s calc(var(--b) + 0.45s) cubic-bezier(0.3, 1.5, 0.5, 1) forwards;
+}
+.ev-cup svg {
+  width: 100%;
+  height: 100%;
+}
+@keyframes ev-drop {
+  0% {
+    opacity: 0;
+    transform: translateY(-160px) scale(0.7);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+.ev-title {
+  position: relative;
+  font-family: var(--font-display);
+  font-weight: 800;
+  color: var(--color-cream);
+  line-height: 1.02;
+  opacity: 0;
+  text-shadow: 0 4px 30px rgba(0, 0, 0, 0.6);
+  animation: ev-slam 0.5s calc(var(--b) + 0.85s) cubic-bezier(0.15, 0.9, 0.3, 1.05) forwards;
+}
+@keyframes ev-slam {
+  0% {
+    opacity: 0;
+    transform: scale(var(--sc));
+    filter: blur(10px);
+  }
+  60% {
+    opacity: 1;
+    filter: blur(0);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+}
+.ev-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 2.5rem;
+  height: 2.5rem;
+  margin: -1.25rem;
+  border-radius: 50%;
+  border: 3px solid var(--c);
+  opacity: 0;
+  pointer-events: none;
+  animation: ev-ring 0.9s calc(var(--b) + 1.3s) ease-out;
+}
+@keyframes ev-ring {
+  0% {
+    opacity: 0.9;
+    transform: scale(0.4);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(16);
+  }
+}
+.ev-plates {
+  display: grid;
+  gap: 0.5rem;
+  width: 100%;
+  max-width: 26rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.ev-plate {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.65rem 0.9rem;
+  border-radius: var(--radius-m);
+  background: rgba(0, 0, 0, 0.42);
+  border: 1px solid color-mix(in srgb, var(--c) 45%, transparent);
+  opacity: 0;
+  font-weight: 700;
+  animation: ev-plate 0.5s calc(var(--b) + 1.55s + var(--i)) cubic-bezier(0.2, 1.2, 0.4, 1) forwards;
+}
+.ev-plate small {
+  color: #d3dad7;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: var(--text-micro);
+}
+.ev-plate b {
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-body);
+  color: var(--color-cream);
+}
+.ev-plate-prize b {
+  color: var(--color-gold-strong);
+  font-size: var(--text-title);
+}
+@keyframes ev-plate {
+  0% {
+    opacity: 0;
+    transform: translateX(var(--fx));
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+.ev-you {
+  color: #e8ece9;
+  font-size: var(--text-small);
+  opacity: 0;
+  animation: ev-show 0.5s calc(var(--b) + 2.25s) forwards;
+}
+.ev-you b {
+  color: var(--c);
+}
+.ev-go {
+  width: 100%;
+  max-width: 26rem;
+  opacity: 0;
+  animation: ev-show 0.5s calc(var(--b) + 2.45s) forwards;
+}
+.ev-go .play-btn {
+  animation: ev-pulse 1.4s calc(var(--b) + 3s) ease-in-out infinite;
+}
+@keyframes ev-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.04);
+  }
+}
+.ev-conf {
+  position: absolute;
+  top: -20px;
+  width: 7px;
+  height: 12px;
+  opacity: 0;
+  z-index: 2;
+  animation: ev-conf 2.8s var(--cd) ease-in forwards;
+}
+@keyframes ev-conf {
+  0% {
+    opacity: 0;
+    transform: translateY(0) rotate(0);
+  }
+  8% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(120dvh) rotate(var(--r));
+  }
+}
+.ev-laser {
+  position: absolute;
+  left: -20%;
+  width: 140%;
+  height: 2px;
+  background: var(--laser);
+  box-shadow: 0 0 10px var(--laser);
+  opacity: 0;
+  transform-origin: 0 50%;
+  z-index: 2;
+  animation: ev-laser 2.2s var(--ld) ease-in-out infinite alternate, ev-show 0.4s var(--ld) forwards;
+}
+@keyframes ev-laser {
+  from {
+    transform: rotate(var(--la));
+  }
+  to {
+    transform: rotate(calc(var(--la) * -1));
+  }
+}
+.ev-fw {
+  position: absolute;
+  z-index: 2;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  opacity: 0;
+  background: #fff7d6;
+  box-shadow: 0 -30px 0 #fff7d6, 21px -21px 0 #7be0ea, 30px 0 0 #ff8a6b, 21px 21px 0 #fff7d6, 0 30px 0 #7be0ea, -21px 21px 0 #ff8a6b, -30px 0 0 #fff7d6, -21px -21px 0 #7be0ea;
+  animation: ev-burst 1.6s var(--wd) ease-out infinite;
+}
+@keyframes ev-burst {
+  0% {
+    opacity: 0;
+    transform: scale(0.1);
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.6);
+  }
+}
+/* A tap anywhere takes it to the end at once. */
+.ev-skip,
+.ev-skip * {
+  animation-duration: 0.01s !important;
+  animation-delay: 0s !important;
+  animation-iteration-count: 1 !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ev *,
+  .ev-from,
+  .room-buy * {
+    animation-duration: 0.01s !important;
+    animation-delay: 0s !important;
+    animation-iteration-count: 1 !important;
+  }
+  .launch-iris,
+  .coin-fly {
+    display: none;
+  }
+}
+
+/* The pub of the Ly cup, from the street, as the picture of the event. */
+.ev-photo {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 52%;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(#000 55%, transparent);
+  mask-image: linear-gradient(#000 55%, transparent);
+  animation: room-drift 26s ease-in-out infinite alternate;
+}
+.ev-photo::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(rgba(5, 8, 16, 0.2), rgba(5, 8, 16, 0.72));
+}
+.ev-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 64% 40%;
+  max-width: none;
+}
+
+/* The picture of the tournament is the background of its card, dark on the side of the text. One line under the name, and no more. */
+.room-over .tourney-card {
+  background: linear-gradient(90deg, rgba(5, 8, 7, 0.9) 0%, rgba(5, 8, 7, 0.62) 55%, rgba(5, 8, 7, 0.3) 100%), var(--pic) center / cover, color-mix(in srgb, var(--color-surface) 80%, transparent);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.tourney-card-locked {
+  filter: saturate(0.5);
+}
+.tourney-takes {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #c9d3ce;
+  font-size: var(--text-small);
+  line-height: 1.3;
+}
+
+/* ---- Gloss and depth: the materials as tokens (the same ramps as lib/materials.ts), one light, three heights of shadow. ---- */
+:root {
+  --metal-bronze-x: #35190a; --metal-bronze-d: #6d3513; --metal-bronze-m: #b8682e; --metal-bronze-l: #eaa96a; --metal-bronze-hi: #ffe6c2;
+  --metal-silver-x: #28323a; --metal-silver-d: #586874; --metal-silver-m: #a1b1bd; --metal-silver-l: #e1e9ef; --metal-silver-hi: #ffffff;
+  --metal-gold-x: #3d2907; --metal-gold-d: #7c5414; --metal-gold-m: #c9962f; --metal-gold-l: #f5d57f; --metal-gold-hi: #fff6cf;
+  --metal-ruby-x: #360a0a; --metal-ruby-d: #6b1511; --metal-ruby-m: #b32b22; --metal-ruby-l: #ee5c49; --metal-ruby-hi: #ffb0a2;
+  --metal-chrome-x: #1e1842; --metal-chrome-d: #4a4079; --metal-chrome-m: #9087bd; --metal-chrome-l: #dcd6f0; --metal-chrome-hi: #ffffff;
+  --metal-amethyst-x: #241049; --metal-amethyst-d: #45228c; --metal-amethyst-m: #7f4ad2; --metal-amethyst-l: #bd92f7; --metal-amethyst-hi: #efdcff;
+  --metal-diamond-x: #124a66; --metal-diamond-d: #3b8fb5; --metal-diamond-m: #8fd3ee; --metal-diamond-l: #d8f6ff; --metal-diamond-hi: #ffffff;
+  --frame-locked: linear-gradient(145deg, #59656b, #2a3337 50%, #454f54);
+  --elev-1: 0 2px 4px rgba(0, 0, 0, 0.5);
+  --elev-2: 0 8px 16px rgba(0, 0, 0, 0.55);
+  --elev-3: 0 18px 32px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+/* The trophy: a metal drawing that tilts, with the gloss moving across it and a glint now and then. */
+.t3d {
+  position: relative;
+  display: block;
+  perspective: 520px;
+}
+.t3d-tilt {
+  touch-action: pan-y;
+}
+.t3d-glow {
+  position: absolute;
+  inset: 6% 6% 20% 6%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--tint) 45%, transparent), transparent 72%);
+  filter: blur(6px);
+  pointer-events: none;
+}
+.t3d-art {
+  position: relative;
+  display: block;
+  transform: rotateY(var(--ry, 0deg)) rotateX(var(--rx, 0deg));
+  transition: transform 0.18s ease-out;
+}
+.t3d-art svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  animation: t3d-bob 5s ease-in-out infinite alternate;
+}
+.t3d-spec {
+  transform: translateX(calc(var(--tx, 0) * 1px));
+  transition: transform 0.18s ease-out;
+}
+.t3d-spark {
+  transform-box: fill-box;
+  transform-origin: center;
+  opacity: 0;
+  animation: t3d-twinkle 3.2s ease-in-out infinite;
+}
+@keyframes t3d-bob {
+  from { transform: translateY(0); }
+  to { transform: translateY(-2.5%); }
+}
+@keyframes t3d-twinkle {
+  0%, 70%, 100% { opacity: 0; transform: scale(0.2) rotate(0); }
+  80% { opacity: 1; transform: scale(1.1) rotate(25deg); }
+  90% { opacity: 0.6; transform: scale(0.7) rotate(40deg); }
+}
+.t3d-locked {
+  filter: brightness(0) opacity(0.45);
+}
+.rank-badge {
+  display: inline-block;
+  width: 2rem;
+  flex: none;
+}
+.rank-badge svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.6));
+}
+
+/* Titles as foil: light at the top, a dark horizon through the letters, and a gleam that sweeps over now and then. Neon for the two biggest. */
+.foil {
+  position: relative;
+  background-image: var(--foil);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 1px 0 var(--edge)) drop-shadow(0 2px 0 var(--edge)) drop-shadow(0 6px 10px rgba(0, 0, 0, 0.6));
+}
+.foil::after {
+  content: attr(data-t);
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.95) 50%, transparent 60%) 220% 0 / 260% 100% no-repeat;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation: foil-sweep 4.6s ease-in-out infinite;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+}
+@keyframes foil-sweep {
+  0%, 35% { background-position: 220% 0; }
+  70%, 100% { background-position: -80% 0; }
+}
+.neon {
+  color: #fff;
+  text-shadow: 0 0 3px #fff, 0 0 8px var(--c), 0 0 20px var(--c), 0 0 42px var(--c), 0 0 80px var(--c);
+  animation: neon-flick 5s linear infinite;
+}
+@keyframes neon-flick {
+  0%, 18%, 22%, 62%, 64%, 100% { opacity: 1; }
+  20%, 63% { opacity: 0.55; }
+}
+
+/* Buttons with depth: a thick edge under, a gloss over, and they go down when pressed. */
+button.play-btn {
+  padding: 0.8rem 1rem 0.95rem;
+  background: linear-gradient(180deg, #a6f4fa 0%, #46d0de 46%, #1b98a9 100%);
+  color: #032a30;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.75),
+    inset 0 -4px 6px rgba(0, 70, 80, 0.35),
+    0 6px 0 #0f6a77,
+    var(--elev-2),
+    0 0 30px -4px color-mix(in srgb, var(--color-teal) 60%, transparent);
+  margin-bottom: 6px;
+}
+button.play-btn::before {
+  content: "";
+  position: absolute;
+  left: 5px;
+  right: 5px;
+  top: 3px;
+  height: 46%;
+  border-radius: 15px 15px 40% 40% / 15px 15px 20px 20px;
+  background: linear-gradient(rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.04));
+  pointer-events: none;
+}
+button.play-btn strong,
+button.play-btn small {
+  position: relative;
+}
+button.play-btn:active:not(:disabled) {
+  transform: translateY(5px);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.75),
+    inset 0 -3px 5px rgba(0, 70, 80, 0.35),
+    0 1px 0 #0f6a77,
+    0 6px 10px -4px rgba(0, 0, 0, 0.65),
+    0 0 18px -4px color-mix(in srgb, var(--color-teal) 50%, transparent);
+}
+button.play-btn.play-btn-gold {
+  color: #2b1c02;
+  background: linear-gradient(180deg, var(--metal-gold-hi) 0%, #eec45c 46%, #b78322 100%);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.8),
+    inset 0 -4px 6px rgba(90, 50, 0, 0.4),
+    0 6px 0 #7b560f,
+    var(--elev-2),
+    0 0 30px -4px color-mix(in srgb, var(--color-gold) 60%, transparent);
+}
+button.play-btn.play-btn-gold:active:not(:disabled) {
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.8),
+    inset 0 -3px 5px rgba(90, 50, 0, 0.4),
+    0 1px 0 #7b560f,
+    0 6px 10px -4px rgba(0, 0, 0, 0.65);
+}
+button.play-btn:disabled {
+  filter: none;
+  opacity: 1;
+  color: #9aa7a1;
+  background: linear-gradient(180deg, #3b4743, #232d2a 50%, #181f1d);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), inset 0 -3px 5px rgba(0, 0, 0, 0.5), 0 5px 0 #0d1211, var(--elev-2);
+  cursor: not-allowed;
+}
+button.play-btn:disabled::before {
+  background: linear-gradient(rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0));
+}
+button.play-btn:disabled::after {
+  display: none;
+}
+.round-btn .round-btn-disc,
+.room-over .round-btn .round-btn-disc {
+  position: relative;
+  background: radial-gradient(circle at 35% 25%, #4a625b 0%, #1d2a26 55%, #0e1513 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), inset 0 -3px 6px rgba(0, 0, 0, 0.55), 0 6px 12px rgba(0, 0, 0, 0.55), 0 0 0 1px #0a100e;
+  border: 0;
+  color: #e8f7f8;
+}
+.round-btn .round-btn-disc::after {
+  content: "";
+  position: absolute;
+  left: 18%;
+  right: 18%;
+  top: 7%;
+  height: 38%;
+  border-radius: 50%;
+  background: linear-gradient(rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0));
+  pointer-events: none;
+}
+.round-btn .round-btn-disc svg {
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--color-teal) 80%, transparent));
+}
+
+/* The balance: a capsule let into the metal, a gold coin, and the figure in foil. */
+[role="group"][aria-label="Status"] > .hud-coin,
+.room-over [role="group"][aria-label="Status"] > .hud-coin {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.22rem 0.9rem 0.22rem 0.28rem;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(#0a0f0d, #18211e);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.8), inset 0 -1px 0 rgba(255, 255, 255, 0.12), 0 1px 0 rgba(255, 255, 255, 0.1), 0 6px 14px rgba(0, 0, 0, 0.5);
+  font-size: var(--text-body);
+  font-weight: 800;
+}
+.coin-mark {
+  display: grid;
+  place-items: center;
+  width: 1.7rem;
+  height: 1.7rem;
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 28%, var(--metal-gold-hi), #efc863 30%, #bd871f 70%, #82560d);
+  box-shadow: inset 0 0 0 2px #e0b248, 0 2px 4px rgba(0, 0, 0, 0.6);
+  color: #7a520c;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.95rem;
+  line-height: 1;
+}
+.hud-coin .coin-figure {
+  background: linear-gradient(var(--metal-gold-hi), #f0c85e 50%, #c18f2a);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 1px 0 #6e4a0a);
+}
+
+/* The rank on the goal: a badge and a bar let into the metal. */
+.goal-strip.goal-strip-badge {
+  padding: 0.35rem 0.9rem 0.35rem 0.5rem;
+  background: linear-gradient(#0a0f0d, #18211e);
+  box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.8), inset 0 -1px 0 rgba(255, 255, 255, 0.12), 0 6px 14px rgba(0, 0, 0, 0.5);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.goal-strip-badge .rank-badge {
+  width: 1.9rem;
+}
+
+/* The tournaments: a plate in the metal of the event, with its picture behind and a trophy in front. */
+.room-over .tourney-card {
+  border: 2px solid transparent;
+  background:
+    linear-gradient(90deg, rgba(5, 8, 7, 0.9) 0%, rgba(5, 8, 7, 0.62) 55%, rgba(5, 8, 7, 0.3) 100%) padding-box,
+    var(--pic) center / cover padding-box,
+    linear-gradient(#17211e, #0e1513) padding-box,
+    var(--frame, var(--frame-locked)) border-box;
+  box-shadow: var(--elev-2), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+.room-over .tourney-card-on {
+  box-shadow: var(--elev-2), 0 0 0 1px var(--cup), 0 10px 24px -10px var(--cup);
+}
+.tourney-trophy {
+  display: block;
+  width: 2.6rem;
+}
+.tourney-trophy .t3d-art svg {
+  animation: none;
+}
+.tourney-name {
+  font-family: var(--font-display);
+  /* Smaller on a narrow phone, so the longest name (Regionmesterskapet) is not cut. */
+  font-size: min(var(--text-body), 3.7vw);
+  font-weight: 800;
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+}
+
+/* The shelf of cups at home: a glass shelf with light over it, a cup for each event, and a dark silhouette for what is not won. */
+.shelf3d {
+  position: relative;
+  margin-top: 0.4rem;
+  width: 100%;
+}
+.shelf3d-items {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  align-items: end;
+  gap: 2px;
+  padding: 0 0.3rem;
+}
+.shelf3d-slot {
+  position: relative;
+  margin-bottom: -4px;
+}
+.shelf3d-slot .t3d-art svg {
+  animation: none;
+}
+.shelf3d-lock {
+  position: absolute;
+  left: 50%;
+  top: 40%;
+  width: 0.95rem;
+  height: 0.95rem;
+  transform: translate(-50%, -50%);
+  color: #fff;
+  opacity: 0.8;
+}
+.shelf3d-count {
+  position: absolute;
+  right: 4%;
+  bottom: 14%;
+  min-width: 1.1rem;
+  padding: 0 0.25rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-gold);
+  color: #2b1c02;
+  font-size: var(--text-micro);
+  font-weight: 800;
+  text-align: center;
+}
+.shelf3d-board {
+  position: relative;
+  z-index: 1;
+  height: 0.75rem;
+  border-radius: 3px;
+  background: linear-gradient(#e8f2f0 0%, #9eb6b1 22%, #51635f 60%, #2a3532 100%);
+  box-shadow: 0 8px 14px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+.shelf3d-light {
+  position: absolute;
+  z-index: 0;
+  left: 6%;
+  right: 6%;
+  bottom: 0.2rem;
+  height: 120%;
+  background: linear-gradient(to top, rgba(255, 236, 190, 0.3), transparent 80%);
+  clip-path: polygon(12% 0, 88% 0, 100% 100%, 0 100%);
+  filter: blur(3px);
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+/* The ceremony: the cup rises in the light, the name is struck in foil and the plate is engraved. */
+.cer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  position: relative;
+}
+.cer-stage {
+  position: relative;
+  width: 100%;
+  max-width: 9.5rem;
+}
+.cer-spot {
+  position: absolute;
+  left: 50%;
+  top: -3rem;
+  width: 18rem;
+  height: 22rem;
+  margin-left: -9rem;
+  clip-path: polygon(42% 0, 58% 0, 100% 100%, 0 100%);
+  background: linear-gradient(rgba(255, 244, 214, 0.5), rgba(255, 244, 214, 0.02) 90%);
+  opacity: 0;
+  mix-blend-mode: screen;
+  filter: blur(3px);
+  pointer-events: none;
+  animation: cer-show 0.9s 0.2s ease-out forwards;
+}
+.cer-rays {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  width: 34rem;
+  height: 34rem;
+  margin: -17rem 0 0 -17rem;
+  background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--tint) 55%, white) 0 7deg, transparent 7deg 22deg);
+  -webkit-mask: radial-gradient(circle, #000 0, transparent 66%);
+  mask: radial-gradient(circle, #000 0, transparent 66%);
+  opacity: 0;
+  mix-blend-mode: screen;
+  pointer-events: none;
+  animation: cer-spin 16s linear infinite, cer-rays 0.8s 1.7s forwards;
+}
+.cer-trophy {
+  position: relative;
+  opacity: 0;
+  transform: translateY(8rem) scale(0.8);
+  animation: cer-rise 1.1s 0.5s cubic-bezier(0.2, 1.1, 0.3, 1) forwards;
+}
+.cer-flash {
+  position: fixed;
+  inset: 0;
+  z-index: 8;
+  background: #fff7dc;
+  opacity: 0;
+  pointer-events: none;
+  animation: cer-flash 0.7s 1.55s ease-out;
+}
+.cer-kicker {
+  font-size: var(--text-small);
+  font-weight: 800;
+  letter-spacing: 0.5em;
+  padding-left: 0.5em;
+  color: var(--tint);
+  opacity: 0;
+  animation: cer-kick 0.9s 1.9s ease-out forwards;
+}
+.cer-title {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(1.8rem, 9vw, 2.6rem);
+  line-height: 1.05;
+  text-align: center;
+  opacity: 0;
+  animation: cer-slam 0.55s 2.2s cubic-bezier(0.15, 0.9, 0.3, 1.05) forwards;
+}
+.cer-plate {
+  position: relative;
+  width: min(100%, 19rem);
+  padding: 0.7rem 0.9rem 0.8rem;
+  border-radius: 6px;
+  background: linear-gradient(145deg, #e8dcb4, #b59c5c 48%, #8d7338);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), inset 0 -2px 3px rgba(60, 40, 0, 0.5), var(--elev-2);
+  color: #3a2a08;
+  text-align: center;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.45);
+  opacity: 0;
+  animation: cer-plate 0.5s 2.7s ease-out forwards;
+}
+.cer-plate::before,
+.cer-plate::after {
+  content: "";
+  position: absolute;
+  top: 6px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff, #8d7338);
+}
+.cer-plate::before { left: 6px; }
+.cer-plate::after { right: 6px; }
+.cer-plate-1 {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--text-title);
+  letter-spacing: 0.03em;
+  clip-path: inset(0 100% 0 0);
+  animation: cer-type 1.2s 3.1s steps(24, end) forwards;
+}
+.cer-plate-2 {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: var(--text-small);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 700;
+  opacity: 0;
+  animation: cer-fade 0.5s 4.3s forwards;
+}
+@keyframes cer-show { to { opacity: 1; } }
+@keyframes cer-spin { to { transform: rotate(360deg); } }
+@keyframes cer-rays { to { opacity: 0.5; } }
+@keyframes cer-rise { to { opacity: 1; transform: none; } }
+@keyframes cer-flash { 0% { opacity: 0.9; } 100% { opacity: 0; } }
+@keyframes cer-kick { 0% { opacity: 0; letter-spacing: 1.1em; } 100% { opacity: 1; letter-spacing: 0.5em; } }
+@keyframes cer-slam { 0% { opacity: 0; transform: scale(2.4); filter: blur(8px); } 60% { opacity: 1; filter: blur(0); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes cer-plate { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes cer-type { to { clip-path: inset(0 0 0 0); } }
+@keyframes cer-fade { to { opacity: 0.85; } }
+.cer-skip, .cer-skip * {
+  animation-duration: 0.01s !important;
+  animation-delay: 0s !important;
+}
+
+/* A cup as a card: a frame in the metal of the event, the cup, the name in foil, the date and the prize. */
+.pokal {
+  position: relative;
+  border-radius: var(--radius-l);
+  padding: 3px;
+  background: var(--frame);
+  box-shadow: var(--elev-3);
+  overflow: hidden;
+  transform: perspective(700px) rotateY(var(--ry, 0deg)) rotateX(var(--rx, 0deg));
+  transition: transform 0.18s ease-out;
+}
+.pokal-in {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  gap: 0.35rem;
+  justify-items: center;
+  text-align: center;
+  padding: 0.8rem 0.5rem 0.75rem;
+  border-radius: calc(var(--radius-l) - 3px);
+  background: radial-gradient(120% 80% at 50% 0%, color-mix(in srgb, var(--tint) 28%, #141c19), #0a0f0d 70%);
+}
+.pokal-ribbon {
+  position: absolute;
+  top: 0.9rem;
+  right: -2rem;
+  transform: rotate(35deg);
+  width: 7.5rem;
+  text-align: center;
+  padding: 0.1rem 0;
+  font-size: var(--text-micro);
+  letter-spacing: 0.18em;
+  font-weight: 800;
+  color: #2b1c02;
+  background: linear-gradient(var(--metal-gold-hi), var(--color-gold));
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  z-index: 2;
+}
+.pokal-name {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--text-body);
+  line-height: 1.05;
+}
+.pokal-meta {
+  display: grid;
+  gap: 0.05rem;
+  color: #b4c0ba;
+  font-size: var(--text-small);
+}
+.pokal-meta b {
+  color: var(--color-gold-strong);
+  font-size: var(--text-body);
+}
+
+/* The rank on the home screen: the badge and the title side by side. */
+.rank-line {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  .t3d-art svg, .t3d-spark, .foil::after, .neon, .cer *, .shelf3d * {
+    animation-duration: 0.01s !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* Before a match: the two in a ring of metal, and the VS struck with a flash between them. */
+.vs-ring {
+  display: inline-block;
+  padding: 3px;
+  border-radius: 50%;
+  background: conic-gradient(from 30deg, var(--metal-gold-hi), var(--metal-gold-m), var(--metal-gold-hi), var(--metal-gold-d), var(--metal-gold-hi));
+  box-shadow: var(--elev-2);
+}
+.vs-ring-b {
+  background: conic-gradient(from 30deg, var(--metal-chrome-hi), var(--metal-chrome-m), var(--metal-chrome-hi), var(--metal-chrome-d), var(--metal-chrome-hi));
+}
+.vs-mark {
+  font-weight: 800;
+  line-height: 1;
+}
+.ev-cup .t3d-art svg {
+  height: auto;
+}
+.ev-cup {
+  width: 5.4rem;
+  height: auto;
+}
+
+.foil.foil-soft {
+  background-image: var(--foil-soft);
+}
+.coin-mark::before {
+  content: "$";
+}
+
+/* ---- The character: a standing figure with a transparent background, in the colour of its own light. ---- */
+.char-figure {
+  position: relative;
+  display: block;
+  aspect-ratio: 2 / 3;
+  pointer-events: none;
+}
+.char-figure-img {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: contain;
+  -webkit-mask-image: linear-gradient(to bottom, #000 78%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 78%, transparent 100%);
+  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.55));
+  animation: char-in 0.5s cubic-bezier(0.2, 1.1, 0.4, 1) both;
+}
+.char-figure-glow::before {
+  content: "";
+  position: absolute;
+  inset: 4% -10% 14% -10%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--tint) 42%, transparent), transparent 72%);
+  filter: blur(8px);
+}
+@keyframes char-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.97);
+  }
+}
+.char-face {
+  position: relative;
+  display: inline-block;
+  flex: none;
+  overflow: hidden;
+  border-radius: 50%;
+  border: 2px solid var(--tint);
+  background: radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--tint) 35%, #1a2220), #0b100e);
+  box-shadow: var(--elev-2);
+}
+.char-face img {
+  position: absolute;
+  left: 50%;
+  top: 4%;
+  width: 190%;
+  max-width: none;
+  transform: translateX(-50%);
+}
+@media (prefers-reduced-motion: reduce) {
+  .char-figure-img {
+    animation: none;
+  }
+}
+
+/* Home: the character stands to the right in the room, with name, rank and the shelf in a column to the left of it. */
+/* The character stands in the room, behind the screen: the big button and the round ones lie over it, and it never takes a touch. */
+.char-home {
+  position: fixed;
+  z-index: 0;
+  right: max(-14vw, -3.5rem);
+  bottom: calc(9.4rem + env(safe-area-inset-bottom, 0px));
+  height: min(54dvh, 30rem);
+  pointer-events: none;
+}
+.char-home .char-figure {
+  height: 100%;
+  aspect-ratio: 2 / 3;
+}
+.char-home-text {
+  max-width: 58%;
+}
+.char-pick {
+  display: grid;
+  gap: 0.6rem;
+  justify-items: center;
+  padding: 0.8rem 0.6rem 0.9rem;
+  border-radius: var(--radius-l);
+  background: radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--tint) 24%, var(--color-surface)), var(--color-surface));
+  border: 1px solid var(--color-border);
+}
+.char-pick-stage {
+  width: min(62%, 14rem);
+}
+.char-pick-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.char-pick-item {
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  opacity: 0.7;
+}
+.char-pick-item[aria-checked="true"] {
+  opacity: 1;
+  box-shadow: 0 0 0 3px var(--tint), 0 6px 14px -4px var(--tint);
+}
+.char-pick-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--color-cream);
+}
+
+.ev-you {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-align: left;
+}
+
+/* The result: the character at a size that leaves room for the amount and the button. A letdown is a little darker and a little lower. */
+.char-result {
+  width: min(62%, 16rem);
+}
+.char-result-low .char-figure-img {
+  filter: saturate(0.75) brightness(0.85) drop-shadow(0 10px 18px rgba(0, 0, 0, 0.55));
+}
+.cer-hero {
+  position: relative;
+  width: min(34%, 8.5rem);
+  margin-top: -0.6rem;
+  opacity: 0;
+  animation: cer-show 0.7s 1.8s ease-out forwards;
+}
+.cer-hero .char-figure-img {
+  -webkit-mask-image: linear-gradient(to bottom, #000 62%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 62%, transparent 100%);
+}
+
+/* New career: the players in two even columns, and the levels as rows with a meter that rises with the level. */
+.player-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+.player-tile {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+  min-height: var(--control-lg);
+  padding: 0.35rem 0.8rem 0.35rem 0.45rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-cream);
+  text-align: left;
+}
+.player-tile[aria-checked="true"] {
+  border-color: var(--color-teal);
+  background: var(--teal-soft);
+}
+.player-tile-add {
+  border: 1.5px dashed var(--color-teal);
+  color: var(--color-teal);
+}
+.player-tile-plus {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  flex: none;
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+.level-list {
+  display: grid;
+  gap: 0.4rem;
+}
+.level-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: var(--control-lg);
+  padding: 0.4rem 1rem;
+  border-radius: var(--radius-m);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-cream);
+  text-align: left;
+}
+.level-row[aria-checked="true"] {
+  border-color: var(--color-teal);
+  background: var(--teal-soft);
+}
+.level-name {
+  font-weight: 700;
+}
+.level-meter {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.25rem;
+  height: 1.3rem;
+}
+.level-meter i {
+  display: block;
+  width: 0.5rem;
+  height: var(--h);
+  border-radius: 2px;
+  background: var(--color-cell);
+}
+.level-meter i.on {
+  background: var(--color-teal);
+}
+.level-row[aria-checked="true"] .level-meter i.on {
+  background: var(--color-gold);
+}
+.level-about {
+  min-height: 1.3em;
+  color: var(--color-muted);
+  font-size: var(--text-small);
+}
+
+/* ---- Opponents: a portrait in a frame of metal, the rows that set two players side by side, and the profile. ---- */
+.opp-frame {
+  display: block;
+  padding: 3px;
+  border-radius: var(--radius-m);
+  background: var(--frame);
+  box-shadow: var(--elev-2);
+}
+.opp-frame-in {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  aspect-ratio: 3 / 4;
+  border-radius: calc(var(--radius-m) - 3px);
+  background: #000;
+}
+.opp-frame-in img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: cover;
+  object-position: 50% 6%;
+}
+.opp-frame-in::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(transparent 62%, rgba(0, 0, 0, 0.5));
+  pointer-events: none;
+}
+.opp-frame-btn {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: inherit;
+}
+.tape-rows {
+  display: grid;
+  gap: 0.55rem;
+  width: 100%;
+}
+.tape-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 0.5rem;
+  align-items: center;
+  opacity: 0;
+  animation: tape-in 0.45s var(--d, 0s) ease-out forwards;
+}
+@keyframes tape-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.tape-lb {
+  min-width: 5.4rem;
+  text-align: center;
+  color: var(--color-text-2);
+  font-size: var(--text-micro);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.tape-v {
+  display: grid;
+  gap: 0.2rem;
+  font-variant-numeric: tabular-nums;
+}
+.tape-v b {
+  font-size: var(--text-body);
+  color: var(--color-cream);
+}
+.tape-l {
+  justify-items: end;
+}
+.tape-r {
+  justify-items: start;
+}
+.tape-v i {
+  display: block;
+  height: 0.32rem;
+  width: var(--w);
+  border-radius: 2px;
+  background: var(--color-teal);
+}
+.tape-r i {
+  background: var(--color-gold);
+}
+.tape-win b {
+  color: var(--color-gold-strong);
+}
+.chance {
+  display: grid;
+  gap: 0.3rem;
+  justify-items: center;
+}
+.chance-n {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--text-num);
+  color: var(--color-gold-strong);
+  line-height: 1;
+}
+.chance-n small {
+  margin-left: 0.4rem;
+  font-family: var(--font-body, inherit);
+  font-size: var(--text-micro);
+  letter-spacing: 0.1em;
+  color: var(--color-text-2);
+}
+.chance-bar {
+  display: block;
+  width: 70%;
+  height: 0.5rem;
+  border-radius: 4px;
+  background: var(--color-cell);
+  overflow: hidden;
+}
+.chance-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--color-teal), var(--color-gold));
+}
+.opp-profile {
+  display: grid;
+  gap: 0.7rem;
+}
+.opp-profile-head {
+  display: flex;
+  gap: 0.9rem;
+  align-items: flex-end;
+}
+.opp-profile-pic {
+  width: 6.4rem;
+  flex: none;
+}
+.opp-profile-name {
+  font-size: var(--text-num);
+  line-height: 1.05;
+  color: var(--color-cream);
+}
+.opp-chips {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  margin-top: 0.35rem;
+}
+.opp-chip {
+  padding: 0.1rem 0.55rem;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, white 8%, transparent);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-2);
+  font-size: var(--text-micro);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+.opp-chip-gold {
+  color: var(--color-gold-strong);
+  border-color: color-mix(in srgb, var(--color-gold) 45%, transparent);
+}
+.opp-chip-teal {
+  color: var(--color-teal);
+  border-color: color-mix(in srgb, var(--color-teal) 45%, transparent);
+  background: color-mix(in srgb, var(--color-teal) 12%, transparent);
+}
+.opp-job {
+  color: var(--color-text-2);
+  font-size: var(--text-small);
+}
+.opp-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.4rem;
+}
+.opp-stats div {
+  padding: 0.45rem 0.3rem;
+  border-radius: var(--radius-m);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  text-align: center;
+}
+.opp-stats b {
+  display: block;
+  font-family: var(--font-display);
+  font-size: var(--text-title);
+  color: var(--color-cream);
+  font-variant-numeric: tabular-nums;
+}
+.opp-stats small {
+  color: var(--color-muted);
+  font-size: var(--text-micro);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+.opp-record {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--radius-m);
+  border: 1px solid color-mix(in srgb, var(--color-gold) 40%, transparent);
+  background: color-mix(in srgb, var(--color-gold) 10%, var(--color-surface));
+  color: var(--color-text-2);
+  font-size: var(--text-small);
+}
+.opp-record b {
+  font-family: var(--font-display);
+  font-size: var(--text-num);
+  color: var(--color-gold-strong);
+}
+@media (prefers-reduced-motion: reduce) {
+  .tape-row {
+    animation-duration: 0.01s;
+    animation-delay: 0s;
+  }
+}
+
+.opp-frame-in {
+  background: radial-gradient(120% 90% at 50% 20%, color-mix(in srgb, var(--tint, #888) 40%, #1a2220), #0b100e);
+}
+.tape-rows {
+  padding: 0.7rem 0.8rem;
+  border-radius: var(--radius-m);
+  background: color-mix(in srgb, #050807 72%, transparent);
+  border: 1px solid var(--color-border);
+}
+
+/* The ranking lists: a tab for the world and one for Norway, and a row for each person with the player's own lit. */
+.seg-tabs {
+  display: flex;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-m);
+  overflow: hidden;
+  background: var(--color-surface);
+}
+.seg-tab {
+  flex: 1;
+  min-height: var(--control);
+  font-weight: 700;
+  color: var(--color-muted);
+  background: transparent;
+  border: 0;
+}
+.seg-tab[aria-selected="true"] {
+  background: var(--color-panel);
+  color: var(--color-teal);
+}
+.rank-row {
+  display: grid;
+  grid-template-columns: 2.4rem 2.4rem 1fr auto;
+  gap: 0.6rem;
+  align-items: center;
+  padding: 0.4rem 0.7rem 0.4rem 0.3rem;
+  border-radius: var(--radius-m);
+  background: color-mix(in srgb, var(--color-surface) 80%, transparent);
+  border: 1px solid var(--color-border);
+}
+.rank-row-me {
+  border-color: var(--color-gold);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--color-gold) 16%, var(--color-surface)), var(--color-surface));
+  box-shadow: 0 0 18px -4px color-mix(in srgb, var(--color-gold) 50%, transparent);
+}
+.rank-no {
+  text-align: center;
+  font-family: var(--font-display);
+  font-weight: 800;
+  color: var(--color-cream);
+}
+.rank-row small {
+  color: var(--color-muted);
+  font-size: var(--text-micro);
+}
+.rank-avg {
+  text-align: right;
+  font-weight: 800;
+  color: var(--color-gold-strong);
+}
+.rank-avg small {
+  display: block;
+}
+
+/* The choice of game: a row for each, the name and one line. */
+.game-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: var(--control-lg);
+  padding: 0.55rem 1rem;
+  border-radius: var(--radius-m);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-cream);
+  text-align: left;
+}
+.game-row[aria-checked="true"] {
+  border-color: var(--color-teal);
+  background: var(--teal-soft);
+}
+.game-about {
+  color: var(--color-muted);
+  font-size: var(--text-small);
+  text-align: right;
+}
+.game-row .level-name {
+  white-space: nowrap;
+}
+.game-about {
+  min-width: 0;
+}
+
+.dart-pick {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+.dart-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 0;
+  padding: 0.7rem 0.6rem 0.8rem;
+  border-radius: var(--radius-m);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-cream);
+  text-align: center;
+}
+.dart-card[aria-checked="true"] {
+  border-color: var(--color-teal);
+  background: var(--teal-soft);
+}
+.dart-card-img {
+  height: 9.5rem;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  transform: rotate(12deg);
+  filter: drop-shadow(0 6px 8px rgb(0 0 0 / 0.45));
+  transition: transform 0.2s ease;
+}
+.dart-card[aria-checked="true"] .dart-card-img {
+  transform: rotate(0deg) scale(1.04);
+}
+.dart-card .game-about {
+  text-align: center;
+}
+
+/* The season, the news and the inbox of a career */
+.season-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.35rem 0.8rem;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--color-bg) 70%, transparent);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-2);
+  font-size: var(--text-micro);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  width: fit-content;
+  max-width: 100%;
+}
+.season-ticks {
+  display: inline-flex;
+  gap: 3px;
+}
+.season-ticks i {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: var(--color-cell);
+}
+.season-ticks i.on {
+  background: var(--color-teal);
+}
+.season-ticks i.now {
+  background: var(--color-gold);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-gold) 35%, transparent);
+}
+.home-pills {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+.home-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 2.5rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-cream);
+  font-size: var(--text-small);
+  font-weight: 700;
+}
+.home-pill-count {
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.35rem;
+  display: inline-grid;
+  place-items: center;
+  border-radius: var(--radius-pill);
+  background: var(--color-red);
+  color: #fff;
+  font-size: var(--text-micro);
+}
+.feed {
+  display: grid;
+  gap: 0.5rem;
+}
+.feed-head {
+  margin-top: 0.4rem;
+}
+.feed-item {
+  border-radius: var(--radius-m);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+}
+.feed-row {
+  display: flex;
+  gap: 0.7rem;
+  align-items: center;
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  background: transparent;
+  border: 0;
+  color: var(--color-cream);
+  min-height: var(--control-lg);
+}
+.feed-new {
+  border-color: var(--color-teal);
+}
+.feed-mark {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-cell);
+  color: var(--color-teal);
+}
+.feed-kind {
+  display: block;
+  color: var(--color-muted);
+  font-size: var(--text-micro);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.feed-text {
+  padding: 0 0.75rem 0.8rem 3.8rem;
+  color: var(--color-text-2);
+  font-size: var(--text-small);
+}
+.msgs {
+  display: grid;
+  gap: 0.5rem;
+}
+.msg {
+  border-radius: var(--radius-m);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+}
+.msg-unread {
+  border-color: var(--color-teal);
+}
+.msg-done {
+  opacity: 0.7;
+}
+.msg-head {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  background: transparent;
+  border: 0;
+  color: var(--color-cream);
+  min-height: var(--control-lg);
+}
+.msg-head small {
+  color: var(--color-muted);
+}
+.msg-time {
+  color: var(--color-gold-strong);
+  font-weight: 700;
+}
+.msg-dot {
+  margin-left: auto;
+  flex: none;
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
+  background: var(--color-red);
+}
+.msg-body {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0 0.75rem 0.8rem;
+  color: var(--color-text-2);
+  font-size: var(--text-small);
+}
+.msg-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.msg-chips li {
+  padding: 0.15rem 0.6rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-cell);
+  color: var(--color-cream);
+  font-size: var(--text-micro);
+  font-weight: 700;
+}
+.msg-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+.msg-actions > * {
+  flex: 1;
+}
+.msg-why {
+  color: var(--color-muted);
+  font-size: var(--text-micro);
+}
+.msg-foot {
+  text-align: center;
+  color: var(--color-muted);
+  font-size: var(--text-micro);
+  padding: 0.4rem;
+}
+.rank-move {
+  font-style: normal;
+  font-weight: 700;
+}
+.rank-move-up {
+  color: var(--color-green);
+}
+.rank-move-down {
+  color: var(--color-red);
+}
+.rank-move-new {
+  color: var(--color-gold-strong);
+}
+
+.ev-back {
+  display: block;
+  margin: 0.6rem auto 0;
+  padding: 0.5rem 1.2rem;
+  background: transparent;
+  border: 0;
+  color: var(--color-text-2);
+  font-size: var(--text-small);
+  font-weight: 700;
+}
+.leg-break {
+  display: grid;
+  gap: 0.4rem;
+  justify-items: center;
+  text-align: center;
+}
+
+/* The profile: a card of facts instead of lines of text */
+.pf-card {
+  display: grid;
+  border-radius: var(--radius-m);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+}
+.pf-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.6rem 0.9rem;
+  min-height: 2.6rem;
+}
+.pf-row + .pf-row {
+  border-top: 1px solid var(--color-border);
+}
+.pf-row dt {
+  color: var(--color-muted);
+  font-size: var(--text-small);
+}
+.pf-row dd {
+  display: grid;
+  justify-items: end;
+  margin: 0;
+  color: var(--color-cream);
+  font-weight: 700;
+  text-align: right;
+}
+.pf-row dd small {
+  color: var(--color-muted);
+  font-size: var(--text-micro);
+  font-weight: 500;
+}
+.pf-bar {
+  display: block;
+  width: 7rem;
+  height: 0.5rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-cell);
+  overflow: hidden;
+}
+.pf-bar i {
+  display: block;
+  height: 100%;
+  background: var(--color-teal);
+}
+.pf-list {
+  display: grid;
+  border-radius: var(--radius-m);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+}
+.pf-list > li {
+  padding: 0.55rem 0.9rem;
+}
+.pf-list > li + li {
+  border-top: 1px solid var(--color-border);
+}
+.home-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.team-faces {
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
+.team-half {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--color-cell);
+}
+.team-half + .team-half {
+  border-left: 2px solid var(--color-bg);
+}
+.team-half img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.opp-frame-team {
+  display: flex;
+}
+.opp-team-pic {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  position: relative;
+}
+.opp-team-pic + .opp-team-pic {
+  border-left: 2px solid var(--color-bg);
+}
+.opp-team-pic img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* A name in a card of the draw: the face stays, the name shortens with an ellipsis instead of running out of the card. */
+.draw-name {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  width: 100%;
+  min-width: 0;
+}
+.draw-nm {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.page-title-long {
+  font-size: clamp(1.15rem, 5.4vw, var(--text-page-title));
+}
+
+.msg-kind {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-cell);
+  border: 1px solid var(--color-border);
+  color: var(--color-muted);
+}
+.msg-kind[data-tone="gold"] {
+  color: var(--color-gold-strong);
+  border-color: color-mix(in srgb, var(--color-gold) 55%, var(--color-border));
+}
+.msg-kind[data-tone="red"] {
+  color: var(--color-red);
+  border-color: color-mix(in srgb, var(--color-red) 55%, var(--color-border));
+}
+.msg-kind[data-tone="teal"] {
+  color: var(--color-teal);
+  border-color: color-mix(in srgb, var(--color-teal) 55%, var(--color-border));
+}
+
+/* The sections of the profile open and close, so the page is short until a list is wanted. */
+.pf-sec > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 2.4rem;
+  cursor: pointer;
+  list-style: none;
+}
+.pf-sec > summary::-webkit-details-marker {
+  display: none;
+}
+.pf-sec > summary::after {
+  content: "›";
+  font-size: 1.3rem;
+  line-height: 1;
+  color: var(--color-muted);
+  transition: transform var(--duration-base, 0.2s);
+}
+.pf-sec[open] > summary::after {
+  transform: rotate(90deg);
+}
+.pf-sec > :not(summary) {
+  margin-top: 0.4rem;
+}
+
+/* What a result gave besides the money: one card with a row each. */
+.new-card {
+  display: grid;
+  border-radius: var(--radius-m);
+  background: color-mix(in srgb, var(--color-surface) 88%, transparent);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+}
+.new-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.8rem;
+  color: var(--color-cream);
+  font-size: var(--text-small);
+}
+.new-row + .new-row {
+  border-top: 1px solid var(--color-border);
+}
+.new-row small {
+  color: var(--color-text-2);
+}
+.next-goal {
+  color: var(--color-text-2);
+  font-size: var(--text-small);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+
+/* Sponsors: a logo on a small tile, and the deals of one message as rows of one line. */
+.sponsor-logo { width: 2.75rem; height: 2.75rem; border-radius: var(--radius-s, 0.5rem); object-fit: cover; flex-shrink: 0; }
+.msg-deals { display: grid; gap: 0.5rem; margin-top: 0.5rem; }
+.msg-deals > li { display: flex; align-items: center; gap: 0.6rem; }
+.msg-deals small { color: var(--color-text-2); font-size: var(--text-small); }
+
+/* The drills of the training room: a row of one line each, with the level and a button. */
+.drills { display: grid; gap: 0.5rem; padding: 0.7rem 0.8rem; }
+.drills ul { display: grid; gap: 0.5rem; }
+.drills li { display: flex; align-items: center; gap: 0.6rem; }
+.drills small { color: var(--color-text-2); font-size: var(--text-small); }
+.drills-skill { color: var(--color-text-2); font-size: var(--text-small); }
+.drills-skill b { color: var(--color-cream); }
+.drills-level { color: var(--color-gold-strong); font-weight: 800; white-space: nowrap; }
+
+/* The setup steps lie over the pub picture: the screen keeps its type, but not its flat background. */
+.career-skin.wizard { background: none; }
+
+/* The recap's table, and the badge of a new rank. */
+.season-table { display: grid; gap: 0.3rem; width: min(20rem, 100%); padding: 0; margin: 0; list-style: none; }
+.season-table li { display: grid; grid-template-columns: 1.5rem 1fr auto; gap: 0.5rem; align-items: center; padding: 0.35rem 0.6rem; border-radius: var(--radius-s); background: var(--color-surface); border: 1px solid var(--color-border); font-size: var(--text-small); text-align: left; }
+.season-table li.me { border-color: var(--color-gold); color: var(--color-gold-strong); }
+.rankup-badge .rank-badge { width: 7.5rem; height: 8.8rem; display: block; filter: drop-shadow(0 0 28px color-mix(in srgb, var(--color-gold) 55%, transparent)); }
+.rankup-badge .rank-badge svg { width: 100%; height: 100%; }
+
+/* The profile: the face in a ring that fills towards the next title, three tabs, and the cabinet. */
+.pf-ring { --p: 0%; display: inline-grid; place-items: center; width: 5.2rem; height: 5.2rem; border-radius: 50%; flex-shrink: 0; background: conic-gradient(var(--color-gold) var(--p), var(--color-cell) 0); padding: 0.28rem; }
+.pf-ring > * { border-radius: 50%; background: var(--color-bg); }
+.pf-tabs { display: flex; gap: 0.35rem; padding: 0.25rem; border-radius: var(--radius-pill); background: var(--color-surface); border: 1px solid var(--color-border); }
+.pf-tab { flex: 1; padding: 0.45rem 0.4rem; border-radius: var(--radius-pill); font-weight: 700; font-size: var(--text-small); color: var(--color-text-2); background: transparent; border: 0; }
+.pf-tab[aria-selected="true"] { background: var(--color-teal); color: #04201f; }
+.pf-sponsor { display: flex; align-items: center; justify-content: flex-end; gap: 0.6rem; text-align: right; }
+.pf-sponsor small { display: block; }
+.trophy-chip { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0 0.7rem; height: var(--control); border-radius: var(--radius-pill); background: var(--color-surface); border: 1px solid var(--color-border); color: var(--color-gold-strong); }
+.cabinet { display: grid; gap: 0.2rem; }
+.cabinet-shelf { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.4rem; padding: 0.7rem 0.3rem 0.35rem; border-bottom: 0.4rem solid color-mix(in srgb, var(--color-gold) 30%, var(--color-cell)); background: linear-gradient(transparent, color-mix(in srgb, var(--color-gold) 7%, transparent)); text-align: center; }
+.cabinet-slot { position: relative; display: grid; justify-items: center; gap: 0.1rem; min-width: 0; }
+.cabinet-slot > span { width: 3.6rem; height: 4.4rem; display: block; }
+.cabinet-slot small { font-size: 0.68rem; color: var(--color-cream); font-weight: 700; line-height: 1.15; }
+.cabinet-slot .cabinet-note { color: var(--color-muted); font-weight: 500; }
+.cabinet-slot-empty small { color: var(--color-muted); }
+.cabinet-lock { position: absolute; top: 1.4rem; width: 1rem; height: 1rem; color: var(--color-muted); }
+
+/* The field under the plates of an opening: three faces and where the player stands. */
+.ev-field { display: grid; gap: 0.4rem; justify-items: center; margin-top: 0.7rem; }
+.ev-field-faces { display: flex; gap: 0.5rem; padding: 0; margin: 0; list-style: none; }
+.ev-field-faces > li { width: 3.4rem; }
+.ev-field p { color: var(--color-cream); font-size: var(--text-small); text-align: center; }
+.ev-field-rival { display: inline-block; margin-left: 0.5rem; padding: 0.05rem 0.5rem; border-radius: var(--radius-pill); border: 1px solid var(--color-red); color: var(--color-red); font-weight: 700; }
+
+/* The title keeps a dark halo, so lights in the picture behind never run through it; and a show shows its two players face to face. */
+.ev-title { text-shadow: 0 2px 16px rgba(0, 0, 0, 0.85); }
+.ev-faceoff { display: flex; align-items: center; justify-content: center; gap: 0.9rem; margin-top: 0.4rem; }
+
+/* A dark curtain that lifts when the career opens. */
+.career-curtain { position: fixed; inset: 0; z-index: 90; pointer-events: none; background: #0c110e; animation: curtain-up 0.5s 0.05s ease-out forwards; }
+@keyframes curtain-up { to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .career-curtain { display: none; } }
+
+/* Drill cards: a glyph, a goal, a meter from 1 to 100 with the room's ceiling marked, and the drill of the day on top. */
+.drill-daily { display: flex; align-items: center; gap: 0.6rem; padding: 0.55rem 0.65rem; border-radius: var(--radius-m); border: 1px solid var(--color-gold); background: color-mix(in srgb, var(--color-gold) 10%, var(--color-surface)); }
+.drill-daily-done { border-color: var(--color-border); background: var(--color-surface); opacity: 0.8; }
+.drill-flame { font-size: 1.4rem; line-height: 1; width: 2rem; text-align: center; }
+.drill-kicker { color: var(--color-gold-strong); font-weight: 800; letter-spacing: 0.06em; }
+.drills li { align-items: flex-start; }
+.drill-glyph { width: 2.2rem; height: 2.2rem; border-radius: var(--radius-s); display: grid; place-items: center; font-weight: 800; font-size: 0.8rem; color: #04201f; flex-shrink: 0; }
+.drill-locked .drill-glyph { opacity: 0.6; }
+.drill-meter { display: block; position: relative; height: 0.4rem; margin-top: 0.3rem; border-radius: var(--radius-pill); background: repeating-linear-gradient(45deg, var(--color-cell) 0 3px, color-mix(in srgb, var(--color-cell) 60%, transparent) 3px 6px); overflow: hidden; }
+.drill-meter i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, var(--color-teal), var(--color-green)); border-radius: var(--radius-pill); }
+.drill-meter em { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--color-gold-strong); }
+
+/* What the next step of the room opens: gold chips under what it adds to the room. */
+.stage-chip-unlock { border-color: var(--color-gold); color: var(--color-gold-strong); }
+
+/* The rival on the home screen: a face and the score between the two. */
+.rival-chip { align-self: flex-start; display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0.7rem 0.25rem 0.3rem; border-radius: var(--radius-pill); background: color-mix(in srgb, var(--color-red) 14%, var(--color-surface)); border: 1px solid color-mix(in srgb, var(--color-red) 55%, var(--color-border)); color: var(--color-cream); text-align: left; }
+.rival-chip small { display: block; font-size: 0.6rem; letter-spacing: 0.12em; font-weight: 800; color: var(--color-red); line-height: 1; }
+.rival-chip b { display: block; font-size: var(--text-small); line-height: 1.15; }
+.rival-score { font-weight: 800; color: var(--color-gold-strong); }
+
+/* The ranking: a header over the columns, and the player's own place pinned to the bottom. */
+.rank-head { display: flex; justify-content: space-between; padding: 0 0.7rem; font-size: 0.65rem; letter-spacing: 0.1em; font-weight: 800; color: var(--color-muted); }
+.rank-you { position: sticky; bottom: 0.5rem; display: flex; align-items: center; gap: 0.7rem; padding: 0.6rem 0.8rem; border-radius: var(--radius-m); background: color-mix(in srgb, var(--color-gold) 16%, var(--color-bg)); border: 1px solid var(--color-gold); color: var(--color-cream); }
+.rank-you small { display: block; color: var(--color-text-2); font-size: var(--text-small); }
+
+/* An invitation is an event: a gold card with a ribbon word, and the time that is left. */
+.msg-invite { border-color: var(--color-gold); background: linear-gradient(135deg, color-mix(in srgb, var(--color-gold) 16%, var(--color-surface)), var(--color-surface) 70%); box-shadow: 0 0 22px color-mix(in srgb, var(--color-gold) 16%, transparent); }
+.msg-ribbon { display: block; color: var(--color-gold-strong); font-weight: 800; letter-spacing: 0.14em; font-size: 0.62rem; }
+
+/* The two of a team cup side by side in the opening. */
+.ev-pair { display: inline-flex; align-items: center; }
+.ev-pair > * + * { margin-left: -0.6rem; }
+
+/* The chance as a ring: the share that is yours is drawn in gold. */
+.chance-ring { --p: 50%; display: inline-grid; place-items: center; width: 4.6rem; height: 4.6rem; border-radius: 50%; background: conic-gradient(var(--color-gold) var(--p), var(--color-cell) 0); position: relative; }
+.chance-ring::before { content: ""; position: absolute; inset: 0.32rem; border-radius: 50%; background: var(--color-bg); }
+.chance-ring .chance-n { position: relative; font-size: var(--text-title); }
+.chance-cap { font-size: var(--text-micro); letter-spacing: 0.12em; color: var(--color-text-2); font-weight: 700; }
+
+/* The road of a night: whom the player beat, as small chips. */
+.road-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; justify-content: center; padding: 0; margin: 0; list-style: none; }
+.road-chips li { display: grid; justify-items: center; line-height: 1.2; padding: 0.2rem 0.75rem; border-radius: var(--radius-pill); background: var(--color-surface); border: 1px solid var(--color-border); font-size: var(--text-small); color: var(--color-text-2); font-weight: 700; }
+
+/* Messages: headings for what waits and what is over; the news as a timeline with a dot for each event. */
+.msgs-head { list-style: none; margin-top: 0.4rem; color: var(--color-gold-strong); }
+.feed-title { margin-top: 0.6rem; color: var(--color-gold-strong); }
+.feed { position: relative; padding-left: 1.1rem; }
+.feed::before { content: ""; position: absolute; left: 0.35rem; top: 0.4rem; bottom: 0.4rem; width: 2px; background: var(--color-border); }
+.feed-item { position: relative; }
+.feed-item::before { content: ""; position: absolute; left: -0.95rem; top: 1.15rem; width: 0.55rem; height: 0.55rem; border-radius: 50%; background: var(--color-teal); box-shadow: 0 0 0 3px var(--color-bg); }
+.feed-item.feed-new::before { background: var(--color-gold-strong); }
+
+/* A career in the list, like a save file: the hall it is at with the character in it, and where it stands. */
+.slot { display: grid; width: 100%; padding: 0; overflow: hidden; text-align: left; border-radius: var(--radius-m); background: var(--color-surface); border: 1px solid var(--color-border); }
+.slot-scene { position: relative; display: block; height: 6.2rem; overflow: hidden; }
+.slot-scene img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 30%; filter: brightness(0.85); }
+.slot-char { position: absolute; right: 0.5rem; bottom: -1.6rem; height: 7.6rem; }
+.slot-char .char-figure { height: 100%; aspect-ratio: 2 / 3; }
+.slot-body { display: grid; gap: 0.15rem; padding: 0.6rem 0.8rem 0.7rem; }
+
+/* The character stage: swipe, or press an arrow. */
+.char-pick-stage { position: relative; touch-action: pan-y; }
+.char-arrow { position: absolute; top: 50%; transform: translateY(-50%); z-index: 2; width: 2.4rem; height: 2.4rem; border-radius: 50%; border: 1px solid var(--color-border); background: color-mix(in srgb, var(--color-bg) 70%, transparent); color: var(--color-cream); font-size: 1.5rem; line-height: 1; }
+.char-arrow-l { left: 0.3rem; }
+.char-arrow-r { right: 0.3rem; }
+
+/* The sponsor's patch on the shirt: a small tile that sits where the pose has a place for it. */
+.char-figure { position: relative; }
+.char-patch { position: absolute; aspect-ratio: 1; object-fit: cover; border-radius: 12%; transform: translate(-50%, -50%) rotate(-3deg); box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.55); }
+
+/* The season screen: the weeks as a wide strip, the finale as a card, and the near-term list. */
+button.season-strip { border: 1px solid var(--color-border); text-align: left; }
+.season-ticks-big { display: flex; gap: 0.3rem; }
+.season-ticks-big i { flex: 1; height: 0.6rem; border-radius: var(--radius-pill); background: var(--color-cell); display: block; }
+.season-ticks-big i.on { background: var(--color-teal); }
+.season-ticks-big i.now { background: var(--color-gold-strong); }
+.season-finale { padding: 0.8rem 0.9rem; border-radius: var(--radius-m); border: 1px solid var(--color-gold); background: color-mix(in srgb, var(--color-gold) 10%, var(--color-surface)); display: grid; gap: 0.2rem; }
+.season-next { display: grid; gap: 0.4rem; padding: 0; margin: 0; list-style: none; }
+.season-next li { display: flex; justify-content: space-between; gap: 0.6rem; padding: 0.5rem 0.7rem; border-radius: var(--radius-s); background: var(--color-surface); border: 1px solid var(--color-border); }
+.season-next small { color: var(--color-gold-strong); font-weight: 700; white-space: nowrap; }
+
+/* A trophy that is a photograph: it fills the same box as the drawn one. */
+.t3d-photo { display: grid; place-items: center; }
+.t3d-photo img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.45)); }
+
+/* In the cabinet a photographed cup keeps to its slot, so the words under it stay readable. */
+.cabinet-slot > span { overflow: hidden; }
+.cabinet-slot .t3d, .cabinet-slot .t3d-art, .cabinet-slot .t3d-photo { width: 100%; height: 100%; }
+.cabinet-slot .t3d-photo img { max-height: 100%; }
+.cabinet-slot .t3d-photo { height: 4.4rem; }
+.cabinet-slot .t3d-photo img { width: auto; height: 4.4rem; max-width: 100%; margin: 0 auto; }
+
+/* The black bars of the big openings are only a frame: they never take a touch, so a button that scrolls under one can still be pressed. */
+.ev-bar { pointer-events: none; }
+
+/* With the black bars of a big opening, the content keeps clear of them (the kicker at the top, the button at the bottom), and on a short phone it is packed a little closer. */
+.ev[data-scale="3"] .ev-inner, .ev[data-scale="4"] .ev-inner, .ev[data-scale="5"] .ev-inner { padding-block: 4.6rem; }
+@media (max-height: 820px) {
+  .ev-inner { gap: 0.55rem; }
+  .ev-cup { width: 4rem; }
+  .ev-field { margin-top: 0.2rem; gap: 0.25rem; }
+  .ev-field-faces > li { width: 2.9rem; }
+}
+
+/* Polish: thumb-sized strips and tabs, a quicker curtain, a short fade between the views of the career, and the danger kept apart in the menu. */
+button.season-strip { min-height: 2.75rem; padding-block: 0; }
+.pf-tab { min-height: 2.75rem; }
+.pf-row dd.pf-sponsor { display: flex; flex-direction: row; align-items: center; justify-content: flex-end; gap: 0.6rem; }
+.pf-sponsor .sponsor-logo { width: 2.25rem; height: 2.25rem; }
+.cabinet-slot small { font-size: 0.75rem; }
+.career-curtain { animation-duration: 0.3s; }
+@keyframes fade-quick { from { opacity: 0; } to { opacity: 1; } }
+.room-over .animate-screen-push { animation: fade-quick 0.12s ease-out both; }
+.menu-danger { display: flex; justify-content: center; margin-top: 1.6rem; }
+
+/* A bigger hit area round a small face, without changing how it looks. */
+.hit-pad { position: relative; }
+.hit-pad::after { content: ""; position: absolute; inset: -9px; }
+/* The rows of what a result gave: two, and a button for the rest. */
+.new-more { list-style: none; text-align: center; }
+.new-more button { padding: 0.5rem 1rem; color: var(--color-text-2); font-weight: 700; font-size: var(--text-small); min-height: 2.75rem; }
+/* An opening seen before is quick: the parts come in at once and the button is there after half a second. */
+.ev-quick .ev-from, .ev-quick .ev-kick, .ev-quick .ev-cup, .ev-quick .ev-title, .ev-quick .ev-plate, .ev-quick .ev-you, .ev-quick .ev-field { animation-duration: 0.25s !important; animation-delay: 0s !important; }
+.ev-quick .ev-go { animation-duration: 0.25s !important; animation-delay: 0.45s !important; }
+.ev-quick .ev-go .play-btn { animation-delay: 0.8s !important; }
+
+/* The home fits the screen exactly: the screen has 1 rem above and 2.5 rem below, and the home takes what is left (it used to be 1.5 rem too tall, so it scrolled). */
+.career-home { min-height: calc(100dvh - 3.5rem - var(--nav-space, 0px) - env(safe-area-inset-bottom, 0px)); }
+
+/* The places to play in, as a row of pictures. */
+.venue-row { display: flex; gap: 0.6rem; overflow-x: auto; padding: 0.2rem 0.1rem 0.8rem; margin-bottom: 0.6rem; scroll-snap-type: x proximity; }
+.venue-tile { position: relative; flex: 0 0 8.6rem; height: 6.2rem; padding: 0; border-radius: var(--radius-m); overflow: hidden; border: 2px solid var(--color-border); background: var(--color-surface); text-align: left; scroll-snap-align: start; }
+.venue-tile[aria-checked="true"] { border-color: var(--color-teal); box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-teal) 40%, transparent); }
+.venue-tile img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.venue-name { position: absolute; inset: auto 0 0 0; display: grid; padding: 1.2rem 0.5rem 0.4rem; background: linear-gradient(transparent, rgba(0, 0, 0, 0.8)); color: var(--color-cream); }
+.venue-name b { font-size: var(--text-small); line-height: 1.15; }
+.venue-name small { font-size: 0.68rem; color: var(--color-text-2); line-height: 1.2; }
+
+/* The field of a tournament outside the career, in its opening: the faces in a row. */
+.ev-faces { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem; padding: 0; margin: 0; list-style: none; }
+.ev-more { display: grid; place-items: center; min-width: 2.5rem; height: 2.5rem; border-radius: 50%; background: var(--color-surface); border: 1px solid var(--color-border); color: var(--color-cream); font-weight: 800; font-size: var(--text-small); }
+
+/* The pairs of a draw outside the career let the picture of the place show through. */
+.room-over .draw-row { background: color-mix(in srgb, var(--color-panel) 78%, transparent) !important; backdrop-filter: blur(6px); }
+
+/* The cup on the winner screen of a tournament, over the winner. */
+.champion-cup { width: 8.5rem; margin: 0 auto 0.5rem; }
+
+/* The name of a game or of darts, centred; what it is stands behind a small i. */
+.game-row-wrap { position: relative; }
+.game-row-wrap .game-row { width: 100%; justify-content: center; align-items: center; padding-inline: 3rem; }
+.dart-card-wrap { position: relative; }
+.dart-card-wrap .dart-card { width: 100%; height: 100%; }
+.info-dot { position: absolute; top: 50%; right: 0.2rem; transform: translateY(-50%); display: grid; place-items: center; width: 2.75rem; height: 2.75rem; border-radius: 50%; background: none; border: 0; color: var(--color-text-2); }
+.info-dot > span { display: grid; place-items: center; width: 1.45rem; height: 1.45rem; border-radius: 50%; border: 1.5px solid currentColor; font-family: var(--font-display); font-style: italic; font-weight: 700; font-size: 0.85rem; line-height: 1; }
+.info-dot[aria-expanded="true"] { color: var(--color-teal); }
+.info-dot.dart-info { top: 0.1rem; right: 0.1rem; transform: none; }
+.info-line { padding: 0.5rem 0.9rem; color: var(--color-text-2); font-size: var(--text-small); }
+
+/* The ranking of the field in an opening: the favourite in a frame, the next ones in a short list, and the player's own place. */
+.ev-fav { display: grid; justify-items: center; gap: 0.3rem; width: 5.2rem; }
+.ev-fav b { color: var(--color-cream); font-size: var(--text-small); text-align: center; line-height: 1.15; }
+.ev-rank { display: grid; gap: 0.3rem; width: min(15rem, 100%); padding: 0; margin: 0; list-style: none; }
+.ev-rank li { display: grid; grid-template-columns: 1.6rem 1fr; align-items: center; padding: 0.25rem 0.6rem; border-radius: var(--radius-s); background: color-mix(in srgb, var(--color-bg) 55%, transparent); border: 1px solid var(--color-border); color: var(--color-cream); font-size: var(--text-small); text-align: left; }
+.ev-rank li > span { color: var(--color-text-2); font-weight: 700; }
+.ev-rank li.me { border-color: var(--color-gold); color: var(--color-gold-strong); }
+.ev-rank li.gap { background: none; border: 0; padding-block: 0; line-height: 0.8; }
+
+/* The title card of a cup: the trophy stands a little out of the card. */
+.cup-banner { position: relative; display: flex; align-items: center; gap: 0.9rem; min-height: 4rem; margin: 1.4rem 0 1rem; padding: 0.6rem 1rem 0.6rem 4.4rem; border-radius: var(--radius-m); background: linear-gradient(90deg, color-mix(in srgb, var(--cup) 20%, var(--color-surface)), var(--color-surface) 80%); border: 1px solid color-mix(in srgb, var(--cup) 45%, var(--color-border)); box-shadow: var(--elevation-1); }
+.cup-banner-trophy { position: absolute; left: 0.7rem; bottom: 0.2rem; width: 2.9rem; height: 5.4rem; display: block; }
+.cup-banner-trophy .t3d, .cup-banner-trophy .t3d-art, .cup-banner-trophy .t3d-photo { width: 100%; height: 100%; }
+.cup-banner-trophy .t3d-photo img { width: auto; height: 100%; max-width: 100%; margin: 0 auto; }
+.cup-banner-trophy .t3d-art svg { height: 100%; width: auto; }
+.cup-banner-name { font-size: var(--text-title); line-height: 1.1; }
+.cup-banner-sub { color: var(--cup); font-size: var(--text-small); font-weight: 600; }
+.cup-banner-large { min-height: 5rem; padding-left: 5.4rem; }
+.cup-banner-large .cup-banner-trophy { width: 3.6rem; height: 6.8rem; }
+.cup-banner-large .cup-banner-name { font-size: var(--text-num); }
+/* The draw as one line per match: the two sides and "mot" between, the player's own line framed in gold. */
+.draw-lines { display: grid; gap: 0.4rem; }
+.draw-lines .draw-card { aspect-ratio: auto; height: 3rem; }
+.draw-lines .draw-card-front { flex-direction: row; justify-content: space-between; align-items: center; gap: 0.4rem; padding: 0 0.7rem; font-size: var(--text-small); }
+.draw-lines .draw-name { width: auto; flex: 1; min-width: 0; justify-content: flex-start; }
+.draw-lines .draw-name:last-of-type { flex-direction: row-reverse; justify-content: flex-start; }
+.draw-lines .draw-name:last-of-type .draw-nm { text-align: right; }
+.draw-lines .draw-card-me { top: 0.1rem; left: 0.5rem; right: auto; font-size: 0.55rem; }
+/* The favourites, in small frames. */
+.fav-compact { max-width: 15rem; margin-inline: auto; }
+
+/* The way back and the money stay at the top when a page of the career scrolls. */
+.career-hud-top { position: sticky; top: 0; z-index: 25; padding-block: 0.5rem; margin-block: -0.5rem 0; background: linear-gradient(var(--color-bg) 55%, transparent); }
+
+/* The level of the ladder, in a gold circle. */
+.drill-level-badge { display: grid; place-items: center; width: 2rem; height: 2rem; flex-shrink: 0; border-radius: 50%; background: var(--color-gold); color: #1b1405; font-weight: 800; font-size: 0.85rem; }
+
+/* The chance of winning is the big thing before a match. */
+.chance-ring { width: 8.6rem; height: 8.6rem; }
+.chance-ring::before { inset: 0.5rem; }
+.chance-ring .chance-n { font-size: 2.3rem; }
+.chance-cap { font-size: var(--text-small); }
+
+/* The draw in the career: names whole, in a smaller type, the ranking number small after them; the favourites in small frames without a number. */
+.draw-lines .draw-card-front { gap: 0.3rem; padding: 0 0.5rem; font-size: 0.8rem; }
+.draw-lines .draw-card-front > span:not(.draw-name):not(.draw-card-me) { font-size: 0.62rem; flex: none; }
+.draw-lines .draw-name { gap: 0.3rem; }
+.fav-compact { max-width: 11.5rem; gap: 0.4rem; }
+.fav-compact .opp-frame { padding: 2px; }
+
+/* The ranking in an opening: a title, and a row for each with a small face beside it. */
+.ev-rank-title { color: var(--color-text-2); font-size: var(--text-micro); font-weight: 800; letter-spacing: 0.16em; }
+.ev-rank { width: min(17rem, 100%); }
+.ev-rank li { grid-template-columns: 1.4rem 2.2rem 1fr; gap: 0.4rem; padding: 0.2rem 0.6rem; }
+.ev-rank-face { display: block; width: 2rem; font-style: normal; }
+.ev-rank-face .opp-frame { padding: 1.5px; }
+
+/* The training panel: three rows of one line each; the pay is a badge, the words are small. */
+.train { display: grid; gap: 0.5rem; }
+.train-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.65rem; border-radius: var(--radius-m); border: 1px solid var(--color-gold); background: color-mix(in srgb, var(--color-gold) 10%, var(--color-surface)); }
+.train-row-done { border-color: var(--color-border); background: var(--color-surface); opacity: 0.85; }
+.train-line { display: block; font-size: 0.82rem; line-height: 1.25; color: var(--color-cream); }
+.train-line b { font-weight: 800; }
+.train-line em { font-style: normal; color: var(--color-text-2); font-size: 0.75rem; }
+.train-badge { flex: none; padding: 0.15rem 0.55rem; border-radius: var(--radius-pill); background: var(--color-gold); color: #1b1405; font-weight: 800; font-size: 0.78rem; }
+.train .drill-kicker { font-size: 0.62rem; }
+.upgrade-picture { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border-radius: var(--radius-m); border: 1px solid var(--color-border); }
+
+/* The overview of the profile: the season as its number and ten dots, the rival as a face to press, merits as a link. */
+.pf-season { display: flex; align-items: center; justify-content: flex-end; gap: 0.6rem; }
+.pf-rival { display: inline-flex; align-items: center; gap: 0.5rem; min-height: 2.75rem; padding: 0 0.2rem; background: none; border: 0; color: var(--color-cream); text-align: right; font-weight: 700; }
+.pf-rival small { display: block; color: var(--color-gold-strong); }
+.pf-rival-face { display: block; width: 2.2rem; flex: none; }
+.pf-rival-face .opp-frame { padding: 1.5px; }
+.pf-rival-big { width: 7rem; margin: 0 auto; }
+.pf-link { min-height: 2.75rem; padding: 0 0.2rem; background: none; border: 0; color: var(--color-teal); font-weight: 700; }
+.pf-pick { display: grid; gap: 0.4rem; padding: 0; margin: 0; list-style: none; max-height: 60dvh; overflow-y: auto; }
+.pf-pick-row { display: flex; align-items: center; gap: 0.7rem; width: 100%; min-height: 3rem; padding: 0.3rem 0.7rem; border-radius: var(--radius-m); background: var(--color-surface); border: 1px solid var(--color-border); color: var(--color-cream); text-align: left; }
+.pf-pick-row[aria-pressed="true"] { border-color: var(--color-gold); }
+.pf-merits { display: grid; gap: 0.4rem; padding: 0; margin: 0; list-style: none; max-height: 62dvh; overflow-y: auto; }
+.pf-merits li { display: flex; align-items: center; gap: 0.7rem; padding: 0.45rem 0.7rem; border-radius: var(--radius-m); background: var(--color-surface); border: 1px solid var(--color-border); color: var(--color-text-2); }
+.pf-merits li.done { border-color: var(--color-gold); color: var(--color-cream); }
+.pf-merits b { display: block; font-size: var(--text-small); }
+.pf-merits small { display: block; font-size: 0.72rem; color: var(--color-muted); }
+.pf-merit-mark { display: grid; place-items: center; width: 1.5rem; height: 1.5rem; flex: none; border-radius: 50%; border: 1.5px solid var(--color-border); color: #1b1405; }
+.pf-merits li.done .pf-merit-mark { background: var(--color-gold); border-color: var(--color-gold); }
+.pf-row dd.pf-season { flex-direction: row; flex-wrap: nowrap; white-space: nowrap; }
+.pf-row dd.pf-season .season-ticks { display: inline-flex; flex-wrap: nowrap; }
+
+/* Meritter: the best place in each cup, above the list of what is done */
+.pf-merits.pf-best { max-height: none; overflow: visible; margin-bottom: 0.8rem; }
+
+/* Meritter: the best place in each cup, above the list of what is done */
+.pf-merits.pf-best { max-height: none; overflow: visible; margin-bottom: 0.8rem; }
+
+/* Cups of invitations that have not come yet: a dark outline with a question mark */
+.cabinet-slot > .cabinet-q { position: absolute; top: 1.2rem; width: auto; height: auto; font-family: var(--font-display, inherit); font-size: 1.4rem; font-weight: 800; line-height: 1; color: var(--color-muted); }
+.cabinet-shelf-wrap { grid-auto-rows: auto; }
+
+/* The two who meet in a duel: a face each, with the name under it */
+.ev-face { display: grid; justify-items: center; gap: 0.25rem; }
+.ev-face small { color: var(--color-cream); font-weight: 700; font-size: var(--text-small); max-width: 8rem; text-align: center; }
+
+/* The road of the night: the round over the name of the one beaten in it */
+.road-chips li small { font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-gold-strong); font-weight: 700; }
+.road-chips li b { color: var(--color-cream); font-weight: 700; }
+
+/* The first line of an open message: the kind, who it is from and how long it lasts */
+.msg-meta { color: var(--color-muted); font-size: var(--text-small); margin-bottom: 0.35rem; }
+
+/* The books: one line for each movement of money, and the sum under */
+.books { display: grid; gap: 0.35rem; padding: 0; margin: 0 0 0.6rem; list-style: none; max-height: 52dvh; overflow-y: auto; }
+.books li { display: flex; align-items: center; justify-content: space-between; gap: 0.7rem; padding: 0.45rem 0.7rem; border-radius: var(--radius-m); background: var(--color-surface); border: 1px solid var(--color-border); color: var(--color-cream); }
+.books small { display: block; font-size: 0.72rem; color: var(--color-muted); }
+.books-in { color: var(--color-green); font-weight: 800; }
+.books-out { color: var(--color-red); font-weight: 800; }
+.books-sum { display: flex; justify-content: space-between; padding: 0.2rem 0.7rem; color: var(--color-text-2); }
+
+/* The ranking: a line that says what the figure is, and the column heading that stays under the top bar while the list is scrolled */
+.rank-explain { color: var(--color-text-2); font-size: var(--text-small); margin: 0; }
+.rank-head { position: sticky; top: 3.4rem; z-index: 5; padding-block: 0.35rem; background: linear-gradient(var(--color-bg) 70%, transparent); }
+
+/* Profil: the last three tournaments under the overview */
+.pf-recent { margin-top: 0.9rem; display: grid; gap: 0.4rem; }
+.pf-recent ul { display: grid; gap: 0.35rem; padding: 0; margin: 0; list-style: none; }
+.pf-recent li { display: flex; justify-content: space-between; gap: 0.7rem; padding: 0.5rem 0.75rem; border-radius: var(--radius-m); background: var(--color-surface); border: 1px solid var(--color-border); color: var(--color-text-2); font-size: var(--text-small); }
+.pf-recent b { color: var(--color-cream); white-space: nowrap; }
+
+/* A row of the ranking opens the card of the player: the whole row is the button */
+.rank-row { position: relative; }
+.rank-open { position: absolute; inset: 0; border-radius: inherit; background: transparent; border: 0; cursor: pointer; }
+.rank-open:focus-visible { outline: 3px solid var(--color-teal); outline-offset: 2px; }
+
+/* Turneringer as a road: a line down the left with a stop by each cup */
+.tourney-path > li { position: relative; padding-left: 1.5rem; }
+.tourney-path > li::before { content: ""; position: absolute; left: 0.45rem; top: -0.5rem; bottom: -0.5rem; width: 3px; background: color-mix(in srgb, var(--color-border) 80%, transparent); }
+.tourney-path > li:first-child::before { top: 50%; }
+.tourney-path > li:last-child::before { bottom: 50%; }
+.tourney-path > li::after { content: ""; position: absolute; left: 0.1rem; top: 50%; width: 0.95rem; height: 0.95rem; margin-top: -0.475rem; border-radius: 50%; background: var(--color-bg); border: 3px solid var(--color-border); }
+.tourney-path > li[data-stop="won"]::after { background: var(--color-green); border-color: var(--color-green); }
+.tourney-path > li[data-stop="won"]::before { background: color-mix(in srgb, var(--color-green) 60%, transparent); }
+.tourney-path > li[data-stop="next"]::after { background: var(--color-gold); border-color: var(--color-gold); box-shadow: 0 0 10px var(--color-gold); }
+.tourney-path > li[data-stop="open"]::after { border-color: var(--color-teal); }
+
+/* Profil: the statistics as small tiles, three to a row */
+.pf-stats { display: grid !important; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.4rem !important; }
+.pf-stats li { display: grid !important; justify-items: center; text-align: center; padding: 0.5rem 0.3rem !important; }
+.pf-stats b { font-family: var(--font-display); font-size: var(--text-title); color: var(--color-cream); }
+.pf-stats small { color: var(--color-muted); font-size: var(--text-micro); }
+
+/* The week of the rival's match: a red ring round its tick in the season strip */
+.season-ticks i.rival { box-shadow: 0 0 0 2px var(--color-red); }
+
+/* The entrance before a semi-final and a final: the words of the caller, in light, over the two */
+.entrance { display: grid; justify-items: center; gap: 0.1rem; margin: 0; text-align: center; animation: entrance-in 0.9s cubic-bezier(.2,.8,.2,1) both; }
+.entrance span { font-size: var(--text-micro); letter-spacing: 0.22em; text-transform: uppercase; color: var(--color-text-2); }
+.entrance b { font-size: clamp(1.8rem, 9vw, 2.6rem); line-height: 1; color: var(--color-cream); text-shadow: 0 0 22px color-mix(in srgb, var(--cup) 70%, transparent); }
+@keyframes entrance-in { from { opacity: 0; transform: scale(1.25); letter-spacing: 0.2em; } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .entrance { animation: none; } }

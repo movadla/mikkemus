@@ -3,7 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { cupColor } from "@/lib/botCup";
 import { GAMES, PLACE_LABEL, REVENGE_BONUS, TIERS, challengeTier, closeChallenge, eventTier, declineChallenge, dollars, settleChallenge, type ActiveEvent, type Career, type Challenge } from "@/lib/career";
-import { matchParticipants } from "@/lib/tournament";
+import { medOfLevel } from "@/lib/opponentStats";
+import { bracketRoundLabel, matchParticipants } from "@/lib/tournament";
+
+/** The round a win was in, for the road of the night: short for the last three (kvart, semi, finale), the full name for the earlier ones. */
+const ROAD_ROUND = (size?: number): string => (size === undefined ? "Gruppe" : size === 4 ? "Kvart" : size === 2 ? "Semi" : bracketRoundLabel(size));
 import { sponsorOutcome } from "@/lib/careerWorld";
 import { lifeOf } from "@/lib/careerLife";
 import { nextRank, rankOf, rankProgress } from "@/lib/careerGoals";
@@ -85,7 +89,8 @@ function ChallengeFlow({ career, commit, onHub }: { career: Career; commit: (c: 
   // Whoever throws first changes from one leg to the next.
   const order = (n: number) => (n % 2 === 0 ? [career.player, opponent] : [opponent, career.player]);
   const newLeg = (n: number) => newCountdown(tv?.theirStart === 301 ? 301 : 501, true, order(n), tv ? { [career.player]: tv.humanStart } : undefined);
-  const botLevels = { [opponent]: c.opponent.skill };
+  // The skill of a challenge is a number on the level scale (1 sharpest to 8 weakest); the games take a number as a MED in mm, so it is turned into one.
+  const botLevels = { [opponent]: medOfLevel(c.opponent.skill) };
   const [cd, setCd] = useState(() => newLeg(0));
   const [lava, setLava] = useState(() => newLava(DEFAULT_LIVES, [career.player, opponent]));
   const [hs, setHs] = useState(() => newHighstriker(DEFAULT_LIVES, [career.player, opponent]));
@@ -442,8 +447,8 @@ export function Result({ career, a, onDone }: { career: Career; a: ActiveEvent; 
     : (a.tournament?.matches ?? [])
         .filter((x) => !x.isBronzeMatch && !x.isBye && x.winner === career.player && matchParticipants(x).includes(career.player))
         .sort((x, y) => (y.bracketRoundSize ?? 0) - (x.bracketRoundSize ?? 0))
-        .map((x) => matchParticipants(x).find((n) => n !== career.player))
-        .filter((n): n is string => !!n);
+        .map((x) => ({ round: ROAD_ROUND(x.bracketRoundSize), name: matchParticipants(x).find((n) => n !== career.player) }))
+        .filter((x): x is { round: string; name: string } => !!x.name);
   const rivalLine = !won && knockedOutBy && rec && rec.l >= 2 && rec.l > rec.w ? `${knockedOutBy} har slått deg ${rec.l} ganger. En seier over ham neste gang gir ${dollars(REVENGE_BONUS)} ekstra.` : null;
   // The sounds of the moment: a win is a fanfare and a cheer, whatever place it is a pay-out for is a touch.
   useEffect(() => {
@@ -474,17 +479,19 @@ export function Result({ career, a, onDone }: { career: Career; a: ActiveEvent; 
             </p>
           ) : (
             <p className="font-display tabular" style={{ fontSize: "var(--text-num)", color: "var(--color-text-2)" }}>
-              +{r.points} rangpoeng
+              +{r.points} poeng
             </p>
           )}
           {beaten.length > 0 && (
             <ul className="road-chips" aria-label="Veien dit">
-              {beaten.map((n, i) => (
-                <li key={`${n}-${i}`}>Slo {n}</li>
+              {beaten.map((b, i) => (
+                <li key={`${b.name}-${i}`}>
+                  <small>{b.round}</small>
+                  <b>{b.name}</b>
+                </li>
               ))}
             </ul>
           )}
-          <NextGoal career={career} />
         </div>
         <NewCard
           rows={[

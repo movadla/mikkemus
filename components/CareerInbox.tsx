@@ -121,16 +121,17 @@ export function CareerInbox({
                 )}
                 <span className="min-w-0 text-left">
                   <b className="block truncate">{m.title}</b>
-                  <small className="block truncate">
-                    {kindOf(m).word} · {m.from.name}
-                    {isOpen(m) && left !== null && <span className="msg-time"> · {left <= 1 ? "siste uke" : `${left} uker igjen`}</span>}
-                    {m.state !== "open" && <span> · {STATE[m.state]}</span>}
-                  </small>
                 </span>
                 {!m.read && <i className="msg-dot" aria-label="Ulest" />}
               </button>
               {open === m.id && (
                 <div className="msg-body">
+                  {/* The row is only the title: who it is from, what kind it is and how long it lasts are here, with the rest. */}
+                  <p className="msg-meta">
+                    {kindOf(m).word} · {m.from.name}
+                    {isOpen(m) && left !== null && <span className="msg-time"> · {left <= 1 ? "siste uke" : `${left} uker igjen`}</span>}
+                    {m.state !== "open" && <span> · {STATE[m.state]}</span>}
+                  </p>
                   {offer.kind !== "sponsor" && <p>{m.body}</p>}
                   {offer.kind === "invite" && <InviteFacts offer={offer} />}
                   {offer.kind === "challenge" && (
@@ -143,6 +144,8 @@ export function CareerInbox({
                       ) : (
                         <li>{GAMES[offer.game].name}</li>
                       )}
+                      {/* A challenge is always played somewhere: at Ly, or in the studio when it is a show. */}
+                      <li>{offer.tv ? "I TV-studioet" : "På Ly"}</li>
                       <li>Vinner {dollars(offer.stake)}</li>
                       {offer.risk > 0 && <li>Taper {dollars(offer.risk)}</li>}
                     </ul>

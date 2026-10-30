@@ -17,7 +17,7 @@ import { SeasonScreen } from "./SeasonScreen";
 import { RankUp, SeasonRecap } from "./CareerScreens";
 import { CareerNews } from "./CareerNews";
 import { sponsorLogo } from "@/lib/careerLife";
-import { inboxCount, isOpen, lifeOf, seasonOf, unseenNews, weekInSeason, WEEKS_PER_SEASON } from "@/lib/careerLife";
+import { inboxCount, isOpen, lifeOf, RIVAL_WEEK, seasonOf, unseenNews, weekInSeason, WEEKS_PER_SEASON } from "@/lib/careerLife";
 import { markNewsSeen } from "@/lib/careerWorld";
 import { CareerHud } from "./CareerHud";
 import { RankBadge, TrophyArt } from "./CareerTrophy";
@@ -46,13 +46,13 @@ function SeasonStrip({ career, onOpen }: { career: Career; onOpen: () => void })
   const life = lifeOf(career);
   const week = weekInSeason(life.week);
   return (
-    <button type="button" className={`season-strip tabular tactile ${FOCUS_RING}`} aria-label={`Sesongen: sesong ${seasonOf(life.week)}, uke ${week} av ${WEEKS_PER_SEASON}`} onClick={onOpen}>
+    <button type="button" className={`season-strip tabular tactile ${FOCUS_RING}`} aria-label={`Sesongen: sesong ${seasonOf(life.week)}, uke ${week} av ${WEEKS_PER_SEASON}, rivalkampen i uke ${RIVAL_WEEK}`} onClick={onOpen}>
       <span>
         Sesong {seasonOf(life.week)} · uke {week}
       </span>
       <span className="season-ticks" aria-hidden>
         {Array.from({ length: WEEKS_PER_SEASON }, (_, i) => (
-          <i key={i} className={i < week - 1 ? "on" : i === week - 1 ? "now" : ""} />
+          <i key={i} className={`${i < week - 1 ? "on" : i === week - 1 ? "now" : ""} ${i === RIVAL_WEEK - 1 ? "rival" : ""}`} />
         ))}
       </span>
     </button>
@@ -379,8 +379,11 @@ export function Hub({ career, onBack, onExit, onPlay, onChallenge, onTrain, comm
           {view === "road" && (
             <>
               <CareerInvites career={career} commit={commit} onPlay={onPlay} />
-              <ul className="space-y-2" aria-label="Turneringer" style={{ paddingBottom: "6.5rem" }}>
+              {/* The ladder as a road: a line down the side with a stop for each step, green where the cup is won, gold for the next one to take. */}
+              <ul className="space-y-2 tourney-path" aria-label="Turneringer" style={{ paddingBottom: "6.5rem" }}>
                 {LADDER.map((tier) => {
+                  // The next stop on the road: the highest step that is open and not yet won.
+                  const nextStop = [...LADDER].reverse().find((t) => isUnlocked(career, t) && !career.trophies.some((x) => x.tier === t.id && !x.name))?.id;
                   const locked = !isUnlocked(career, tier);
                   const here = career.active?.tier === tier.id;
                   const qualified = !locked && !!tier.qualify;
@@ -391,7 +394,7 @@ export function Hub({ career, onBack, onExit, onPlay, onChallenge, onTrain, comm
                   const needs = tier.qualify?.replace(/^Krever /, "").replace("Regionmesterskapet", "Region").replace("Norgesmesterskapet", "NM");
                   const takes = needs ? needs.charAt(0).toUpperCase() + needs.slice(1) : "Åpen for alle";
                   return (
-                    <li key={tier.id}>
+                    <li key={tier.id} data-stop={career.trophies.some((t) => t.tier === tier.id && !t.name) ? "won" : locked ? "locked" : tier.id === nextStop ? "next" : "open"}>
                       <button type="button" onClick={() => setPicked(tier.id)} aria-pressed={selected.id === tier.id} className={`tourney-card tactile ${selected.id === tier.id ? "tourney-card-on" : ""} ${locked ? "tourney-card-locked" : ""} ${FOCUS_RING}`} style={{ "--cup": colour, "--pic": pic ? `url(${pic})` : "none", "--frame": locked ? "var(--frame-locked)" : frameOf(tier.id) } as React.CSSProperties}>
                         <span className="tourney-trophy" aria-hidden>
                           {locked ? (

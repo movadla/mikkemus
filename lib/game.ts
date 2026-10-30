@@ -329,6 +329,10 @@ export type TurnAggregate = {
   /** Darts actually thrown across these turns — the honest "piler brukt". Not hits + misses:
    *  hits counts crosses, so a triple would inflate it by two darts that were never thrown. */
   darts: number;
+  /** A match of 301 or 501: what each round made (a round over the line is 0), for the statistics of the career. */
+  rounds?: number[];
+  /** A match of 301 or 501 that the player won: what the last round took out. */
+  checkout?: number;
 };
 
 /** Sums a player's full turn-by-turn log (already de-duplicated by turn index) into totals. */

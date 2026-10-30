@@ -14,7 +14,7 @@ export function meritsOf(career: Career): Merit[] {
   const has = (tier: string) => career.trophies.some((t) => t.tier === tier && !t.name);
   const duelWins = career.history.filter((h) => h.game && h.won).length;
   const climb = (career.climb?.level ?? 1) - 1;
-  const rankMerit = (i: number) => ({ id: `rank-${i}`, name: RANKS[i].name, about: `${RANKS[i].min} rangpoeng`, done: career.points >= RANKS[i].min });
+  const rankMerit = (i: number) => ({ id: `rank-${i}`, name: RANKS[i].name, about: `${RANKS[i].min} poeng`, done: career.points >= RANKS[i].min });
   const tierMerits = LADDER.map((t) => ({ id: `cup-${t.id}`, name: TIERS[t.id].trophy.replace(/-?pokalen$/, "").replace(/-$/, ""), about: `Vinn ${t.name}`, done: has(t.id) }));
   return [
     { id: "first", name: "Første turnering", about: "Spill en turnering", done: career.played >= 1 },

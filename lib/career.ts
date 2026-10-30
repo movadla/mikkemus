@@ -9,6 +9,9 @@
  * here is plain data in and out: a career can be saved as it is, paused anywhere and picked up again. See CAREER_PLAN.md.
  */
 import { levelOfMed } from "./botLevels";
+import { book } from "./ledger";
+import { matchLines, withLines, type MatchLine } from "./careerStats";
+import type { LedgerEntry } from "./ledger";
 import { addNews, lifeOf, lyPool, mustPlay, rivalOf, welcomeLife, REP_MAX, type Invitation, type Life, type Tv } from "./careerLife";
 import { INTERNATIONALS, LY_REGULARS } from "./opponents";
 import { countdownOf, gameOf, type CareerGame } from "./careerGame";
@@ -253,6 +256,10 @@ export type Career = {
   qualified: TierId[];
   /** The cups won, newest first. */
   trophies: Trophy[];
+  /** The books: every movement of money, with the week and what it was for (lib/ledger.ts). Absent on a career from before there were any. */
+  ledger?: LedgerEntry[];
+  /** One line for each match the player has thrown in a tournament, for the statistics on the profile (lib/careerStats.ts). */
+  log?: MatchLine[];
   /** The best place the player has had in each step of the ladder: kept for good (the history holds only the last thirty events). Absent on a career from before there was one: the profile reads the history and the shelf then. */
   best?: Partial<Record<TierId, Place>>;
   /** The last training sessions, newest first. */
@@ -294,13 +301,28 @@ export const REGULARS = LY_REGULARS.map((r) => r.name);
 const FIRST = ["Anders", "Mikael", "Jonas", "Tobias", "Henrik", "Lukas", "Marius", "Erik", "Stian", "Daniel", "Peter", "Marco", "Luca", "Jan", "Pieter", "Sven", "Karl", "Dmitri", "Ivan", "Tomas", "Rafael", "Hugo", "Oskar", "Felix", "Emil", "Nils", "Magnus", "Viktor", "Adam", "Leon", "Matteo", "Jesper"];
 const LAST = ["Berg", "Holm", "Dahl", "Lund", "Strand", "Vik", "Moe", "Brandt", "Keller", "Rossi", "Visser", "Novak", "Kovac", "Lindqvist", "Hartmann", "Dubois", "Moreau", "Jansen", "Bakker", "Fischer", "Weber", "Olsen", "Nygård", "Solberg", "Haugen", "Berntsen", "Engen", "Rud", "Foss", "Ruud", "Santos", "Varga"];
 
+/** Norwegian names for the people of the Norwegian events who are not from Ly. */
+const NOR_FIRST = ["Mikael", "Jonas", "Tobias", "Henrik", "Marius", "Erik", "Stian", "Daniel", "Magnus", "Emil", "Nils", "Jesper", "Oskar", "Sindre", "Eirik", "Kristian"];
+const NOR_LAST = ["Berg", "Strand", "Vik", "Moe", "Olsen", "Nygård", "Solberg", "Haugen", "Berntsen", "Engen", "Rud", "Foss", "Ruud"];
+
 const byLuck = <T>(items: T[], key: (t: T) => string, seed: string): T[] => [...items].sort((x, y) => unit(`${seed}|${key(x)}`) - unit(`${seed}|${key(y)}`));
 
 /** `count` names for a field, none of them the player's: the regulars at the pub, full names everywhere else. */
 export function fieldNames(tier: Tier, player: string, seed: number, count: number, world?: Life["world"]): string[] {
   const own = player.trim().toLowerCase();
   const retired = world?.retired ?? [];
-  if (tier.id === "lu") return byLuck((world ? lyPool({ world } as Life) : REGULARS).filter((n) => n.toLowerCase() !== own), (n) => n, `${seed}|names`).slice(0, count);
+  const ly = byLuck((world ? lyPool({ world } as Life) : REGULARS).filter((n) => n.toLowerCase() !== own), (n) => n, `${seed}|names`);
+  if (tier.id === "lu") return ly.slice(0, count);
+  // The Norwegian events are played by Norwegians: the regional championship by the people of Ly and a few more from the region, the national
+  // one by Ly and the best Norwegians. The international names come in from the Grand Slam.
+  if (tier.id === "region" || tier.id === "nm") {
+    const nf = byLuck(NOR_FIRST, (n) => n, `${seed}|nf`);
+    const nl = byLuck(NOR_LAST, (n) => n, `${seed}|nl`);
+    const made = nf.map((f, i) => `${f} ${nl[(i * 5) % nl.length]}`).filter((n) => !n.toLowerCase().startsWith(`${own} `));
+    const norwegians = byLuck(INTERNATIONALS.filter((n) => n.nat === "NOR" && !retired.includes(n.name)).map((n) => n.name), (n) => n, `${seed}|nor`);
+    const fromLy = Math.min(ly.length, Math.round(count * (tier.id === "region" ? 0.65 : 0.6)));
+    return [...ly.slice(0, fromLy), ...(tier.id === "nm" ? norwegians : []), ...made].filter((n, i, all) => n.toLowerCase() !== own && all.indexOf(n) === i).slice(0, count);
+  }
   const firsts = byLuck(FIRST, (n) => n, `${seed}|first`);
   const lasts = byLuck(LAST, (n) => n, `${seed}|last`);
   // The international players with a face of their own come back in the bigger events; the rest of the field is made up.
@@ -403,7 +425,7 @@ export function startEvent(career: Career, tierId: TierId, seed: number, invite?
   const cost = entryCost(career, tier);
   const active: ActiveEvent = { id: `${career.id}-${seed}`, tier: tierId, seed, cost, entrants: fieldFor(career, tier, seed), cup: cupFor(career, tier, seed), tournament: null, result: null, ...(invite ? { invite } : {}) };
   // The qualification is for this one entry (an invitation uses none).
-  return { ...career, money: career.money - cost, qualified: invite ? career.qualified : career.qualified.filter((q) => q !== tierId), active };
+  return book({ ...career, money: career.money - cost, qualified: invite ? career.qualified : career.qualified.filter((q) => q !== tierId), active }, "fee", `Innskudd: ${tier.name}`, -cost);
 }
 
 /** The draw is made: the cup is opened, in the order the draw gave. */
@@ -455,7 +477,7 @@ export function finishEvent(career: Career, now: string): Career {
   const entry: HistoryEntry = { at: now, event: tier.name, place, prize: result.prize, cost: result.cost, points: result.points };
   const won = place === "winner";
   const opens = tier.opens && tier.opens.places.includes(place) ? tier.opens.tier : null;
-  return {
+  return book(withLines({
     ...career,
     qualified: opens && !career.qualified.includes(opens) ? [...career.qualified, opens] : career.qualified,
     money: career.money + result.prize,
@@ -468,7 +490,7 @@ export function finishEvent(career: Career, now: string): Career {
     history: [entry, ...career.history].slice(0, 30),
     rivals,
     active: { ...a, tournament: t, result },
-  };
+  }, matchLines(t, side, now)), "prize", `Premie: ${tier.name}`, result.prize);
 }
 
 /** Leaves the finished event behind. */
@@ -550,7 +572,7 @@ export function settleChallenge(career: Career, won: boolean, now: string): Care
   if (life && (c.tv || c.opponent.name === rivalOf(career).name)) {
     life = addNews(life, "you", won ? `${career.player} slo ${c.opponent.name}${c.tv ? ` i ${c.tv.title}` : ""}` : `${career.player} tapte mot ${c.opponent.name}${c.tv ? ` i ${c.tv.title}` : ""}`, won ? `+${dollars(prize)}` : lost > 0 ? `−${dollars(lost)}` : "", career.player);
   }
-  return { ...career, money: career.money + prize, history: [entry, ...career.history].slice(0, 30), challenge: { ...c, won }, trophies: [...trophy, ...career.trophies], ...(life ? { life: { ...life, reputation: Math.min(REP_MAX, life.reputation + (c.from ? 1 : 0)) } } : {}) };
+  return book({ ...career, money: career.money + prize, history: [entry, ...career.history].slice(0, 30), challenge: { ...c, won }, trophies: [...trophy, ...career.trophies], ...(life ? { life: { ...life, reputation: Math.min(REP_MAX, life.reputation + (c.from ? 1 : 0)) } } : {}) }, "duel", c.tv ? `${c.tv.title}: ${c.opponent.name}` : `Duell mot ${c.opponent.name}`, prize);
 }
 
 /**
@@ -625,7 +647,7 @@ export function whyNotBuy(career: Career): string | null {
 export function buyStage(career: Career): Career {
   if (whyNotBuy(career)) return career;
   const next = nextStage(career)!;
-  return { ...career, money: career.money - next.price, room: career.room + 1 };
+  return book({ ...career, money: career.money - next.price, room: career.room + 1 }, "room", `Treningsrom, nivå ${career.room + 2}`, -next.price);
 }
 
 /** The picture of a step: where it lies in public/. */

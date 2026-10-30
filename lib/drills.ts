@@ -9,6 +9,7 @@
  * kind to add here, with the same level, cap and pass.
  */
 import type { Career } from "./career";
+import { book } from "./ledger";
 import { trainCareer } from "./training";
 
 export const LEVEL_MIN = 1;
@@ -99,7 +100,7 @@ export const climbOpen = (career: Career) => climbLevel(career) <= Math.min(CLIM
 /** Three darts have made this much: when it is enough for the level, the player moves up and is paid for it. */
 export function applyClimb(career: Career, score: number): Career {
   if (!climbOpen(career) || score < climbTarget(climbLevel(career))) return career;
-  return { ...career, money: career.money + CLIMB_REWARD, climb: { level: climbLevel(career) + 1 } };
+  return book({ ...career, money: career.money + CLIMB_REWARD, climb: { level: climbLevel(career) + 1 } }, "training", `Stigen, nivå ${climbLevel(career)}`, CLIMB_REWARD);
 }
 
 /** The drill of a day: one of those the room has opened, the same for the whole day. */
@@ -129,6 +130,6 @@ export function applyDrill(career: Career, r: DrillResult, now: string): Career 
   // The drill of the day, passed for the first time that day: a streak day, and the reward.
   const day = now.slice(0, 10);
   const today = dailyOf(career, day);
-  if (ok && !today.done && today.id === r.id) return { ...next, money: next.money + DAILY_REWARD, daily: { day, done: true, streak: today.streak + 1, last: day } };
+  if (ok && !today.done && today.id === r.id) return book({ ...next, money: next.money + DAILY_REWARD, daily: { day, done: true, streak: today.streak + 1, last: day } }, "training", "Dagens øvelse", DAILY_REWARD);
   return next;
 }

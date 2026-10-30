@@ -5,6 +5,7 @@
  * prize for the best of it, and the other players change: some get sharper or worse, some stop, and new ones come. Nothing is random in the
  * sense that matters for saving: everything is drawn from the name of the career and the week, so the same career is the same on every phone.
  */
+import { book } from "./ledger";
 import { levelOfMed } from "./botLevels";
 import { unit } from "./botCup";
 import { EVERYONE, LY_REGULARS, INTERNATIONALS, opponentOf, type Opponent } from "./opponents";
@@ -14,7 +15,7 @@ import {
   type Career, type Challenge, type GameId, type Place, type Tier, type TierId,
 } from "./career";
 import {
-  BOSSES, REP_MAX, addMessage, addNews, dealsOf, WEEKS_PER_SEASON, lifeOf, lyPool, placeMeets, rivalOf, seasonOf, weekInSeason,
+  BOSSES, REP_MAX, RIVAL_WEEK, addMessage, addNews, dealsOf, WEEKS_PER_SEASON, lifeOf, lyPool, placeMeets, rivalOf, seasonOf, weekInSeason,
   type Invitation, type Life, type TeamCup, type Message, type Offer, type Rookie, type Sender, type SeasonResult, type SponsorDeal,
 } from "./careerLife";
 
@@ -74,9 +75,12 @@ export function playBracket(names: string[], medOf: (name: string) => number, ke
 }
 
 /** The cup of the week elsewhere: one of the steps the player has reached, played by the others. Their points go to the season. */
-function otherCup(career: Career, life: Life, week: number): Life {
+function otherCup(career: Career, life: Life, week: number, played?: TierId): Life {
   const top = LADDER.indexOf(topStep(career));
-  const tier = LADDER[Math.floor(unit(`${career.id}|${week}|which`) * (top + 1))] ?? LADDER[0];
+  // Not the step the player has just played: the news would then have a winner of the same cup that is not the player.
+  const open = LADDER.slice(0, top + 1).filter((t) => t.id !== played);
+  const tier = open[Math.floor(unit(`${career.id}|${week}|which`) * open.length)];
+  if (!tier) return life;
   const names = fieldNames(tier, "", week * 31 + career.played, tier.size, life.world);
   if (names.length < 4) return life;
   const medOf = (n: string) => botMed({ ...career, life }, n);
@@ -150,7 +154,7 @@ const reached = (career: Career, id: TierId) => LADDER.indexOf(topStep(career)) 
 const TEMPLATES: Template[] = [
   { key: "ly-sprint", name: "Ly-sprinten", city: "Ly", base: "lu", fee: 0, prize: 0.8, countdown: { start: 301, doubleOut: false }, from: { name: "Puben på Ly", role: "Ly" }, tagline: "En kort kveld i 301", need: () => true, reason: () => "Puben setter opp en kort kveld i 301, uten krav om dobbel." },
   { key: "bergen", name: "Bergen Invitational", city: "Bergen", base: "region", fee: 0.6, prize: 1.1, countdown: { start: 301, doubleOut: true }, from: { name: "Bergen Dartklubb", role: "Arrangør" }, tagline: "301 med dobbel ut", need: (c) => reached(c, "region") || c.points >= 10, reason: (c) => `Invitert fordi du er nr. ${norwayRank(c)} i Norge.` },
-  { key: "trondheim", name: "Trondheim Open", city: "Trondheim", base: "region", fee: 0.5, prize: 0.9, from: { name: "Trondheim Dartklubb", role: "Arrangør" }, tagline: "Spilles som karrieren din", need: (c) => c.points >= 10, reason: (c) => `Invitert fordi du har ${c.points} rangpoeng.` },
+  { key: "trondheim", name: "Trondheim Open", city: "Trondheim", base: "region", fee: 0.5, prize: 0.9, from: { name: "Trondheim Dartklubb", role: "Arrangør" }, tagline: "Spilles som karrieren din", need: (c) => c.points >= 10, reason: (c) => `Invitert fordi du har ${c.points} poeng.` },
   { key: "wildcard", name: "Oslo Wildcard", city: "Oslo", base: "region", fee: 0.5, prize: 0.7, wildcard: true, from: { name: "Norges Dartsforbund", role: "Forbundet" }, tagline: "Vinn plassen din", need: (c) => !!lockedStep(c) && c.points >= 10, reason: (c) => `Vinneren og finalisten får plass i ${lockedStep(c)?.name ?? "neste turnering"}.` },
   { key: "stavanger", name: "Stavanger Masters", city: "Stavanger", base: "nm", fee: 0.7, prize: 0.8, countdown: { start: 501, doubleOut: true }, from: { name: "Stavanger Dartklubb", role: "Arrangør" }, tagline: "501 med dobbel ut", need: (c) => reached(c, "nm"), reason: (c) => `Invitert som nr. ${norwayRank(c)} i Norge.` },
   { key: "handicap", name: "Handicapcupen", city: "Drammen", base: "region", fee: 0.5, prize: 1.6, countdown: { start: 301, doubleOut: true, humanStart: 501 }, from: { name: "Drammen Dartklubb", role: "Arrangør" }, tagline: "Du starter på 501, de på 301", need: (c) => c.points >= 10, reason: () => "Du får handicap: 501 mot deres 301. Premien er større." },
@@ -260,7 +264,7 @@ function maybeTv(career: Career, life: Life, week: number): Life {
   const who = named[Math.floor(unit(`${career.id}|${week}|tv-who`) * named.length)];
   if (!who) return life;
   const tv = { title: pick.title, honorarium: Math.max(100, round50(base * 0.3)), legs: 3 as const, humanStart: 301, theirStart: 301 };
-  return addMessage(life, from, tv.title, `Best av tre mot ${who.name}.`, { kind: "challenge", game: "501", opponent: { name: who.name, skill: Math.max(1, levelOfMed(who.med * 0.95)) }, stake: round50(base * 2), risk: 0, tv }, week + 3);
+  return addMessage(life, from, tv.title, `Best av tre mot ${who.name}.`, { kind: "challenge", game: "501", opponent: { name: who.name, skill: Math.max(1, levelOfMed(who.med)) }, stake: round50(base * 2), risk: 0, tv }, week + 3);
 }
 
 /** What the player pays when they lose to someone who asked, against what they win: half. */
@@ -277,10 +281,24 @@ function challengeFrom(career: Career, life: Life, week: number, rival: string |
   const rec = rival ? career.rivals?.[rival] : undefined;
   const title = rival ? (rec && rec.l > rec.w ? `${name} vil ha revansje` : `${name} vil teste deg`) : `${name} tilbyr en kamp`;
   const body = rival ? "Én runde i 501." : `${GAMES[game].name}, én runde.`;
-  return addMessage(life, { name, role: rival ? "Rival" : "Stamgjest" }, title, body, { kind: "challenge", game, opponent: { name, skill: base.opponent.skill }, stake, risk }, week + 1);
+  // A rival throws as the rival does (the strength the world list has for the name), not as the stranger the challenge was made with.
+  const skill = rival ? Math.min(8, Math.max(1, levelOfMed(botMed({ ...career, life }, rival)))) : base.opponent.skill;
+  return addMessage(life, { name, role: rival ? "Rival" : "Stamgjest" }, title, body, { kind: "challenge", game, opponent: { name, skill }, stake, risk }, week + 1);
 }
 
 /** Maybe a challenge that nobody asked for: more often the better the name. */
+/**
+ * The rival's match of the season: in the same week of every season the rival asks for one big match in 501 at Ly, for much more than an ordinary
+ * challenge. It comes even when something else waits for an answer, but not while a challenge is being played.
+ */
+function maybeRivalNight(career: Career, life: Life, week: number): Life {
+  if (career.challenge || weekInSeason(week) !== RIVAL_WEEK) return life;
+  const rival = rivalOf({ ...career, life }).name;
+  const stake = round50(stakeFor(career, "501") * 3);
+  const skill = Math.min(8, Math.max(1, levelOfMed(botMed({ ...career, life }, rival))));
+  return addMessage(life, { name: rival, role: "Rival" }, "Rivalkampen", `Sesongens store kamp mot ${rival}: 501 på Ly, for mye mer enn vanlig.`, { kind: "challenge", game: "501", opponent: { name: rival, skill }, stake, risk: riskFor(stake) }, week + 2);
+}
+
 function maybeChallenge(career: Career, life: Life, week: number): Life {
   if (career.challenge || asked(life)) return life;
   if (unit(`${career.id}|${week}|surprise`) > 0.15 + 0.05 * life.reputation) return life;
@@ -310,7 +328,7 @@ export function dealsFor(career: Career, seed: string): SponsorDeal[] {
 /** The three deals go out as one message, to be answered in three weeks: one of them can be taken. */
 function offerSponsors(career: Career, life: Life, week: number): Life {
   const deals = dealsFor(career, `${career.id}|${week}`);
-  return addMessage(life, { name: "Tre firmaer", role: "Sponsor" }, "Sponsorer vil ha deg", deals[0].need === "quarter" ? "De betaler hver gang du kommer til kvartfinalen." : "De betaler hver gang du kommer til semifinalen.", { kind: "sponsor", deals }, week + 3);
+  return addMessage(life, { name: "Tre firmaer", role: "Sponsor" }, "Sponsortilbud", deals[0].need === "quarter" ? "De betaler hver gang du kommer til kvartfinalen." : "De betaler hver gang du kommer til semifinalen.", { kind: "sponsor", deals }, week + 3);
 }
 
 /** Now and then a sponsor turns up on its own, once the player has played a little and has a name. */
@@ -381,11 +399,11 @@ function endSeason(career: Career, life: Life, week: number): { life: Life; priz
 /* ----------------------------------------------------------------- a week goes by */
 
 /** A week has gone by: the others play their tournament, messages that ran out are closed, offers come, and when the tenth week is over, the season ends. */
-export function advanceWeek(career: Career): Career {
+export function advanceWeek(career: Career, played?: TierId): Career {
   let life = lifeOf(career);
   const was = life.week;
   const week = was + 1;
-  life = otherCup(career, life, was);
+  life = otherCup(career, life, was, played);
   life = { ...life, week };
   // Offers that were not answered in time: a challenge that goes by is a no, which the name remembers.
   const late = life.inbox.filter((m) => isLate(m, week));
@@ -398,12 +416,13 @@ export function advanceWeek(career: Career): Career {
     money += ended.prize;
   }
   life = maybeFinale(career, life, week);
+  life = maybeRivalNight(career, life, week);
   life = maybeInvite(career, life, week);
   life = maybeTv(career, life, week);
   life = maybeChallenge(career, life, week);
   life = maybeSponsor(career, life, week);
   if (weekInSeason(week) % 3 === 0) life = leaderNews(career, life);
-  return { ...career, money, life };
+  return book({ ...career, money, life }, "season", `Sesongpremie ${seasonOf(was)}`, money - career.money);
 }
 
 const isLate = (m: Message, week: number) => m.state === "open" && m.offer.kind !== "info" && m.until !== undefined && m.until < week;
@@ -453,7 +472,7 @@ export function leaveEvent(career: Career): Career {
   // In a cup of teams the player's side is the team, and the partner is part of the story.
   const side = sideOf(a, career.player);
   const team = a.invite?.team;
-  life = addNews(life, "you", team ? `${side} ${WENT[r.place]} ${tier.name}` : `${career.player} ${WENT[r.place]} ${tier.name}`, `${team ? `Sammen med ${team.mine.partner}. ` : ""}${r.prize > 0 ? `+${dollars(r.prize)} · ` : ""}+${r.points} rangpoeng`, career.player);
+  life = addNews(life, "you", team ? `${side} ${WENT[r.place]} ${tier.name}` : `${career.player} ${WENT[r.place]} ${tier.name}`, `${team ? `Sammen med ${team.mine.partner}. ` : ""}${r.prize > 0 ? `+${dollars(r.prize)} · ` : ""}+${r.points} poeng`, career.player);
   life = { ...life, seasonPts: life.seasonPts + r.points };
   if (r.place === "winner") {
     life = { ...life, reputation: Math.min(REP_MAX, life.reputation + 1) };
@@ -465,14 +484,11 @@ export function leaveEvent(career: Career): Career {
   const m = team ? undefined : a.tournament?.matches.find((x) => !x.isBronzeMatch && x.winner && x.winner !== career.player && [x.participantA, x.participantB].includes(career.player));
   const by = m ? [m.participantA, m.participantB].find((n) => n && n !== career.player) ?? null : null;
   const rec = career.rivals?.[rival];
-  let next = withLife({ ...career, money }, life);
+  let next = book(withLife({ ...career, money }, life), "sponsor", `Sponsor: ${so?.name ?? ""}`, so?.pay ?? 0);
   if (by === rival && rec && rec.l > rec.w && !next.challenge && !asked(life) && unit(`${career.id}|${life.week}|ask`) < 0.7) {
     next = withLife(next, challengeFrom(next, life, life.week, rival));
-  } else if (unit(`${career.id}|${life.week}|line`) < 0.5) {
-    const line = team?.mine.partner === rival ? (r.place === "winner" ? "Vi gjorde det. Sammen er vi best." : "Vi tar den neste gangen, du og jeg.") : r.place === "winner" ? "Bra spilt. Neste gang er det min tur." : by === rival ? "Det var meg som tok deg. Vi sees." : r.place === "final" ? "Så nærme. Jeg venter i neste finale." : "Jeg ser deg i neste turnering.";
-    next = withLife(next, addNews(life, "you", rival, line, rival));
   }
-  return advanceWeek(closeEvent(next));
+  return advanceWeek(closeEvent(next), a.tier);
 }
 
 /** The player gives an event up: it is gone, and the week goes by all the same. */

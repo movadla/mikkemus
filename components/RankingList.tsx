@@ -9,6 +9,17 @@ import { norwayRankOf, playerWorldRank } from "@/lib/opponentStats";
 import { gameOf, statsFor } from "@/lib/careerGame";
 import { CharacterFace } from "./CharacterFigure";
 import { Avatar } from "./ui/Avatar";
+import { Sheet } from "./ui/Sheet";
+import { OpponentProfile } from "./OpponentCard";
+import { opponentOf } from "@/lib/opponents";
+
+/** What the figure of each player means, for the line over the list. */
+const STAT_WORDS: Record<string, string> = {
+  hit: "treffprosenten: hvor ofte spilleren treffer det den sikter på",
+  avg: "snittet på tre piler",
+  legs: "hvor mange piler spilleren bruker på en runde",
+  double: "hvor ofte spilleren treffer dobbelen på utsjekk",
+};
 
 type Row = { name: string; nat: string; world: number; figure: number; me: boolean; /** Places up (positive) or down since the last season, or "ny" for someone who came in since. */ moved?: number | "ny" };
 
@@ -19,6 +30,8 @@ type Row = { name: string; nat: string; world: number; figure: number; me: boole
  */
 export function RankingList({ career }: { career: Career }) {
   const [tab, setTab] = useState<"world" | "nor">("world");
+  // The card of a player, opened from the list: the portrait, the strength and the record against them.
+  const [card, setCard] = useState<string | null>(null);
   const settings = gameOf(career.profile);
   const first = (med: number) => statsFor(settings, med)[0];
   const me: Row = { name: career.player, nat: "NOR", world: playerWorldRank(career.skillMed, career.points), figure: first(career.skillMed).value, me: true };
@@ -46,6 +59,8 @@ export function RankingList({ career }: { career: Career }) {
           </button>
         ))}
       </div>
+      {/* What the figure at the right is, in words, and the heading over the column stays in view while the list is scrolled. */}
+      <p className="rank-explain">Tallet til høyre er {STAT_WORDS[stat.key] ?? stat.label.toLowerCase()}.</p>
       <p className="rank-head" aria-hidden>
         <span>PLASS</span>
         <span>{stat.label.toUpperCase()}</span>
@@ -73,9 +88,15 @@ export function RankingList({ career }: { career: Career }) {
               {r.figure}
               {stat.suffix ?? ""}
             </span>
+            {!r.me && <button type="button" className="rank-open" aria-label={`Om ${r.name}`} onClick={() => setCard(r.name)} />}
           </li>
         ))}
       </ol>
+      {card && (
+        <Sheet title={card} onClose={() => setCard(null)}>
+          <OpponentProfile name={card} med={opponentOf(card).med} me={{ name: career.player, med: career.skillMed, points: career.points, character: career.profile.character, rival: rivalOf(career), rivals: career.rivals, settings }} />
+        </Sheet>
+      )}
       <div className="rank-you" role="status">
         <span className="rank-no tabular">{tab === "world" ? me.world : norwayRankOf(me.world)}</span>
         <CharacterFace id={career.profile.character} px={32} />

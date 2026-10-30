@@ -572,6 +572,17 @@ test.describe("karriere", () => {
     await expect(page.getByText("Drømmerommet", { exact: true })).toBeVisible();
   });
 
+  test("regnskap: pengene øverst åpner siste uke og totalt", async ({ page }) => {
+    await seed(page, { ...CAREER, ledger: [{ week: 3, kind: "prize", label: "Premie: Ly-cupen", amount: 500 }, { week: 3, kind: "fee", label: "Innskudd: Regionmesterskapet", amount: -200 }], life: { ...LIFE, inbox: [] } });
+    await page.getByRole("button", { name: /Lars/ }).click();
+    await page.getByRole("button", { name: /^Regnskap, saldo/ }).click();
+    await expect(page.getByText("Premie: Ly-cupen")).toBeVisible();
+    await expect(page.getByText("Innskudd: Regionmesterskapet")).toBeVisible();
+    await page.getByRole("tab", { name: "Totalt" }).click();
+    await expect(page.getByRole("list", { name: "Fordelt" }).getByText("Premier")).toBeVisible();
+    await expect(page.getByText("Resultat")).toBeVisible();
+  });
+
   test("rangering: hele listen kan rulles, og den som er best ligger først", async ({ page }) => {
     await toCareer(page);
     await page.getByRole("button", { name: /Lars/ }).click();

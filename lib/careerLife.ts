@@ -10,6 +10,9 @@ import { LY_REGULARS } from "./opponents";
 /** A season is ten weeks, and a week goes by when the player has played a tournament (or left one). */
 export const WEEKS_PER_SEASON = 10;
 
+/** The week of each season the rival asks for the big match of the season (lib/careerWorld.ts). */
+export const RIVAL_WEEK = 6;
+
 /** The best a name can be. It starts in the middle: saying no to what people ask costs some, playing what they ask earns some. */
 export const REP_MAX = 10;
 export const REP_START = 5;

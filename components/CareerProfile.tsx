@@ -15,7 +15,12 @@ import { CheckIcon } from "./icons";
 import { LY_REGULARS } from "@/lib/opponents";
 import { chooseRival, challengeRival } from "@/lib/careerWorld";
 import { bestResults, meritsOf } from "@/lib/merits";
+import { statsOf } from "@/lib/careerStats";
 import { FOCUS_RING } from "./ui/focus";
+import type { Place } from "@/lib/career";
+
+/** A place in a tournament, in a word for the list of the last results. */
+const RESULT_WORD: Record<Place, string> = { winner: "Vinner", final: "Finale", semi: "Semifinale", quarter: "Kvartfinale", r16: "8-delsfinale", r32: "Første runde" };
 
 /** One number with its name under it. */
 function Stat({ label, value }: { label: string; value: string }) {
@@ -51,6 +56,9 @@ export function CareerProfile({ career, tab: first = "oversikt", commit, onChall
   const metRival = !!rec && rec.w + rec.l > 0;
   const merits = meritsOf(career);
   const best = bestResults(career);
+  // The last three tournaments (not the duels), newest first.
+  const recent = career.history.filter((h) => !h.game).slice(0, 3);
+  const stats = statsOf(career);
   const progress = next ? Math.min(1, career.points / next.min) : 1;
   return (
     <div className="space-y-4">
@@ -77,6 +85,7 @@ export function CareerProfile({ career, tab: first = "oversikt", commit, onChall
           {next && (
             <p className="tabular" style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>
               {career.points} av {next.min} poeng til {next.name}
+              {life.seasonPts > 0 ? ` · ${life.seasonPts} denne sesongen` : ""}
             </p>
           )}
         </div>
@@ -156,6 +165,67 @@ export function CareerProfile({ career, tab: first = "oversikt", commit, onChall
               </dd>
             </div>
           </dl>
+          {stats.matches > 0 && (
+            <div className="pf-recent">
+              <p className="section-label">STATISTIKK</p>
+              <ul className="pf-stats" aria-label="Statistikk">
+                <li>
+                  <b className="tabular">
+                    {stats.won} av {stats.matches}
+                  </b>
+                  <small>Kamper vunnet</small>
+                </li>
+                {stats.countdown && (
+                  <>
+                    <li>
+                      <b className="tabular">{stats.countdown.average.toLocaleString("nb-NO")}</b>
+                      <small>Snitt, siste 10</small>
+                    </li>
+                    <li>
+                      <b className="tabular">{stats.countdown.best}</b>
+                      <small>Beste runde</small>
+                    </li>
+                    <li>
+                      <b className="tabular">{stats.countdown.max180}</b>
+                      <small>180</small>
+                    </li>
+                    <li>
+                      <b className="tabular">{stats.countdown.checkout || "–"}</b>
+                      <small>Høyeste utsjekk</small>
+                    </li>
+                  </>
+                )}
+                {stats.mm && (
+                  <>
+                    <li>
+                      <b className="tabular">{stats.mm.hitRate} %</b>
+                      <small>Treff</small>
+                    </li>
+                    <li>
+                      <b className="tabular">{stats.mm.darts}</b>
+                      <small>Piler per kamp</small>
+                    </li>
+                  </>
+                )}
+              </ul>
+            </div>
+          )}
+          {recent.length > 0 && (
+            <div className="pf-recent">
+              <p className="section-label">SISTE RESULTATER</p>
+              <ul aria-label="Siste resultater">
+                {recent.map((h, i) => (
+                  <li key={`${h.at}-${i}`}>
+                    <span className="min-w-0 truncate">{h.event}</span>
+                    <b className="tabular">
+                      {h.place ? RESULT_WORD[h.place] : ""}
+                      {h.prize > 0 ? ` · ${dollars(h.prize)}` : ""}
+                    </b>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       )}
 

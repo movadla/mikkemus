@@ -5,6 +5,7 @@ import { dollars, type Career } from "@/lib/career";
 import { ArrowLeftIcon } from "./icons";
 import { FOCUS_RING } from "./ui/focus";
 import { CountUp } from "./ui/CountUp";
+import { MoneySheet } from "./MoneySheet";
 
 const subscribeOnline = (cb: () => void) => {
   window.addEventListener("online", cb);
@@ -42,6 +43,7 @@ function SaveDot({ savedAt }: { savedAt: string }) {
  */
 export function CareerHud({ career, end, onBack, title }: { career: Career; end?: ReactNode; /** On a screen behind a button: the way back, and what the screen is called. */ onBack?: () => void; title?: string }) {
   const [delta, setDelta] = useState<number | null>(null);
+  const [books, setBooks] = useState(false);
   const [prev, setPrev] = useState(career.money);
   if (career.money !== prev) {
     // Money came in (or went out): the chip says by how much, for a moment.
@@ -54,7 +56,7 @@ export function CareerHud({ career, end, onBack, title }: { career: Career; end?
     return () => clearTimeout(t);
   }, [delta]);
   const coin = (
-    <span key={delta === null ? "still" : career.money} className={`hud-coin relative tabular ${delta !== null && delta > 0 ? "hud-pop" : ""}`} title="Saldo">
+    <button type="button" onClick={() => setBooks(true)} aria-label={`Regnskap, saldo ${dollars(career.money)}`} key={delta === null ? "still" : career.money} className={`hud-coin relative tabular tactile ${FOCUS_RING} ${delta !== null && delta > 0 ? "hud-pop" : ""}`} title="Regnskap">
         {delta !== null && delta !== 0 && (
           <span className={`hud-delta ${delta < 0 ? "hud-delta-out" : ""}`} style={{ color: delta > 0 ? "var(--color-green)" : "var(--color-red)" }}>
             {delta > 0 ? "+" : "−"}
@@ -65,8 +67,9 @@ export function CareerHud({ career, end, onBack, title }: { career: Career; end?
         <span className="coin-figure">
           <CountUp value={career.money} format={dollars} />
         </span>
-    </span>
+    </button>
   );
+  const sheet = books ? <MoneySheet career={career} onClose={() => setBooks(false)} /> : null;
   if (onBack) {
     return (
       <div className="career-hud-top flex items-center gap-3" role="group" aria-label="Status">
@@ -78,6 +81,7 @@ export function CareerHud({ career, end, onBack, title }: { career: Career; end?
         </h1>
         {coin}
         <SaveDot savedAt={career.savedAt} />
+        {sheet}
       </div>
     );
   }
@@ -87,6 +91,7 @@ export function CareerHud({ career, end, onBack, title }: { career: Career; end?
       <SaveDot savedAt={career.savedAt} />
       <span className="flex-1" />
       {end}
+      {sheet}
     </div>
   );
 }
