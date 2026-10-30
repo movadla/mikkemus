@@ -20,7 +20,6 @@ export function VenuePicker({ value, onChange }: { value: VenueId; onChange: (v:
             )}
             <span className="venue-name">
               <b>{v.name}</b>
-              <small>{v.line}</small>
             </span>
           </button>
         );
