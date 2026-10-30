@@ -26,6 +26,7 @@ import {
 } from "@/lib/halvit";
 import { haptics } from "@/lib/haptics";
 import { splitPeople, type PickedTeam, type Person } from "@/lib/people";
+import { standing, type SeriesWiring } from "@/lib/series";
 import { individualSetupProblem, setupSummary, teamSetupProblem } from "@/lib/setupProblem";
 import { useRoster } from "@/lib/storage";
 import { rostersOf } from "@/lib/teamGame";
@@ -37,6 +38,7 @@ import { UndoIcon } from "./icons";
 import { SwitchRow } from "./ui/Switch";
 import { RollingNumber } from "./RollingNumber";
 import { ScoreKeypad } from "./ScoreKeypad";
+import { SeriesPicker, SeriesSummary, seriesLine } from "./SeriesPicker";
 import { ScreenTop } from "./ScreenTop";
 import { commitPeople, commitTeams } from "./SetupScreen";
 import { SideAvatar } from "./SideAvatar";
@@ -55,6 +57,10 @@ export function HalvItApp({ onExitToHome }: { onExitToHome: () => void }) {
   const [mode, setMode] = useState<GameMode>("individual");
   const [teams, setTeams] = useState<PickedTeam[]>([]);
   const [advanced, setAdvanced] = useState(false);
+  /** Best av x: 1 is one game. */
+  const [bestOf, setBestOf] = useState(1);
+  /** The winners of the games of the series so far. */
+  const [history, setHistory] = useState<string[]>([]);
   /** Both members of a team throw in every round. */
   const [both, setBoth] = useState(false);
   const [game, setGame] = useState<HalvItGame | null>(null);
@@ -68,20 +74,22 @@ export function HalvItApp({ onExitToHome }: { onExitToHome: () => void }) {
         <div className="screen-inner">
           <ScreenTop title="Halv It" onBack={onExitToHome} />
           <GameWho mode={mode} onMode={setMode} people={people} onPeople={setPeople} teams={teams} onTeams={setTeams} botsAllowed={false} />
-          {mode === "team" && (
-            <div className="mt-4 space-y-2">
-              <SwitchRow
-                label="Avanserte innstillinger"
-                hint="Begge på laget kaster hver runde"
-                checked={advanced}
-                onChange={(on) => {
-                  setAdvanced(on);
-                  if (!on) setBoth(false);
-                }}
-              />
-              {advanced && <SwitchRow label="Begge kaster hver runde" hint="Poengene legges sammen. Det er bare en bom når ingen av dem fikk poeng" checked={both} onChange={setBoth} />}
-            </div>
-          )}
+          <div className="mt-4 space-y-2">
+            <SwitchRow
+              label="Avanserte innstillinger"
+              hint={mode === "team" ? "Best av, og begge på laget kaster hver runde" : "Best av"}
+              checked={advanced}
+              onChange={(on) => {
+                setAdvanced(on);
+                if (!on) {
+                  setBoth(false);
+                  setBestOf(1);
+                }
+              }}
+            />
+            {advanced && mode === "team" && <SwitchRow label="Begge kaster hver runde" hint="Poengene legges sammen. Det er bare en bom når ingen av dem fikk poeng" checked={both} onChange={setBoth} />}
+            {advanced && <SeriesPicker value={bestOf} onChange={setBestOf} />}
+          </div>
           <VenueSection value={venue} onChange={setVenue} />
           <StickyAction
             onClick={() => {
@@ -106,13 +114,16 @@ export function HalvItApp({ onExitToHome }: { onExitToHome: () => void }) {
 
   return (
     <GameVenue venue={venue}>
-      <HalvItGameScreen game={game} setGame={setGame} photos={photos} onHome={onExitToHome} onNew={() => setGame(null)} />
+      <HalvItGameScreen game={game} setGame={setGame} photos={photos} onHome={onExitToHome} onNew={() => {
+          setGame(null);
+          setHistory([]);
+        }} series={bestOf > 1 ? { bestOf, history, onWin: (w) => setHistory((h) => [...h, w]), onReset: () => setHistory([]) } : undefined} />
     </GameVenue>
   );
 }
 
 
-export function HalvItGameScreen({ game, setGame, photos, onHome, onNew }: { game: HalvItGame; setGame: (g: HalvItGame) => void; photos: Map<string, string | null | undefined>; onHome: () => void; onNew: () => void }) {
+export function HalvItGameScreen({ game, setGame, photos, onHome, onNew, series }: { game: HalvItGame; setGame: (g: HalvItGame) => void; photos: Map<string, string | null | undefined>; onHome: () => void; onNew: () => void; /** A series (best of x) the game is one of. */ series?: SeriesWiring }) {
   const [confirmExit, setConfirmExit] = useState(false);
   /** The throw just taken in, while what it did plays: set when one goes in, cleared when one is taken back. */
   const [fresh, setFresh] = useState<{ n: number; player: string; points: number; bom: boolean; pending: boolean } | null>(null);
@@ -121,7 +132,9 @@ export function HalvItGameScreen({ game, setGame, photos, onHome, onNew }: { gam
   const { winner, up, member, round, tieBreak } = state;
   const who = member?.name ?? up;
   const target = ROUNDS[Math.min(round, ROUNDS_IN_ALL) - 1];
-  useRecordNight(winner, game.entries.length === 0, (id) => (winner ? halvitNight(game, winner, id) : null));
+  const std = series ? standing(series, game.players, winner) : null;
+  const nightWinner = series ? (std?.decided ?? null) : winner;
+  useRecordNight(nightWinner, game.entries.length === 0, (id) => (nightWinner ? halvitNight(game, nightWinner, id, series && std ? { bestOf: series.bestOf, wins: std.wins } : undefined) : null));
   useRecordResult(game.rosters ? null : winner, game.entries.length === 0, (id, at) => halvitResult(game, id, at));
   const rain = useMemo(() => (winner && fx.confetti ? generateConfettiRain(fx.bigConfetti ? 60 : 36) : []), [winner, fx.confetti, fx.bigConfetti]);
 
@@ -198,9 +211,18 @@ export function HalvItGameScreen({ game, setGame, photos, onHome, onNew }: { gam
               </li>
             ))}
           </ul>
+          {series && winner && <SeriesSummary series={series} sides={game.players} current={winner} />}
           <div className="space-y-2">
-            <Button block variant="primary" size="lg" onClick={() => setGame(newGame(game.players, game.rosters, game.both))}>
-              Spill igjen
+            <Button
+              block
+              variant="primary"
+              size="lg"
+              onClick={() => {
+                if (series && winner) (std?.decided ? series.onReset : () => series.onWin(winner))();
+                setGame(newGame(game.players, game.rosters, game.both));
+              }}
+            >
+              {series ? (std?.decided ? "Ny serie" : "Neste kamp") : "Spill igjen"}
             </Button>
             <Button block onClick={undo}>
               Angre siste kast
@@ -243,6 +265,7 @@ export function HalvItGameScreen({ game, setGame, photos, onHome, onNew }: { gam
       <div className="screen-inner cd-fill">
         <ScreenTop
           title="Halv It"
+          sub={series ? seriesLine(series, game.players, null) : undefined}
           onBack={() => setConfirmExit(true)}
           backLabel="Avslutt kampen"
           right={

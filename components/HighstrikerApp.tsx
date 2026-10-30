@@ -33,6 +33,7 @@ import {
   type HighstrikerGame,
 } from "@/lib/highstriker";
 import { splitPeople, type PickedTeam, type Person } from "@/lib/people";
+import { standing, type SeriesWiring } from "@/lib/series";
 import { rostersOf } from "@/lib/teamGame";
 import { medOfLevel } from "@/lib/opponentStats";
 import { useGameVenue } from "@/lib/gameVenue";
@@ -48,6 +49,7 @@ import { ScoreKeypad } from "./ScoreKeypad";
 import { GameVenue, VenueSection } from "./GameVenue";
 import { GameWho, type GameMode } from "./GameWho";
 import { SideAvatar } from "./SideAvatar";
+import { SeriesPicker, SeriesSummary, seriesLine } from "./SeriesPicker";
 import { ScreenTop } from "./ScreenTop";
 import { commitPeople, commitTeams } from "./SetupScreen";
 import { StickyAction } from "./StickyAction";
@@ -86,6 +88,10 @@ export function HighstrikerApp({ onExitToHome }: { onExitToHome: () => void }) {
   const [teams, setTeams] = useState<PickedTeam[]>([]);
   const [advanced, setAdvanced] = useState(false);
   const [lives, setLives] = useState(DEFAULT_LIVES);
+  /** Best av x: 1 is one game. */
+  const [bestOf, setBestOf] = useState(1);
+  /** The winners of the games of the series so far. */
+  const [history, setHistory] = useState<string[]>([]);
   const [game, setGame] = useState<HighstrikerGame | null>(null);
   const [botLevels, setBotLevels] = useState<Record<string, BotLevel>>({});
   const photos = new Map(useRoster().map((r) => [r.name, r.photo]));
@@ -108,7 +114,10 @@ export function HighstrikerApp({ onExitToHome }: { onExitToHome: () => void }) {
               checked={advanced}
               onChange={(on) => {
                 setAdvanced(on);
-                if (!on) setLives(DEFAULT_LIVES);
+                if (!on) {
+                  setLives(DEFAULT_LIVES);
+                  setBestOf(1);
+                }
               }}
             />
             {advanced && (
@@ -124,6 +133,11 @@ export function HighstrikerApp({ onExitToHome }: { onExitToHome: () => void }) {
               </div>
             )}
           </div>
+          {advanced && (
+            <div className="mt-2">
+              <SeriesPicker value={bestOf} onChange={setBestOf} />
+            </div>
+          )}
           <VenueSection value={venue} onChange={setVenue} />
           <StickyAction
             onClick={() => {
@@ -152,7 +166,10 @@ export function HighstrikerApp({ onExitToHome }: { onExitToHome: () => void }) {
 
   return (
     <GameVenue venue={venue}>
-      <HighstrikerGameScreen game={game} setGame={setGame} botLevels={botLevels} photos={photos} onHome={onExitToHome} onNew={() => setGame(null)} />
+      <HighstrikerGameScreen game={game} setGame={setGame} botLevels={botLevels} photos={photos} onHome={onExitToHome} onNew={() => {
+          setGame(null);
+          setHistory([]);
+        }} series={bestOf > 1 ? { bestOf, history, onWin: (w) => setHistory((h) => [...h, w]), onReset: () => setHistory([]) } : undefined} />
     </GameVenue>
   );
 }
@@ -165,6 +182,7 @@ export function HighstrikerGameScreen({
   onHome,
   onNew,
   career,
+  series,
 }: {
   game: HighstrikerGame;
   setGame: (g: HighstrikerGame) => void;
@@ -174,6 +192,8 @@ export function HighstrikerGameScreen({
   onNew: () => void;
   /** A challenge of the career: the result is not kept with the statistics, the winner screen goes on, and leaving gives it up. */
   career?: { onDone: () => void };
+  /** A series (best of x) the game is one of. */
+  series?: SeriesWiring;
 }) {
   const [confirmExit, setConfirmExit] = useState(false);
   /** What is written on the keypad, so the tower can rise with it. */
@@ -197,7 +217,6 @@ export function HighstrikerGameScreen({
   const who = member?.name ?? up;
   const botUp = !winner && (member ? member.isBot : isBot(up));
   const isBotThrower = (n: string) => isBot(n) || Object.values(game.rosters ?? {}).some((r) => r.some((m) => m.name === n && m.isBot));
-  useRecordNight(winner, game.turns.length === 0, (id) => (career || !winner ? null : highstrikerNight(game, winner, Object.keys(botLevels), id)));
   useRecordResult(career || game.rosters ? null : winner, game.turns.length === 0, (id, at) => highstrikerResult(game, Object.keys(botLevels), id, at));
 
   // A player on the last life is told so, once, when the turn comes to them.
@@ -205,6 +224,9 @@ export function HighstrikerGameScreen({
     if (lastLife) callOut("Siste liv");
   }, [lastLife, up, game.turns.length]);
   const rain = useMemo(() => (winner && fx.confetti ? generateConfettiRain(fx.bigConfetti ? 60 : 36) : []), [winner, fx.confetti, fx.bigConfetti]);
+  const std = series ? standing(series, game.players, winner) : null;
+  const nightWinner = series ? (std?.decided ?? null) : winner;
+  useRecordNight(nightWinner, game.turns.length === 0, (id) => (career || !nightWinner ? null : highstrikerNight(game, nightWinner, Object.keys(botLevels), id, series && std ? { bestOf: series.bestOf, wins: std.wins } : undefined)));
 
   // The win is announced with the fanfare, where the level allows it.
   useEffect(() => {
@@ -294,14 +316,23 @@ export function HighstrikerGameScreen({
               </li>
             ))}
           </ul>
+          {series && winner && <SeriesSummary series={series} sides={game.players} current={winner} />}
           <div className="space-y-2">
             {career ? (
               <Button block variant="primary" size="lg" onClick={career.onDone}>
                 Fortsett
               </Button>
             ) : (
-              <Button block variant="primary" size="lg" onClick={() => setGame(newGame(game.lives, game.players, game.rosters))}>
-                Spill igjen
+              <Button
+                block
+                variant="primary"
+                size="lg"
+                onClick={() => {
+                  if (series && winner) (std?.decided ? series.onReset : () => series.onWin(winner))();
+                  setGame(newGame(game.lives, game.players, game.rosters));
+                }}
+              >
+                {series ? (std?.decided ? "Ny serie" : "Neste kamp") : "Spill igjen"}
               </Button>
             )}
             <Button block onClick={() => setGame(undoRound(game))}>
@@ -339,6 +370,7 @@ export function HighstrikerGameScreen({
       <div className="screen-inner hs-fill">
         <ScreenTop
           title="Highstriker"
+          sub={series ? seriesLine(series, game.players, null) : undefined}
           onBack={() => setConfirmExit(true)}
           backLabel={career ? "Gi opp" : "Avslutt kampen"}
           right={

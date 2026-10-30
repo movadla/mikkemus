@@ -27,6 +27,7 @@ import {
   type LavaGame,
 } from "@/lib/lava";
 import { splitPeople, type PickedTeam, type Person } from "@/lib/people";
+import { standing, type SeriesWiring } from "@/lib/series";
 import { rostersOf } from "@/lib/teamGame";
 import { medOfLevel } from "@/lib/opponentStats";
 import { fieldOfLabel } from "@/lib/lava";
@@ -41,6 +42,7 @@ import { LavaBoard } from "./LavaBoard";
 import { GameVenue, VenueSection } from "./GameVenue";
 import { GameWho, type GameMode } from "./GameWho";
 import { SideAvatar } from "./SideAvatar";
+import { SeriesPicker, SeriesSummary, seriesLine } from "./SeriesPicker";
 import { ScreenTop } from "./ScreenTop";
 import { commitPeople, commitTeams } from "./SetupScreen";
 import { StickyAction } from "./StickyAction";
@@ -69,6 +71,10 @@ export function LavaApp({ onExitToHome }: { onExitToHome: () => void }) {
   const [teams, setTeams] = useState<PickedTeam[]>([]);
   const [advanced, setAdvanced] = useState(false);
   const [lives, setLives] = useState(DEFAULT_LIVES);
+  /** Best av x: 1 is one game. */
+  const [bestOf, setBestOf] = useState(1);
+  /** The winners of the games of the series so far. */
+  const [history, setHistory] = useState<string[]>([]);
   /** Doubles and trebles as sections of their own (under Avanserte innstillinger). */
   const [rings, setRings] = useState(false);
   const [game, setGame] = useState<LavaGame | null>(null);
@@ -96,6 +102,7 @@ export function LavaApp({ onExitToHome }: { onExitToHome: () => void }) {
                 if (!on) {
                   setLives(DEFAULT_LIVES);
                   setRings(false);
+                  setBestOf(1);
                 }
               }}
             />
@@ -113,6 +120,11 @@ export function LavaApp({ onExitToHome }: { onExitToHome: () => void }) {
               </div>
             )}
           </div>
+          {advanced && (
+            <div className="mt-2">
+              <SeriesPicker value={bestOf} onChange={setBestOf} />
+            </div>
+          )}
           <VenueSection value={venue} onChange={setVenue} />
           <StickyAction
             onClick={() => {
@@ -141,7 +153,10 @@ export function LavaApp({ onExitToHome }: { onExitToHome: () => void }) {
 
   return (
     <GameVenue venue={venue}>
-      <LavaGameScreen game={game} setGame={setGame} botLevels={botLevels} photos={photos} onHome={onExitToHome} onNew={() => setGame(null)} />
+      <LavaGameScreen game={game} setGame={setGame} botLevels={botLevels} photos={photos} onHome={onExitToHome} onNew={() => {
+          setGame(null);
+          setHistory([]);
+        }} series={bestOf > 1 ? { bestOf, history, onWin: (w) => setHistory((h) => [...h, w]), onReset: () => setHistory([]) } : undefined} />
     </GameVenue>
   );
 }
@@ -154,6 +169,7 @@ export function LavaGameScreen({
   onHome,
   onNew,
   career,
+  series,
 }: {
   game: LavaGame;
   setGame: (g: LavaGame) => void;
@@ -163,6 +179,8 @@ export function LavaGameScreen({
   onNew: () => void;
   /** A challenge of the career: the result is not kept with the statistics, the winner screen goes on, and leaving gives it up. */
   career?: { onDone: () => void };
+  /** A series (best of x) the game is one of. */
+  series?: SeriesWiring;
 }) {
   const [confirmExit, setConfirmExit] = useState(false);
   /** The dart just thrown, while its effect plays: set when a dart goes in, cleared when one is taken back. */
@@ -177,7 +195,9 @@ export function LavaGameScreen({
   const who = member?.name ?? up;
   const botUp = !winner && (member ? member.isBot : isBot(up));
   const isBotThrower = (n: string) => isBot(n) || Object.values(game.rosters ?? {}).some((r) => r.some((m) => m.name === n && m.isBot));
-  useRecordNight(winner, game.darts.length === 0, (id) => (career || !winner ? null : lavaNight(game, winner, Object.keys(botLevels), id)));
+  const std = series ? standing(series, game.players, winner) : null;
+  const nightWinner = series ? (std?.decided ?? null) : winner;
+  useRecordNight(nightWinner, game.darts.length === 0, (id) => (career || !nightWinner ? null : lavaNight(game, nightWinner, Object.keys(botLevels), id, series && std ? { bestOf: series.bestOf, wins: std.wins } : undefined)));
   useRecordResult(career || game.rosters ? null : winner, game.darts.length === 0, (id, at) => lavaResult(game, Object.keys(botLevels), id, at));
   const rain = useMemo(() => (winner && fx.confetti ? generateConfettiRain(fx.bigConfetti ? 60 : 36) : []), [winner, fx.confetti, fx.bigConfetti]);
 
@@ -249,14 +269,23 @@ export function LavaGameScreen({
               </li>
             ))}
           </ul>
+          {series && winner && <SeriesSummary series={series} sides={game.players} current={winner} />}
           <div className="space-y-2">
             {career ? (
               <Button block variant="primary" size="lg" onClick={career.onDone}>
                 Fortsett
               </Button>
             ) : (
-              <Button block variant="primary" size="lg" onClick={() => setGame(newGame(game.lives, game.players, game.fields, game.rosters))}>
-                Spill igjen
+              <Button
+                block
+                variant="primary"
+                size="lg"
+                onClick={() => {
+                  if (series && winner) (std?.decided ? series.onReset : () => series.onWin(winner))();
+                  setGame(newGame(game.lives, game.players, game.fields, game.rosters));
+                }}
+              >
+                {series ? (std?.decided ? "Ny serie" : "Neste kamp") : "Spill igjen"}
               </Button>
             )}
             <Button block onClick={undo}>
@@ -295,7 +324,7 @@ export function LavaGameScreen({
         />
       )}
       <div className="screen-inner">
-        <ScreenTop title="Lava" onBack={() => setConfirmExit(true)} backLabel={career ? "Gi opp" : "Avslutt kampen"} />
+        <ScreenTop title="Lava" onBack={() => setConfirmExit(true)} backLabel={career ? "Gi opp" : "Avslutt kampen"} sub={series ? seriesLine(series, game.players, null) : undefined} />
         <ul className="grid grid-cols-2 gap-2 mb-3" aria-label="Stilling">
           {game.players.map((p) => {
             const active = p === up;

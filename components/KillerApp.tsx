@@ -28,6 +28,7 @@ import {
   type KillerGame,
 } from "@/lib/killer";
 import { splitPeople, type PickedTeam, type Person } from "@/lib/people";
+import { standing, type SeriesWiring } from "@/lib/series";
 import { individualSetupProblem, setupSummary, teamSetupProblem } from "@/lib/setupProblem";
 import { useRoster } from "@/lib/storage";
 import { rostersOf } from "@/lib/teamGame";
@@ -38,6 +39,7 @@ import { GameWho, type GameMode } from "./GameWho";
 import { Hearts } from "./Hearts";
 import { MinusIcon, PlusIcon, UndoIcon } from "./icons";
 import { LavaBoard } from "./LavaBoard";
+import { SeriesPicker, SeriesSummary, seriesLine } from "./SeriesPicker";
 import { ScreenTop } from "./ScreenTop";
 import { commitPeople, commitTeams } from "./SetupScreen";
 import { SideAvatar } from "./SideAvatar";
@@ -95,6 +97,10 @@ export function KillerApp({ onExitToHome }: { onExitToHome: () => void }) {
   const [teams, setTeams] = useState<PickedTeam[]>([]);
   const [advanced, setAdvanced] = useState(false);
   const [lives, setLives] = useState(DEFAULT_LIVES);
+  /** Best av x: 1 is one game. */
+  const [bestOf, setBestOf] = useState(1);
+  /** The winners of the games of the series so far. */
+  const [history, setHistory] = useState<string[]>([]);
   const [game, setGame] = useState<KillerGame | null>(null);
   const photos = new Map(useRoster().map((r) => [r.name, r.photo]));
   const [venue, setVenue] = useGameVenue("killer");
@@ -116,7 +122,10 @@ export function KillerApp({ onExitToHome }: { onExitToHome: () => void }) {
               checked={advanced}
               onChange={(on) => {
                 setAdvanced(on);
-                if (!on) setLives(DEFAULT_LIVES);
+                if (!on) {
+                  setLives(DEFAULT_LIVES);
+                  setBestOf(1);
+                }
               }}
             />
             {advanced && (
@@ -132,6 +141,11 @@ export function KillerApp({ onExitToHome }: { onExitToHome: () => void }) {
               </div>
             )}
           </div>
+          {advanced && (
+            <div className="mt-2">
+              <SeriesPicker value={bestOf} onChange={setBestOf} />
+            </div>
+          )}
           <VenueSection value={venue} onChange={setVenue} />
           <StickyAction
             onClick={() => {
@@ -156,12 +170,15 @@ export function KillerApp({ onExitToHome }: { onExitToHome: () => void }) {
 
   return (
     <GameVenue venue={venue}>
-      <KillerGameScreen game={game} setGame={setGame} photos={photos} onHome={onExitToHome} onNew={() => setGame(null)} />
+      <KillerGameScreen game={game} setGame={setGame} photos={photos} onHome={onExitToHome} onNew={() => {
+          setGame(null);
+          setHistory([]);
+        }} series={bestOf > 1 ? { bestOf, history, onWin: (w) => setHistory((h) => [...h, w]), onReset: () => setHistory([]) } : undefined} />
     </GameVenue>
   );
 }
 
-export function KillerGameScreen({ game, setGame, photos, onHome, onNew }: { game: KillerGame; setGame: (g: KillerGame) => void; photos: Map<string, string | null | undefined>; onHome: () => void; onNew: () => void }) {
+export function KillerGameScreen({ game, setGame, photos, onHome, onNew, series }: { game: KillerGame; setGame: (g: KillerGame) => void; photos: Map<string, string | null | undefined>; onHome: () => void; onNew: () => void; /** A series (best of x) the game is one of. */ series?: SeriesWiring }) {
   const [confirmExit, setConfirmExit] = useState(false);
   /** The dart just thrown, while its effect plays: set when a dart goes in, cleared when one is taken back. */
   const [fresh, setFresh] = useState<{ n: number; dart: KillerDart } | null>(null);
@@ -170,7 +187,9 @@ export function KillerGameScreen({ game, setGame, photos, onHome, onNew }: { gam
   const { winner, up, member, phase } = state;
   const who = member?.name ?? up;
   const sunk = useMemo(() => new Map([...sunkSections(state, game)].map((s) => [s, ""])), [state, game]);
-  useRecordNight(winner, game.darts.length === 0, (id) => (winner ? killerNight(game, winner, id) : null));
+  const std = series ? standing(series, game.players, winner) : null;
+  const nightWinner = series ? (std?.decided ?? null) : winner;
+  useRecordNight(nightWinner, game.darts.length === 0, (id) => (nightWinner ? killerNight(game, nightWinner, id, series && std ? { bestOf: series.bestOf, wins: std.wins } : undefined) : null));
   useRecordResult(game.rosters ? null : winner, game.darts.length === 0, (id, at) => killerResult(game, id, at));
   const rain = useMemo(() => (winner && fx.confetti ? generateConfettiRain(fx.bigConfetti ? 60 : 36) : []), [winner, fx.confetti, fx.bigConfetti]);
 
@@ -257,9 +276,18 @@ export function KillerGameScreen({ game, setGame, photos, onHome, onNew }: { gam
               </li>
             ))}
           </ul>
+          {series && winner && <SeriesSummary series={series} sides={game.players} current={winner} />}
           <div className="space-y-2">
-            <Button block variant="primary" size="lg" onClick={() => setGame(newGame(game.lives, game.players, game.rosters))}>
-              Spill igjen
+            <Button
+              block
+              variant="primary"
+              size="lg"
+              onClick={() => {
+                if (series && winner) (std?.decided ? series.onReset : () => series.onWin(winner))();
+                setGame(newGame(game.lives, game.players, game.rosters));
+              }}
+            >
+              {series ? (std?.decided ? "Ny serie" : "Neste kamp") : "Spill igjen"}
             </Button>
             <Button block onClick={undo}>
               Angre siste pil
@@ -291,6 +319,7 @@ export function KillerGameScreen({ game, setGame, photos, onHome, onNew }: { gam
       <div className="screen-inner">
         <ScreenTop
           title="Killer"
+          sub={series ? seriesLine(series, game.players, null) : undefined}
           onBack={() => setConfirmExit(true)}
           backLabel="Avslutt kampen"
           right={

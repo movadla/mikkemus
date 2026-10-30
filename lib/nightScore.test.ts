@@ -61,4 +61,22 @@ describe("kveldsscore", () => {
     expect(eveningOf([], "2026-10-28T20:00:00.000Z")).toBeNull();
     expect(countOf([match({}), match({ deleted: true })])).toBe(1);
   });
+
+  it("tells a series by its games, and the winner of it gets the point", () => {
+    const m = match({ placements: ["A", "B"], series: { bestOf: 3, wins: { A: 2, B: 1 } } });
+    expect(lineOf(m)).toEqual({ title: "A vs. B", score: "2-1", tag: "Best av 3" });
+    expect(pointsOf(m)).toEqual({ A: 1, B: 0 });
+    // Overridden, it is told as any match is.
+    expect(lineOf({ ...m, override: { placements: ["B", "A"] } }).score).toBe("0-1");
+  });
+
+  it("gives the person who did a feat a point more, whoever won, but not in a match that was taken out", () => {
+    const m = match({ sides: [team("Vadla", "Monge"), solo("Hans")], placements: ["Vadla og Monge", "Hans"], bonus: [{ who: "Monge", feat: "180" }, { who: "Hans", feat: "co100" }] });
+    expect(pointsOf(m)).toEqual({ Vadla: 1, Monge: 2, Hans: 1 });
+    expect(pointsOf({ ...m, deleted: true })).toEqual({ Vadla: 0, Monge: 0, Hans: 0 });
+    expect(pointsOf({ ...m, override: { draw: true } })).toEqual({ Vadla: 0, Monge: 1, Hans: 1 });
+    const rows = tableOf([m]);
+    expect(rows.find((r) => r.name === "Monge")).toMatchObject({ points: 2, bonus: 1 });
+    expect(lineOf(m).bonus).toBe("Monge: 180, Hans: utsjekk 100+");
+  });
 });

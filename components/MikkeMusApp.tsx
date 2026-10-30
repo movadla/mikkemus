@@ -32,6 +32,7 @@ import { finishState } from "@/lib/finishState";
 import { computeOddsOffThread } from "@/lib/odds/client";
 import { saveMatchArchive } from "@/lib/matchArchive";
 import { recordNightMatch } from "@/lib/nightScoreStorage";
+import { mikkeBull3 } from "@/lib/bonus";
 import type { OddsMatch } from "@/lib/odds/match";
 import { fairPrice } from "@/lib/bet/ledger";
 import { groupBestWin } from "@/lib/bestWin";
@@ -430,6 +431,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   const exactEntryRef = useRef(false);
   // The place of a single match, chosen under Avanserte innstillinger (Ly unless it is changed): its cup is on the winner screen.
   const [matchVenue, setMatchVenue] = useState<VenueId>("lu");
+  /** Three crosses on the bull in a turn: an extra point in Kveldsscore. */
+  const [bonusBull3, setBonusBull3] = useState(false);
   const [exactEntry, setExactEntryState] = useState(false);
   const setExactEntry = (v: boolean) => {
     exactEntryRef.current = v;
@@ -660,6 +663,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       setSkipStats(restored.skipStats ?? false);
       setExactEntry(restored.exactEntry ?? false);
       setMatchVenue(restored.venue ?? "lu");
+      setBonusBull3(restored.bonusBull3 ?? false);
       setPlayers(restored.players);
       writeProgress(restored.progress);
       setCurrentIdx(restored.currentIdx);
@@ -755,6 +759,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       skipStats,
       exactEntry,
       venue: matchVenue,
+      bonusBull3,
       players,
       progress,
       currentIdx,
@@ -801,6 +806,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     skipStats,
     exactEntry,
     matchVenue,
+    bonusBull3,
     players,
     progress,
     currentIdx,
@@ -1397,11 +1403,13 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     startVariant: GameVariant = "standard",
     startStatsOff = false,
     startExactEntry = false,
-    startVenue: VenueId = "lu"
+    startVenue: VenueId = "lu",
+    startBonusBull3 = false
   ) {
     setSkipStats(startStatsOff);
     setExactEntry(startExactEntry);
     setMatchVenue(startVenue);
+    setBonusBull3(startBonusBull3);
     // A new match starts with a freshly calibrated board. It used to be done by hand with «Kalibrer» before every match: the
     // board can still be part-way through the last visit (a match is won on the first or second dart), and would then count the
     // first throws of the next match against it. Only with a board that is up, so nothing is sent to one that is not.
@@ -2259,6 +2267,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         game: onMatchComplete ? "turnering" : "enkeltkamp",
         sides: players.map((name) => ({ name, members: teamRosters[name]?.map((m) => m.name) ?? [name] })),
         placements: [winnerName, ...players.filter((p) => p !== winnerName).sort((a, b) => left(a) - left(b))],
+        ...(bonusBull3 ? { bonus: mikkeBull3(finalTurnLog, { s180: false, co100: false, bull3: true }) } : {}),
         source: { kind: "match", id: matchIdRef.current },
       });
     }
@@ -2777,7 +2786,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
    *  WinnerScreen call site below). */
   function rematch() {
     flushMatchResults();
-    startGame(players, botLevels, teamRosters, guestPlayers, variant, skipStatsRef.current, exactEntryRef.current, matchVenue);
+    startGame(players, botLevels, teamRosters, guestPlayers, variant, skipStatsRef.current, exactEntryRef.current, matchVenue, bonusBull3);
   }
 
   /**

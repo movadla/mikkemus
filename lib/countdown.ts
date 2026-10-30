@@ -21,6 +21,8 @@ export type CountdownTurn = {
   bust: boolean;
   /** Darts thrown in the round: three, but fewer in the round that finished it, where the thrower says how many it took. */
   darts: number;
+  /** Three bulls in the round (150), when the thrower said so: for the extra point of that feat. */
+  bull3?: boolean;
 };
 
 export type CountdownGame = {
@@ -71,11 +73,11 @@ export function memberUp(g: CountdownGame): CountdownMember | null {
 }
 
 /** The round that is written in. A round over the line is kept, and counts for nothing. */
-export function playRound(g: CountdownGame, scored: number, darts = DARTS_PER_ROUND): CountdownGame {
+export function playRound(g: CountdownGame, scored: number, darts = DARTS_PER_ROUND, bull3 = false): CountdownGame {
   const player = playerUp(g);
   const by = memberUp(g)?.name;
   const verdict = judge(remainingOf(g, player), scored, g.doubleOut);
-  return { ...g, turns: [...g.turns, { player, ...(by ? { by } : {}), scored, bust: verdict === "bust", darts: verdict === "bust" ? DARTS_PER_ROUND : darts }] };
+  return { ...g, turns: [...g.turns, { player, ...(by ? { by } : {}), scored, bust: verdict === "bust", darts: verdict === "bust" ? DARTS_PER_ROUND : darts, ...(bull3 && verdict !== "bust" ? { bull3: true } : {}) }] };
 }
 
 /** Takes the last round back. */

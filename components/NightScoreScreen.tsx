@@ -9,6 +9,7 @@ import { buildMatchLog } from "@/lib/matchLog";
 import { groupNights, nightOf } from "@/lib/nights";
 import {
   NIGHT_GAME_MARKS,
+  bonusText,
   NIGHT_GAME_NAMES,
   isOverridden,
   lineOf,
@@ -177,6 +178,7 @@ export function NightScoreScreen() {
                 <span className="kv-name">{r.name}</span>
                 <span className="kv-meta">
                   {r.matches} {r.matches === 1 ? "kamp" : "kamper"} · {r.wins}-{r.losses}
+                  {r.bonus > 0 && ` · +${r.bonus} bonus`}
                 </span>
                 <span className="kv-points tabular" aria-label={`${r.points} poeng`}>
                   {r.points}
@@ -202,6 +204,7 @@ export function NightScoreScreen() {
                         {isOverridden(m) && !m.deleted && <span className="kv-tag kv-tag--o">Overstyrt</span>}
                         {m.deleted && <span className="kv-tag kv-tag--d">Slettet</span>}
                         {line.tag && !m.deleted && <span className="kv-tag">{line.tag}</span>}
+                        {line.bonus && !m.deleted && <span className="kv-tag kv-tag--o">Bonus</span>}
                       </small>
                     </span>
                     {line.score && <span className="kv-score tabular">{line.score}</span>}
@@ -285,6 +288,11 @@ function MatchSheet({ m, canOpen, onClose, onDelete }: { m: NightMatch; /** The 
           options={[...m.sides.map((s: NightSide) => ({ value: s.name, label: sideLabel(s) })), { value: "draw", label: "Uavgjort" }]}
         />
       </div>
+      {m.bonus && m.bonus.length > 0 && (
+        <p className="mb-2" style={{ color: "var(--color-gold-strong)", fontSize: "var(--text-small)", fontWeight: 700 }}>
+          Ekstrapoeng: {bonusText(m)}
+        </p>
+      )}
       <p className="mb-4" style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }} aria-live="polite">
         {m.deleted ? "Kampen er tatt ut av kvelden, så den gir ingen poeng." : giving.length === 0 ? "Ingen får poeng." : giving.map(([p, n]) => `${p} får ${n === 1 ? "ett poeng" : `${n} poeng`}`).join(", ") + "."}
       </p>

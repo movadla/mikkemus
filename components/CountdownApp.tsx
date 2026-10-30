@@ -37,6 +37,8 @@ import {
 } from "@/lib/countdown";
 import { haptics } from "@/lib/haptics";
 import { splitPeople, type PickedTeam, type Person } from "@/lib/people";
+import { standing, type SeriesWiring } from "@/lib/series";
+import { NO_BONUS, countdownBonuses, type BonusSettings, type NightBonus } from "@/lib/bonus";
 import { rostersOf } from "@/lib/teamGame";
 import { useGameVenue } from "@/lib/gameVenue";
 import { individualSetupProblem, setupSummary, teamSetupProblem } from "@/lib/setupProblem";
@@ -49,6 +51,7 @@ import { ScoreKeypad } from "./ScoreKeypad";
 import { GameVenue, VenueSection } from "./GameVenue";
 import { GameWho, type GameMode } from "./GameWho";
 import { SideAvatar } from "./SideAvatar";
+import { SeriesPicker, SeriesSummary, seriesLine } from "./SeriesPicker";
 import { ScreenTop } from "./ScreenTop";
 import { commitPeople, commitTeams } from "./SetupScreen";
 import { StickyAction } from "./StickyAction";
@@ -73,6 +76,14 @@ export function CountdownApp({ onExitToHome }: { onExitToHome: () => void }) {
   const [mode, setMode] = useState<GameMode>("individual");
   const [teams, setTeams] = useState<PickedTeam[]>([]);
   const [start, setStart] = useState<CountdownStart>(501);
+  const [advanced, setAdvanced] = useState(false);
+  /** Best av x: 1 is one game. */
+  const [bestOf, setBestOf] = useState(1);
+  /** The winners of the games of the series so far. */
+  const [history, setHistory] = useState<string[]>([]);
+  /** Extra points for feats (180, three bulls, a checkout of 100 or more), and the feats of the games of the series so far. */
+  const [bonus, setBonus] = useState<BonusSettings>(NO_BONUS);
+  const [bonusHistory, setBonusHistory] = useState<NightBonus[]>([]);
   const [doubleOut, setDoubleOut] = useState(true);
   const [game, setGame] = useState<CountdownGame | null>(null);
   const [botLevels, setBotLevels] = useState<Record<string, BotLevel>>({});
@@ -92,6 +103,29 @@ export function CountdownApp({ onExitToHome }: { onExitToHome: () => void }) {
           <GameWho mode={mode} onMode={setMode} people={people} onPeople={setPeople} teams={teams} onTeams={setTeams} />
           <div className="mt-4">
             <SwitchRow label="Dobbel ut" hint="Står det 1 igjen, er runden over streken" checked={doubleOut} onChange={setDoubleOut} />
+          </div>
+          <div className="mt-3 space-y-2">
+            <SwitchRow
+              label="Avanserte innstillinger"
+              hint="Best av"
+              checked={advanced}
+              onChange={(on) => {
+                setAdvanced(on);
+                if (!on) {
+                  setBestOf(1);
+                  setBonus(NO_BONUS);
+                }
+              }}
+            />
+            {advanced && <SeriesPicker value={bestOf} onChange={setBestOf} />}
+            {advanced && (
+              <div className="space-y-2" role="group" aria-label="Ekstrapoeng">
+                <p className="section-label mt-1">EKSTRAPOENG I KVELDSSCORE</p>
+                <SwitchRow label="180" hint="Et poeng til den som kaster 180" checked={bonus.s180} onChange={(v) => setBonus({ ...bonus, s180: v })} />
+                <SwitchRow label="Tre i bull" hint="Et poeng når en runde på 150 var tre bull (du blir spurt)" checked={bonus.bull3} onChange={(v) => setBonus({ ...bonus, bull3: v })} />
+                <SwitchRow label="Utsjekk på 100 eller mer" hint="Et poeng til vinneren" checked={bonus.co100} onChange={(v) => setBonus({ ...bonus, co100: v })} />
+              </div>
+            )}
           </div>
           <VenueSection value={venue} onChange={setVenue} />
           <StickyAction
@@ -121,7 +155,17 @@ export function CountdownApp({ onExitToHome }: { onExitToHome: () => void }) {
 
   return (
     <GameVenue venue={venue}>
-      <CountdownGameScreen game={game} setGame={setGame} botLevels={botLevels} photos={photos} onHome={onExitToHome} onNew={() => setGame(null)} />
+      <CountdownGameScreen game={game} setGame={setGame} botLevels={botLevels} photos={photos} onHome={onExitToHome} onNew={() => {
+          setGame(null);
+          setHistory([]);
+          setBonusHistory([]);
+        }} bonus={bonus} series={bestOf > 1 ? { bestOf, history, bonus: bonusHistory, onWin: (w, b) => {
+          setHistory((h) => [...h, w]);
+          setBonusHistory((x) => [...x, ...(b ?? [])]);
+        }, onReset: () => {
+          setHistory([]);
+          setBonusHistory([]);
+        } } : undefined} />
     </GameVenue>
   );
 }
@@ -138,6 +182,8 @@ export function CountdownGameScreen({
   onHome,
   onNew,
   career,
+  series,
+  bonus,
 }: {
   game: CountdownGame;
   setGame: (g: CountdownGame) => void;
@@ -146,8 +192,16 @@ export function CountdownGameScreen({
   onHome: () => void;
   onNew: () => void;
   career?: { onDone: () => void; /** A challenge, not a leg of a cup: leaving gives it up. */ giveUp?: boolean };
+  /** A series (best of x) the game is one of. */
+  series?: SeriesWiring;
+  /** The feats that give an extra point (set under Avanserte innstillinger). */
+  bonus?: BonusSettings;
 }) {
   const [finishing, setFinishing] = useState<number | null>(null);
+  /** A round of 150 with the extra point for three bulls on: the thrower is asked, as 150 can be made in other ways. */
+  const [askBull, setAskBull] = useState<number | null>(null);
+  /** The answer, for a round that finishes the game and still has to say how many darts it took. */
+  const [finishBull, setFinishBull] = useState(false);
   const [notice, setNotice] = useState("");
   /** The darts of the bot that threw last, for the line under the board: told as it is, not as a warning. */
   const [botNote, setBotNote] = useState("");
@@ -167,7 +221,9 @@ export function CountdownGameScreen({
   const who = member?.name ?? up;
   const botUp = !winner && (member ? member.isBot : isBot(up));
   const isBotThrower = (n: string) => isBot(n) || Object.values(game.rosters ?? {}).some((r) => r.some((m) => m.name === n && m.isBot));
-  useRecordNight(winner, game.turns.length === 0, (id) => (career || !winner ? null : countdownNight(game, winner, Object.keys(botLevels), id)));
+  const std = series ? standing(series, game.players, winner) : null;
+  const nightWinner = series ? (std?.decided ?? null) : winner;
+  useRecordNight(nightWinner, game.turns.length === 0, (id) => (career || !nightWinner ? null : countdownNight(game, nightWinner, Object.keys(botLevels), id, series && std ? { bestOf: series.bestOf, wins: std.wins } : undefined, [...(series?.bonus ?? []), ...countdownBonuses(game, bonus)])));
   useRecordResult(career || game.rosters ? null : winner, game.turns.length === 0, (id, at) => countdownResult(game, Object.keys(botLevels), id, at));
   const rain = useMemo(() => (winner && fx.confetti ? generateConfettiRain(fx.bigConfetti ? 60 : 36) : []), [winner, fx.confetti, fx.bigConfetti]);
 
@@ -182,11 +238,16 @@ export function CountdownGameScreen({
   }, [slam]);
 
   /** The round is written in: over the line it counts for nothing, a finish asks how many darts it took, anything else goes on. */
-  function submit(scored: number) {
+  function submit(scored: number, asked: false | "yes" | "no" = false) {
     const verdict = judge(left, scored, game.doubleOut);
+    if (!asked && bonus?.bull3 && scored === 150 && verdict !== "bust") {
+      setAskBull(scored);
+      return;
+    }
     // The number is said at once, so the round can be heard to have gone in right; over the line it is said as such.
     callOut(verdict === "bust" ? "Over" : String(scored));
     if (verdict === "finish") {
+      setFinishBull(asked === "yes");
       setFinishing(scored);
       return;
     }
@@ -198,7 +259,7 @@ export function CountdownGameScreen({
       setSlam(game.turns.length + 1);
       if (fx.ringSlam) playFanfare();
     }
-    setGame(playRound(game, scored));
+    setGame(playRound(game, scored, undefined, asked === "yes"));
   }
 
   /** A bot's round: its darts are shown, the number is said as for anyone else, and it goes in with the darts it took. */
@@ -291,14 +352,23 @@ export function CountdownGameScreen({
               </li>
             ))}
           </ul>
+          {series && winner && <SeriesSummary series={series} sides={game.players} current={winner} />}
           <div className="space-y-2">
             {career ? (
               <Button block variant="primary" size="lg" onClick={career.onDone}>
                 Fortsett
               </Button>
             ) : (
-              <Button block variant="primary" size="lg" onClick={() => setGame(newGame(game.start, game.doubleOut, game.players, game.starts, game.rosters))}>
-                Spill igjen
+              <Button
+                block
+                variant="primary"
+                size="lg"
+                onClick={() => {
+                  if (series && winner) (std?.decided ? series.onReset : () => series.onWin(winner, countdownBonuses(game, bonus)))();
+                  setGame(newGame(game.start, game.doubleOut, game.players, game.starts, game.rosters));
+                }}
+              >
+                {series ? (std?.decided ? "Ny serie" : "Neste kamp") : "Spill igjen"}
               </Button>
             )}
             <Button block onClick={undo}>
@@ -338,6 +408,43 @@ export function CountdownGameScreen({
           ]}
         />
       )}
+      {askBull !== null && (
+        <Sheet
+          title="Tre i bull?"
+          onClose={() => {
+            const s = askBull;
+            setAskBull(null);
+            submit(s, "no");
+          }}
+        >
+          <p className="mb-4" style={{ color: "var(--color-text-2)", fontSize: "var(--text-body)" }}>
+            {who} kastet 150. Var det tre bull? Det gir et ekstra poeng i Kveldsscore.
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              size="lg"
+              variant="primary"
+              onClick={() => {
+                const s = askBull;
+                setAskBull(null);
+                submit(s, "yes");
+              }}
+            >
+              Ja, tre bull
+            </Button>
+            <Button
+              size="lg"
+              onClick={() => {
+                const s = askBull;
+                setAskBull(null);
+                submit(s, "no");
+              }}
+            >
+              Nei
+            </Button>
+          </div>
+        </Sheet>
+      )}
       {finishing !== null && (
         <Sheet title="Hvor mange piler tok siste runde?" onClose={() => setFinishing(null)}>
           <p className="mb-4" style={{ color: "var(--color-text-2)", fontSize: "var(--text-body)" }}>
@@ -352,7 +459,7 @@ export function CountdownGameScreen({
                 onClick={() => {
                   haptics.win();
                   setFinishing(null);
-                  setGame(playRound(game, finishing, n));
+                  setGame(playRound(game, finishing, n, finishBull));
                 }}
                 className={key}
                 style={keyStyle}
@@ -366,6 +473,7 @@ export function CountdownGameScreen({
       <div className="screen-inner cd-fill">
         <ScreenTop
           title={String(game.start)}
+          sub={series ? seriesLine(series, game.players, null) : undefined}
           onBack={() => setConfirmExit(true)}
           backLabel={career?.giveUp ? "Gi opp" : career ? "Pause" : "Avslutt kampen"}
           right={

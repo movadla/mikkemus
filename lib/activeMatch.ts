@@ -37,6 +37,8 @@ export type ActiveMatchSnapshot = {
   guestPlayers: Record<string, true>;
   /** The place a single match is played in (lib/venues.ts), chosen under Avanserte innstillinger: its cup is on the winner screen. Absent: Ly. */
   venue?: VenueId;
+  /** Three crosses on the bull in a turn gives an extra point in Kveldsscore (chosen under Avanserte innstillinger). */
+  bonusBull3?: boolean;
   /**
    * The match's accumulating statistics. All optional, and all absent from snapshots saved
    * before they were persisted at all — restore falls back to empty rather than migrating.

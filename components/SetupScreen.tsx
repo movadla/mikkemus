@@ -89,7 +89,9 @@ export function SetupScreen({
     /** Advanced: every dart keyed in by hand as the bed it hit, a miss included. */
     exactEntry?: boolean,
     /** Where the match is played (Ly unless changed under Avanserte innstillinger): its cup is on the winner screen. */
-    venue?: VenueId
+    venue?: VenueId,
+    /** Advanced: three crosses on the bull in one turn gives the thrower an extra point in Kveldsscore. */
+    bonusBull3?: boolean
   ) => void;
   onHome?: () => void;
   /** Overridden by other modes (e.g. Bull-duell) that reuse this same player picker. */
@@ -109,6 +111,7 @@ export function SetupScreen({
   // on screen, and keying in every dart.
   const [advanced, setAdvanced] = useState(false);
   const [exactEntry, setExactEntry] = useState(false);
+  const [bonusBull3, setBonusBull3] = useState(false);
   const [venue, setVenue] = useState<VenueId>("lu");
 
   // The longer games have no bots — see botsSupported. Bots already added when the length is
@@ -126,7 +129,7 @@ export function SetupScreen({
     commitPeople(people);
     const { players, botLevels, guestPlayers } = splitPeople(people);
     // The stand rule belongs to team play; a lone player has no one to hand over to.
-    onStart(players, botLevels, undefined, guestPlayers, withStandRule(variant, false), statsOff, exactEntry, venue);
+    onStart(players, botLevels, undefined, guestPlayers, withStandRule(variant, false), statsOff, exactEntry, venue, bonusBull3);
   }
 
   function startTeamGame() {
@@ -144,7 +147,8 @@ export function SetupScreen({
       variant,
       statsOff,
       exactEntry,
-      venue
+      venue,
+      bonusBull3
     );
   }
 
@@ -161,6 +165,7 @@ export function SetupScreen({
           // What is hidden is not left on: closing it puts the game back as everyone plays it.
           if (!on) {
             setExactEntry(false);
+            setBonusBull3(false);
             setVariant("standard");
             setStatsOff(false);
             setVenue("lu");
@@ -196,6 +201,7 @@ export function SetupScreen({
         {advanced && (
           <SwitchRow label="Legg inn hver pil for hånd" hint="Velg hva hver pil traff" checked={exactEntry} onChange={setExactEntry} />
         )}
+        {advanced && <SwitchRow label="Ekstrapoeng for tre i bull" hint="Et poeng i Kveldsscore for tre kryss på bull i én runde" checked={bonusBull3} onChange={setBonusBull3} />}
         {advanced && (
           // Played without a trace in the statistics: last of the choices.
           <div className="w-full">{noStatsToggle}</div>

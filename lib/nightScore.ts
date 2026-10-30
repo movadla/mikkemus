@@ -6,6 +6,9 @@
  *
  * Only matches between people count: a match with a bot in it is never written (see lib/nightScoreStorage.ts).
  */
+import type { Feat, NightBonus } from "./bonus";
+import { FEAT_NAMES } from "./bonus";
+
 export type NightGame = "enkeltkamp" | "turnering" | "bullduel" | "301" | "501" | "highstriker" | "lava" | "halvit" | "killer" | "annet";
 
 export const NIGHT_GAME_NAMES: Record<NightGame, string> = {
@@ -47,6 +50,10 @@ export type NightMatch = {
   deleted?: boolean;
   /** Written in by hand. */
   manual?: boolean;
+  /** Feats that give a person an extra point (180 in 301/501, three bulls, a checkout of 100 or more), when the game was set to count them. */
+  bonus?: NightBonus[];
+  /** The match is a series (best of 3, say): what each side won, and how long it was. The series is one match in the evening, and its winner gets the point. */
+  series?: { bestOf: number; wins: Record<string, number> };
   /** Where the match can be opened from: a match page, a tournament. */
   source?: { kind: "match"; id: string } | { kind: "tournament"; id: string } | { kind: "game"; id: string };
 };
@@ -69,17 +76,23 @@ export function pointsOf(m: NightMatch): Record<string, number> {
   const out: Record<string, number> = {};
   const order = resultOf(m);
   for (const s of m.sides) for (const p of s.members) out[p] ??= 0;
-  if (m.deleted || !order) return out;
-  m.sides.forEach((s) => {
-    const place = order.indexOf(s.name);
+  if (m.deleted) return out;
+  // A draw gives no place points; the feats still count.
+  (order ? m.sides : []).forEach((s) => {
+    const place = (order ?? []).indexOf(s.name);
     if (place === -1) return;
     const points = m.sides.length === 2 ? (place === 0 ? 1 : 0) : (PLACE_POINTS[place] ?? 0);
     for (const p of s.members) out[p] = (out[p] ?? 0) + points;
   });
+  // The extra points are for the person who did it, and count whatever the result was.
+  for (const b of m.bonus ?? []) if (b.who in out) out[b.who] += 1;
   return out;
 }
 
-export type NightRow = { name: string; points: number; matches: number; wins: number; losses: number };
+/** The feats of a match as a sentence: «Lars: 180, Vadla: tre i bull». */
+export const bonusText = (m: NightMatch): string => (m.bonus ?? []).map((b) => `${b.who}: ${FEAT_NAMES[b.feat as Feat].toLowerCase()}`).join(", ");
+
+export type NightRow = { name: string; points: number; matches: number; wins: number; losses: number; /** The extra points among the points. */ bonus: number };
 
 /** The table of an evening: the people with the most points first, then the most wins, then the fewest matches (the same points in fewer matches is better). */
 export function tableOf(matches: NightMatch[]): NightRow[] {
@@ -92,8 +105,9 @@ export function tableOf(matches: NightMatch[]): NightRow[] {
       const won = !!order && order[0] === s.name;
       const lost = !!order && order[0] !== s.name;
       for (const p of s.members) {
-        const row = rows.get(p) ?? { name: p, points: 0, matches: 0, wins: 0, losses: 0 };
+        const row = rows.get(p) ?? { name: p, points: 0, matches: 0, wins: 0, losses: 0, bonus: 0 };
         row.points += points[p] ?? 0;
+        row.bonus += (m.bonus ?? []).filter((b) => b.who === p).length;
         row.matches += 1;
         if (won) row.wins += 1;
         if (lost) row.losses += 1;
@@ -112,15 +126,24 @@ export type NightLine = {
   title: string;
   /** «1-0», «0-1» or «0-0» for a draw; empty for a match of more than two sides. */
   score: string;
-  /** For a match of more than two sides, who won; for a draw, a word. */
+  /** For a match of more than two sides, who won; for a draw, a word; for a series, how long it was. */
   tag?: string;
+  /** The feats with an extra point, when there are any. */
+  bonus?: string;
 };
 
 /** A match as a line of the list. In the order the sides were put in, not the order they finished, so the line reads the same whoever won. */
 export function lineOf(m: NightMatch): NightLine {
+  const line = lineWithoutBonus(m);
+  return m.bonus && m.bonus.length > 0 ? { ...line, bonus: bonusText(m) } : line;
+}
+
+function lineWithoutBonus(m: NightMatch): NightLine {
   const order = resultOf(m);
   if (m.sides.length === 2) {
     const [a, b] = m.sides;
+    // A series is told by its games (2-1); once the result is overridden it is told by who won, as any match.
+    if (m.series && !m.override) return { title: `${sideLabel(a)} vs. ${sideLabel(b)}`, score: `${m.series.wins[a.name] ?? 0}-${m.series.wins[b.name] ?? 0}`, tag: `Best av ${m.series.bestOf}` };
     const score = !order ? "0-0" : order[0] === a.name ? "1-0" : "0-1";
     return { title: `${sideLabel(a)} vs. ${sideLabel(b)}`, score, ...(!order ? { tag: "Uavgjort" } : {}) };
   }
