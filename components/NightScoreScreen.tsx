@@ -23,7 +23,7 @@ import {
   type NightMatch,
   type NightSide,
 } from "@/lib/nightScore";
-import { currentEvening, deleteEvening, recordNightMatch, startNewEvening, updateNightMatch, useNightScore, type NewNightMatch } from "@/lib/nightScoreStorage";
+import { currentEvening, deleteEvening, recordNightMatch, refreshNight, startNewEvening, updateNightMatch, useNightScore, type NewNightMatch } from "@/lib/nightScoreStorage";
 import type { PickedTeam, Person } from "@/lib/people";
 import { useRoster } from "@/lib/storage";
 import { ConfirmDialog } from "./ConfirmDialog";
@@ -246,6 +246,9 @@ export function NightScoreScreen() {
           </div>
         )}
         <div className="mt-3">
+          <button type="button" onClick={() => void refreshNight(true)} className={`tactile flex items-center justify-center w-full rounded-lg mb-2 ${FOCUS_RING}`} style={{ minHeight: "var(--control)", color: "var(--color-teal)", fontWeight: 700, fontSize: "var(--text-small)" }}>
+            Oppdater fra de andre telefonene
+          </button>
           <button type="button" onClick={() => setRules(true)} className={`tactile flex items-center justify-center w-full rounded-lg ${FOCUS_RING}`} style={{ minHeight: "var(--control)", color: "var(--color-teal)", fontWeight: 700, fontSize: "var(--text-small)" }}>
             Regler for Kveldsscore
           </button>

@@ -12,6 +12,20 @@ const EMPTY: NightSnapshot = { evenings: [], matches: [], loaded: false };
 let snap: NightSnapshot = EMPTY;
 let loading = false;
 const waiting: (() => void)[] = [];
+/** Writes on their way, and the ids written lately: a fresh list from the database must not take away what it has not got yet. */
+let pending = 0;
+const lately = new Map<string, number>();
+const LATELY_MS = 60_000;
+const touched = (...ids: string[]) => ids.forEach((id) => lately.set(id, Date.now()));
+const isLately = (id: string) => Date.now() - (lately.get(id) ?? 0) < LATELY_MS;
+async function tracked<T>(p: PromiseLike<T>): Promise<T> {
+  pending++;
+  try {
+    return await p;
+  } finally {
+    pending--;
+  }
+}
 const listeners = new Set<() => void>();
 
 const notify = () => listeners.forEach((l) => l());
@@ -24,6 +38,8 @@ const newId = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? c
 
 type Row = { id: string; kind: "evening" | "match"; at: string; data: Evening | NightMatch };
 
+const fetchRows = () => supabase!.from("night_scores").select("id, kind, at, data").order("at", { ascending: false }).limit(3000);
+
 async function load() {
   if (snap.loaded || loading) return;
   if (!supabase) {
@@ -32,7 +48,7 @@ async function load() {
     return;
   }
   loading = true;
-  const { data, error } = await supabase.from("night_scores").select("id, kind, at, data").order("at", { ascending: false }).limit(3000);
+  const { data, error } = await fetchRows();
   loading = false;
   if (error || !Array.isArray(data)) {
     // No table: there is no evening, and nothing waits for one.
@@ -52,6 +68,30 @@ async function load() {
   waiting.splice(0).forEach((f) => f());
 }
 
+let refreshedAt = 0;
+let refreshing = false;
+
+/**
+ * Fetches the list again, for what other phones have written since: what the database says is taken as it is (a match changed or an evening
+ * deleted elsewhere too), except what this phone wrote lately or is still writing. Not while a write is on its way, and not more than once in five seconds.
+ */
+export async function refreshNight(force = false): Promise<void> {
+  if (!supabase || !snap.loaded || loading || refreshing || pending > 0) return;
+  if (!force && Date.now() - refreshedAt < 5000) return;
+  refreshing = true;
+  const { data, error } = await fetchRows();
+  refreshing = false;
+  refreshedAt = Date.now();
+  if (error || !Array.isArray(data) || pending > 0) return;
+  const rows = data as Row[];
+  const evenings = rows.filter((r) => r.kind === "evening").map((r) => r.data as Evening);
+  const matches = rows.filter((r) => r.kind === "match").map((r) => r.data as NightMatch);
+  set({
+    evenings: [...snap.evenings.filter((e) => isLately(e.id) && !evenings.some((x) => x.id === e.id)), ...evenings],
+    matches: [...snap.matches.filter((m) => isLately(m.id) && !matches.some((x) => x.id === m.id)), ...matches],
+  });
+}
+
 /** Runs when the list is there (at once, if it is). */
 function whenLoaded(f: () => void) {
   if (snap.loaded) f();
@@ -61,10 +101,26 @@ function whenLoaded(f: () => void) {
   }
 }
 
+/** Comes back to the page: look again, for what the others have written while it was away. */
+const onBack = () => {
+  if (typeof document === "undefined" || document.visibilityState === "visible") void refreshNight();
+};
+
 function subscribe(listener: () => void) {
   listeners.add(listener);
+  if (listeners.size === 1 && typeof document !== "undefined") {
+    document.addEventListener("visibilitychange", onBack);
+    window.addEventListener("focus", onBack);
+  }
   void load();
-  return () => listeners.delete(listener);
+  void refreshNight();
+  return () => {
+    listeners.delete(listener);
+    if (listeners.size === 0 && typeof document !== "undefined") {
+      document.removeEventListener("visibilitychange", onBack);
+      window.removeEventListener("focus", onBack);
+    }
+  };
 }
 
 /** The evenings and matches written down. Empty until they are loaded, and for good when there is no table. */
@@ -77,7 +133,8 @@ export const currentEvening = (s: NightSnapshot): Evening | null => [...s.evenin
 
 async function write(kind: "evening" | "match", id: string, at: string, data: Evening | NightMatch) {
   if (!supabase) return;
-  const { error } = await supabase.from("night_scores").upsert({ id, kind, at, data }, { onConflict: "id" });
+  touched(id);
+  const { error } = await tracked(supabase.from("night_scores").upsert({ id, kind, at, data }, { onConflict: "id" }));
   if (error) console.warn("Kunne ikke lagre kvelden:", error.message);
 }
 
@@ -124,14 +181,14 @@ export function updateNightMatch(id: string, patch: Partial<NightMatch>): void {
 export function deleteEvening(id: string): void {
   const matchIds = snap.matches.filter((m) => m.evening === id).map((m) => m.id);
   set({ evenings: snap.evenings.filter((e) => e.id !== id), matches: snap.matches.filter((m) => m.evening !== id) });
-  if (supabase) void supabase.from("night_scores").delete().in("id", [id, ...matchIds]).then(({ error }) => error && console.warn("Kunne ikke slette kvelden:", error.message));
+  if (supabase) void tracked(supabase.from("night_scores").delete().in("id", [id, ...matchIds])).then(({ error }) => error && console.warn("Kunne ikke slette kvelden:", error.message));
 }
 
 /** Takes a match away for good: for a win that was undone, which was never a result. */
 export function removeNightMatch(id: string): void {
   if (!snap.matches.some((m) => m.id === id)) return;
   set({ matches: snap.matches.filter((m) => m.id !== id) });
-  if (supabase) void supabase.from("night_scores").delete().eq("id", id).then(({ error }) => error && console.warn("Kunne ikke slette kampen:", error.message));
+  if (supabase) void tracked(supabase.from("night_scores").delete().eq("id", id)).then(({ error }) => error && console.warn("Kunne ikke slette kampen:", error.message));
 }
 
 /**

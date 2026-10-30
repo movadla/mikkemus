@@ -112,6 +112,8 @@ export function SetupScreen({
   const [advanced, setAdvanced] = useState(false);
   const [exactEntry, setExactEntry] = useState(false);
   const [bonusBull3, setBonusBull3] = useState(false);
+  // «Tvungen Tvunget»: the hard way to play it. It does not count in the statistics, but the match still counts in Kveldsscore.
+  const [tvungen, setTvungen] = useState(false);
   const [venue, setVenue] = useState<VenueId>("lu");
 
   // The longer games have no bots — see botsSupported. Bots already added when the length is
@@ -129,7 +131,7 @@ export function SetupScreen({
     commitPeople(people);
     const { players, botLevels, guestPlayers } = splitPeople(people);
     // The stand rule belongs to team play; a lone player has no one to hand over to.
-    onStart(players, botLevels, undefined, guestPlayers, withStandRule(variant, false), statsOff, exactEntry, venue, bonusBull3);
+    onStart(players, botLevels, undefined, guestPlayers, withStandRule(variant, false), statsOff || tvungen, exactEntry, venue, bonusBull3);
   }
 
   function startTeamGame() {
@@ -145,14 +147,14 @@ export function SetupScreen({
       teamRosters,
       undefined,
       variant,
-      statsOff,
+      statsOff || tvungen,
       exactEntry,
       venue,
       bonusBull3
     );
   }
 
-  const noStatsToggle = <SwitchRow label="Spill uten at statistikken teller" checked={statsOff} onChange={setStatsOff} />;
+  const noStatsToggle = <SwitchRow label="Spill uten at statistikken teller" checked={statsOff || tvungen} onChange={setStatsOff} />;
 
   const advancedSettings = (
     <div className="w-full flex flex-col gap-2" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
@@ -201,6 +203,7 @@ export function SetupScreen({
         {advanced && (
           <SwitchRow label="Legg inn hver pil for hånd" hint="Velg hva hver pil traff" checked={exactEntry} onChange={setExactEntry} />
         )}
+        {advanced && <SwitchRow label="Tvungen Tvunget" hint="Teller ikke i statistikken, men i Kveldsscore" checked={tvungen} onChange={setTvungen} />}
         {advanced && <SwitchRow label="Ekstrapoeng for tre i bull" hint="Et poeng i Kveldsscore for tre kryss på bull i én runde" checked={bonusBull3} onChange={setBonusBull3} />}
         {advanced && (
           // Played without a trace in the statistics: last of the choices.
