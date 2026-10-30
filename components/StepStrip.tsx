@@ -3,7 +3,7 @@ const STEPS = ["Oppsett", "Trekning", "Turnering"];
 /** Where in the making of a tournament this screen is: setup, the draw, then the tournament itself. The career has no setup: its strip is the draw and the tournament. */
 export function StepStrip({ step, steps = STEPS }: { step: 0 | 1 | 2; steps?: string[] }) {
   return (
-    <ol aria-label="Steg" className="flex items-center justify-center gap-2 mb-4 list-none p-0" style={{ fontSize: "var(--text-micro)" }}>
+    <ol aria-label="Steg" className="step-pill flex items-center justify-center gap-2 mb-4 list-none" style={{ fontSize: "var(--text-micro)" }}>
       {steps.map((label, i) => (
         <li
           key={label}

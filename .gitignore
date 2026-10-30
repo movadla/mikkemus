@@ -55,3 +55,6 @@ scolia-relay-run.log
 # playwright
 /test-results/
 /playwright-report/
+
+# Playwright-skjermbilder lages lokalt
+/e2e/__screenshots__/

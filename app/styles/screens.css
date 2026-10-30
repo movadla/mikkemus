@@ -1673,3 +1673,27 @@ html[data-fx="full"] .hs-last {
 }
 
 .draw-toggle-on { background: linear-gradient(180deg, color-mix(in srgb, var(--color-teal) 82%, white), var(--color-teal)); border: 2px solid var(--color-teal); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 8px 16px -8px var(--color-teal); }
+
+/* The prizes: a plate each, the odd one in a row of its own with the detail at the end. */
+.award { background: linear-gradient(180deg, color-mix(in srgb, var(--color-cell) 80%, white), var(--color-cell)); border: 1px solid var(--color-border); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 1px 2px rgba(0, 0, 0, 0.1); }
+.award-wide { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 0.75rem; }
+
+/* What is inside the advanced settings is one card, with a thin line between the choices. */
+.adv-card { padding: 0.75rem; border-radius: 16px; background: linear-gradient(180deg, color-mix(in srgb, var(--color-surface) 88%, white), var(--color-surface)); border: 1px solid var(--color-border); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 1px 2px rgba(0, 0, 0, 0.1), 0 12px 22px -16px rgba(0, 0, 0, 0.4); }
+.adv-card > * + * { border-top: 1px solid var(--color-hairline); margin-top: 0.7rem; padding-top: 0.7rem; }
+.adv-card > * { width: 100%; }
+
+/* Mer: the rows are one raised card with thin lines between them, not a stack of boxes. */
+.group-list { border-radius: 16px; overflow: hidden; background: linear-gradient(180deg, color-mix(in srgb, var(--color-surface) 90%, white), var(--color-surface)); border: 1px solid var(--color-border); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 1px 2px rgba(0, 0, 0, 0.1), 0 12px 22px -16px rgba(0, 0, 0, 0.4); }
+.group-list > * + * { border-top: 1px solid var(--color-hairline); }
+.group-list > * { display: flex; }
+
+.empty-card { padding: 1.5rem 1rem; border-radius: 18px; background: linear-gradient(180deg, color-mix(in srgb, var(--color-surface) 90%, white), var(--color-surface)); border: 1px solid var(--color-border); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 1px 2px rgba(0, 0, 0, 0.1), 0 14px 26px -18px rgba(0, 0, 0, 0.45); }
+
+/* A cup card: the emblem in the corner and the check in the other, the name at the bottom on one line, the trophy under it. */
+.cup-poster { display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-start; text-align: left; flex: 0 0 min(62%, 12rem); }
+.cup-poster-emblem { position: absolute; top: 0.5rem; left: 0.6rem; }
+.cup-poster-name, .cup-poster-trophy { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* The steps sit in a pill of their own, so they read against a picture as well as against the page. */
+.step-pill { width: fit-content; margin-inline: auto; padding: 0.3rem 0.9rem; border-radius: 999px; background: color-mix(in srgb, var(--color-surface) 82%, transparent); border: 1px solid var(--color-border); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }

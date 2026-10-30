@@ -28,7 +28,7 @@ export function FxMenu({ onClose }: { onClose: () => void }) {
 
   return (
     <Sheet title="Animasjon og lyd" onClose={onClose}>
-      <Segmented value={level} onChange={choose} label="Animasjon og lyd" options={FX_LEVELS.map((l) => ({ value: l, label: FX_LABELS[l] }))} />
+      <Segmented value={level} onChange={choose} label="Animasjon og lyd" fit options={FX_LEVELS.map((l) => ({ value: l, label: FX_LABELS[l] }))} />
       {askSimple && (
         <div className="mt-3 card-flat text-center" style={{ borderColor: "var(--color-red)" }}>
           <p style={{ color: "var(--color-cream)", fontSize: "var(--text-body)" }}>Bytt til Enkel? Kampen teller ikke.</p>

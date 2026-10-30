@@ -152,7 +152,7 @@ export function SetupScreen({
     <div className="w-full flex flex-col gap-2" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
       <SwitchRow
         label="Avanserte innstillinger"
-        hint="Kryss per rad, animasjon, pil for pil og statistikk"
+        hint="Kryss, animasjon, sted og mer"
         checked={advanced}
         onChange={(on) => {
           setAdvanced(on);
@@ -165,36 +165,40 @@ export function SetupScreen({
           }
         }}
       />
-      {/* The order of the advanced settings: the stand rule (teams), animation and sound, crosses per row, the place, a dart at a time, and last the statistics. */}
-      {advanced && variantSelectable && mode === "team" && (
-        <div className="w-full pt-2 text-left">
-          <RulesPicker variant={variant} onChange={setVariant} teamPlay part="stand" />
-        </div>
-      )}
       {advanced && (
-        <div className="w-full pb-1">
-          {/* Enkel, Vanlig, Party, Full party: the same device setting as in Innstillinger, chosen here before the match. */}
-          <FxPicker />
+        <div className="adv-card w-full flex flex-col">
+        {/* The order of the advanced settings: the stand rule (teams), animation and sound, crosses per row, the place, a dart at a time, and last the statistics. */}
+        {advanced && variantSelectable && mode === "team" && (
+          <div className="w-full pt-2 text-left">
+            <RulesPicker variant={variant} onChange={setVariant} teamPlay part="stand" />
+          </div>
+        )}
+        {advanced && (
+          <div className="w-full pb-1">
+            {/* Enkel, Vanlig, Party, Full party: the same device setting as in Innstillinger, chosen here before the match. */}
+            <FxPicker />
+          </div>
+        )}
+        {advanced && variantSelectable && (
+          <div className="w-full pt-2 text-left">
+            <RulesPicker variant={variant} onChange={setVariant} teamPlay={false} part="crosses" />
+          </div>
+        )}
+        {advanced && variantSelectable && (
+          // The place the match is played in: its cup is on the winner screen when the match is won.
+          <div className="w-full pt-1 pb-1 text-left">
+            <p className="section-label mb-2">STED · {venueOf(venue).name.toUpperCase()}</p>
+            <VenuePicker value={venue} onChange={setVenue} />
+          </div>
+        )}
+        {advanced && (
+          <SwitchRow label="Legg inn hver pil for hånd" hint="Velg hva hver pil traff" checked={exactEntry} onChange={setExactEntry} />
+        )}
+        {advanced && (
+          // Played without a trace in the statistics: last of the choices.
+          <div className="w-full">{noStatsToggle}</div>
+        )}
         </div>
-      )}
-      {advanced && variantSelectable && (
-        <div className="w-full pt-2 text-left">
-          <RulesPicker variant={variant} onChange={setVariant} teamPlay={false} part="crosses" />
-        </div>
-      )}
-      {advanced && variantSelectable && (
-        // The place the match is played in: its cup is on the winner screen when the match is won.
-        <div className="w-full pt-1 pb-1 text-left">
-          <p className="section-label mb-2">STED · {venueOf(venue).name.toUpperCase()}</p>
-          <VenuePicker value={venue} onChange={setVenue} />
-        </div>
-      )}
-      {advanced && (
-        <SwitchRow label="Legg inn hver pil for hånd" hint="Velg hva hver pil traff" checked={exactEntry} onChange={setExactEntry} />
-      )}
-      {advanced && (
-        // Played without a trace in the statistics: last of the choices.
-        <div className="w-full">{noStatsToggle}</div>
       )}
     </div>
   );

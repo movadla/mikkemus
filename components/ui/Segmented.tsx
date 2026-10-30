@@ -17,6 +17,7 @@ export function Segmented<T extends string>({
   options,
   label,
   compact = false,
+  fit = false,
 }: {
   value: T;
   onChange: (v: T) => void;
@@ -25,6 +26,8 @@ export function Segmented<T extends string>({
   label: string;
   /** Smaller pills, for two groups on one line. */
   compact?: boolean;
+  /** Equal parts that fill the width, with no sideways scrolling: for a few choices (up to five) that all have to be seen at once. */
+  fit?: boolean;
 }) {
   const box = useRef<HTMLDivElement>(null);
   // Where there is more to scroll to, one side at a time.
@@ -64,8 +67,8 @@ export function Segmented<T extends string>({
       onScroll={measure}
       role="radiogroup"
       aria-label={label}
-      className={`flex ${compact ? "gap-1" : "gap-2"} p-1 overflow-x-auto ${fade}`}
-      style={{ scrollbarWidth: "none" }}
+      className={fit ? "grid gap-1.5 p-1" : `flex ${compact ? "gap-1" : "gap-2"} p-1 overflow-x-auto ${fade}`}
+      style={fit ? { gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` } : { scrollbarWidth: "none" }}
     >
       {options.map((o) => {
         const selected = o.value === value;
@@ -79,11 +82,11 @@ export function Segmented<T extends string>({
               if (!selected) uiFeedback("pick");
               onChange(o.value);
             }}
-            className={`${compact ? "flex-none" : "flex-1"} inline-flex items-center justify-center gap-2 whitespace-nowrap font-semibold ${compact ? "px-1.5" : "px-4"} ${FOCUS_RING}`}
+            className={`${fit ? "px-1" : compact ? "flex-none" : "flex-1"} inline-flex items-center justify-center gap-2 ${fit ? "whitespace-normal text-center leading-tight [overflow-wrap:anywhere]" : "whitespace-nowrap"} font-semibold ${compact ? "px-1.5" : fit ? "" : "px-4"} ${FOCUS_RING}`}
             style={{
               minHeight: "var(--control)",
               borderRadius: "var(--radius-pill)",
-              fontSize: compact ? "0.8rem" : "var(--text-body)",
+              fontSize: compact || fit ? "0.8rem" : "var(--text-body)",
               background: selected ? "var(--color-teal)" : "var(--color-surface)",
               color: selected ? "var(--color-bg)" : "var(--color-text-2)",
               border: selected ? "1px solid transparent" : "1px solid var(--color-border)",
@@ -97,7 +100,7 @@ export function Segmented<T extends string>({
         );
       })}
     </div>
-      {more.right && (
+      {!fit && more.right && (
         <button
           type="button"
           tabIndex={-1}

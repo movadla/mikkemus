@@ -41,7 +41,7 @@ export function buildAwards(args: {
   const throwers = players.flatMap((p) => throwerStats(turnLog[p] ?? [], p).map((r) => ({ ...r, side: p })));
 
   const accurate = throwers.filter((t) => t.darts >= MIN_DARTS_ACCURATE).sort((a, b) => b.hitPct - a.hitPct || b.hits - a.hits)[0];
-  if (accurate) out.push({ icon: "accuracy", title: "Mest treffsikker", who: accurate.name, detail: `${accurate.hitPct} % treff` });
+  if (accurate) out.push({ icon: "accuracy", title: "Mest treff", who: accurate.name, detail: `${accurate.hitPct} % treff` });
 
   const streak = [...throwers].sort((a, b) => b.bestRun - a.bestRun)[0];
   if (streak && streak.bestRun >= 1) out.push({ icon: "streak", title: "Lengste serie", who: streak.name, detail: `${streak.bestRun * 3} piler på rad` });
@@ -68,18 +68,24 @@ export function AwardsCard({ awards }: { awards: Award[] }) {
     <div className="card mb-6" style={{ background: "var(--color-surface)" }}>
       <p className="mb-4 section-label">PRISER</p>
       <div className="grid grid-cols-2 gap-2">
-        {awards.map((a) => (
-          <div key={a.title} className="rounded-xl p-3" style={{ background: "var(--color-cell)", border: "1px solid var(--color-border)" }}>
-            <p aria-hidden style={{ color: "var(--color-gold)" }}>
-              {AWARD_ICON[a.icon]}
-            </p>
-            <p style={{ color: "var(--color-gold)", fontSize: "var(--text-micro)", letterSpacing: "0.12em", fontWeight: 700, textTransform: "uppercase" }}>{a.title}</p>
-            <p className="font-display truncate" style={{ fontSize: "var(--text-title)", color: "var(--color-cream)" }}>
-              {a.who}
-            </p>
-            <p style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>{a.detail}</p>
-          </div>
-        ))}
+        {awards.map((a, i) => {
+          // An odd one out stretches under the others, so the grid always fills its width.
+          const last = i === awards.length - 1 && awards.length % 2 === 1;
+          return (
+            <div key={a.title} className={`award rounded-xl p-3 ${last ? "col-span-2 award-wide" : ""}`}>
+              <p aria-hidden style={{ color: "var(--color-gold)" }}>
+                {AWARD_ICON[a.icon]}
+              </p>
+              <div className="min-w-0">
+                <p className="whitespace-nowrap" style={{ color: "var(--color-gold)", fontSize: "var(--text-micro)", letterSpacing: "0.12em", fontWeight: 700, textTransform: "uppercase" }}>{a.title}</p>
+                <p className="font-display truncate" style={{ fontSize: "var(--text-title)", color: "var(--color-cream)" }}>
+                  {a.who}
+                </p>
+              </div>
+              <p className="award-detail" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>{a.detail}</p>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

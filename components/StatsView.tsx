@@ -34,7 +34,7 @@ export function StatsView({ initialTab = "spillere" }: { initialTab?: StatsTab }
       <div className="screen-inner wide">
         <ScreenTop title="Statistikk" />
         <div className="mb-5">
-          <Segmented value={shown} onChange={setTab} label="Statistikk" options={options} />
+          <Segmented value={shown} onChange={setTab} label="Statistikk" fit options={options} />
         </div>
         {shown === "spillere" ? <PlayerStatCards /> : shown === "seeding" ? <SeedingTab /> : shown === "rekorder" ? <RecordsTab /> : shown === "kamper" ? <MatchLogTab /> : shown === "andre" ? <OtherGamesTab /> : <HallOfFameTab />}
       </div>

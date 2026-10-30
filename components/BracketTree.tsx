@@ -13,7 +13,7 @@ const FOCUS_RING =
   "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]";
 
 type Metrics = { w: number; h: number; pitch: number; gap: number; top: number; font: string; small: string };
-const NORMAL: Metrics = { w: 116, h: 68, pitch: 84, gap: 18, top: 42, font: "var(--text-small)", small: "var(--text-micro)" };
+const NORMAL: Metrics = { w: 128, h: 68, pitch: 84, gap: 18, top: 42, font: "var(--text-small)", small: "var(--text-micro)" };
 const LARGE: Metrics = { w: 250, h: 70, pitch: 92, gap: 48, top: 44, font: "var(--text-title)", small: "var(--text-small)" };
 
 /**
@@ -162,12 +162,12 @@ export function BracketTree({
           </span>
         )}
         {match.isBye && (
-          <span className="absolute" style={{ top: -8, left: 8, background: "var(--color-surface)", padding: "0 4px", color: "var(--color-muted)", fontSize: "var(--text-micro)", letterSpacing: "0.08em" }}>
+          <span className="absolute" style={{ bottom: -14, left: 2, color: "var(--color-muted)", fontSize: "var(--text-micro)", letterSpacing: "0.08em" }}>
             WALKOVER
           </span>
         )}
         {match.simulated && (
-          <span className="absolute" style={{ top: -8, left: 8, background: "var(--color-surface)", padding: "0 4px", color: "var(--color-muted)", fontSize: "var(--text-micro)", letterSpacing: "0.08em" }}>
+          <span className="absolute" style={{ bottom: -14, left: 2, color: "var(--color-muted)", fontSize: "var(--text-micro)", letterSpacing: "0.08em" }}>
             AUTO
           </span>
         )}

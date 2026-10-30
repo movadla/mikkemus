@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { TrophyIcon } from "./icons";
 
 /**
@@ -5,6 +6,16 @@ import { TrophyIcon } from "./icons";
  * between them and the cup at the end. Shown under the draw, and it changes with it.
  */
 export function MiniBracket({ pairs, accent }: { pairs: { a: string | null; b: string | null }[]; accent: string }) {
+  const box = useRef<HTMLDivElement>(null);
+  // The road is drawn at its own size and scaled down to the width it has, so every column is seen without scrolling sideways.
+  const [avail, setAvail] = useState(0);
+  useEffect(() => {
+    const el = box.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const watch = new ResizeObserver(() => setAvail(el.clientWidth));
+    watch.observe(el);
+    return () => watch.disconnect();
+  }, [pairs.length]);
   if (pairs.length === 0) return null;
   // Wide and low enough for a name such as "Madhouse Mafia" to sit in its box at a size that is still read.
   const w = 140;
@@ -21,9 +32,11 @@ export function MiniBracket({ pairs, accent }: { pairs: { a: string | null; b: s
   const x = (c: number) => c * (w + gap);
   const width = cols.length * (w + gap) - gap;
   const name = (n: string | null) => (n ?? "Walkover");
+  const scale = avail > 0 ? Math.min(1, avail / width) : 1;
   return (
-    <div className="overflow-x-auto" style={{ paddingBottom: 4 }}>
-      <div role="img" aria-label="Slik blir veien til pokalen" className="relative" style={{ width, height, minWidth: width }}>
+    <div ref={box} style={{ paddingBottom: 4 }}>
+      <div style={{ width: width * scale, height: (height + 28) * scale }}>
+      <div role="img" aria-label="Slik blir veien til pokalen" className="relative" style={{ width, height: height + 28, paddingTop: 28, transform: `scale(${scale})`, transformOrigin: "0 0" }}>
         <svg width={width} height={height} className="absolute left-0 top-0 pointer-events-none" aria-hidden>
           {cols.slice(0, -1).map((count, c) =>
             Array.from({ length: count }, (_, i) => {
@@ -55,6 +68,7 @@ export function MiniBracket({ pairs, accent }: { pairs: { a: string | null; b: s
         <span aria-hidden className="absolute flex justify-center" style={{ left: x(cols.length - 1), top: cy(cols.length - 1, 0) - h / 2 - 28, width: w, color: accent }}>
           <TrophyIcon className="w-6 h-6" />
         </span>
+      </div>
       </div>
     </div>
   );

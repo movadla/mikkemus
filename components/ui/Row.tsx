@@ -21,6 +21,7 @@ export function Row({
   selected,
   tone = "default",
   accent,
+  plain = false,
 }: {
   leading?: ReactNode;
   title: ReactNode;
@@ -38,6 +39,8 @@ export function Row({
   tone?: "default" | "gold";
   /** A colour for the stripe along the start of the row: a player's own (see avatarAccent). */
   accent?: string;
+  /** Inside a card that is the box already: no box of its own, so rows are separated by a line. */
+  plain?: boolean;
 }) {
   const opens = !!onClick || !!href;
   const style = {
@@ -49,6 +52,7 @@ export function Row({
     padding: "0.5rem 0.75rem",
     boxShadow: "var(--elevation-1)",
     ...(accent ? { borderLeft: `4px solid ${accent}` } : {}),
+    ...(plain ? { background: "transparent", border: "0", boxShadow: "none", borderRadius: 0 } : {}),
   } as const;
   const body = (
     <>

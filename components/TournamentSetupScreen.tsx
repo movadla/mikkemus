@@ -158,10 +158,9 @@ export function TournamentSetupScreen({
         />
         <StepStrip step={0} />
 
-        {/* Who plays and what kind of tournament: two small choices on one line. */}
-        <div className="grid items-center gap-2 mb-4" style={{ gridTemplateColumns: "auto auto auto", justifyContent: "space-between" }}>
+        {/* Who plays and what kind of tournament: two choices, one under the other, each in equal parts. */}
+        <div className="flex flex-col gap-3 mb-4">
           <ModeToggle
-            compact
             label="Hvem spiller"
             value={mode}
             onChange={setMode}
@@ -170,10 +169,7 @@ export function TournamentSetupScreen({
               { value: "team", label: "Lag" },
             ]}
           />
-          {/* Two different choices: a line between them. */}
-          <span aria-hidden style={{ width: 2, height: "1.9rem", borderRadius: 2, background: "var(--color-muted)", opacity: 0.55 }} />
           <ModeToggle
-            compact
             label="Type turnering"
             value={cupMode ? "cup" : "plain"}
             onChange={(v) => {

@@ -63,7 +63,7 @@ export function SettingsScreen({ onBack }: { onBack?: () => void }) {
             <p className="mb-2" style={{ color: "var(--color-cream)", fontSize: "var(--text-body)", fontWeight: 600 }}>
               Hastighet
             </p>
-            <Segmented value={botSpeed} onChange={setBotSpeed} label="Hastighet på boter" options={BOT_SPEEDS.map((v) => ({ value: v, label: BOT_SPEED_LABELS[v] }))} />
+            <Segmented value={botSpeed} onChange={setBotSpeed} label="Hastighet på boter" fit options={BOT_SPEEDS.map((v) => ({ value: v, label: BOT_SPEED_LABELS[v] }))} />
             <p className="mt-2" style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>
               Pausen mellom pilene til en bot. Rolig gir tid til å følge med, Lyn går nesten uten pause.
             </p>
@@ -76,7 +76,7 @@ export function SettingsScreen({ onBack }: { onBack?: () => void }) {
               <p className="mb-2" style={{ color: "var(--color-cream)", fontSize: "var(--text-body)", fontWeight: 600 }}>
                 Animasjon og lyd
               </p>
-              <Segmented value={fx} onChange={setFxLevel} label="Animasjon og lyd" options={FX_LEVELS.map((l) => ({ value: l, label: FX_LABELS[l] }))} />
+              <Segmented value={fx} onChange={setFxLevel} label="Animasjon og lyd" fit options={FX_LEVELS.map((l) => ({ value: l, label: FX_LABELS[l] }))} />
               <div className="mt-2">
                 <FxPreview level={fx} />
               </div>

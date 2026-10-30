@@ -14,8 +14,8 @@ export function FxPicker() {
   const level = useFxLevel();
   return (
     <div className="mb-6 w-full">
-      <p className="section-label text-center mb-2">ANIMASJON OG LYD</p>
-      <div className="flex gap-2" role="radiogroup" aria-label="Animasjon og lyd">
+      <p className="section-label mb-2">ANIMASJON OG LYD</p>
+      <div className="grid grid-cols-4 gap-1.5" role="radiogroup" aria-label="Animasjon og lyd">
         {FX_LEVELS.map((l) => {
           const selected = level === l;
           return (
@@ -31,7 +31,9 @@ export function FxPicker() {
                 background: selected ? "var(--teal-soft)" : "var(--color-surface)",
                 color: selected ? "var(--color-teal)" : "var(--color-muted)",
                 border: selected ? "1px solid var(--color-teal)" : "1px solid var(--color-border)",
-                fontSize: "var(--text-body)",
+                fontSize: "0.8rem",
+                paddingInline: "0.25rem",
+                whiteSpace: "nowrap",
               }}
             >
               {FX_LABELS[l]}

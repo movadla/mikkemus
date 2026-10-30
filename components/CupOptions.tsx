@@ -42,7 +42,7 @@ export function CupTypePicker({ value, onChange, maxSize }: { value: CupChoice; 
             style={{ "--cup": cupColor(t.kind), ...(pic ? { "--pic": `url(${pic})` } : {}) } as React.CSSProperties}
           >
             <span className="cup-poster-emblem">
-              <CupEmblem kind={t.kind} className="w-8 h-8" />
+              <CupEmblem kind={t.kind} className="w-6 h-6" />
             </span>
             <span className="font-display cup-poster-name">
               {t.name}
