@@ -7,6 +7,8 @@ import { fxFlags, useFxLevel } from "@/lib/fxLevel";
 import { killerResult } from "@/lib/gameResults";
 import { useGameVenue } from "@/lib/gameVenue";
 import { useRecordResult } from "@/lib/gameResultsStorage";
+import { killerNight } from "@/lib/nightGames";
+import { useRecordNight } from "@/lib/nightScoreStorage";
 import { haptics } from "@/lib/haptics";
 import { MISS, type LavaDart } from "@/lib/lava";
 import {
@@ -62,6 +64,8 @@ function describe(d: KillerDart): string {
       return `${who} er killer!`;
     case "self":
       return `${who} traff sitt eget tall og mistet et liv`;
+    case "heal":
+      return `${who} fikk tilbake liv`;
     case "selfout":
       return `${who} traff sitt eget tall og er ute`;
     case "hit":
@@ -77,7 +81,7 @@ function describe(d: KillerDart): string {
 
 /** The dart as the board draws it: a hit that took a life is lava, one that got a number or a hit on the own number a fire, the rest nothing. */
 function asLavaDart(d: KillerDart): LavaDart {
-  const outcome = d.effect === "hit" || d.effect === "kill" || d.effect === "self" || d.effect === "selfout" ? "lava" : d.effect === "claim" || d.effect === "progress" || d.effect === "killer" ? "burn" : "miss";
+  const outcome = d.effect === "hit" || d.effect === "kill" || d.effect === "self" || d.effect === "selfout" ? "lava" : d.effect === "claim" || d.effect === "progress" || d.effect === "killer" || d.effect === "heal" ? "burn" : "miss";
   return { player: d.player, section: d.number === 0 ? MISS : d.section, outcome, knockedOut: d.effect === "kill" || d.effect === "selfout", nth: d.nth };
 }
 
@@ -166,6 +170,7 @@ export function KillerGameScreen({ game, setGame, photos, onHome, onNew }: { gam
   const { winner, up, member, phase } = state;
   const who = member?.name ?? up;
   const sunk = useMemo(() => new Map([...sunkSections(state, game)].map((s) => [s, ""])), [state, game]);
+  useRecordNight(winner, game.darts.length === 0, (id) => (winner ? killerNight(game, winner, id) : null));
   useRecordResult(game.rosters ? null : winner, game.darts.length === 0, (id, at) => killerResult(game, id, at));
   const rain = useMemo(() => (winner && fx.confetti ? generateConfettiRain(fx.bigConfetti ? 60 : 36) : []), [winner, fx.confetti, fx.bigConfetti]);
 
@@ -323,7 +328,7 @@ export function KillerGameScreen({ game, setGame, photos, onHome, onNew }: { gam
                   {number ?? "?"}
                 </span>
                 <p className="kl-status">
-                  {out ? "UTE" : phase === "claim" ? (number === null ? "venter" : "har tall") : isKiller ? "KILLER" : `${state.hits[p]} av ${HITS_TO_KILLER} til killer`}
+                  {out ? "UTE" : phase === "claim" ? (number === null ? "venter" : "har tall") : isKiller ? "KILLER" : state.regain[p] || livesLeft(state, p) < game.lives ? "treff deg selv for liv" : `${state.hits[p]} av ${HITS_TO_KILLER} til killer`}
                 </p>
                 {!out && phase === "play" && <Hearts total={game.lives} left={livesLeft(state, p)} fresh={false} size="w-4 h-4" />}
                 {game.rosters?.[p] && active && !out && <p className="cd-recent"><span>Nå: {who}</span></p>}

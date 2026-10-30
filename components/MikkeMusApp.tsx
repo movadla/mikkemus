@@ -31,6 +31,7 @@ import { memberDeltas } from "@/lib/memberStats";
 import { finishState } from "@/lib/finishState";
 import { computeOddsOffThread } from "@/lib/odds/client";
 import { saveMatchArchive } from "@/lib/matchArchive";
+import { recordNightMatch } from "@/lib/nightScoreStorage";
 import type { OddsMatch } from "@/lib/odds/match";
 import { fairPrice } from "@/lib/bet/ledger";
 import { groupBestWin } from "@/lib/bestWin";
@@ -2250,6 +2251,17 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
    * back until the win is ACCEPTED — see flushMatchResults.
    */
   function persistMatchResults(finalTurnLog: Record<string, TurnResult[]>, winnerName: string | null) {
+    // The match goes in Kveldsscore (also one that does not count for the statistics), when everyone in it is a person.
+    if (winnerName && !players.some((p) => botLevels[p] || (teamRosters[p] ?? []).some((m) => m.isBot))) {
+      const left = (p: string) => (progress[p] ? remainingMarks(progress[p]) : 0);
+      recordNightMatch({
+        id: matchIdRef.current,
+        game: onMatchComplete ? "turnering" : "enkeltkamp",
+        sides: players.map((name) => ({ name, members: teamRosters[name]?.map((m) => m.name) ?? [name] })),
+        placements: [winnerName, ...players.filter((p) => p !== winnerName).sort((a, b) => left(a) - left(b))],
+        source: { kind: "match", id: matchIdRef.current },
+      });
+    }
     // 1 treff is a different game; its matches stay out of the career records entirely.
     if (!getRules().countsForStats) return;
     players.forEach((p) => {

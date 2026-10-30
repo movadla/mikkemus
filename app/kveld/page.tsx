@@ -1,14 +1,9 @@
 "use client";
 
-import { useRoster } from "@/lib/storage";
-import { groupNights } from "@/lib/nights";
-import { NightDetail } from "@/components/NightDetail";
+import { NightScoreScreen } from "@/components/NightScoreScreen";
 
-/** Defaults to the most recent night with any recorded matches — /kveld/[dato] is the
- *  shareable, specific-date version of this same view. */
-export default function LatestNightPage() {
-  const roster = useRoster();
-  const nights = groupNights(roster);
-  const [latest, ...rest] = nights;
-  return <NightDetail night={latest ?? null} otherDates={rest.map((n) => n.date)} />;
+/** Kveldsscore: the points and the matches of the evening that is on. The story of an evening with pictures (the old Kveld) is at /kveld/[dato],
+ *  from the button «Kveldens historie». */
+export default function NightScorePage() {
+  return <NightScoreScreen />;
 }

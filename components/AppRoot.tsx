@@ -12,6 +12,7 @@ import dynamic from "next/dynamic";
 import { HeroMascot } from "./HeroMascot";
 import { BoltIcon, BullseyeIcon, DartIcon, DoubleIcon, FlameIcon, GridIcon, HeartIcon, KeypadIcon, TrophyIcon } from "./icons";
 import { RulesIntro } from "./RulesIntro";
+import { NightStripe } from "./NightStripe";
 import { ScoliaDot, summarizeScolia } from "./ScoliaStatusBadge";
 import { SkeletonRows } from "./ui/Skeleton";
 import { Welcome, hasBeenWelcomed, markWelcomed } from "./Welcome";
@@ -178,6 +179,8 @@ export function AppRoot() {
             </>
           )}
         </section>
+
+        <NightStripe />
 
         {/* The hero is already Enkeltkamp when nothing is under way, so its tile is only there when the hero is something else. */}
         {/* One tile has the whole row, as it should look; two or three share it. */}

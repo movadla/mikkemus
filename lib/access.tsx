@@ -24,5 +24,7 @@ export const LIMITED_BLOCKED_PATHS = ["/statistikk", "/hall-of-fame", "/kveld", 
 /** Whether the limited code is kept out of this path (the page itself and anything under it). */
 export function blockedForLimited(pathname: string | null): boolean {
   if (!pathname) return false;
+  // Kveldsscore (the page itself) is open to every code; the story of a night under it (/kveld/dato) is not.
+  if (pathname === "/kveld") return false;
   return LIMITED_BLOCKED_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }

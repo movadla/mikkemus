@@ -127,3 +127,47 @@ describe("halv it", () => {
     expect(undoEntry(newGame(["A", "B"])).entries).toEqual([]);
   });
 });
+
+describe("halv it: both members of a team throw in every round", () => {
+  const rosters = { T1: [{ name: "Lars", isBot: false }, { name: "Per", isBot: false }], T2: [{ name: "Ola", isBot: false }, { name: "Kari", isBot: false }] };
+  const g0 = newGame(["T1", "T2"], rosters, true);
+
+  it("lets the first of them throw, then the second, before the other team", () => {
+    let s = stateOf(g0);
+    expect(s.member?.name).toBe("Lars");
+    expect(s.part).toEqual({ n: 1, of: 2 });
+    s = stateOf(play(g0, pts(20)));
+    // Nothing has happened to the score yet: the round is the two together.
+    expect(s.scores.T1).toBe(0);
+    expect(s.up).toBe("T1");
+    expect(s.member?.name).toBe("Per");
+    expect(s.part).toEqual({ n: 2, of: 2 });
+    s = stateOf(play(g0, pts(20), pts(40)));
+    expect(s.scores.T1).toBe(60);
+    expect(s.up).toBe("T2");
+    expect(s.member?.name).toBe("Ola");
+  });
+
+  it("adds both throws, and halves only when neither made any", () => {
+    // Round 1: T1 gets 60, T2 gets nothing from either. Round 2: T1 one bom and 24 (adds), T2 20 and a bom (adds). Round 3: T1 both bom.
+    const g = play(g0, pts(20), pts(40), BOM, BOM, BOM, pts(24), pts(20), BOM, BOM, BOM);
+    const s = stateOf(g);
+    expect(s.scores).toEqual({ T1: 42 + 0, T2: 20 });
+    expect(halvingsOf(s, "T1")).toBe(1);
+    expect(halvingsOf(s, "T2")).toBe(1);
+    expect(s.round).toBe(3);
+    expect(s.up).toBe("T2");
+  });
+
+  it("is a round of one throw for a side with no team, and for the tie-break", () => {
+    const solo = newGame(["A", "B"], undefined, true);
+    expect(stateOf(solo).part).toEqual({ n: 1, of: 1 });
+    expect(stateOf(play(solo, pts(20))).scores.A).toBe(20);
+  });
+
+  it("takes the first of two throws back, and the best round is the two together", () => {
+    const g = play(g0, pts(20), pts(40));
+    expect(stateOf(undoEntry(g)).part).toEqual({ n: 2, of: 2 });
+    expect(bestRoundOf(stateOf(g), "T1")).toBe(60);
+  });
+});

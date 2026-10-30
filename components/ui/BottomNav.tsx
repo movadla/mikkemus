@@ -23,6 +23,8 @@ const ITEMS: Item[] = [
 export function navKeyFor(pathname: string): NavKey | null {
   if (pathname === "/") return "spill";
   if (pathname.startsWith("/spillere")) return "spillere";
+  // Kveldsscore is reached from Mer and from the front page; the story of a night under it belongs to Statistikk.
+  if (pathname === "/kveld") return "mer";
   if (pathname.startsWith("/statistikk") || pathname.startsWith("/hall-of-fame") || pathname.startsWith("/kveld") || pathname.startsWith("/kamp")) return "statistikk";
   if (pathname.startsWith("/mer") || pathname.startsWith("/bet") || pathname.startsWith("/innstillinger") || pathname.startsWith("/lyd")) return "mer";
   return null;

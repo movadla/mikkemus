@@ -7,6 +7,8 @@ import { fxFlags, useFxLevel } from "@/lib/fxLevel";
 import { halvitResult } from "@/lib/gameResults";
 import { useGameVenue } from "@/lib/gameVenue";
 import { useRecordResult } from "@/lib/gameResultsStorage";
+import { halvitNight } from "@/lib/nightGames";
+import { useRecordNight } from "@/lib/nightScoreStorage";
 import {
   BULL_VALUES,
   ROUNDS,
@@ -32,6 +34,7 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import { GameVenue, VenueSection } from "./GameVenue";
 import { GameWho, type GameMode } from "./GameWho";
 import { UndoIcon } from "./icons";
+import { SwitchRow } from "./ui/Switch";
 import { RollingNumber } from "./RollingNumber";
 import { ScoreKeypad } from "./ScoreKeypad";
 import { ScreenTop } from "./ScreenTop";
@@ -51,6 +54,9 @@ export function HalvItApp({ onExitToHome }: { onExitToHome: () => void }) {
   const [people, setPeople] = useState<Person[]>([]);
   const [mode, setMode] = useState<GameMode>("individual");
   const [teams, setTeams] = useState<PickedTeam[]>([]);
+  const [advanced, setAdvanced] = useState(false);
+  /** Both members of a team throw in every round. */
+  const [both, setBoth] = useState(false);
   const [game, setGame] = useState<HalvItGame | null>(null);
   const photos = new Map(useRoster().map((r) => [r.name, r.photo]));
   const [venue, setVenue] = useGameVenue("halvit");
@@ -62,12 +68,26 @@ export function HalvItApp({ onExitToHome }: { onExitToHome: () => void }) {
         <div className="screen-inner">
           <ScreenTop title="Halv It" onBack={onExitToHome} />
           <GameWho mode={mode} onMode={setMode} people={people} onPeople={setPeople} teams={teams} onTeams={setTeams} botsAllowed={false} />
+          {mode === "team" && (
+            <div className="mt-4 space-y-2">
+              <SwitchRow
+                label="Avanserte innstillinger"
+                hint="Begge på laget kaster hver runde"
+                checked={advanced}
+                onChange={(on) => {
+                  setAdvanced(on);
+                  if (!on) setBoth(false);
+                }}
+              />
+              {advanced && <SwitchRow label="Begge kaster hver runde" hint="Poengene legges sammen. Det er bare en bom når ingen av dem fikk poeng" checked={both} onChange={setBoth} />}
+            </div>
+          )}
           <VenueSection value={venue} onChange={setVenue} />
           <StickyAction
             onClick={() => {
               if (mode === "team") {
                 commitTeams(teams);
-                setGame(newGame(teams.map((t) => t.name), rostersOf(teams)));
+                setGame(newGame(teams.map((t) => t.name), rostersOf(teams), both));
                 return;
               }
               commitPeople(people);
@@ -95,12 +115,13 @@ export function HalvItApp({ onExitToHome }: { onExitToHome: () => void }) {
 export function HalvItGameScreen({ game, setGame, photos, onHome, onNew }: { game: HalvItGame; setGame: (g: HalvItGame) => void; photos: Map<string, string | null | undefined>; onHome: () => void; onNew: () => void }) {
   const [confirmExit, setConfirmExit] = useState(false);
   /** The throw just taken in, while what it did plays: set when one goes in, cleared when one is taken back. */
-  const [fresh, setFresh] = useState<{ n: number; player: string; points: number; bom: boolean } | null>(null);
+  const [fresh, setFresh] = useState<{ n: number; player: string; points: number; bom: boolean; pending: boolean } | null>(null);
   const fx = fxFlags(useFxLevel());
   const state = useMemo(() => stateOf(game), [game]);
   const { winner, up, member, round, tieBreak } = state;
   const who = member?.name ?? up;
   const target = ROUNDS[Math.min(round, ROUNDS_IN_ALL) - 1];
+  useRecordNight(winner, game.entries.length === 0, (id) => (winner ? halvitNight(game, winner, id) : null));
   useRecordResult(game.rosters ? null : winner, game.entries.length === 0, (id, at) => halvitResult(game, id, at));
   const rain = useMemo(() => (winner && fx.confetti ? generateConfettiRain(fx.bigConfetti ? 60 : 36) : []), [winner, fx.confetti, fx.bigConfetti]);
 
@@ -113,8 +134,10 @@ export function HalvItGameScreen({ game, setGame, photos, onHome, onNew }: { gam
       haptics.confirm();
       uiSound("confirm");
     }
-    setFresh({ n: game.entries.length + 1, player: up, points: entry.points, bom: entry.bom });
-    setGame(playEntry(game, entry));
+    const next = playEntry(game, entry);
+    const done = stateOf(next).log.at(-1)!;
+    setFresh({ n: game.entries.length + 1, player: up, points: done.entry.points, bom: done.halved, pending: !!done.pending });
+    setGame(next);
   }
 
   function undo() {
@@ -176,7 +199,7 @@ export function HalvItGameScreen({ game, setGame, photos, onHome, onNew }: { gam
             ))}
           </ul>
           <div className="space-y-2">
-            <Button block variant="primary" size="lg" onClick={() => setGame(newGame(game.players, game.rosters))}>
+            <Button block variant="primary" size="lg" onClick={() => setGame(newGame(game.players, game.rosters, game.both))}>
               Spill igjen
             </Button>
             <Button block onClick={undo}>
@@ -195,7 +218,7 @@ export function HalvItGameScreen({ game, setGame, photos, onHome, onNew }: { gam
   }
 
   const count = game.players.length;
-  const lastThree = (p: string) => state.log.filter((t) => t.player === p && t.round <= ROUNDS_IN_ALL).slice(-3);
+  const lastThree = (p: string) => state.log.filter((t) => t.player === p && t.round <= ROUNDS_IN_ALL && !t.pending).slice(-3);
   const gridAt = Math.max(0, game.players.indexOf(up));
   const boardStyle: React.CSSProperties =
     count === 1
@@ -256,13 +279,13 @@ export function HalvItGameScreen({ game, setGame, photos, onHome, onNew }: { gam
             const recent = lastThree(p);
             const out = tieBreak && !state.contenders.includes(p);
             return (
-              <li key={p} aria-current={active ? "true" : undefined} className={`cd-card ${active ? "cd-card--up turn-lift" : ""} ${mine?.bom ? "cd-bust" : ""}`} style={out ? { opacity: 0.5 } : undefined}>
-                {mine && !mine.bom && mine.points > 0 && (
+              <li key={p} aria-current={active ? "true" : undefined} className={`cd-card ${active ? "cd-card--up turn-lift" : ""} ${mine?.bom && !mine.pending ? "cd-bust" : ""}`} style={out ? { opacity: 0.5 } : undefined}>
+                {mine && !mine.pending && !mine.bom && mine.points > 0 && (
                   <span key={mine.n} className="delta-chip" style={{ color: "var(--color-green)" }}>
                     +{mine.points}
                   </span>
                 )}
-                {mine?.bom && (
+                {mine?.bom && !mine.pending && (
                   <span key={mine.n} className="stamp">
                     ÷2
                   </span>
@@ -275,14 +298,14 @@ export function HalvItGameScreen({ game, setGame, photos, onHome, onNew }: { gam
                     </p>
                     {game.rosters?.[p] && active ? (
                       <p className="cd-recent">
-                        <span>Nå: {who}</span>
+                        <span>Nå: {who}{state.part.of === 2 ? ` (${state.part.n} av 2)` : ""}</span>
                       </p>
                     ) : (
                       recent.length > 0 && (
-                        <p className="cd-recent" aria-label={`Siste runder: ${recent.map((t) => (t.entry.bom ? "halvert" : t.entry.points)).join(", ")}`}>
+                        <p className="cd-recent" aria-label={`Siste runder: ${recent.map((t) => (t.halved ? "halvert" : t.entry.points)).join(", ")}`}>
                           {recent.map((t, i) => (
-                            <span key={`${game.entries.length}-${i}`} className={t.entry.bom ? "cd-recent--bust" : undefined}>
-                              {t.entry.bom ? "÷2" : `+${t.entry.points}`}
+                            <span key={`${game.entries.length}-${i}`} className={t.halved ? "cd-recent--bust" : undefined}>
+                              {t.halved ? "÷2" : `+${t.entry.points}`}
                             </span>
                           ))}
                         </p>

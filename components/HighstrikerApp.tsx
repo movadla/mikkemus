@@ -10,6 +10,8 @@ import { generateConfettiRain } from "@/lib/confetti";
 import { fxFlags, useFxLevel } from "@/lib/fxLevel";
 import { highstrikerResult } from "@/lib/gameResults";
 import { useRecordResult } from "@/lib/gameResultsStorage";
+import { highstrikerNight } from "@/lib/nightGames";
+import { useRecordNight } from "@/lib/nightScoreStorage";
 import { haptics } from "@/lib/haptics";
 import { towerScale, towerShare } from "@/lib/roundTier";
 import {
@@ -195,6 +197,7 @@ export function HighstrikerGameScreen({
   const who = member?.name ?? up;
   const botUp = !winner && (member ? member.isBot : isBot(up));
   const isBotThrower = (n: string) => isBot(n) || Object.values(game.rosters ?? {}).some((r) => r.some((m) => m.name === n && m.isBot));
+  useRecordNight(winner, game.turns.length === 0, (id) => (career || !winner ? null : highstrikerNight(game, winner, Object.keys(botLevels), id)));
   useRecordResult(career || game.rosters ? null : winner, game.turns.length === 0, (id, at) => highstrikerResult(game, Object.keys(botLevels), id, at));
 
   // A player on the last life is told so, once, when the turn comes to them.

@@ -76,4 +76,28 @@ test.describe("Halv It", () => {
     // Round 2: the first team again, and it is the other of them.
     await expect(side(page, "Lars og Per")).toContainText("Nå: Per");
   });
+
+  test("lag med begge kastende: laget kaster to ganger per runde, og poengene legges sammen", async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem("mikke-mus-team-cards", JSON.stringify(["Lars og Per", "Ola og Kari"].map((name, i) => ({ name, members: name.split(" og "), lastUsed: 1000 - i }))));
+    });
+    await openApp(page, "dark");
+    await page.getByRole("button", { name: "Andre spill" }).click();
+    await page.getByRole("button", { name: "Halv It" }).click();
+    await page.getByRole("radio", { name: "Lag" }).click();
+    const group = page.getByRole("group", { name: "Lag" });
+    for (const n of ["Lars og Per", "Ola og Kari"]) await group.getByRole("button", { name: new RegExp(n) }).click();
+    await page.getByRole("switch", { name: /Avanserte innstillinger/ }).click();
+    await page.getByRole("switch", { name: /Begge kaster hver runde/ }).click();
+    await page.getByRole("button", { name: "Start kampen" }).click();
+    await expect(side(page, "Lars og Per")).toContainText("Nå: Lars (1 av 2)");
+    await keys(page, "20");
+    await page.getByRole("button", { name: "Bekreft" }).click();
+    // The second of them throws next, for the same team, and nothing has been added yet.
+    await expect(side(page, "Lars og Per")).toContainText("Nå: Per (2 av 2)");
+    await keys(page, "40");
+    await page.getByRole("button", { name: "Bekreft" }).click();
+    await expect(side(page, "Lars og Per")).toContainText("60");
+    await expect(side(page, "Ola og Kari")).toContainText("Nå: Ola (1 av 2)");
+  });
 });

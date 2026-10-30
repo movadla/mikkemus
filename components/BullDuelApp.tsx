@@ -25,6 +25,7 @@ import { fxFlags, getFxLevel, useFxLevel } from "@/lib/fxLevel";
 import { haptics } from "@/lib/haptics";
 import { requestRecalibration } from "@/lib/scoliaCommands";
 import { getPlayerRecord, playPlayerSound, recordBullDuelMatch } from "@/lib/storage";
+import { recordNightMatch } from "@/lib/nightScoreStorage";
 import { useScolia } from "@/lib/useScolia";
 import { BullDuelGameScreen } from "./BullDuelGameScreen";
 import { BullDuelTargetScreen } from "./BullDuelTargetScreen";
@@ -324,6 +325,17 @@ export function BullDuelApp({ onExitToHome }: { onExitToHome: () => void }) {
     haptics.win();
     writeSaved(null);
     clearUndo();
+    // In Kveldsscore, unless the match is one without a trace or has a bot in it.
+    if (!skipStatsRef.current && !duel.players.some((p) => botLevels[p] || (teamRosters[p] ?? []).some((m) => m.isBot))) {
+      const id = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `bull-${Date.now()}`;
+      recordNightMatch({
+        id,
+        game: "bullduel",
+        sides: duel.players.map((name) => ({ name, members: teamRosters[name]?.map((m) => m.name) ?? [name] })),
+        placements: [duel.winner, ...duel.players.filter((p) => p !== duel.winner).sort((a, b) => duel.stats[b].points - duel.stats[a].points)],
+        source: { kind: "game", id },
+      });
+    }
     duel.players.forEach((p) => {
       if (skipStatsRef.current) return;
       if (botLevels[p] || teamRosters[p] || guestPlayers[p]) return;

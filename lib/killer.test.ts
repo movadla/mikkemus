@@ -127,3 +127,45 @@ describe("killer: the round, undo, teams and the board", () => {
     expect(sunk.has(BULL)).toBe(true);
   });
 });
+
+describe("killer: winning the status back", () => {
+  it("makes a killer who is hit and lives on a player who is not a killer any more", () => {
+    // A is a killer. B needs three hits on 19 first, and then takes a life from A by hitting 20.
+    let g = throwAll(started(), T(20), MISS, MISS, T(19), 20, MISS);
+    let s = stateOf(g);
+    expect(s.killer.B).toBe(true);
+    expect(s.lives.A).toBe(2);
+    expect(s.killer.A).toBe(false);
+    expect(s.regain.A).toBe(true);
+    g = throwAll(g, MISS);
+    s = stateOf(g);
+    expect(s.killer.A).toBe(false);
+  });
+  it("gives the lives back with hits on the own number, and the status when they are full again", () => {
+    // A is hit twice (a double: two lives) by B the killer, and then wins them back with a treble.
+    const g = throwAll(started(), T(20), MISS, MISS, T(19), D(20), MISS);
+    let s = stateOf(g);
+    expect(s.lives.A).toBe(1);
+    expect(s.killer.A).toBe(false);
+    // C throws, then A: a single gives one life back, and a double the last.
+    const back = throwAll(g, MISS, MISS, MISS, 20);
+    s = stateOf(back);
+    expect(s.lives.A).toBe(2);
+    expect(s.log.at(-1)!.effect).toBe("heal");
+    expect(s.killer.A).toBe(false);
+    const full = throwAll(back, 20);
+    s = stateOf(full);
+    expect(s.lives.A).toBe(3);
+    expect(s.killer.A).toBe(true);
+    expect(s.log.at(-1)!.effect).toBe("killer");
+  });
+  it("does not make a player who never was a killer one by healing", () => {
+    // C is hit by A (a killer) with a single, then hits their own 18: the life is back, and no status.
+    let g = throwAll(started(), T(20), 18, MISS);
+    g = throwAll(g, MISS, MISS, MISS, 18);
+    const s = stateOf(g);
+    expect(s.lives.C).toBe(3);
+    expect(s.killer.C).toBe(false);
+    expect(s.hits.C).toBe(0);
+  });
+});

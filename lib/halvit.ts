@@ -2,7 +2,8 @@
  * Halv It: ten rounds, each with its own target. Hit it and the points go on the score; miss it (a «bom») and the whole score is halved, rounded
  * up. The one with the most after round 10 wins; a tie is settled by one dart each at the bull until one is left.
  *
- * Everyone throws once in every round, in the order they were put in; a team throws one member at a time, a round each. The game is a list of what
+ * Everyone throws once in every round, in the order they were put in; a team throws one member at a time, a round each (or, when the game is set so,
+ * both members throw in every round, and the round is the two together: the points are added, and it is a bom only when neither made any). The game is a list of what
  * each throw made, in order; everything else (whose throw it is, the scores, the round) is worked out from it, so taking one back is taking the last
  * one off. After the tenth round, the entries are the darts at the bull of the tie-break: a hit (points 0, not a bom) or a bom.
  */
@@ -56,10 +57,12 @@ export type HalvItGame = {
   entries: HalvItEntry[];
   /** The people of the sides that are teams. A team has one score; its members throw a round each, in turn. */
   rosters?: Record<string, HalvItMember[]>;
+  /** Both members of a team throw in every round (the two of a team of two), and the round is the two throws together. */
+  both?: boolean;
 };
 
-export function newGame(players: string[], rosters?: Record<string, HalvItMember[]>): HalvItGame {
-  return { players, entries: [], ...(rosters && Object.keys(rosters).length > 0 ? { rosters } : {}) };
+export function newGame(players: string[], rosters?: Record<string, HalvItMember[]>, both = false): HalvItGame {
+  return { players, entries: [], ...(rosters && Object.keys(rosters).length > 0 ? { rosters } : {}), ...(both && rosters && Object.keys(rosters).length > 0 ? { both: true } : {}) };
 }
 
 /** Half of a score, rounded up: 85 becomes 43. */
@@ -90,6 +93,10 @@ export type HalvItThrow = {
   /** The score before and after. */
   before: number;
   after: number;
+  /** The score was halved by this throw (in a round of two throws, by the second, when neither made any). */
+  halved: boolean;
+  /** The first of the two throws of a team's round: nothing has happened to the score yet. */
+  pending?: boolean;
 };
 
 export type HalvItState = {
@@ -102,6 +109,8 @@ export type HalvItState = {
   member: HalvItMember | null;
   /** The side is the last of the round, so that the round ends with it. */
   tieBreak: boolean;
+  /** Which of the throws of the round this is, when a team throws two (1 or 2), and how many there are. */
+  part: { n: number; of: number };
   /** Those still in the tie-break, in order. */
   contenders: string[];
   winner: string | null;
@@ -122,15 +131,31 @@ export function stateOf(g: HalvItGame): HalvItState {
   let at = 0;
   let order = g.players;
   let hits: string[] = [];
+  // When both members of a team throw: how many throws a side has in the round (the team of two throws twice), and the first one, waiting for the second.
+  const throwsOf = (p: string) => (round <= ROUNDS_IN_ALL && g.both && (g.rosters?.[p]?.length ?? 0) >= 2 ? 2 : 1);
+  let sub = 0;
+  let first: HalvItEntry | null = null;
 
   for (const entry of g.entries) {
     if (winner) break;
     const player = order[at];
     const by = memberOf(player)?.name;
     const before = scores[player];
-    if (round <= ROUNDS_IN_ALL) scores[player] = entry.bom ? halve(before) : before + entry.points;
-    log.push({ player, ...(by ? { by } : {}), round, entry, before, after: scores[player] });
     thrown[player] = (thrown[player] ?? 0) + 1;
+    if (throwsOf(player) === 2 && sub === 0) {
+      first = entry;
+      sub = 1;
+      log.push({ player, ...(by ? { by } : {}), round, entry, before, after: before, halved: false, pending: true });
+      continue;
+    }
+    // The round of a side is this throw, or the two together.
+    const made = first ? first.points + entry.points : entry.points;
+    const missed = first ? first.bom && entry.bom : entry.bom;
+    const counted: HalvItEntry = first ? { points: made, bom: missed } : entry;
+    first = null;
+    sub = 0;
+    if (round <= ROUNDS_IN_ALL) scores[player] = missed ? halve(before) : before + made;
+    log.push({ player, ...(by ? { by } : {}), round, entry: counted, before, after: scores[player], halved: round <= ROUNDS_IN_ALL && missed });
     if (round > ROUNDS_IN_ALL && !entry.bom) hits.push(player);
     at += 1;
     if (at < order.length) continue;
@@ -163,7 +188,7 @@ export function stateOf(g: HalvItGame): HalvItState {
     hits = [];
   }
   const up = winner ? log[log.length - 1].player : order[at];
-  return { scores, log, round, up, member: winner ? null : memberOf(up), tieBreak: round > ROUNDS_IN_ALL, contenders: round > ROUNDS_IN_ALL ? order : [], winner };
+  return { scores, log, round, up, member: winner ? null : memberOf(up), tieBreak: round > ROUNDS_IN_ALL, part: { n: sub + 1, of: winner ? 1 : throwsOf(up) }, contenders: round > ROUNDS_IN_ALL ? order : [], winner };
 }
 
 /** A throw taken in: nothing happens once there is a winner. */
@@ -178,7 +203,7 @@ export function undoEntry(g: HalvItGame): HalvItGame {
 }
 
 /** How many times a side has had its score halved in the ten rounds. */
-export const halvingsOf = (s: HalvItState, player: string): number => s.log.filter((t) => t.player === player && t.round <= ROUNDS_IN_ALL && t.entry.bom).length;
+export const halvingsOf = (s: HalvItState, player: string): number => s.log.filter((t) => t.player === player && t.round <= ROUNDS_IN_ALL && t.halved).length;
 
 /** The most a side made in one round. */
-export const bestRoundOf = (s: HalvItState, player: string): number => Math.max(0, ...s.log.filter((t) => t.player === player && t.round <= ROUNDS_IN_ALL).map((t) => t.entry.points));
+export const bestRoundOf = (s: HalvItState, player: string): number => Math.max(0, ...s.log.filter((t) => t.player === player && t.round <= ROUNDS_IN_ALL && !t.pending).map((t) => t.entry.points));

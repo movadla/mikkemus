@@ -1,7 +1,9 @@
 /**
  * Killer: every player throws one dart to get a number of their own (a number someone has is not given again). To become a killer you have to hit
  * your own number three times (a double counts for two and a treble for three). A killer takes lives from the others by hitting their numbers (a
- * double takes two lives, a treble three), and loses a life by hitting their own. A player with no lives is out, and the last one standing wins.
+ * double takes two lives, a treble three), and loses a life by hitting their own. A killer who loses a life is not a killer any more: hits on their own
+ * number then give the lives back (a double two, a treble three), and when they are at full lives again they are a killer again. A player with no lives
+ * is out, and the last one standing wins.
  *
  * Three darts a round. A team has one number and its lives together, and its members throw a round each, in turn (in the first part, the first of
  * them throws for the team). The game is a list of darts, in the order they were thrown, as in Lava: a section id (the number, 100 and the number for
@@ -31,10 +33,11 @@ export type KillerGame = {
 /**
  * What a dart did.
  * claim: got a number. taken: that number is someone's, throw again. again: no number (a miss, the bull): throw again.
- * progress: a hit on the own number, short of three. killer: the third, and the player is a killer. self: a killer hit their own number, a life lost.
- * selfout: that was the last life. hit: a killer took lives from another. kill: and it was the last. nothing/miss: no effect.
+ * progress: a hit on the own number, short of three. killer: the third, or the lives back to full for one who was a killer: a killer. self: a killer hit
+ * their own number, a life lost (and the status). selfout: that was the last life. heal: lives given back by a hit on the own number. hit: a killer took lives
+ * from another. kill: and it was the last. nothing/miss: no effect.
  */
-export type KillerEffect = "claim" | "taken" | "again" | "progress" | "killer" | "self" | "selfout" | "hit" | "kill" | "nothing" | "miss";
+export type KillerEffect = "claim" | "taken" | "again" | "progress" | "killer" | "self" | "selfout" | "heal" | "hit" | "kill" | "nothing" | "miss";
 
 export type KillerDart = {
   player: string;
@@ -57,6 +60,8 @@ export type KillerState = {
   /** Hits on the own number, up to three. */
   hits: Record<string, number>;
   killer: Record<string, boolean>;
+  /** Was a killer and lost a life: the lives have to be won back, by hitting the own number, to be one again. */
+  regain: Record<string, boolean>;
   lives: Record<string, number>;
   /** Players each has taken out. */
   kills: Record<string, number>;
@@ -84,6 +89,7 @@ export function stateOf(g: KillerGame): KillerState {
   const numbers: Record<string, number | null> = Object.fromEntries(g.players.map((p) => [p, null]));
   const hits: Record<string, number> = Object.fromEntries(g.players.map((p) => [p, 0]));
   const killer: Record<string, boolean> = Object.fromEntries(g.players.map((p) => [p, false]));
+  const regain: Record<string, boolean> = Object.fromEntries(g.players.map((p) => [p, false]));
   const lives: Record<string, number> = Object.fromEntries(g.players.map((p) => [p, g.lives]));
   const kills: Record<string, number> = Object.fromEntries(g.players.map((p) => [p, 0]));
   const rounds: Record<string, number> = Object.fromEntries(g.players.map((p) => [p, 0]));
@@ -138,21 +144,37 @@ export function stateOf(g: KillerGame): KillerState {
 
     if (number === 0) dart.effect = "miss";
     else if (number === numbers[up]) {
-      if (!killer[up]) {
+      if (killer[up]) {
+        // A killer who hits their own number loses a life, and with it the status.
+        lives[up] -= 1;
+        killer[up] = false;
+        regain[up] = true;
+        dart.effect = lives[up] <= 0 ? "selfout" : "self";
+      } else if (lives[up] < g.lives) {
+        // Short of lives: the own number gives them back, and a killer who lost the status is one again at full lives.
+        lives[up] = Math.min(g.lives, lives[up] + mult);
+        if (lives[up] >= g.lives && regain[up]) {
+          killer[up] = true;
+          regain[up] = false;
+          dart.effect = "killer";
+        } else dart.effect = "heal";
+      } else {
         hits[up] = Math.min(HITS_TO_KILLER, hits[up] + mult);
         if (hits[up] >= HITS_TO_KILLER) {
           killer[up] = true;
           dart.effect = "killer";
         } else dart.effect = "progress";
-      } else {
-        lives[up] -= 1;
-        dart.effect = lives[up] <= 0 ? "selfout" : "self";
       }
     } else {
       const victim = g.players.find((p) => p !== up && lives[p] > 0 && numbers[p] === number);
       if (victim && killer[up]) {
         const lost = Math.min(mult, lives[victim]);
         lives[victim] -= mult;
+        // A killer who is hit and lives on is not a killer any more.
+        if (lives[victim] > 0 && killer[victim]) {
+          killer[victim] = false;
+          regain[victim] = true;
+        }
         dart.victim = victim;
         dart.livesLost = lost;
         if (lives[victim] <= 0) {
@@ -176,7 +198,7 @@ export function stateOf(g: KillerGame): KillerState {
       round = [];
     }
   }
-  return { phase, numbers, hits, killer, lives, kills, rounds, up, thrown, member: winner ? null : memberOf(up), log, round, winner };
+  return { phase, numbers, hits, killer, regain, lives, kills, rounds, up, thrown, member: winner ? null : memberOf(up), log, round, winner };
 }
 
 /** A dart thrown. Nothing happens once there is a winner. */

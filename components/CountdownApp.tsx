@@ -13,6 +13,8 @@ import { playFanfare } from "@/lib/fanfare";
 import { fxFlags, useFxLevel } from "@/lib/fxLevel";
 import { countdownResult } from "@/lib/gameResults";
 import { useRecordResult } from "@/lib/gameResultsStorage";
+import { countdownNight } from "@/lib/nightGames";
+import { useRecordNight } from "@/lib/nightScoreStorage";
 import { tierOf } from "@/lib/roundTier";
 import {
   DARTS_PER_ROUND,
@@ -165,6 +167,7 @@ export function CountdownGameScreen({
   const who = member?.name ?? up;
   const botUp = !winner && (member ? member.isBot : isBot(up));
   const isBotThrower = (n: string) => isBot(n) || Object.values(game.rosters ?? {}).some((r) => r.some((m) => m.name === n && m.isBot));
+  useRecordNight(winner, game.turns.length === 0, (id) => (career || !winner ? null : countdownNight(game, winner, Object.keys(botLevels), id)));
   useRecordResult(career || game.rosters ? null : winner, game.turns.length === 0, (id, at) => countdownResult(game, Object.keys(botLevels), id, at));
   const rain = useMemo(() => (winner && fx.confetti ? generateConfettiRain(fx.bigConfetti ? 60 : 36) : []), [winner, fx.confetti, fx.bigConfetti]);
 

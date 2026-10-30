@@ -5,6 +5,8 @@ import { generateConfettiRain } from "@/lib/confetti";
 import { fxFlags, useFxLevel } from "@/lib/fxLevel";
 import { lavaResult } from "@/lib/gameResults";
 import { useRecordResult } from "@/lib/gameResultsStorage";
+import { lavaNight } from "@/lib/nightGames";
+import { useRecordNight } from "@/lib/nightScoreStorage";
 import { haptics } from "@/lib/haptics";
 import {
   DARTS_PER_ROUND,
@@ -175,6 +177,7 @@ export function LavaGameScreen({
   const who = member?.name ?? up;
   const botUp = !winner && (member ? member.isBot : isBot(up));
   const isBotThrower = (n: string) => isBot(n) || Object.values(game.rosters ?? {}).some((r) => r.some((m) => m.name === n && m.isBot));
+  useRecordNight(winner, game.darts.length === 0, (id) => (career || !winner ? null : lavaNight(game, winner, Object.keys(botLevels), id)));
   useRecordResult(career || game.rosters ? null : winner, game.darts.length === 0, (id, at) => lavaResult(game, Object.keys(botLevels), id, at));
   const rain = useMemo(() => (winner && fx.confetti ? generateConfettiRain(fx.bigConfetti ? 60 : 36) : []), [winner, fx.confetti, fx.bigConfetti]);
 
