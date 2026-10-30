@@ -16,12 +16,15 @@ export function Segmented<T extends string>({
   onChange,
   options,
   label,
+  compact = false,
 }: {
   value: T;
   onChange: (v: T) => void;
   options: { value: T; label: string; icon?: ReactNode }[];
   /** Spoken name of the group. */
   label: string;
+  /** Smaller pills, for two groups on one line. */
+  compact?: boolean;
 }) {
   const box = useRef<HTMLDivElement>(null);
   // Where there is more to scroll to, one side at a time.
@@ -61,7 +64,7 @@ export function Segmented<T extends string>({
       onScroll={measure}
       role="radiogroup"
       aria-label={label}
-      className={`flex gap-2 p-1 overflow-x-auto ${fade}`}
+      className={`flex ${compact ? "gap-1" : "gap-2"} p-1 overflow-x-auto ${fade}`}
       style={{ scrollbarWidth: "none" }}
     >
       {options.map((o) => {
@@ -76,11 +79,11 @@ export function Segmented<T extends string>({
               if (!selected) uiFeedback("pick");
               onChange(o.value);
             }}
-            className={`flex-1 inline-flex items-center justify-center gap-2 whitespace-nowrap px-4 font-semibold ${FOCUS_RING}`}
+            className={`flex-1 inline-flex items-center justify-center gap-2 whitespace-nowrap font-semibold ${compact ? "px-2" : "px-4"} ${FOCUS_RING}`}
             style={{
               minHeight: "var(--control)",
               borderRadius: "var(--radius-pill)",
-              fontSize: "var(--text-body)",
+              fontSize: compact ? "var(--text-small)" : "var(--text-body)",
               background: selected ? "var(--color-teal)" : "var(--color-surface)",
               color: selected ? "var(--color-bg)" : "var(--color-text-2)",
               border: selected ? "1px solid transparent" : "1px solid var(--color-border)",

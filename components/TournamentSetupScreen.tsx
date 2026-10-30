@@ -6,7 +6,6 @@ import { DEFAULT_CUP_LEVEL, MAX_CUP_SIZE, TEAM_CUP_MAX, buildCupParticipants, cu
 import { botsSupported, withStandRule, type GameVariant } from "@/lib/rules";
 import { splitPeople, toMember, type PickedTeam, type Person } from "@/lib/people";
 import { individualSetupProblem, teamSetupProblem } from "@/lib/setupProblem";
-import { PeopleIcon, PersonIcon, TrophyIcon } from "./icons";
 import { PlayerPicker } from "./PlayerPicker";
 import { RulesPicker } from "./RulesPicker";
 import { ScreenTop } from "./ScreenTop";
@@ -15,21 +14,13 @@ import { ModeToggle, commitPeople, commitTeams } from "./SetupScreen";
 import { StepStrip } from "./StepStrip";
 import { TextField } from "./ui/TextField";
 import { VenuePicker } from "./VenuePicker";
-import { defaultVenue, type VenueId } from "@/lib/venues";
+import { defaultVenue, venueOf, type VenueId } from "@/lib/venues";
 import { StickyAction } from "./StickyAction";
 import { TeamPicker } from "./TeamPicker";
 
-/** A numbered heading: the screen reads as three questions, one after the other. */
-function Step({ n, children, aside }: { n: number; children: React.ReactNode; aside?: string }) {
-  return (
-    <div className="flex items-center gap-3 mb-3 mt-2">
-      <span aria-hidden className="tabular rounded-full shrink-0 flex items-center justify-center" style={{ width: "1.75rem", height: "1.75rem", background: "var(--teal-soft)", color: "var(--color-teal)", border: "1px solid var(--color-teal)", fontWeight: 700, fontSize: "var(--text-small)" }}>
-        {n}
-      </span>
-      <h2 className="font-display flex-1" style={{ color: "var(--color-cream)", fontSize: "var(--text-title)", lineHeight: 1.1 }}>{children}</h2>
-      {aside && <span className="tabular" style={{ color: "var(--color-muted)", fontSize: "var(--text-body)" }}>{aside}</span>}
-    </div>
-  );
+/** A small label over a part of the screen: it is one screen, and the parts can be done in any order, so they are not numbered. */
+function Label({ children }: { children: React.ReactNode }) {
+  return <h2 className="section-label mb-2 mt-1">{children}</h2>;
 }
 
 const MIN_INDIVIDUAL = 2;
@@ -81,6 +72,8 @@ export function TournamentSetupScreen({
   const [variant, setVariant] = useState<GameVariant>(initialVariant);
   const [name, setName] = useState(initialName);
   const [moreOpen, setMoreOpen] = useState(false);
+  // Which cup and where it is played are behind one row; a cup against bots has more to choose, so it starts open.
+  const [detailsOpen, setDetailsOpen] = useState(!!initialCup);
   // A cup against bots keeps only the house's own entrants: the bots are made again when the cup is.
   const ownOf = (list: Participant[] | null) => (initialCup && list ? list.filter((p) => (p.members ? p.members.some((m) => !m.isBot) : !p.isBot)) : list);
   const [people, setPeople] = useState<Person[]>(() => (initialMode === "individual" && initialParticipants ? peopleFromParticipants(ownOf(initialParticipants) ?? []) : []));
@@ -163,48 +156,71 @@ export function TournamentSetupScreen({
         />
         <StepStrip step={0} />
 
-        <Step n={1}>Hvem</Step>
-        <ModeToggle
-          label="Hvem spiller"
-          value={mode}
-          onChange={setMode}
-          options={[
-            { value: "individual", label: "Spillere", icon: <PersonIcon className="w-4 h-4" /> },
-            { value: "team", label: "Lag", icon: <PeopleIcon className="w-4 h-4" /> },
-          ]}
-        />
+        {/* Who plays and what kind of tournament: two small choices on one line. */}
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <ModeToggle
+            compact
+            label="Hvem spiller"
+            value={mode}
+            onChange={setMode}
+            options={[
+              { value: "individual", label: "Spillere" },
+              { value: "team", label: "Lag" },
+            ]}
+          />
+          <ModeToggle
+            compact
+            label="Type turnering"
+            value={cupMode ? "cup" : "plain"}
+            onChange={(v) => {
+              setCupMode(v === "cup");
+              if (v === "cup") setDetailsOpen(true);
+            }}
+            options={[
+              { value: "plain", label: "Vanlig" },
+              { value: "cup", label: "Mot boter" },
+            ]}
+          />
+        </div>
+        <Label>{mode === "team" ? "LAG" : "SPILLERE"}</Label>
         {mode === "team" ? (
           <TeamPicker teams={teams} onChange={setTeams} botsAllowed={botsAllowed && !cupMode} />
         ) : (
           <PlayerPicker people={people} onChange={setPeople} botsAllowed={botsAllowed && !cupMode} />
         )}
 
-        <Step n={2}>Turnering</Step>
-        <ModeToggle
-          label="Type turnering"
-          value={cupMode ? "cup" : "plain"}
-          onChange={(v) => setCupMode(v === "cup")}
-          options={[
-            { value: "plain", label: "Vanlig", icon: <PeopleIcon className="w-4 h-4" /> },
-            { value: "cup", label: "Mot boter", icon: <TrophyIcon className="w-4 h-4" /> },
-          ]}
-        />
-        {cupMode && (
-          <>
-            <CupTypePicker value={{ ...cup, size: cupSize }} onChange={setCup} maxSize={maxSize} />
-            {cupType(cup.kind).sizes.length > 1 ? (
+        {/* The cup and the place in one row, that opens: most nights nothing here changes. */}
+        <button
+          type="button"
+          onClick={() => setDetailsOpen((o) => !o)}
+          aria-expanded={detailsOpen}
+          className={`tactile w-full rounded-lg px-4 flex items-center justify-between gap-3 text-left mt-4 mb-3 ${FOCUS_RING}`}
+          style={{ minHeight: "var(--control)", background: "var(--color-surface)", border: "1px solid var(--color-border)" }}
+        >
+          <span className="min-w-0 truncate" style={{ color: "var(--color-cream)", fontWeight: 600, fontSize: "var(--text-body)" }}>{cupMode ? `${cupType(cup.kind).name} · ${cupSize}` : "Sted"}</span>
+          <span className="shrink-0" style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>
+            {venueOf(venue).name} <span aria-hidden>{detailsOpen ? "⌃" : "›"}</span>
+          </span>
+        </button>
+        {detailsOpen && (
+          <div className="mb-3">
+            {cupMode && (
               <>
-                <Step n={3}>Antall</Step>
-                <CupSizePicker value={{ ...cup, size: cupSize }} onChange={setCup} own={ownCount} maxSize={maxSize} />
+                <CupTypePicker value={{ ...cup, size: cupSize }} onChange={setCup} maxSize={maxSize} />
+                {cupType(cup.kind).sizes.length > 1 ? (
+                  <>
+                    <Label>ANTALL</Label>
+                    <CupSizePicker value={{ ...cup, size: cupSize }} onChange={setCup} own={ownCount} maxSize={maxSize} />
+                  </>
+                ) : (
+                  ownCount >= cupSize && <p className="mb-6" style={{ color: "var(--color-red)", fontSize: "var(--text-small)" }}>For mange</p>
+                )}
               </>
-            ) : (
-              ownCount >= cupSize && <p className="mb-6" style={{ color: "var(--color-red)", fontSize: "var(--text-small)" }}>For mange</p>
             )}
-          </>
+            <Label>STED</Label>
+            <VenuePicker value={venue} onChange={setChosenVenue} />
+          </div>
         )}
-
-        <p className="section-label mb-2">STED</p>
-        <VenuePicker value={venue} onChange={setChosenVenue} />
 
         <button
           type="button"
@@ -226,12 +242,9 @@ export function TournamentSetupScreen({
           </div>
         )}
 
-        <StickyAction
-          onClick={handleNext}
-          ready={!problem}
-          reason={problem}
-        >
-          Neste
+        {/* The button is always at the bottom and says what is missing, or how many are in. */}
+        <StickyAction onClick={handleNext} ready={!problem} reason={null}>
+          {problem ?? `Neste · ${ownCount} ${mode === "team" ? "lag" : ownCount === 1 ? "spiller" : "spillere"}`}
         </StickyAction>
       </div>
     </div>

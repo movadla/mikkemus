@@ -18,11 +18,14 @@ test.describe("sted for turneringen", () => {
     await openApp(page, "dark");
     await page.getByRole("button", { name: "Turnering" }).first().click();
     await addPlayers(page, ["Lars", "Vadla", "Moen", "Hans"]);
+    // The place is behind one row: it says where, and opens to choose another.
+    await expect(page.getByRole("button", { name: /^Sted.*Ly/ })).toBeVisible();
+    await page.getByRole("button", { name: /^Sted/ }).click();
     const places = page.getByRole("radiogroup", { name: "Sted" });
     // Four players fit a pub; another place can be picked.
     await expect(places.getByRole("radio", { name: /^Ly/ })).toBeChecked();
     await places.getByRole("radio", { name: /Rompuben Moss/ }).click();
-    await page.getByRole("button", { name: "Neste", exact: true }).click();
+    await page.getByRole("button", { name: /^Neste · \d+ spillere?$/ }).click();
     // The opening: the name of the place and the trophy, then on to the draw.
     await expect(page.getByRole("list", { name: "Om turneringen" }).getByText("Rompuben Moss")).toBeVisible();
     await expect(page.getByLabel("Feltet")).toBeVisible();
@@ -51,8 +54,10 @@ test.describe("sted for turneringen", () => {
     await expect(page.getByRole("radio", { name: /Ly-cupen|Regionmesterskapet|Norgesmesterskapet|Grand Slam|VM i dart|Ly Pilotturnering/ })).toHaveCount(6);
     await expect(page.getByRole("radio", { name: /EM i dart/ })).toHaveCount(0);
     await page.getByRole("radio", { name: /Grand Slam/ }).click();
+    // A cup against bots opens the choices at once; the place follows the cup, and the row says which.
+    await expect(page.getByRole("button", { name: /Grand Slam · \d+.*Civic Hall/ })).toBeVisible();
     await expect(page.getByRole("radiogroup", { name: "Sted" }).getByRole("radio", { name: /Civic Hall/ })).toBeChecked();
-    await page.getByRole("button", { name: "Neste", exact: true }).click();
+    await page.getByRole("button", { name: /^Neste · \d+ spillere?$/ }).click();
     await expect(page.getByRole("heading", { name: "Grand Slam" })).toBeVisible();
     await page.getByRole("button", { name: "TREKK" }).click({ timeout: 10_000 });
     await expect(page.getByLabel("Favoritter")).toBeVisible({ timeout: 15_000 });

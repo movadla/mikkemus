@@ -25,15 +25,18 @@ export function ModeToggle<T extends string>({
   onChange,
   options,
   label = "Hvem spiller",
+  compact = false,
 }: {
   value: T;
   onChange: (v: T) => void;
-  options: { value: T; label: string; icon: React.ReactNode }[];
+  options: { value: T; label: string; icon?: React.ReactNode }[];
   label?: string;
+  /** Smaller, and with no room under it: for two on one line. */
+  compact?: boolean;
 }) {
   return (
-    <div className="mb-6">
-      <Segmented value={value} onChange={onChange} options={options} label={label} />
+    <div className={compact ? "min-w-0" : "mb-6"}>
+      <Segmented value={value} onChange={onChange} options={options} label={label} compact={compact} />
     </div>
   );
 }
