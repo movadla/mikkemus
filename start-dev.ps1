@@ -1,4 +1,4 @@
-# start-dev.ps1
+﻿# start-dev.ps1
 # Starter Next.js dashboard med Cloudflare-tunnel.
 # Oppdaterer next.config.ts automatisk med ny tunnel-URL.
 # Bruk: npm run tunnel
@@ -43,9 +43,12 @@ Write-Host "  Venter pa tunnel-URL (maks 30 sek)..." -ForegroundColor DarkGray
 $tunnelUrl = $null
 for ($i = 0; $i -lt 30; $i++) {
     Start-Sleep -Seconds 1
-    $log = Get-Content "$root\cloudflared-err.log" -Raw -ErrorAction SilentlyContinue
-    if ($log -match "https://[a-z0-9][a-z0-9-]+\.trycloudflare\.com") {
-        $tunnelUrl = $Matches[0]
+    # -join: Get-Content -Raw kan returnere flere biter hvis cloudflared skriver
+    # akkurat idet vi leser. Da setter ikke -match $Matches, saa vi bruker [regex] direkte.
+    $log = (Get-Content "$root\cloudflared-err.log" -Raw -ErrorAction SilentlyContinue) -join ""
+    $m = [regex]::Match($log, "https://[a-z0-9][a-z0-9-]+\.trycloudflare\.com")
+    if ($m.Success) {
+        $tunnelUrl = $m.Value
         break
     }
 }
