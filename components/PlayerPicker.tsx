@@ -1,16 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRoster } from "@/lib/storage";
 import { BOT_LEVEL_PICKABLE, botDisplayName, type BotLevel } from "@/lib/botLevels";
 import { nextBotName, sameName, type Person } from "@/lib/people";
 import { filterNames, readUsage, sortByRecent } from "@/lib/recentPlayers";
-import { groupNights, nightOf } from "@/lib/nights";
-import { fetchLatestTournament } from "@/lib/tournamentStorage";
 import { BotIcon, CloseIcon, GuestIcon } from "./icons";
 import { LevelBadge } from "./LevelBadge";
 import { Avatar } from "./ui/Avatar";
-import { LevelBars } from "./ui/LevelBars";
 import { SearchField, TextField } from "./ui/TextField";
 
 const FOCUS_RING =
@@ -18,6 +15,9 @@ const FOCUS_RING =
 
 /** A search box only earns its place once the list is long enough to need one. */
 const SEARCH_FROM = 12;
+
+/** How many of the known players are shown before "Flere spillere": the ones with the most matches. */
+const SHOWN = 8;
 
 const addButton = "tactile flex-1 rounded-lg text-sm font-medium flex items-center justify-center gap-2";
 
@@ -36,7 +36,6 @@ export function PlayerPicker({
   botsAllowed = true,
   guests = false,
   hidden = [],
-  bulk = false,
 }: {
   people: Person[];
   onChange: (people: Person[]) => void;
@@ -46,39 +45,28 @@ export function PlayerPicker({
   guests?: boolean;
   /** Names not offered — people already on another team. */
   hidden?: string[];
-  /** Offers everyone at once, and nobody. */
-  bulk?: boolean;
 }) {
   const [adding, setAdding] = useState<"player" | "guest" | "bot" | null>(null);
   const [nameInput, setNameInput] = useState("");
   const [query, setQuery] = useState("");
+  const [more, setMore] = useState(false);
   const [error, setError] = useState("");
   const roster = useRoster();
-  // The people of the last tournament, for "Som sist" (only asked for where the shortcuts are offered).
-  const [lastTime, setLastTime] = useState<string[]>([]);
-  useEffect(() => {
-    if (!bulk) return;
-    let live = true;
-    void fetchLatestTournament().then((t) => {
-      if (live && t) setLastTime(t.mode === "individual" ? t.participants.filter((p) => !p.isBot).map((p) => p.name) : []);
-    });
-    return () => {
-      live = false;
-    };
-  }, [bulk]);
 
   const known = useMemo(() => {
     const names = roster.filter((r) => r.kind !== "team" && !hidden.some((h) => sameName(h, r.name))).map((r) => r.name);
     return sortByRecent(names, readUsage());
   }, [roster, hidden]);
-  // Everyone who has thrown tonight (a night runs to five in the morning, see lib/nights).
-  const tonight = useMemo(() => {
-    const night = groupNights(roster)[0];
-    return night && night.date === nightOf(new Date().toISOString()) ? night.players.map((p) => p.name).filter((n) => known.some((k) => sameName(k, n))) : [];
-  }, [roster, known]);
-  const lastKnown = lastTime.filter((n) => known.some((k) => sameName(k, n)));
   const extra = people.filter((p) => !known.some((n) => sameName(n, p.name)));
-  const shown = [...filterNames(known, query).map((name) => people.find((p) => sameName(p.name, name)) ?? { name, isBot: false }), ...extra];
+  // The eight with the most matches, and anyone who is in already; the rest wait behind one button (a search shows them all).
+  const top = useMemo(() => new Set([...known].sort((a, b) => (roster.find((r) => sameName(r.name, b))?.matchesPlayed ?? 0) - (roster.find((r) => sameName(r.name, a))?.matchesPlayed ?? 0) || known.indexOf(a) - known.indexOf(b)).slice(0, SHOWN)), [known, roster]);
+  const searching = query.trim() !== "";
+  const listed = filterNames(known, query).filter((n) => more || searching || top.has(n) || people.some((p) => sameName(p.name, n)));
+  const hiddenCount = known.length - listed.length;
+  // Under the field for a new name: the players who are known already with that spelling, so a name that is there is tapped, not typed again.
+  const typed = nameInput.trim();
+  const suggestions = adding === "player" && typed ? [...known, ...extra.filter((p) => !p.isBot && !p.isGuest).map((p) => p.name)].filter((n) => n.toLowerCase().includes(typed.toLowerCase())).slice(0, 5) : [];
+  const shown = [...listed.map((name) => people.find((p) => sameName(p.name, name)) ?? { name, isBot: false }), ...extra];
 
   function orderOf(name: string): number {
     return people.findIndex((p) => sameName(p.name, name));
@@ -117,6 +105,67 @@ export function PlayerPicker({
 
   return (
     <div className="mb-4">
+      {known.length >= SEARCH_FROM && (
+        <div className="mb-4">
+          <SearchField value={query} onChange={setQuery} label="Søk etter spiller" />
+        </div>
+      )}
+
+      {shown.length > 0 && (
+        <div className="grid grid-cols-2 gap-2" role="group" aria-label="Spillere">
+          {shown.map((person) => {
+            const order = orderOf(person.name);
+            const selected = order !== -1;
+            const photo = roster.find((r) => sameName(r.name, person.name))?.photo;
+            const botBlocked = person.isBot && !botsAllowed;
+            const dashed = person.isBot || person.isGuest;
+            return (
+              <button
+                key={person.name}
+                type="button"
+                aria-pressed={selected}
+                onClick={() => toggle(person)}
+                className={`tactile relative flex items-center gap-2 px-2 py-1.5 rounded-xl text-left ${FOCUS_RING}`}
+                style={{
+                  minHeight: "2.75rem",
+                  background: selected ? "var(--teal-soft)" : "var(--color-surface)",
+                  border: selected ? "1px solid var(--color-teal)" : `1px ${dashed ? "dashed" : "solid"} var(--color-border)`,
+                }}
+              >
+                {person.isGuest ? (
+                  <span aria-hidden className="rounded-full shrink-0 flex items-center justify-center" style={{ width: 28, height: 28, background: "var(--color-cell)", border: "1.5px dashed var(--color-border)" }}>
+                    <GuestIcon className="w-3.5 h-3.5" />
+                  </span>
+                ) : (
+                  <Avatar name={person.name} photo={photo} size="s" px={28} bot={person.isBot} />
+                )}
+                <span className="flex-1 min-w-0 truncate" style={{ color: botBlocked ? "var(--color-red)" : selected ? "var(--color-cream)" : "var(--color-muted)", fontSize: "var(--text-body)", fontWeight: selected ? 600 : 400 }}>
+                  {person.name}
+                </span>
+                                                {selected && (
+                  <span
+                    className="tabular rounded-full shrink-0 flex items-center justify-center absolute"
+                    style={{ top: "50%", right: "0.4rem", transform: "translateY(-50%)", width: "1.375rem", height: "1.375rem", background: "var(--color-teal)", color: "var(--color-bg)", fontSize: "var(--text-micro)", fontWeight: 700 }}
+                    aria-label={`nummer ${order + 1}`}
+                  >
+                    {order + 1}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+      {shown.length === 0 && query && (
+        <p style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>Ingen spillere heter noe slikt.</p>
+      )}
+      {!searching && (hiddenCount > 0 || more) && known.length > SHOWN && (
+        <button type="button" onClick={() => setMore((m) => !m)} aria-expanded={more} className={`tactile w-full rounded-lg mt-2 flex items-center justify-between px-4 ${FOCUS_RING}`} style={{ minHeight: "var(--control)", background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-cream)", fontWeight: 600, fontSize: "var(--text-body)" }}>
+          <span>{more ? "Færre spillere" : `Flere spillere (${hiddenCount})`}</span>
+          <span aria-hidden style={{ color: "var(--color-muted)" }}>{more ? "⌃" : "›"}</span>
+        </button>
+      )}
+      <div className="mt-4">
       <div className="flex gap-2 mb-4">
         <button
           type="button"
@@ -190,6 +239,34 @@ export function PlayerPicker({
           </button>
         </div>
       )}
+      {suggestions.length > 0 && (
+        <ul className="mb-4 rounded-lg overflow-hidden" aria-label="Spillere som finnes" style={{ border: "1px solid var(--color-border)", background: "var(--color-surface)" }}>
+          {suggestions.map((name) => {
+            const inAlready = orderOf(name) !== -1;
+            const photo = roster.find((r) => sameName(r.name, name))?.photo;
+            return (
+              <li key={name} style={{ borderTop: "1px solid var(--color-border)" }} className="first:border-t-0">
+                <button
+                  type="button"
+                  disabled={inAlready}
+                  onClick={() => {
+                    onChange([...people, { name, isBot: false }]);
+                    setNameInput("");
+                    setError("");
+                    setAdding(null);
+                  }}
+                  className={`tactile w-full flex items-center gap-2 px-3 text-left ${FOCUS_RING}`}
+                  style={{ minHeight: "var(--control)", color: "var(--color-cream)", opacity: inAlready ? 0.6 : 1 }}
+                >
+                  <Avatar name={name} photo={photo} size="s" px={28} />
+                  <span className="flex-1 min-w-0 truncate">{name}</span>
+                  <span style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>{inAlready ? "er med" : "finnes"}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
       {adding === "bot" && botsAllowed && (
         <div className="grid grid-cols-3 gap-2 mb-4">
           {BOT_LEVEL_PICKABLE.map((level) => (
@@ -212,77 +289,7 @@ export function PlayerPicker({
         </p>
       )}
 
-      {known.length >= SEARCH_FROM && (
-        <div className="mb-4">
-          <SearchField value={query} onChange={setQuery} label="Søk etter spiller" />
-        </div>
-      )}
-
-      {bulk && known.length > 0 && (
-        <div className="flex flex-wrap justify-end gap-2 mb-2">
-          {([
-            ...(lastKnown.length > 1 ? [["Som sist", () => onChange(lastKnown.map((name) => ({ name: known.find((k) => sameName(k, name)) ?? name, isBot: false })))] as const] : []),
-            ...(tonight.length > 1 ? [["Hele kvelden", () => onChange(tonight.map((name) => ({ name: known.find((k) => sameName(k, name)) ?? name, isBot: false })))] as const] : []),
-            ["Alle", () => onChange([...people, ...filterNames(known, query).filter((n) => orderOf(n) === -1).map((name) => ({ name, isBot: false }))])],
-            ["Ingen", () => onChange([])],
-          ] as const).map(([label, run]) => (
-            <button key={label} type="button" onClick={run} className={`tactile rounded-lg px-3 text-sm ${FOCUS_RING}`} style={{ minHeight: "2.25rem", background: "var(--color-surface)", color: "var(--color-muted)", border: "1px solid var(--color-border)" }}>
-              {label}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {shown.length > 0 && (
-        <div className="grid grid-cols-3 gap-2" role="group" aria-label="Spillere">
-          {shown.map((person) => {
-            const order = orderOf(person.name);
-            const selected = order !== -1;
-            const photo = roster.find((r) => sameName(r.name, person.name))?.photo;
-            const botBlocked = person.isBot && !botsAllowed;
-            const dashed = person.isBot || person.isGuest;
-            return (
-              <button
-                key={person.name}
-                type="button"
-                aria-pressed={selected}
-                onClick={() => toggle(person)}
-                className={`tactile relative flex flex-col items-center justify-center gap-1.5 px-2 py-3 rounded-xl text-center ${FOCUS_RING}`}
-                style={{
-                  minHeight: "6.5rem",
-                  background: selected ? "var(--teal-soft)" : "var(--color-surface)",
-                  border: selected ? "1px solid var(--color-teal)" : `1px ${dashed ? "dashed" : "solid"} var(--color-border)`,
-                }}
-              >
-                {person.isGuest ? (
-                  <span aria-hidden className="rounded-full shrink-0 flex items-center justify-center" style={{ width: 44, height: 44, background: "var(--color-cell)", border: "1.5px dashed var(--color-border)" }}>
-                    <GuestIcon className="w-4 h-4" />
-                  </span>
-                ) : (
-                  <Avatar name={person.name} photo={photo} size="m" bot={person.isBot} />
-                )}
-                <span className="w-full min-w-0 truncate" style={{ color: botBlocked ? "var(--color-red)" : selected ? "var(--color-cream)" : "var(--color-muted)", fontSize: "var(--text-body)", fontWeight: selected ? 600 : 400 }}>
-                  {person.name}
-                </span>
-                {person.isBot && person.botLevel && <LevelBars level={person.botLevel} name={person.name} />}
-                {person.isGuest && <span style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>gjest</span>}
-                {selected && (
-                  <span
-                    className="tabular rounded-full shrink-0 flex items-center justify-center absolute"
-                    style={{ top: "0.375rem", right: "0.375rem", width: "1.375rem", height: "1.375rem", background: "var(--color-teal)", color: "var(--color-bg)", fontSize: "var(--text-micro)", fontWeight: 700 }}
-                    aria-label={`nummer ${order + 1}`}
-                  >
-                    {order + 1}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      )}
-      {shown.length === 0 && query && (
-        <p style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>Ingen spillere heter noe slikt.</p>
-      )}
+      </div>
     </div>
   );
 }

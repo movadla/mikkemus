@@ -176,7 +176,7 @@ export function TournamentSetupScreen({
         {mode === "team" ? (
           <TeamPicker teams={teams} onChange={setTeams} botsAllowed={botsAllowed && !cupMode} />
         ) : (
-          <PlayerPicker people={people} onChange={setPeople} botsAllowed={botsAllowed && !cupMode} bulk />
+          <PlayerPicker people={people} onChange={setPeople} botsAllowed={botsAllowed && !cupMode} />
         )}
 
         <Step n={2}>Turnering</Step>
