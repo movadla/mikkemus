@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState, useSyncExternalStore } from "react";
-import { teamKitsOf, useTeamRecords } from "@/lib/storage";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { ensureTeam, teamKitsOf, useRosterLoaded, useTeamRecords } from "@/lib/storage";
 import { TEAMS_SHOWN, getTeamCardsSnapshot, rankByUse, subscribeTeamCards, withTeamRecords, type TeamCard } from "@/lib/teamCards";
 import { firstKit, type Kit } from "@/lib/teamKit";
 import { TEAM_NAME_MAX, defaultTeamName, pairKey, savedTeamName, teamNameProblems } from "@/lib/teamNames";
@@ -28,7 +28,14 @@ type Tile = { name: string; members: string[]; bots?: TeamCard["bots"]; kit: Kit
 export function TeamPicker({ teams, onChange, botsAllowed }: { teams: PickedTeam[]; onChange: (teams: PickedTeam[]) => void; botsAllowed: boolean }) {
   const local = useSyncExternalStore(subscribeTeamCards, getTeamCardsSnapshot, () => NO_CARDS);
   const records = useTeamRecords();
+  const loaded = useRosterLoaded();
   const known = useMemo(() => rankByUse(withTeamRecords(local, records), records), [local, records]);
+  // The teams this device remembers are teams of Spillere too, where their name and shirts can be changed. Only once the roster has arrived:
+  // writing a team before then could write over one the database already has.
+  useEffect(() => {
+    if (!loaded) return;
+    for (const c of known) if (!c.bots) ensureTeam(c.name, c.members);
+  }, [loaded, known]);
   // Only the four used most to begin with; «Mer» opens the rest. A team that is picked stays in view whichever it is.
   const [showAll, setShowAll] = useState(false);
 
@@ -86,6 +93,8 @@ export function TeamPicker({ teams, onChange, botsAllowed }: { teams: PickedTeam
       setError(problem);
       return;
     }
+    // A team of people is a team of Spillere from the moment it is made (a team with a bot in it has no record of its own).
+    if (!next.members.some((m) => m.isBot)) ensureTeam(next.name, next.members.map((m) => m.name));
     onChange([...teams, next]);
     setComposing(false);
   }

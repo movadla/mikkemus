@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { VenuePicker } from "./VenuePicker";
 import { venueOf, type VenueId } from "@/lib/venues";
-import { ensurePlayer } from "@/lib/storage";
+import { ensurePlayer, ensureTeam } from "@/lib/storage";
 import type { BotLevel, TeamMember } from "@/lib/botLevels";
 import { RULES, baseOf, botsSupported, withStandRule, type GameVariant } from "@/lib/rules";
 import { rememberTeamNames } from "@/lib/teamNames";
@@ -66,6 +66,8 @@ export function commitTeams(teams: PickedTeam[]) {
       return [hasBot ? { ...t, bots } : t];
     }),
   );
+  // A team that plays is a team of Spillere, with its own name and shirts to edit there.
+  teams.filter((t) => !t.members.some((m) => m.isBot)).forEach((t) => ensureTeam(t.name, t.members.map((m) => m.name)));
   commitPeople(teamPeople(teams));
 }
 

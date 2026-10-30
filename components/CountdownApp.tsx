@@ -34,22 +34,23 @@ import {
   type CountdownStart,
 } from "@/lib/countdown";
 import { haptics } from "@/lib/haptics";
-import { splitPeople, type Person } from "@/lib/people";
+import { splitPeople, type PickedTeam, type Person } from "@/lib/people";
+import { rostersOf } from "@/lib/teamGame";
 import { useGameVenue } from "@/lib/gameVenue";
-import { individualSetupProblem, setupSummary } from "@/lib/setupProblem";
+import { individualSetupProblem, setupSummary, teamSetupProblem } from "@/lib/setupProblem";
 import { useRoster } from "@/lib/storage";
 import { CheckoutChips } from "./CheckoutChips";
 import { useBotTurn } from "./useBotTurn";
 import { ConfirmDialog } from "./ConfirmDialog";
-import { PlayerPicker } from "./PlayerPicker";
 import { RollingNumber } from "./RollingNumber";
 import { ScoreKeypad } from "./ScoreKeypad";
 import { GameVenue, VenueSection } from "./GameVenue";
+import { GameWho, type GameMode } from "./GameWho";
+import { SideAvatar } from "./SideAvatar";
 import { ScreenTop } from "./ScreenTop";
-import { commitPeople } from "./SetupScreen";
+import { commitPeople, commitTeams } from "./SetupScreen";
 import { StickyAction } from "./StickyAction";
 import { VoiceToggle } from "./VoiceSwitch";
-import { Avatar } from "./ui/Avatar";
 import { CountUp } from "./ui/CountUp";
 import { UndoIcon } from "./icons";
 import { Button } from "./ui/Button";
@@ -67,6 +68,8 @@ const oneDecimal = (n: number) => n.toFixed(1).replace(".", ",");
  */
 export function CountdownApp({ onExitToHome }: { onExitToHome: () => void }) {
   const [people, setPeople] = useState<Person[]>([]);
+  const [mode, setMode] = useState<GameMode>("individual");
+  const [teams, setTeams] = useState<PickedTeam[]>([]);
   const [start, setStart] = useState<CountdownStart>(501);
   const [doubleOut, setDoubleOut] = useState(true);
   const [game, setGame] = useState<CountdownGame | null>(null);
@@ -75,7 +78,7 @@ export function CountdownApp({ onExitToHome }: { onExitToHome: () => void }) {
   const [venue, setVenue] = useGameVenue("countdown");
 
   if (!game) {
-    const problem = (people.length > 0 && people.every((p) => p.isBot) ? "Velg minst én spiller" : individualSetupProblem(people.map((p) => p.name), false)) || null;
+    const problem = (mode === "team" ? teamSetupProblem(teams, true, 2) : people.length > 0 && people.every((p) => p.isBot) ? "Velg minst én spiller" : individualSetupProblem(people.map((p) => p.name), false)) || null;
     return (
       <div className="animate-screen-push screen has-sticky-action">
         <div className="screen-inner">
@@ -84,20 +87,27 @@ export function CountdownApp({ onExitToHome }: { onExitToHome: () => void }) {
           <div className="mb-4">
             <Segmented value={String(start) as "301" | "501"} onChange={(v) => setStart(Number(v) as CountdownStart)} label="Start fra" options={[{ value: "501", label: "501" }, { value: "301", label: "301" }]} />
           </div>
-          <PlayerPicker people={people} onChange={setPeople} guests />
+          <GameWho mode={mode} onMode={setMode} people={people} onPeople={setPeople} teams={teams} onTeams={setTeams} />
           <div className="mt-4">
             <SwitchRow label="Dobbel ut" hint="Står det 1 igjen, er runden over streken" checked={doubleOut} onChange={setDoubleOut} />
           </div>
           <VenueSection value={venue} onChange={setVenue} />
           <StickyAction
             onClick={() => {
+              if (mode === "team") {
+                // A team has one score, and its members throw a round each, in turn: a bot among them throws its own round.
+                commitTeams(teams);
+                setBotLevels({});
+                setGame(newGame(start, doubleOut, teams.map((t) => t.name), undefined, rostersOf(teams)));
+                return;
+              }
               commitPeople(people);
               const split = splitPeople(people);
               setBotLevels(split.botLevels);
               setGame(newGame(start, doubleOut, split.players));
             }}
             ready={!problem}
-            summary={setupSummary([`${people.length} ${people.length === 1 ? "spiller" : "spillere"}`, String(start)])}
+            summary={setupSummary([mode === "team" ? `${teams.length} lag` : `${people.length} ${people.length === 1 ? "spiller" : "spillere"}`, String(start)])}
             reason={problem}
           >
             Start kampen
@@ -155,7 +165,7 @@ export function CountdownGameScreen({
   const who = member?.name ?? up;
   const botUp = !winner && (member ? member.isBot : isBot(up));
   const isBotThrower = (n: string) => isBot(n) || Object.values(game.rosters ?? {}).some((r) => r.some((m) => m.name === n && m.isBot));
-  useRecordResult(career ? null : winner, game.turns.length === 0, (id, at) => countdownResult(game, Object.keys(botLevels), id, at));
+  useRecordResult(career || game.rosters ? null : winner, game.turns.length === 0, (id, at) => countdownResult(game, Object.keys(botLevels), id, at));
   const rain = useMemo(() => (winner && fx.confetti ? generateConfettiRain(fx.bigConfetti ? 60 : 36) : []), [winner, fx.confetti, fx.bigConfetti]);
 
   useEffect(() => {
@@ -234,7 +244,7 @@ export function CountdownGameScreen({
         <div className="screen-inner relative z-10">
           <div className="card-gold shadow-panel rounded-2xl text-center mb-4 mt-8 relative" style={{ padding: "3.4rem 1.25rem 1.1rem" }}>
             <span className="absolute" style={{ top: "-2.9rem", left: "50%", transform: "translateX(-50%)" }}>
-              <Avatar name={winner} photo={photos.get(winner)} px={104} state="winner" />
+              <SideAvatar name={winner} roster={game.rosters?.[winner]} photo={photos.get(winner)} px={104} state="winner" />
             </span>
             <p className="font-display" style={{ color: "var(--color-bg)", fontStyle: "italic", fontSize: "var(--text-body)", letterSpacing: "0.04em" }}>
               Vinner · {game.start}
@@ -267,7 +277,7 @@ export function CountdownGameScreen({
           <ul className="space-y-2 mb-6" aria-label="Resultat">
             {game.players.map((p) => (
               <li key={p} className="flex items-center gap-3" style={{ padding: "0.5rem 0.75rem", borderRadius: "var(--radius-m)", background: "var(--color-surface)", border: "1px solid var(--color-border)", boxShadow: "var(--elevation-1)" }}>
-                <Avatar name={p} photo={photos.get(p)} size="m" state={p === winner ? "winner" : "idle"} />
+                <SideAvatar name={p} roster={game.rosters?.[p]} photo={photos.get(p)} px={44} state={p === winner ? "winner" : "idle"} />
                 <span className="flex-1 min-w-0 truncate font-semibold">{p}</span>
                 <span className="text-right" style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>
                   <span className="num block" style={{ fontSize: "var(--text-title)", color: "var(--color-cream)" }}>
@@ -284,7 +294,7 @@ export function CountdownGameScreen({
                 Fortsett
               </Button>
             ) : (
-              <Button block variant="primary" size="lg" onClick={() => setGame(newGame(game.start, game.doubleOut, game.players))}>
+              <Button block variant="primary" size="lg" onClick={() => setGame(newGame(game.start, game.doubleOut, game.players, game.starts, game.rosters))}>
                 Spill igjen
               </Button>
             )}
@@ -425,7 +435,7 @@ export function CountdownGameScreen({
                   </span>
                 )}
                 <div className="cd-who">
-                  <Avatar name={p} photo={photos.get(p)} px={big ? (active ? 68 : 44) : active ? 46 : 32} state={active ? "active" : "idle"} bot={isBot(p)} />
+                  <SideAvatar name={p} roster={game.rosters?.[p]} photo={photos.get(p)} px={big ? (active ? 68 : 44) : active ? 46 : 32} state={active ? "active" : "idle"} bot={isBot(p)} />
                   <div className="min-w-0">
                     <p className="font-display truncate" style={{ fontSize: "var(--text-title)", lineHeight: 1.1 }}>
                       {p}

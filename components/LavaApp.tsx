@@ -24,22 +24,24 @@ import {
   type LavaDart,
   type LavaGame,
 } from "@/lib/lava";
-import { splitPeople, type Person } from "@/lib/people";
+import { splitPeople, type PickedTeam, type Person } from "@/lib/people";
+import { rostersOf } from "@/lib/teamGame";
+import { medOfLevel } from "@/lib/opponentStats";
 import { fieldOfLabel } from "@/lib/lava";
 import { useGameVenue } from "@/lib/gameVenue";
-import { individualSetupProblem, setupSummary } from "@/lib/setupProblem";
+import { individualSetupProblem, setupSummary, teamSetupProblem } from "@/lib/setupProblem";
 import { useRoster } from "@/lib/storage";
 import { uiSound } from "@/lib/uiSound";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { Hearts } from "./Hearts";
 import { MinusIcon, PlusIcon } from "./icons";
 import { LavaBoard } from "./LavaBoard";
-import { PlayerPicker } from "./PlayerPicker";
 import { GameVenue, VenueSection } from "./GameVenue";
+import { GameWho, type GameMode } from "./GameWho";
+import { SideAvatar } from "./SideAvatar";
 import { ScreenTop } from "./ScreenTop";
-import { commitPeople } from "./SetupScreen";
+import { commitPeople, commitTeams } from "./SetupScreen";
 import { StickyAction } from "./StickyAction";
-import { Avatar } from "./ui/Avatar";
 import { Button } from "./ui/Button";
 import { SwitchRow } from "./ui/Switch";
 import { useBotTurn } from "./useBotTurn";
@@ -49,9 +51,10 @@ import { botDelayMs } from "@/lib/botSpeed";
 
 /** What the last dart did, in words: said under the board, and read out by the screen reader. */
 function describe(d: LavaDart): string {
-  if (d.section === MISS) return `${d.player}: bom`;
-  if (d.outcome === "burn") return `${d.player}: ${sectionLabel(d.section)} er brent${d.opened !== undefined ? `. ${sectionLabel(d.opened)} er trygg igjen` : ""}`;
-  return d.knockedOut ? `${d.player}: ${sectionLabel(d.section)} er lava, og det var siste liv` : `${d.player}: ${sectionLabel(d.section)} er lava, mister et liv`;
+  const who = d.by ?? d.player;
+  if (d.section === MISS) return `${who}: bom`;
+  if (d.outcome === "burn") return `${who}: ${sectionLabel(d.section)} er brent${d.opened !== undefined ? `. ${sectionLabel(d.opened)} er trygg igjen` : ""}`;
+  return d.knockedOut ? `${who}: ${sectionLabel(d.section)} er lava, og det var siste liv` : `${who}: ${sectionLabel(d.section)} er lava, mister et liv`;
 }
 
 /**
@@ -60,6 +63,8 @@ function describe(d: LavaDart): string {
  */
 export function LavaApp({ onExitToHome }: { onExitToHome: () => void }) {
   const [people, setPeople] = useState<Person[]>([]);
+  const [mode, setMode] = useState<GameMode>("individual");
+  const [teams, setTeams] = useState<PickedTeam[]>([]);
   const [advanced, setAdvanced] = useState(false);
   const [lives, setLives] = useState(DEFAULT_LIVES);
   /** Doubles and trebles as sections of their own (under Avanserte innstillinger). */
@@ -70,7 +75,7 @@ export function LavaApp({ onExitToHome }: { onExitToHome: () => void }) {
   const [venue, setVenue] = useGameVenue("lava");
 
   if (!game) {
-    const problem = (people.length > 0 && people.every((p) => p.isBot) ? "Velg minst én spiller" : individualSetupProblem(people.map((p) => p.name), false, 2)) || null;
+    const problem = (mode === "team" ? teamSetupProblem(teams, true, 2) : people.length > 0 && people.every((p) => p.isBot) ? "Velg minst én spiller" : individualSetupProblem(people.map((p) => p.name), false, 2)) || null;
     return (
       <div className="animate-screen-push screen has-sticky-action">
         <div className="screen-inner">
@@ -78,7 +83,7 @@ export function LavaApp({ onExitToHome }: { onExitToHome: () => void }) {
           <p className="mb-4" style={{ color: "var(--color-text-2)", fontSize: "var(--text-body)" }}>
             Treffer du et felt, blir det lava for alle: dobbel, trippel og begge enkeltfeltene. Treffer noen lava, mister de et liv.
           </p>
-          <PlayerPicker people={people} onChange={setPeople} guests />
+          <GameWho mode={mode} onMode={setMode} people={people} onPeople={setPeople} teams={teams} onTeams={setTeams} />
           <div className="mt-4 space-y-2">
             <SwitchRow
               label="Avanserte innstillinger"
@@ -109,13 +114,20 @@ export function LavaApp({ onExitToHome }: { onExitToHome: () => void }) {
           <VenueSection value={venue} onChange={setVenue} />
           <StickyAction
             onClick={() => {
+              if (mode === "team") {
+                // A team has its lives together, and its members throw a round of three darts each, in turn.
+                commitTeams(teams);
+                setBotLevels({});
+                setGame(newGame(lives, teams.map((t) => t.name), rings ? "all" : "numbers", rostersOf(teams)));
+                return;
+              }
               commitPeople(people);
               const split = splitPeople(people);
               setBotLevels(split.botLevels);
               setGame(newGame(lives, split.players, rings ? "all" : "numbers"));
             }}
             ready={!problem}
-            summary={setupSummary([`${people.length} spillere`, `${lives} liv`, ...(rings ? ["doble og trippel"] : [])])}
+            summary={setupSummary([mode === "team" ? `${teams.length} lag` : `${people.length} spillere`, `${lives} liv`, ...(rings ? ["doble og trippel"] : [])])}
             reason={problem}
           >
             Start kampen
@@ -158,8 +170,12 @@ export function LavaGameScreen({
   const { winner, up } = state;
   const big = fx.heat;
   const isBot = (p: string) => botLevels[p] !== undefined;
-  const botUp = !winner && isBot(up);
-  useRecordResult(career ? null : winner, game.darts.length === 0, (id, at) => lavaResult(game, Object.keys(botLevels), id, at));
+  // A team throws one member at a time (a round of three darts each): it is the member who is a bot or not, and the member who is named.
+  const member = state.member;
+  const who = member?.name ?? up;
+  const botUp = !winner && (member ? member.isBot : isBot(up));
+  const isBotThrower = (n: string) => isBot(n) || Object.values(game.rosters ?? {}).some((r) => r.some((m) => m.name === n && m.isBot));
+  useRecordResult(career || game.rosters ? null : winner, game.darts.length === 0, (id, at) => lavaResult(game, Object.keys(botLevels), id, at));
   const rain = useMemo(() => (winner && fx.confetti ? generateConfettiRain(fx.bigConfetti ? 60 : 36) : []), [winner, fx.confetti, fx.bigConfetti]);
 
   useEffect(() => {
@@ -184,7 +200,7 @@ export function LavaGameScreen({
 
   // A bot throws a dart at a time, with a pause that follows the bot speed in Innstillinger.
   useBotTurn(botUp, game.darts.length, () => botDelayMs() + 250, () => {
-    const d = botLavaDart(new Set(state.burned.keys()), botLevels[up], undefined, game.fields);
+    const d = botLavaDart(new Set(state.burned.keys()), member ? member.botLevel ?? medOfLevel(4) : botLevels[up], undefined, game.fields);
     pick(fieldOfLabel(d.label, d.section, game.fields));
   });
 
@@ -193,7 +209,7 @@ export function LavaGameScreen({
     setFresh(null);
     // Taking a dart back also takes back the bots' darts after it, or the bot would throw it again at once.
     let g = game;
-    while (g.darts.length > 0 && isBot(stateOf(g).log.at(-1)!.player)) g = undoDart(g);
+    while (g.darts.length > 0 && isBotThrower(stateOf(g).log.at(-1)!.by ?? stateOf(g).log.at(-1)!.player)) g = undoDart(g);
     setGame(undoDart(g));
   }
 
@@ -207,7 +223,7 @@ export function LavaGameScreen({
         </div>
         <div className="screen-inner relative z-10">
           <div className="flex flex-col items-center text-center mb-6 mt-6">
-            <Avatar name={winner} photo={photos.get(winner)} px={112} state="winner" />
+            <SideAvatar name={winner} roster={game.rosters?.[winner]} photo={photos.get(winner)} px={112} state="winner" />
             <p className="section-label mt-4">LAVA · SISTE I LIVE</p>
             <h1 className="font-display" style={{ color: "var(--color-gold)", fontSize: "clamp(2.2rem, 11vw, 3.2rem)", lineHeight: 1.05 }}>
               {winner}
@@ -219,7 +235,7 @@ export function LavaGameScreen({
           <ul className="space-y-2 mb-6" aria-label="Resultat">
             {game.players.map((p) => (
               <li key={p} className="flex items-center gap-3" style={{ padding: "0.5rem 0.75rem", borderRadius: "var(--radius-m)", background: "var(--color-surface)", border: "1px solid var(--color-border)", boxShadow: "var(--elevation-1)" }}>
-                <Avatar name={p} photo={photos.get(p)} size="m" state={p === winner ? "winner" : "idle"} />
+                <SideAvatar name={p} roster={game.rosters?.[p]} photo={photos.get(p)} px={44} state={p === winner ? "winner" : "idle"} />
                 <span className="flex-1 min-w-0 truncate font-semibold">{p}</span>
                 <span className="text-right" style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>
                   <span className="num block" style={{ fontSize: "var(--text-title)", color: "var(--color-cream)" }}>
@@ -236,7 +252,7 @@ export function LavaGameScreen({
                 Fortsett
               </Button>
             ) : (
-              <Button block variant="primary" size="lg" onClick={() => setGame(newGame(game.lives, game.players, game.fields))}>
+              <Button block variant="primary" size="lg" onClick={() => setGame(newGame(game.lives, game.players, game.fields, game.rosters))}>
                 Spill igjen
               </Button>
             )}
@@ -261,7 +277,7 @@ export function LavaGameScreen({
 
   const last = state.log.at(-1);
   const lostNow = fresh?.dart.outcome === "lava" ? fresh.dart.player : null;
-  const message = fresh ? describe(fresh.dart) : `${up} kaster`;
+  const message = fresh ? describe(fresh.dart) : `${who} kaster`;
   const roundDarts = [...state.round];
 
   return (
@@ -296,7 +312,7 @@ export function LavaGameScreen({
                 }}
               >
                 {hit && <span key={fresh?.n} aria-hidden className="hs-flash" />}
-                <Avatar name={p} photo={photos.get(p)} size="m" state={active ? "active" : "idle"} bot={isBot(p)} />
+                <SideAvatar name={p} roster={game.rosters?.[p]} photo={photos.get(p)} px={44} state={active ? "active" : "idle"} bot={isBot(p)} />
                 <div className="flex-1 min-w-0">
                   <p className="font-display truncate" style={{ fontSize: "var(--text-body)", lineHeight: 1.1 }}>
                     {p}
@@ -318,7 +334,7 @@ export function LavaGameScreen({
           {message}
         </div>
         <p className="text-center mb-3" style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>
-          {up} · pil {Math.min(state.thrown + 1, DARTS_PER_ROUND)} av {DARTS_PER_ROUND} · {safeLeft(state, game.fields)} felt er trygge
+          {who}{who !== up ? ` for ${up}` : ""} · pil {Math.min(state.thrown + 1, DARTS_PER_ROUND)} av {DARTS_PER_ROUND} · {safeLeft(state, game.fields)} felt er trygge
         </p>
         <div className="grid grid-cols-2 gap-2">
           <Button block size="lg" onClick={() => pick(MISS)} disabled={botUp}>

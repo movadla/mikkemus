@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { VENUES, type VenueId } from "./venues";
 
 /** The games that are played in a place of their own choosing, and that remember it (on this device) until the next time. */
-export type VenueGame = "countdown" | "lava" | "highstriker";
+export type VenueGame = "countdown" | "lava" | "highstriker" | "halvit" | "killer";
 
 const key = (game: VenueGame) => `mikke-mus-game-venue-${game}`;
 

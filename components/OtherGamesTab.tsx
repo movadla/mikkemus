@@ -13,7 +13,11 @@ function figuresOf(table: GameTable, r: TableRow): string[] {
   const parts: (string | null)[] =
     table.game === "highstriker"
       ? [r.average !== null ? `Snitt ${oneDecimal(r.average)}` : null, r.best !== null ? `Beste runde ${r.best}` : null, `${r.lostLives} liv tapt`]
-      : table.game === "lava"
+      : table.game === "killer"
+        ? [`${r.burned} drept`, `${r.lostLives} liv tapt`]
+        : table.game === "halvit"
+        ? [r.best !== null ? `Beste ${r.best} poeng` : null, `${r.lostLives} ganger halvert`]
+        : table.game === "lava"
         ? [`${r.burned} brent`, `${r.lostLives} liv tapt`]
         : [
             r.average !== null ? `Snitt ${oneDecimal(r.average)}` : null,

@@ -137,7 +137,7 @@ export function LineupIntro({ sides, onDone }: { sides: LineupSide[]; onDone: ()
           </span>
         )}
         <div className={s.chance !== undefined ? "mt-8" : "mt-4"}>{picture(s, big ? (s.kit ? 150 : 160) : s.kit ? 104 : 112)}</div>
-        <p className="font-display mt-3 w-full truncate" style={{ fontSize: big ? "calc(var(--text-num) * 1.4)" : "var(--text-num)", lineHeight: 1.05, color: "var(--color-cream)", letterSpacing: "0.02em", textShadow: "var(--shadow-text)" }}>
+        <p className="font-display mt-3 w-full truncate" style={{ fontSize: big ? "calc(var(--text-num) * 1.4)" : "var(--text-num)", lineHeight: 1.05, color: "var(--color-cream)", letterSpacing: "0.02em", textShadow: "var(--shadow-text)", paddingBottom: "0.18em" }}>
           {s.name}
         </p>
         {/* The people of a team, as small faces. Their names are only written when the team has a name of its own: «Lars og Per» says it already. */}
@@ -153,7 +153,6 @@ export function LineupIntro({ sides, onDone }: { sides: LineupSide[]; onDone: ()
             )}
           </div>
         )}
-        {s.record && <p className="mt-auto" style={{ color: "var(--color-text-2)", fontSize: "var(--text-micro)" }}>{s.record}</p>}
         <span aria-hidden className="foil-sheen" />
       </div>
     );

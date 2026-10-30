@@ -46,4 +46,19 @@ test.describe("lag på kamp", () => {
     await expect(page.getByRole("group", { name: "Med" }).getByRole("button", { name: /Siv og Bjørn/ })).toBeVisible();
     await expect(group.getByRole("button")).toHaveCount(4);
   });
+
+  test("lag som er laget står under Spillere, så navn og drakter kan endres", async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem("mikke-mus-team-cards", JSON.stringify([{ name: "Lars og Per", members: ["Lars", "Per"], lastUsed: 1000 }]));
+    });
+    await openApp(page, "dark");
+    await page.getByRole("button", { name: "Ny kamp" }).click();
+    await page.getByRole("radio", { name: "Lag" }).click();
+    await expect(page.getByRole("group", { name: "Lag" }).getByRole("button", { name: /Lars og Per/ })).toBeVisible();
+    // Without having played: the team is in Spillere, under Lag.
+    await page.getByRole("button", { name: "Tilbake" }).first().click();
+    await page.getByRole("link", { name: "Spillere" }).first().click();
+    await expect(page.getByRole("heading", { name: "Lag" }).or(page.getByText("LAG", { exact: true })).first()).toBeVisible();
+    await expect(page.getByRole("link", { name: /Lars og Per/ }).first()).toBeVisible();
+  });
 });

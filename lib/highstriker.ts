@@ -6,8 +6,13 @@ export const DEFAULT_LIVES = 3;
 export const MIN_LIVES = 1;
 export const MAX_LIVES = 9;
 
+/** One person on a side that is a team. A bot's level is a MED in mm. */
+export type HighstrikerMember = { name: string; isBot: boolean; botLevel?: number };
+
 export type HighstrikerTurn = {
   player: string;
+  /** Who of a team threw the round. */
+  by?: string;
   /** What the round made. */
   scored: number;
   /** What it had to beat: the round before it. Null for the very first round. */
@@ -20,10 +25,12 @@ export type HighstrikerGame = {
   lives: number;
   players: string[];
   turns: HighstrikerTurn[];
+  /** The people of the sides that are teams. A team has its lives together; its members throw a round each, in turn. */
+  rosters?: Record<string, HighstrikerMember[]>;
 };
 
-export function newGame(lives: number, players: string[]): HighstrikerGame {
-  return { lives: Math.max(MIN_LIVES, Math.min(MAX_LIVES, lives)), players, turns: [] };
+export function newGame(lives: number, players: string[], rosters?: Record<string, HighstrikerMember[]>): HighstrikerGame {
+  return { lives: Math.max(MIN_LIVES, Math.min(MAX_LIVES, lives)), players, turns: [], ...(rosters && Object.keys(rosters).length > 0 ? { rosters } : {}) };
 }
 
 /** Lives a player has left. */
@@ -64,9 +71,18 @@ export function leastToKeep(g: HighstrikerGame): number | null {
   return t === null ? null : t + 1;
 }
 
+/** Who throws the round that is up: for a team the member whose turn it is (they take turns, a round each), otherwise null. */
+export function memberUp(g: HighstrikerGame): HighstrikerMember | null {
+  const side = playerUp(g);
+  const roster = g.rosters?.[side];
+  if (!roster || roster.length === 0) return null;
+  return roster[g.turns.filter((t) => t.player === side).length % roster.length];
+}
+
 export function playRound(g: HighstrikerGame, scored: number): HighstrikerGame {
   const target = targetOf(g);
-  return { ...g, turns: [...g.turns, { player: playerUp(g), scored, target, lostLife: target !== null && scored <= target }] };
+  const by = memberUp(g)?.name;
+  return { ...g, turns: [...g.turns, { player: playerUp(g), ...(by ? { by } : {}), scored, target, lostLife: target !== null && scored <= target }] };
 }
 
 export function undoRound(g: HighstrikerGame): HighstrikerGame {

@@ -45,6 +45,9 @@ function random(seed: number, count: number): number {
   return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
 }
 
+/** One person on a side that is a team. A bot's level is a MED in mm. */
+export type LavaMember = { name: string; isBot: boolean; botLevel?: number };
+
 export type LavaGame = {
   lives: number;
   players: string[];
@@ -54,6 +57,8 @@ export type LavaGame = {
   fields?: LavaFields;
   /** What decides which section opens again when all have been set on fire. */
   seed?: number;
+  /** The people of the sides that are teams. A team has its lives together; its members throw a round of three darts each, in turn. */
+  rosters?: Record<string, LavaMember[]>;
 };
 
 /** What a dart did: nothing, set a section on fire, or hit one that was already burning. */
@@ -67,6 +72,8 @@ export type LavaDart = {
   knockedOut: boolean;
   /** Which dart of the round it was, from 0. */
   nth: number;
+  /** Who of a team threw it. */
+  by?: string;
   /** The section that opened again, as safe, because this dart set the last safe one on fire. */
   opened?: number;
 };
@@ -82,11 +89,20 @@ export type LavaState = {
   log: LavaDart[];
   /** The darts of the round now going on (empty at the start of a round). */
   round: LavaDart[];
+  /** Who throws the round now going on, when the side up is a team. */
+  member: LavaMember | null;
   winner: string | null;
 };
 
-export function newGame(lives: number, players: string[], fields: LavaFields = "numbers"): LavaGame {
-  return { lives: Math.max(MIN_LIVES, Math.min(MAX_LIVES, lives)), players, darts: [], ...(fields === "all" ? { fields } : {}), seed: Math.floor(Math.random() * 2147483647) };
+export function newGame(lives: number, players: string[], fields: LavaFields = "numbers", rosters?: Record<string, LavaMember[]>): LavaGame {
+  return {
+    lives: Math.max(MIN_LIVES, Math.min(MAX_LIVES, lives)),
+    players,
+    darts: [],
+    ...(fields === "all" ? { fields } : {}),
+    seed: Math.floor(Math.random() * 2147483647),
+    ...(rosters && Object.keys(rosters).length > 0 ? { rosters } : {}),
+  };
 }
 
 /** Works the game out from its darts. */
@@ -96,6 +112,12 @@ export function stateOf(g: LavaGame): LavaState {
   const everything = sectionsFor(g.fields);
   const seed = g.seed ?? 1;
   let reopened = 0;
+  // The rounds a side has thrown, for a team to know whose turn it is among its members.
+  const done: Record<string, number> = {};
+  const memberOf = (p: string): LavaMember | null => {
+    const roster = g.rosters?.[p];
+    return roster && roster.length > 0 ? roster[(done[p] ?? 0) % roster.length] : null;
+  };
   const log: LavaDart[] = [];
   let up = g.players[0];
   let thrown = 0;
@@ -124,7 +146,8 @@ export function stateOf(g: LavaGame): LavaState {
       }
     }
     const knockedOut = outcome === "lava" && lives[up] <= 0;
-    const dart: LavaDart = { player: up, section, outcome, knockedOut, nth: thrown };
+    const by = memberOf(up)?.name;
+    const dart: LavaDart = { player: up, ...(by ? { by } : {}), section, outcome, knockedOut, nth: thrown };
     // Every section on fire: one opens again at random (never the one that was just hit, if there is another), and so on for as long as the game goes.
     if (outcome === "burn" && burned.size >= everything.length) {
       const pool = everything.filter((s) => s !== section);
@@ -142,12 +165,13 @@ export function stateOf(g: LavaGame): LavaState {
       break;
     }
     if (knockedOut || thrown === DARTS_PER_ROUND) {
+      done[up] = (done[up] ?? 0) + 1;
       up = nextAlive(up);
       thrown = 0;
       round = [];
     }
   }
-  return { burned, lives, up, thrown, log, round, winner };
+  return { burned, lives, up, thrown, log, round, member: memberOf(up), winner };
 }
 
 /** A dart thrown: a section, or MISS. Nothing happens once there is a winner. */

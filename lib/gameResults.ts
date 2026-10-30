@@ -5,13 +5,15 @@
  */
 import { bestRoundOf, dartsOf, remainingOf, roundsOf, tonsOf, winnerOf as countdownWinner, type CountdownGame } from "./countdown";
 import { burnedBy, stateOf as lavaState, type LavaGame } from "./lava";
+import { stateOf as killerState, type KillerGame } from "./killer";
+import { ROUNDS_IN_ALL, halvingsOf, stateOf as halvitState, type HalvItGame } from "./halvit";
 import { livesLeft as highstrikerLives, winnerOf as highstrikerWinner, type HighstrikerGame } from "./highstriker";
 
-export type GameKind = "301" | "501" | "highstriker" | "lava";
+export type GameKind = "301" | "501" | "highstriker" | "lava" | "halvit" | "killer";
 
 /** In the order the tab shows them. */
-export const GAME_KINDS: GameKind[] = ["301", "501", "highstriker", "lava"];
-export const GAME_NAMES: Record<GameKind, string> = { "301": "301", "501": "501", highstriker: "Highstriker", lava: "Lava" };
+export const GAME_KINDS: GameKind[] = ["301", "501", "highstriker", "lava", "halvit", "killer"];
+export const GAME_NAMES: Record<GameKind, string> = { "301": "301", "501": "501", highstriker: "Highstriker", lava: "Lava", halvit: "Halv It", killer: "Killer" };
 
 /** What one player made in a game. What a game has no use for is 0. */
 export type PlayerFigures = {
@@ -89,6 +91,26 @@ export function lavaResult(g: LavaGame, bots: string[], id: string, playedAt: st
     figures[p] = { ...none(), darts: s.log.filter((d) => d.player === p).length, burned: burnedBy(s, p), lostLives: g.lives - (s.lives[p] ?? 0) };
   }
   return { id, game: "lava", playedAt, winner: s.winner, players: g.players, bots: bots.filter((b) => g.players.includes(b)), figures };
+}
+
+/** A finished Halv It between at least two (a game of one, or of teams, is not kept): the best figure is the score, and the lives lost are the halvings. */
+export function halvitResult(g: HalvItGame, id: string, playedAt: string): GameResult | null {
+  const s = halvitState(g);
+  if (!s.winner || g.players.length < 2 || g.rosters) return null;
+  const figures: Record<string, PlayerFigures> = {};
+  for (const p of g.players) {
+    figures[p] = { ...none(), points: s.scores[p], rounds: ROUNDS_IN_ALL, best: s.scores[p], lostLives: halvingsOf(s, p) };
+  }
+  return { id, game: "halvit", playedAt, winner: s.winner, players: g.players, bots: [], figures };
+}
+
+/** A finished Killer between at least two players (teams are not kept): the best figure is the players taken out. */
+export function killerResult(g: KillerGame, id: string, playedAt: string): GameResult | null {
+  const s = killerState(g);
+  if (!s.winner || g.players.length < 2 || g.rosters) return null;
+  const figures: Record<string, PlayerFigures> = {};
+  for (const p of g.players) figures[p] = { ...none(), darts: s.log.filter((d) => d.player === p).length, rounds: s.rounds[p], best: s.kills[p], burned: s.kills[p], lostLives: g.lives - (s.lives[p] ?? 0) };
+  return { id, game: "killer", playedAt, winner: s.winner, players: g.players, bots: [], figures };
 }
 
 /** One person's line in the table of a game. A number a game does not have stays null. */

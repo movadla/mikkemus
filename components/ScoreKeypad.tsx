@@ -21,6 +21,8 @@ export function ScoreKeypad({
   fill = false,
   tone,
   finishLabel,
+  manual = false,
+  invalid,
 }: {
   onSubmit: (score: number) => void;
   onUndo: () => void;
@@ -35,6 +37,10 @@ export function ScoreKeypad({
   tone?: (typed: string) => "bust" | "finish" | undefined;
   /** What Bekreft says while the number written is a finish (Ut!); without it, it always says Bekreft. */
   finishLabel?: string;
+  /** Nothing goes in by itself: what is written waits for Bekreft, whatever it is (Halv It, where 50 can be a sum as well as a start). */
+  manual?: boolean;
+  /** A sum that cannot be right: it is shown as over the line, and Bekreft is off. */
+  invalid?: (typed: string) => boolean;
 }) {
   const [typed, setTyped] = useState("");
   useEffect(() => {
@@ -45,7 +51,7 @@ export function ScoreKeypad({
     uiFeedback("pick");
     const next = pressDigit(typed, digit);
     if (next === typed) return;
-    if (canGrow(next)) {
+    if (manual || canGrow(next)) {
       setTyped(next);
       return;
     }
@@ -111,9 +117,9 @@ export function ScoreKeypad({
             setTyped("");
             onSubmit(n);
           }}
-          disabled={typed === ""}
+          disabled={typed === "" || !!invalid?.(typed)}
           className={`glossy font-semibold ${FOCUS_RING}`}
-          style={{ "--btn-fill": tone?.(typed) === "finish" ? "var(--color-green)" : "var(--color-teal)", color: "var(--color-bg)", minHeight: fill ? "3.2rem" : "var(--control-lg)", borderRadius: fill ? "var(--radius-m)" : "var(--radius-pill)", opacity: typed === "" ? 0.4 : 1, fontSize: fill ? "clamp(1.2rem, 4.5vw, 1.9rem)" : "var(--text-title)" } as React.CSSProperties}
+          style={{ "--btn-fill": tone?.(typed) === "finish" ? "var(--color-green)" : "var(--color-teal)", color: "var(--color-bg)", minHeight: fill ? "3.2rem" : "var(--control-lg)", borderRadius: fill ? "var(--radius-m)" : "var(--radius-pill)", opacity: typed === "" || invalid?.(typed) ? 0.4 : 1, fontSize: fill ? "clamp(1.2rem, 4.5vw, 1.9rem)" : "var(--text-title)" } as React.CSSProperties}
         >
           {fill && finishLabel && tone?.(typed) === "finish" ? finishLabel : "Bekreft"}
         </button>

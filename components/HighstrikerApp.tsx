@@ -16,6 +16,7 @@ import {
   DEFAULT_LIVES,
   MAX_LIVES,
   MIN_LIVES,
+  memberUp,
   averageOf,
   bestOf,
   isOut,
@@ -29,9 +30,11 @@ import {
   winnerOf,
   type HighstrikerGame,
 } from "@/lib/highstriker";
-import { splitPeople, type Person } from "@/lib/people";
+import { splitPeople, type PickedTeam, type Person } from "@/lib/people";
+import { rostersOf } from "@/lib/teamGame";
+import { medOfLevel } from "@/lib/opponentStats";
 import { useGameVenue } from "@/lib/gameVenue";
-import { individualSetupProblem, setupSummary } from "@/lib/setupProblem";
+import { individualSetupProblem, setupSummary, teamSetupProblem } from "@/lib/setupProblem";
 import { useRoster } from "@/lib/storage";
 import { uiSound } from "@/lib/uiSound";
 import { Bell } from "./Bell";
@@ -39,14 +42,14 @@ import { useBotTurn } from "./useBotTurn";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { Hearts } from "./Hearts";
 import { MinusIcon, PlusIcon, UndoIcon } from "./icons";
-import { PlayerPicker } from "./PlayerPicker";
 import { ScoreKeypad } from "./ScoreKeypad";
 import { GameVenue, VenueSection } from "./GameVenue";
+import { GameWho, type GameMode } from "./GameWho";
+import { SideAvatar } from "./SideAvatar";
 import { ScreenTop } from "./ScreenTop";
-import { commitPeople } from "./SetupScreen";
+import { commitPeople, commitTeams } from "./SetupScreen";
 import { StickyAction } from "./StickyAction";
 import { VoiceToggle } from "./VoiceSwitch";
-import { Avatar } from "./ui/Avatar";
 import { CountUp } from "./ui/CountUp";
 import { FOCUS_RING } from "./ui/focus";
 import { Button } from "./ui/Button";
@@ -77,6 +80,8 @@ function Stairs({ game, height = "4rem", count = 6 }: { game: HighstrikerGame; h
  */
 export function HighstrikerApp({ onExitToHome }: { onExitToHome: () => void }) {
   const [people, setPeople] = useState<Person[]>([]);
+  const [mode, setMode] = useState<GameMode>("individual");
+  const [teams, setTeams] = useState<PickedTeam[]>([]);
   const [advanced, setAdvanced] = useState(false);
   const [lives, setLives] = useState(DEFAULT_LIVES);
   const [game, setGame] = useState<HighstrikerGame | null>(null);
@@ -85,7 +90,7 @@ export function HighstrikerApp({ onExitToHome }: { onExitToHome: () => void }) {
   const [venue, setVenue] = useGameVenue("highstriker");
 
   if (!game) {
-    const problem = (people.length > 0 && people.every((p) => p.isBot) ? "Velg minst én spiller" : individualSetupProblem(people.map((p) => p.name), false, 2)) || null;
+    const problem = (mode === "team" ? teamSetupProblem(teams, true, 2) : people.length > 0 && people.every((p) => p.isBot) ? "Velg minst én spiller" : individualSetupProblem(people.map((p) => p.name), false, 2)) || null;
     return (
       <div className="animate-screen-push screen has-sticky-action">
         <div className="screen-inner">
@@ -93,7 +98,7 @@ export function HighstrikerApp({ onExitToHome }: { onExitToHome: () => void }) {
           <p className="mb-4" style={{ color: "var(--color-text-2)", fontSize: "var(--text-body)" }}>
             Hver runde må være mer enn runden før. Gjør du ikke det, mister du et liv.
           </p>
-          <PlayerPicker people={people} onChange={setPeople} guests />
+          <GameWho mode={mode} onMode={setMode} people={people} onPeople={setPeople} teams={teams} onTeams={setTeams} />
           <div className="mt-4 space-y-2">
             <SwitchRow
               label="Avanserte innstillinger"
@@ -120,13 +125,20 @@ export function HighstrikerApp({ onExitToHome }: { onExitToHome: () => void }) {
           <VenueSection value={venue} onChange={setVenue} />
           <StickyAction
             onClick={() => {
+              if (mode === "team") {
+                // A team has its lives together, and its members throw a round each, in turn.
+                commitTeams(teams);
+                setBotLevels({});
+                setGame(newGame(lives, teams.map((t) => t.name), rostersOf(teams)));
+                return;
+              }
               commitPeople(people);
               const split = splitPeople(people);
               setBotLevels(split.botLevels);
               setGame(newGame(lives, split.players));
             }}
             ready={!problem}
-            summary={setupSummary([`${people.length} spillere`, `${lives} liv`])}
+            summary={setupSummary([mode === "team" ? `${teams.length} lag` : `${people.length} spillere`, `${lives} liv`])}
             reason={problem}
           >
             Start kampen
@@ -178,8 +190,12 @@ export function HighstrikerGameScreen({
   const passes = least !== null && typed !== "" && written >= least;
   const lastLife = !winner && game.turns.length > 0 && upLives === 1;
   const isBot = (p: string) => botLevels[p] !== undefined;
-  const botUp = !winner && isBot(up);
-  useRecordResult(career ? null : winner, game.turns.length === 0, (id, at) => highstrikerResult(game, Object.keys(botLevels), id, at));
+  // A team throws one member at a time: it is the member who is a bot or not, and the member who is named.
+  const member = memberUp(game);
+  const who = member?.name ?? up;
+  const botUp = !winner && (member ? member.isBot : isBot(up));
+  const isBotThrower = (n: string) => isBot(n) || Object.values(game.rosters ?? {}).some((r) => r.some((m) => m.name === n && m.isBot));
+  useRecordResult(career || game.rosters ? null : winner, game.turns.length === 0, (id, at) => highstrikerResult(game, Object.keys(botLevels), id, at));
 
   // A player on the last life is told so, once, when the turn comes to them.
   useEffect(() => {
@@ -192,7 +208,7 @@ export function HighstrikerGameScreen({
   }, [winner, fx.confetti]);
 
   function submit(scored: number, darts?: string) {
-    setBotNote(darts ? `${up}: ${darts} = ${scored}` : "");
+    setBotNote(darts ? `${who}: ${darts} = ${scored}` : "");
     const next = playRound(game, scored);
     const turn = next.turns[next.turns.length - 1];
     const nextUp = playerUp(next);
@@ -210,13 +226,13 @@ export function HighstrikerGameScreen({
 
   // A bot throws its round after a pause that follows the bot speed in Innstillinger.
   useBotTurn(botUp, game.turns.length, () => botDelayMs() * 2 + 300, () => {
-    const r = botHighstrikerRound(least, botLevels[up]);
+    const r = botHighstrikerRound(least, member ? member.botLevel ?? medOfLevel(4) : botLevels[up]);
     submit(r.scored, r.labels.join(" · "));
   });
 
   function undo() {
     setBotNote("");
-    setGame(undoThroughBots(game, isBot));
+    setGame(undoThroughBots(game, isBotThrower));
   }
 
   if (winner) {
@@ -231,7 +247,7 @@ export function HighstrikerGameScreen({
           <div className="card-gold shadow-panel rounded-2xl text-center mb-4 mt-12 relative" style={{ padding: "3.4rem 1.25rem 1.1rem" }}>
             <span className="absolute flex flex-col items-center" style={{ top: "-4.6rem", left: "50%", transform: "translateX(-50%)" }}>
               <Bell ring size={30} />
-              <Avatar name={winner} photo={photos.get(winner)} px={104} state="winner" />
+              <SideAvatar name={winner} roster={game.rosters?.[winner]} photo={photos.get(winner)} px={104} state="winner" />
             </span>
             <p className="font-display" style={{ color: "var(--color-bg)", fontStyle: "italic", fontSize: "var(--text-body)", letterSpacing: "0.04em" }}>
               Vinner
@@ -264,7 +280,7 @@ export function HighstrikerGameScreen({
           <ul className="space-y-2 mb-6" aria-label="Resultat">
             {game.players.map((p) => (
               <li key={p} className="flex items-center gap-3" style={{ padding: "0.5rem 0.75rem", borderRadius: "var(--radius-m)", background: "var(--color-surface)", border: "1px solid var(--color-border)", boxShadow: "var(--elevation-1)" }}>
-                <Avatar name={p} photo={photos.get(p)} size="m" state={p === winner ? "winner" : "idle"} />
+                <SideAvatar name={p} roster={game.rosters?.[p]} photo={photos.get(p)} px={44} state={p === winner ? "winner" : "idle"} />
                 <span className="flex-1 min-w-0 truncate font-semibold">{p}</span>
                 <span className="text-right" style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>
                   <span className="num block" style={{ fontSize: "var(--text-title)", color: "var(--color-cream)" }}>
@@ -281,7 +297,7 @@ export function HighstrikerGameScreen({
                 Fortsett
               </Button>
             ) : (
-              <Button block variant="primary" size="lg" onClick={() => setGame(newGame(game.lives, game.players))}>
+              <Button block variant="primary" size="lg" onClick={() => setGame(newGame(game.lives, game.players, game.rosters))}>
                 Spill igjen
               </Button>
             )}
@@ -360,13 +376,18 @@ export function HighstrikerGameScreen({
                     UTE
                   </span>
                 )}
-                <Avatar name={p} photo={photos.get(p)} px={active && !out ? 64 : 40} state={active ? "active" : "idle"} bot={isBot(p)} />
+                <SideAvatar name={p} roster={game.rosters?.[p]} photo={photos.get(p)} px={active && !out ? 64 : 40} state={active ? "active" : "idle"} bot={isBot(p)} />
                 <div className="flex-1 min-w-0">
                   <p className="font-display truncate" style={{ fontSize: "var(--text-title)", lineHeight: 1.1 }}>
                     {p}
                   </p>
                   <Hearts total={game.lives} left={left} fresh={hit} beat={isLast} size={active && !out ? "w-7 h-7" : "w-4 h-4"} />
                   {isLast && <p className="last-label">SISTE LIV</p>}
+                  {game.rosters?.[p] && active && !out && (
+                    <p className="cd-recent">
+                      <span>Nå: {who}</span>
+                    </p>
+                  )}
                   {out && outTurn && (
                     <p style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>
                       Ute i runde {Math.floor(outAt / game.players.length) + 1} med {outTurn.scored}
@@ -427,7 +448,7 @@ export function HighstrikerGameScreen({
                 return Number(typed) >= least ? "finish" : "bust";
               }}
               line={(typed) => {
-                if (botUp) return <span className="cd-note">{up} kaster …</span>;
+                if (botUp) return <span className="cd-note">{who} kaster …</span>;
                 if (typed === "" && botNote) return <span className="cd-note">{botNote}</span>;
                 if (typed === "" || least === null) return null;
                 const n = Number(typed);

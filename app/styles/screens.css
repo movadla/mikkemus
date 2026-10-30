@@ -1831,3 +1831,32 @@ html[data-fx="normal"] .hs-hit { animation: hs-shake 520ms ease-in-out both; }
 .lava-reopen { fill: rgba(127, 216, 154, 0.45); stroke: #7fd89a; stroke-width: 3px; pointer-events: none; animation: lava-reopen 1.6s ease-out both; }
 @keyframes lava-reopen { 0% { opacity: 0; } 20% { opacity: 1; } 100% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .lava-reopen { animation: none; opacity: 0; } }
+
+/* Halv It: the strip of rounds, the Bom button, and the two large buttons of a round that is a yes or a no. */
+.hi-strip { flex: 0 0 auto; margin-bottom: 0.4rem; }
+.hi-pips { display: flex; gap: 0.2rem; padding: 0 0.1rem; }
+.hi-pips > i { flex: 1; height: 0.3rem; border-radius: var(--radius-pill); background: color-mix(in srgb, var(--color-text-2) 28%, transparent); }
+.hi-pips > .hi-pip--done { background: var(--color-teal); }
+.hi-pips > .hi-pip--now { background: var(--color-gold); }
+.hi-round { text-align: center; margin-top: 0.25rem; line-height: 1.1; }
+.hi-round small { display: block; font-size: var(--text-micro); letter-spacing: 0.14em; font-weight: 700; color: var(--color-text-2); }
+.hi-round b { font-family: var(--font-display), serif; font-size: var(--text-title); }
+.hi-bom { flex: 0 0 auto; min-height: 3.2rem; margin-bottom: 0.5rem; border-radius: var(--radius-m); font-weight: 800; font-size: 1.15rem; letter-spacing: 0.04em; color: var(--color-bg); background: linear-gradient(180deg, color-mix(in srgb, var(--color-red) 88%, white), var(--color-red)); box-shadow: var(--elevation-1); }
+.hi-btns { display: grid; gap: 0.6rem; flex: 1 1 0; min-height: 0; grid-template-rows: 1fr 1fr; }
+.hi-btns--bull { grid-template-columns: 1fr 1fr; grid-template-rows: 1.2fr 1fr; }
+.hi-btn { display: grid; place-items: center; align-content: center; gap: 0.15rem; border-radius: var(--radius-m); font-weight: 800; font-size: clamp(1.6rem, 8vw, 2.4rem); line-height: 1.05; box-shadow: var(--elevation-1); }
+.hi-btn small { font-size: var(--text-small); font-weight: 600; opacity: 0.85; }
+.hi-btn--yes { color: var(--color-bg); background: linear-gradient(180deg, color-mix(in srgb, var(--color-green) 82%, white), var(--color-green)); }
+.hi-btn--no { color: var(--color-bg); background: linear-gradient(180deg, color-mix(in srgb, var(--color-red) 88%, white), var(--color-red)); }
+@media (orientation: landscape) and (min-width: 1000px) { .cd-fill > .hi-strip { grid-column: 1 / -1; } .cd-fill { grid-template-rows: auto auto minmax(0, 1fr); } .cd-fill > .cd-board, .cd-fill > .cd-right { grid-row: 3; } }
+
+/* Killer: a card for every side, with the number it owns, and what it needs to be a killer. */
+.kl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+.kl-card { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; padding: 0.5rem 0.5rem 0.55rem; min-width: 0; border-radius: var(--radius-m); background: var(--color-surface); border: 1px solid var(--color-border); box-shadow: var(--elevation-1); text-align: center; }
+.kl-card--up { background: color-mix(in srgb, var(--color-teal) 12%, var(--color-surface)); border: 2px solid var(--color-teal); }
+.kl-card--out { opacity: 0.45; }
+.kl-top { display: flex; align-items: center; gap: 0.4rem; min-width: 0; max-width: 100%; }
+.kl-num { display: grid; place-items: center; width: 3.2rem; height: 3.2rem; border-radius: 50%; font-family: var(--font-display), serif; font-weight: 700; font-size: 1.6rem; color: var(--color-bg); background: radial-gradient(circle at 35% 30%, var(--color-gold-strong), var(--color-gold)); border: 2px solid var(--color-gold); }
+.kl-num--killer { background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--color-red) 70%, white), var(--color-red)); border-color: var(--color-red); color: var(--color-bg); }
+.kl-status { font-size: var(--text-micro); letter-spacing: 0.1em; font-weight: 800; color: var(--color-text-2); text-transform: uppercase; }
+.kl-num--killer + .kl-status { color: var(--color-red); }

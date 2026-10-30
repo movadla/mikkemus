@@ -10,7 +10,7 @@ import { loadActiveTournamentId } from "@/lib/tournamentStorage";
 import { useScolia } from "@/lib/useScolia";
 import dynamic from "next/dynamic";
 import { HeroMascot } from "./HeroMascot";
-import { BullseyeIcon, DartIcon, FlameIcon, GridIcon, HeartIcon, KeypadIcon, TrophyIcon } from "./icons";
+import { BoltIcon, BullseyeIcon, DartIcon, DoubleIcon, FlameIcon, GridIcon, HeartIcon, KeypadIcon, TrophyIcon } from "./icons";
 import { RulesIntro } from "./RulesIntro";
 import { ScoliaDot, summarizeScolia } from "./ScoliaStatusBadge";
 import { SkeletonRows } from "./ui/Skeleton";
@@ -34,10 +34,12 @@ const TournamentApp = dynamic(() => import("./TournamentApp").then((m) => m.Tour
 const BullDuelApp = dynamic(() => import("./BullDuelApp").then((m) => m.BullDuelApp), { loading });
 const LavaApp = dynamic(() => import("./LavaApp").then((m) => m.LavaApp), { loading });
 const HighstrikerApp = dynamic(() => import("./HighstrikerApp").then((m) => m.HighstrikerApp), { loading });
+const KillerApp = dynamic(() => import("./KillerApp").then((m) => m.KillerApp), { loading });
+const HalvItApp = dynamic(() => import("./HalvItApp").then((m) => m.HalvItApp), { loading });
 const CountdownApp = dynamic(() => import("./CountdownApp").then((m) => m.CountdownApp), { loading });
 const CareerApp = dynamic(() => import("./CareerApp").then((m) => m.CareerApp), { loading });
 
-type Mode = "home" | "single" | "tournament" | "bullduel" | "countdown" | "highstriker" | "lava" | "career";
+type Mode = "home" | "single" | "tournament" | "bullduel" | "countdown" | "highstriker" | "lava" | "halvit" | "killer" | "career";
 
 const TOURNAMENTS_OFFERED = true;
 
@@ -131,6 +133,8 @@ export function AppRoot() {
   if (mode === "tournament") return <TournamentApp onExitToHome={() => setMode("home")} />;
   if (mode === "bullduel") return <BullDuelApp onExitToHome={() => setMode("home")} />;
   if (mode === "lava") return <LavaApp onExitToHome={() => setMode("home")} />;
+  if (mode === "killer") return <KillerApp onExitToHome={() => setMode("home")} />;
+  if (mode === "halvit") return <HalvItApp onExitToHome={() => setMode("home")} />;
   if (mode === "highstriker") return <HighstrikerApp onExitToHome={() => setMode("home")} />;
   if (mode === "countdown") return <CountdownApp onExitToHome={() => setMode("home")} />;
   if (mode === "career" && !limited) return <CareerApp onExitToHome={() => setMode("home")} />;
@@ -193,6 +197,8 @@ export function AppRoot() {
             <Tile icon={<KeypadIcon className="w-6 h-6" />} label="301 / 501" onClick={() => setMode("countdown")} />
             <Tile icon={<HeartIcon className="w-6 h-6" />} label="Highstriker" onClick={() => setMode("highstriker")} />
             <Tile icon={<FlameIcon className="w-6 h-6" />} label="Lava" onClick={() => setMode("lava")} />
+            <Tile icon={<DoubleIcon className="w-6 h-6" />} label="Halv It" onClick={() => setMode("halvit")} />
+            <Tile icon={<BoltIcon className="w-6 h-6" />} label="Killer" onClick={() => setMode("killer")} />
           </div>
         )}
         {/* Karriere is behind the full code while it is built. */}
