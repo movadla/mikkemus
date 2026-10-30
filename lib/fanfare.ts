@@ -270,7 +270,36 @@ export function playWinBoom() {
  * turn is not clean. The boom that rides on real throws is not used here; see lib/fxLevel.ts for
  * why those effects are turned down for hand-entered darts.
  */
+/** The recording of a dart landing (public/sounds/dart-hit.mp3). Null until asked for; false when there is no file, and the synthesizer is used. */
+let tapRecording: HTMLAudioElement | null | false = null;
+
+/** Plays the recording of a dart for a tap, a little higher for each dart of the turn. Returns false when there is no recording to play. */
+function playTapRecording(dartInTurn: number): boolean {
+  if (typeof Audio === "undefined" || tapRecording === false) return false;
+  try {
+    if (!tapRecording) {
+      tapRecording = new Audio("/sounds/dart-hit.mp3");
+      tapRecording.preload = "auto";
+      tapRecording.addEventListener("error", () => {
+        tapRecording = false;
+      });
+    }
+    // A copy for each tap, so quick taps overlap instead of cutting each other off.
+    const one = tapRecording.cloneNode() as HTMLAudioElement;
+    one.volume = 0.8;
+    one.playbackRate = [1, 1.06, 1.12][Math.max(0, Math.min(2, Math.round(dartInTurn) - 1))];
+    void one.play().catch(() => {
+      tapRecording = false;
+    });
+    return true;
+  } catch {
+    tapRecording = false;
+    return false;
+  }
+}
+
 export function playTapSound(dartInTurn: number = 1) {
+  if (playTapRecording(dartInTurn)) return;
   const ctx = getContext();
   if (!ctx) return;
   try {
