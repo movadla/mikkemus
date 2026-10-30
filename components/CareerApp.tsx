@@ -28,7 +28,7 @@ import { TextField } from "./ui/TextField";
 import { applyTheme } from "@/lib/theme";
 import { levelOfMed } from "@/lib/botLevels";
 import { rankLevel, rankOf } from "@/lib/careerGoals";
-import { hubPicture, topStep } from "@/lib/career";
+import { hubPicture, tierFor, topStep } from "@/lib/career";
 import { lifeOf, seasonOf, weekInSeason } from "@/lib/careerLife";
 import { CoinIcon } from "./icons";
 import { StarIcon } from "./careerIcons";
@@ -275,8 +275,10 @@ function NewCareerSteps({ taken, onBack, onCreate }: NewCareerProps) {
   // The game and the darts start as they are most likely wanted; changing them is one tap away, not three cards in the way.
   const [changing, setChanging] = useState(false);
   const [dartInfo, setDartInfo] = useState<DartsId | null>(null);
-  // A new player typed in here: the career is for someone, and that someone may not be in the list yet.
-  const [adding, setAdding] = useState(false);
+  // A new player typed in here: the career is for someone, and that someone may not be in the list yet. With nobody in the list the field is there at once.
+  const [adding, setAdding] = useState(people.length === 0);
+  // Whether Neste has been pressed without a player: only then does the screen say one is missing.
+  const [tried, setTried] = useState(false);
   const [nameInput, setNameInput] = useState("");
   const [nameError, setNameError] = useState("");
   const addPlayer = () => {
@@ -422,7 +424,7 @@ function NewCareerSteps({ taken, onBack, onCreate }: NewCareerProps) {
               <span className="truncate">{p.name}</span>
             </button>
           ))}
-          <button type="button" onClick={() => setAdding((a) => !a)} aria-expanded={adding} className={`player-tile player-tile-add tactile ${FOCUS_RING}`}>
+          <button type="button" onClick={() => setAdding(true)} aria-expanded={adding} className={`player-tile player-tile-add tactile ${FOCUS_RING}`}>
             <span aria-hidden className="player-tile-plus">
               +
             </span>
@@ -468,7 +470,7 @@ function NewCareerSteps({ taken, onBack, onCreate }: NewCareerProps) {
         <p className="level-about mb-6" aria-live="polite">
           {START_LEVELS.find((l) => l.key === level)?.about}
         </p>
-        <StickyAction onClick={() => setStep(2)} ready={!!player} reason="Velg en spiller">
+        <StickyAction onClick={() => setStep(2)} ready={!!player} reason={tried ? "Velg en spiller" : null} onBlocked={() => setTried(true)}>
           Neste
         </StickyAction>
       </div>
@@ -537,7 +539,8 @@ function Play({ career, commit, onHub }: { career: Career; commit: (c: Career) =
     );
   }
   if (intro) {
-    const tier = eventTier(a);
+    // The step with the fee this player pays (the travel takes some off).
+    const tier = tierFor(career, eventTier(a));
     return (
       <EventIntro
         tier={tier}

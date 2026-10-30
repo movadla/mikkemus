@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useState } from "react";
-import { GAMES, dollars, type Career } from "@/lib/career";
+import { dollars, type Career } from "@/lib/career";
 import { dealsOf, sponsorLogo, lifeOf, isOpen, type Message } from "@/lib/careerLife";
 import { answerMessage, markRead, whyNotAnswer } from "@/lib/careerWorld";
 import { newSeed } from "./careerFormat";
@@ -28,7 +28,8 @@ function kindOf(m: Message): {
     return o.tv
       ? { word: "TV", icon: <TvIcon className="w-5 h-5" />, tone: "teal" }
       : {
-          word: "Utfordring",
+          // The rival's challenge is the rival's, not one more challenge.
+          word: m.from.role === "Rival" ? "Rival" : "Utfordring",
           icon: <BoltIcon className="w-5 h-5" />,
           tone: "red",
         };
@@ -132,22 +133,18 @@ export function CareerInbox({
                     {isOpen(m) && left !== null && <span className="msg-time"> · {left <= 1 ? "siste uke" : `${left} uker igjen`}</span>}
                     {m.state !== "open" && <span> · {STATE[m.state]}</span>}
                   </p>
-                  {offer.kind !== "sponsor" && <p>{m.body}</p>}
+                  {/* The sponsors' message says what they pay for (a place in the quarter-final); it is read before the deals. */}
+                  <p>{m.body}</p>
                   {offer.kind === "invite" && <InviteFacts offer={offer} />}
                   {offer.kind === "challenge" && (
                     <ul className="msg-chips" aria-label="Om utfordringen">
-                      {offer.tv ? (
-                        <>
-                          {offer.tv.humanStart !== offer.tv.theirStart ? <li>Du starter på {offer.tv.humanStart}</li> : <li>Best av {offer.tv.legs}</li>}
-                          <li>Honorar {dollars(offer.tv.honorarium)}</li>
-                        </>
-                      ) : (
-                        <li>{GAMES[offer.game].name}</li>
-                      )}
+                      {/* The game is in the body ("Lava, én runde"), so the chips say the rest: where, what it wins, what a loss costs. */}
+                      {offer.tv && (offer.tv.humanStart !== offer.tv.theirStart ? <li>Du starter på {offer.tv.humanStart}</li> : <li>Best av {offer.tv.legs}</li>)}
+                      {offer.tv && <li>Honorar {dollars(offer.tv.honorarium)}</li>}
                       {/* A challenge is always played somewhere: at Ly, or in the studio when it is a show. */}
                       <li>{offer.tv ? "I TV-studioet" : "På Ly"}</li>
                       <li>Vinner {dollars(offer.stake)}</li>
-                      {offer.risk > 0 && <li>Taper {dollars(offer.risk)}</li>}
+                      {offer.risk > 0 && <li>Ved tap: −{dollars(offer.risk)}</li>}
                     </ul>
                   )}
                   {offer.kind === "sponsor" && (m.state !== "open" || deals === m.id) && (

@@ -33,7 +33,7 @@ export const CUP_SIZES = [4, 8, 16, 32, 64, 128];
 /** A cup of teams holds fewer: every team needs two named people, and the pool of names is not endless. */
 export const TEAM_CUP_MAX = 16;
 
-/** Where the cup begins when nothing is chosen: ChrisBell, 39 mm, which is the group's own average (Vadla measures about 37). */
+/** Where the cup begins when nothing is chosen: level 4 (Halfdan), 39 mm, which is the group's own average (Vadla measures about 37). */
 export const DEFAULT_CUP_LEVEL: BotLevel = "4";
 
 /** What is kept of a cup in the tournament: enough to name it, and to work out how the bots throw each match. */

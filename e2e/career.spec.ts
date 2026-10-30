@@ -166,7 +166,7 @@ test.describe("karriere", () => {
     await expect(page.getByText("Uke 2", { exact: true })).toBeVisible();
     // Say no to the challenge, and the name pays for it.
     await page.getByRole("button", { name: /Roger vil ha revansje/ }).click();
-    await expect(page.getByText("Taper $100")).toBeVisible();
+    await expect(page.getByText("Ved tap: −$100")).toBeVisible();
     await page.getByRole("button", { name: "Ikke i kveld" }).click();
     await expect.poll(async () => (await saved(page)).life.reputation).toBe(4);
     // The invitation: yes signs up for it, as its own tournament.
@@ -346,6 +346,28 @@ test.describe("karriere", () => {
     const s = await saved(page);
     expect(s.money).toBe(300);
     expect(s.challenge).toBeNull();
+  });
+
+  test("utstyr: piler, trener og reise kjøpes under treningen, hvert trinn med prisen på knappen, og regnskapet får dem", async ({ page }) => {
+    await seed(page, { ...CAREER, money: 5000, life: { ...LIFE, inbox: [] } });
+    await page.getByRole("button", { name: /Lars/ }).click();
+    await place(page, "Trening").click();
+    const gear = page.getByRole("list", { name: "Utstyr" });
+    await expect(gear.getByText("PILER · Messingpiler")).toBeVisible();
+    await expect(gear.getByText("TRENER · Ingen trener")).toBeVisible();
+    await expect(gear.getByText("REISE · Til fots")).toBeVisible();
+    await gear.getByRole("button", { name: "Kjøp Wolfram 80 %, $400" }).click();
+    await expect.poll(async () => (await saved(page)).gear?.darts).toBe(1);
+    expect((await saved(page)).money).toBe(4600);
+    await expect(gear.getByText("PILER · Wolfram 80 %")).toBeVisible();
+    await gear.getByRole("button", { name: "Kjøp Togkort, $600" }).click();
+    await expect.poll(async () => (await saved(page)).gear?.travel).toBe(1);
+    // The books have both, under their own heading.
+    const c = await saved(page);
+    expect(c.ledger.filter((e: { kind: string }) => e.kind === "gear").map((e: { label: string; amount: number }) => [e.label, e.amount])).toEqual([["Piler: Wolfram 80 %", -400], ["Reise: Togkort", -600]]);
+    // Too little for the next darts: the button is there, but not to press.
+    await expect(gear.getByRole("button", { name: "Kjøp Wolfram 90 %, $1 500" })).toBeEnabled();
+    await expect(gear.getByRole("button", { name: "Kjøp Mental trener, $8 000" })).toHaveCount(0);
   });
 
   test("trening: bildet av rommet og to knapper, og oppgraderingen kjøpes i et eget vindu", async ({ page }) => {
@@ -542,10 +564,10 @@ test.describe("karriere", () => {
     await seed(page, { ...CAREER, life: { ...LIFE, inbox: [], seasonPts: 0 } });
     await page.getByRole("button", { name: /Lars/ }).click();
     await place(page, "Profil").click();
-    // The season is its number and ten dots, three of them marked; nothing on development, reputation or darts.
+    // The season is its number and ten dots, three of them marked; the name (rykte) is one row of ten dots too; nothing on development or darts.
     await expect(page.getByRole("img", { name: "Uke 3 av 10" })).toBeVisible();
+    await expect(page.getByRole("img", { name: "Rykte 5 av 10" })).toBeVisible();
     await expect(page.getByText("Utvikling")).toHaveCount(0);
-    await expect(page.getByText("Rykte")).toHaveCount(0);
     await expect(page.getByText("Piler", { exact: true })).toHaveCount(0);
     await expect(page.getByText("Treningsrom")).toBeVisible();
     // Not met: only a button to choose one; a chosen rival shows with a button to challenge.

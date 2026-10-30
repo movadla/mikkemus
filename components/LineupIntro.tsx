@@ -6,7 +6,7 @@ import type { Kit } from "@/lib/teamKit";
 import { KitStage } from "./TeamKit";
 import { Avatar } from "./ui/Avatar";
 import { formatOdds } from "@/lib/odds/price";
-import { faceSrc, opponentOf } from "@/lib/opponents";
+import { portraitSrc } from "@/lib/opponents";
 
 export type LineupSide = {
   name: string;
@@ -80,7 +80,7 @@ export function LineupIntro({ sides, onDone }: { sides: LineupSide[]; onDone: ()
         setReady(true);
       }
     };
-    const srcs = sides.map((s) => (s.kit ? null : s.photo ?? (s.isBot ? faceSrc(opponentOf(s.name).face) : null))).filter((x): x is string => !!x);
+    const srcs = sides.map((s) => (s.kit ? null : s.photo ?? (s.isBot ? portraitSrc(s.name) : null))).filter((x): x is string => !!x);
     const timer = setTimeout(go, PICTURES_WAIT_MS);
     Promise.all(
       srcs.map((src) => {

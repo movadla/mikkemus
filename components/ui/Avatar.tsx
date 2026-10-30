@@ -4,7 +4,7 @@ import { createContext, useContext, ViewTransition } from "react";
 import { CharacterFace } from "../CharacterFigure";
 import { avatarAccent } from "@/lib/avatarAccent";
 import { useRoster } from "@/lib/storage";
-import { faceSrc, opponentOf } from "@/lib/opponents";
+import { opponentOf, portraitSrc } from "@/lib/opponents";
 import { characterOf, poseSrc } from "@/lib/characters";
 
 /**
@@ -29,7 +29,7 @@ export function TeamFaces({ members, character, me }: { members: string[]; chara
         return (
           <span key={m} className="team-half" style={mine ? ({ background: c.tint } as React.CSSProperties) : undefined}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={mine ? poseSrc(c, "noytral") : faceSrc(opponentOf(m).face)} alt="" draggable={false} style={{ objectPosition: mine ? "50% 4%" : facePosition(opponentOf(m).face) }} />
+            <img src={mine ? poseSrc(c, "noytral") : portraitSrc(m)} alt="" draggable={false} style={{ objectPosition: mine ? "50% 4%" : facePosition(opponentOf(m).face) }} />
           </span>
         );
       })}
@@ -48,7 +48,7 @@ export type AvatarSize = keyof typeof AVATAR_SIZES;
  * they have won. A bot has a dashed ring and a face made from its name (BotFace). No glow: the frame is the same size of fuss everywhere.
  */
 /** Where the face sits in a portrait, for a round crop of the top of it: the pictures with a hand and a dart (the n set) have their heads lower than the studio portraits (the p set). */
-const facePosition = (face: number) => (face >= 100 ? "50% 30%" : "50% 8%");
+const facePosition = (face: number) => (face === 0 ? "50% 50%" : face >= 100 ? "50% 30%" : "50% 8%");
 
 export function Avatar({
   name,
@@ -100,7 +100,7 @@ export function Avatar({
           <TeamFaces members={team} character={career?.character} me={career?.name} />
         ) : bot ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={faceSrc(opponentOf(name.replace(/ (\d+)$/, "")).face)} alt="" className="w-full h-full object-cover" style={{ objectPosition: facePosition(opponentOf(name.replace(/ (d+)$/, "")).face) }} draggable={false} />
+          <img src={portraitSrc(name.replace(/ (\d+)$/, ""))} alt="" className="w-full h-full object-cover" style={{ objectPosition: facePosition(opponentOf(name.replace(/ (\d+)$/, "")).face) }} draggable={false} />
         ) : photo ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={photo} alt="" className="w-full h-full object-cover" />

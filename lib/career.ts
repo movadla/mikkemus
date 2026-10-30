@@ -10,9 +10,10 @@
  */
 import { levelOfMed } from "./botLevels";
 import { book } from "./ledger";
+import { dartsBonus, feeDiscount } from "./gear";
 import { matchLines, withLines, type MatchLine } from "./careerStats";
 import type { LedgerEntry } from "./ledger";
-import { addNews, lifeOf, lyPool, mustPlay, rivalOf, welcomeLife, REP_MAX, type Invitation, type Life, type Tv } from "./careerLife";
+import { addNews, botMed, lifeOf, lyPool, mustPlay, rivalOf, welcomeLife, REP_MAX, type Invitation, type Life, type Tv } from "./careerLife";
 import { INTERNATIONALS, LY_REGULARS } from "./opponents";
 import { countdownOf, gameOf, type CareerGame } from "./careerGame";
 import { unit, type CupConfig, type CupKind } from "./botCup";
@@ -272,6 +273,8 @@ export type Career = {
   climb?: { level: number };
   /** How far the room has come: its step, 0 (as it was when the career began) to 9. */
   room: number;
+  /** The darts, the coach and the travel the player has bought: the step of each (lib/gear.ts). Absent on a career from before there was anything to buy but the room. */
+  gear?: { darts: number; coach: number; travel: number };
   /** A challenge that is waiting, or has been played and not yet taken in. */
   challenge: Challenge | null;
   /** How many challenges there have been, so each is a new one. */
@@ -332,10 +335,10 @@ export function fieldNames(tier: Tier, player: string, seed: number, count: numb
   return [...known, ...made.filter((n) => !surnames.has(n.split(" ")[1]))].filter((n) => !n.toLowerCase().startsWith(`${own} `) && n.toLowerCase() !== own).slice(0, count);
 }
 
-/** The factor of a step of the ladder for this player: the world championship gets sharper with every title. */
+/** The factor of a step of the ladder for this player: the world championship gets sharper with every title, and the room and the darts make the evening a little easier. */
 export function factorFor(career: Career, tier: Tier): number {
   const own = tier.id === "vm" ? tier.factor * Math.max(0.7, 0.96 ** career.worldTitles) : tier.factor;
-  return own * roomBonus(career);
+  return own * roomBonus(career) * dartsBonus(career);
 }
 
 /** The bots' skill on the level scale (1 sharpest to 8 weakest) for a player of this level at this step of the ladder, before each bot's own spread. */
@@ -343,41 +346,50 @@ export function fieldCentre(career: Career, tier: Tier): number {
   return levelOfMed(career.skillMed * factorFor(career, tier));
 }
 
-/** The field: the player and the rest, strongest first (the player where their own level puts them). Each bot has a skill of its own around the centre. */
+/**
+ * How sharp each of a field's bots is in this event: each throws as the lists say they throw, against the others (so the best of the field on
+ * paper is the best in the match), and the whole field is set around the player, at the centre of the step. The one in the middle of the
+ * field throws at the centre, one twice as sharp as the middle twice as sharp as that, within bounds so no field runs away.
+ */
+function fieldMeds(career: Career, tier: Tier, names: string[]): Record<string, number> {
+  const centre = career.skillMed * factorFor(career, tier);
+  const own = names.map((n) => botMed(career, n)).sort((a, b) => a - b);
+  const middle = own.length ? own[Math.floor(own.length / 2)] : centre;
+  const out: Record<string, number> = {};
+  for (const n of names) out[n] = centre * Math.min(1.4, Math.max(0.72, botMed(career, n) / middle));
+  return out;
+}
+
+const asBot = (name: string, med: number): Participant => {
+  const skill = Math.min(8, Math.max(1, levelOfMed(med)));
+  return { name, isBot: true as const, botLevel: String(Math.round(skill)) as Participant["botLevel"], skill };
+};
+
+/** The field: the player and the rest, strongest first (the player where their own level puts them). Each bot throws as the lists say, set around the centre of the step. */
 export function fieldFor(career: Career, tier: Tier | Invitation, seed: number): Participant[] {
-  if ("team" in tier && tier.team) return teamFieldFor(career, tier, tier.team, seed);
+  if ("team" in tier && tier.team) return teamFieldFor(career, tier, tier.team);
   const fixed = "field" in tier && tier.field ? tier.field.filter((n) => n !== career.player).slice(0, tier.size - 1) : null;
   const names = fixed ?? fieldNames(tier, career.player, seed, tier.size - 1, lifeOf(career).world);
   // The rival and the boss of the step are in the field every time, in place of the weakest names drawn (a field that is fixed is left as it is).
   const must = mustPlay(career, tier.id);
   const wanted = must.filter((n) => !names.includes(n));
   for (let i = 0; !fixed && i < wanted.length && names.length > 0; i++) names[names.length - 1 - i] = wanted[i];
-  const factor = factorFor(career, tier);
-  const rival = rivalOf(career).name;
-  const bots = names.map((name) => {
-    // The rival is the sharpest of a field, and the boss of a step nearly as sharp: the ones to beat.
-    const edge = name === rival ? 0.85 : must.includes(name) ? 0.88 : 0.88 + unit(`${seed}|skill|${name}`) * 0.24;
-    const med = career.skillMed * factor * edge;
-    const skill = Math.min(8, Math.max(1, levelOfMed(med)));
-    return { name, isBot: true as const, botLevel: String(Math.round(skill)) as Participant["botLevel"], skill };
-  });
+  const meds = fieldMeds(career, tier, names);
+  const bots = names.map((name) => asBot(name, meds[name]));
   const own = levelOfMed(career.skillMed);
-  const order: { p: Participant; strength: number }[] = [{ p: { name: career.player, isBot: false }, strength: own }, ...bots.map((b) => ({ p: b as Participant, strength: b.skill }))];
+  const order: { p: Participant; strength: number }[] = [{ p: { name: career.player, isBot: false }, strength: own }, ...bots.map((b) => ({ p: b, strength: b.skill! }))];
   return order.sort((a, b) => a.strength - b.strength).map((x) => x.p);
 }
 
 /**
  * The field of a cup of teams: the player's side (the player and a partner, who is the rival in the World Cup) and the others, each of two. A team is a
- * side of its own with members, as in the tournaments of teams; each member has a skill of his or her own, the partner and the best of the others sharper.
+ * side of its own with members, as in the tournaments of teams; each member throws as the lists say, set around the centre of the step like any field.
  */
-function teamFieldFor(career: Career, tier: Tier, team: NonNullable<Invitation["team"]>, seed: number): Participant[] {
-  const factor = factorFor(career, tier);
-  const rival = rivalOf(career).name;
-  const sharp: Record<string, number> = { Littler: 0.8, "Cor Dekker": 0.85 };
+function teamFieldFor(career: Career, tier: Tier, team: NonNullable<Invitation["team"]>): Participant[] {
+  const meds = fieldMeds(career, tier, [team.mine.partner, ...team.others.flatMap((o) => o.members)]);
   const member = (name: string): NonNullable<Participant["members"]>[number] => {
-    const edge = name === team.mine.partner ? (name === rival ? 0.85 : 0.95) : sharp[name] ?? 0.88 + unit(`${seed}|skill|${name}`) * 0.24;
-    const skill = Math.min(8, Math.max(1, levelOfMed(career.skillMed * factor * edge)));
-    return { name, isBot: true, botLevel: String(Math.round(skill)) as Participant["botLevel"], skill };
+    const b = asBot(name, meds[name]);
+    return { name, isBot: true, botLevel: b.botLevel, skill: b.skill };
   };
   const mine: Participant = { name: team.mine.name, isBot: false, members: [{ name: career.player, isBot: false }, member(team.mine.partner)] };
   const others = team.others.map((o): Participant => ({ name: o.name, isBot: false, members: o.members.map(member) }));
@@ -393,8 +405,11 @@ export function cupFor(career: Career, tier: Tier | Invitation, seed: number): C
   return { kind: tier.kind, name: tier.name, trophy: tier.trophy, level: String(Math.round(Math.min(8, Math.max(1, fieldCentre(career, tier))))) as CupConfig["level"], growth: true, seed, career: true, ...(countdown ? { countdown } : {}) };
 }
 
-/** What it costs to get in. */
-export const entryCost = (_career: Career, tier: Tier) => tier.fee;
+/** What it costs to get in: the fee, less what the travel takes off (to the nearest ten). */
+export const entryCost = (career: Career, tier: Tier) => (tier.fee === 0 ? 0 : Math.round((tier.fee * (1 - feeDiscount(career))) / 10) * 10);
+
+/** The step as it is for this player: with the fee they pay, for the screens that show it. */
+export const tierFor = <T extends Tier>(career: Career, tier: T): T => ({ ...tier, fee: entryCost(career, tier) });
 
 /** Ly and the regional championship are open to anyone with the money; the rest are entered by qualifying. */
 export const isUnlocked = (career: Career, tier: Tier) => !tier.qualify || career.qualified.includes(tier.id);
@@ -403,7 +418,8 @@ export const isUnlocked = (career: Career, tier: Tier) => !tier.qualify || caree
 export function whyNot(career: Career, tier: Tier): string | null {
   if (career.active) return "Fullfør turneringen først";
   if (!isUnlocked(career, tier)) return tier.qualify ?? "Må kvalifiseres";
-  if (career.money < tier.fee) return `Mangler ${dollars(tier.fee - career.money)}`;
+  const cost = entryCost(career, tier);
+  if (career.money < cost) return `Mangler ${dollars(cost - career.money)}`;
   return null;
 }
 
@@ -543,11 +559,16 @@ export function stakeFor(career: Career, game: GameId): number {
   return game === "501" ? base : Math.round((base * 0.7) / 50) * 50 || 50;
 }
 
-/** A new challenge, from the seed: the game chosen, an opponent from the field, and a stake. */
+/** A new challenge, from the seed: the game chosen, an opponent from the field who throws as the lists say (against the field of the step), and a stake. */
 export function newChallenge(career: Career, game: GameId, seed: number): Challenge {
-  const names = fieldNames(topStep(career), career.player, seed, 4);
+  const step = topStep(career);
+  const names = fieldNames(step, career.player, seed, 4, lifeOf(career).world);
   const name = names[Math.floor(unit(`${seed}|who`) * names.length)] ?? "Roger";
-  const med = career.skillMed * CHALLENGE_FACTOR * roomBonus(career) * (0.9 + unit(`${seed}|skill`) * 0.2);
+  const field = fieldNames(step, career.player, seed, step.size - 1, lifeOf(career).world);
+  const centre = career.skillMed * CHALLENGE_FACTOR * roomBonus(career) * dartsBonus(career);
+  const own = field.map((n) => botMed(career, n)).sort((a, b) => a - b);
+  const middle = own[Math.floor(own.length / 2)] ?? botMed(career, name);
+  const med = centre * Math.min(1.4, Math.max(0.72, botMed(career, name) / middle));
   const skill = Math.min(8, Math.max(1, levelOfMed(med)));
   return { id: `${career.id}-c${seed}`, game, opponent: { name, skill }, stake: stakeFor(career, game), won: null };
 }
@@ -558,8 +579,8 @@ export function offerChallenge(career: Career, game: GameId, seed: number): Care
   return { ...career, challenge: newChallenge(career, game, seed), challenges: career.challenges + 1 };
 }
 
-/** The game is over: the stake is the player's if they won. */
-export function settleChallenge(career: Career, won: boolean, now: string): Career {
+/** The game is over: the stake is the player's if they won. The lines are what the player threw (one for each leg), for the statistics; a game that keeps no darts gives one line with none. */
+export function settleChallenge(career: Career, won: boolean, now: string, lines: Omit<MatchLine, "at">[] = [{ won, darts: 0 }]): Career {
   const c = career.challenge;
   if (!c || c.won !== null) return career;
   const trophy = won && c.tv ? [{ tier: challengeTier(c).id, at: now, prize: c.stake + c.tv.honorarium, name: `${c.tv.title}-pokalen` }] : [];
@@ -570,9 +591,10 @@ export function settleChallenge(career: Career, won: boolean, now: string): Care
   // Playing what someone asked for is good for the name, and a show or a match against the rival is news.
   let life: Life | null = c.from ? lifeOf(career) : null;
   if (life && (c.tv || c.opponent.name === rivalOf(career).name)) {
-    life = addNews(life, "you", won ? `${career.player} slo ${c.opponent.name}${c.tv ? ` i ${c.tv.title}` : ""}` : `${career.player} tapte mot ${c.opponent.name}${c.tv ? ` i ${c.tv.title}` : ""}`, won ? `+${dollars(prize)}` : lost > 0 ? `−${dollars(lost)}` : "", career.player);
+    life = addNews(life, "you", won ? `Du slo ${c.opponent.name}${c.tv ? ` i ${c.tv.title}` : ""}` : `Du tapte mot ${c.opponent.name}${c.tv ? ` i ${c.tv.title}` : ""}`, won ? `+${dollars(prize)}` : lost > 0 ? `−${dollars(lost)}` : "", career.player);
   }
-  return book({ ...career, money: career.money + prize, history: [entry, ...career.history].slice(0, 30), challenge: { ...c, won }, trophies: [...trophy, ...career.trophies], ...(life ? { life: { ...life, reputation: Math.min(REP_MAX, life.reputation + (c.from ? 1 : 0)) } } : {}) }, "duel", c.tv ? `${c.tv.title}: ${c.opponent.name}` : `Duell mot ${c.opponent.name}`, prize);
+  const settled: Career = { ...career, money: career.money + prize, history: [entry, ...career.history].slice(0, 30), challenge: { ...c, won }, trophies: [...trophy, ...career.trophies], ...(life ? { life: { ...life, reputation: Math.min(REP_MAX, life.reputation + (c.from ? 1 : 0)) } } : {}) };
+  return book(withLines(settled, lines.map((l) => ({ ...l, at: now }))), "duel", c.tv ? `${c.tv.title}: ${c.opponent.name}` : `Duell mot ${c.opponent.name}`, prize);
 }
 
 /**

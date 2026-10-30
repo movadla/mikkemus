@@ -40,53 +40,53 @@ export const LY_REGULARS: Opponent[] = [
   o("Svein", "NOR", "", ["", ""], 17, 42),
 ];
 
-/** The international players: thirty-one, one for each place in the world championship, each with a face of their own (the three women are Sofia, Mei and Emma). They come back in the bigger events. The jobs and the words are left out: only the numbers are the game's. */
+/** The international players: thirty-one, one for each place in the world championship, each with a face of their own (the three women are Sofia, Mei and Emma). They come back in the bigger events. The jobs and the words are left out: only the numbers are the game's. They are sharper than anyone at Ly (16 to 27 mm against the pub's 29 to 49): the world championship is a sharper field than the pub. */
 export const INTERNATIONALS: Opponent[] = [
-  o("Max Hartmann", "GER", "", ["", ""], 101, 27),
-  o("Stefano Rossi", "ITA", "", ["", ""], 102, 30),
-  o("Sofia Moreau", "FRA", "", ["", ""], 103, 28),
-  o("Viktor Kovac", "SVK", "", ["", ""], 104, 33),
-  o("Matteo Bianchi", "ITA", "", ["", ""], 105, 29),
-  o("Dmitri Novak", "CZE", "", ["", ""], 106, 31),
-  o("Rafael Santos", "ESP", "", ["", ""], 108, 26),
-  o("Samuel Okafor", "ENG", "", ["", ""], 109, 32),
-  o("Luca Dubois", "FRA", "", ["", ""], 110, 25),
-  o("Jonas Keller", "GER", "", ["", ""], 111, 34),
-  o("Hugo Vermeer", "NED", "", ["", ""], 112, 29),
-  o("Callum Reid", "SCO", "", ["", ""], 113, 31),
-  o("Mei Tanaka", "JPN", "", ["", ""], 114, 27),
-  o("Pieter Visser", "NED", "", ["", ""], 115, 24),
-  o("Marcus Williams", "ENG", "", ["", ""], 116, 30),
-  o("Tomas Varga", "HUN", "", ["", ""], 117, 33),
-  o("Bruno Alves", "POR", "", ["", ""], 118, 28),
-  o("Jesper Holm", "DEN", "", ["", ""], 119, 32),
-  o("Oskar Lund", "DEN", "", ["", ""], 120, 35),
-  o("Ivan Petrov", "BUL", "", ["", ""], 121, 29),
-  o("Henrik Lindqvist", "SWE", "", ["", ""], 122, 26),
-  o("Felix Weber", "GER", "", ["", ""], 123, 31),
-  o("Wyatt Brooks", "USA", "", ["", ""], 124, 28),
-  o("Andre Santos", "BRA", "", ["", ""], 125, 30),
-  o("Sven Bakker", "NED", "", ["", ""], 126, 27),
-  o("Nils Jansen", "BEL", "", ["", ""], 127, 34),
-  o("Emma Fischer", "GER", "", ["", ""], 128, 29),
-  o("Dragan Kovacevic", "SRB", "", ["", ""], 129, 32),
-  o("Emil Haugen", "NOR", "", ["", ""], 130, 33),
-  o("Leon Moreau", "FRA", "", ["", ""], 131, 28),
-  o("Kenji Sato", "JPN", "", ["", ""], 132, 26),
+  o("Max Hartmann", "GER", "", ["", ""], 101, 19),
+  o("Stefano Rossi", "ITA", "", ["", ""], 102, 22),
+  o("Sofia Moreau", "FRA", "", ["", ""], 103, 20),
+  o("Viktor Kovac", "SVK", "", ["", ""], 104, 25),
+  o("Matteo Bianchi", "ITA", "", ["", ""], 105, 21),
+  o("Dmitri Novak", "CZE", "", ["", ""], 106, 23),
+  o("Rafael Santos", "ESP", "", ["", ""], 108, 18),
+  o("Samuel Okafor", "ENG", "", ["", ""], 109, 24),
+  o("Luca Dubois", "FRA", "", ["", ""], 110, 17),
+  o("Jonas Keller", "GER", "", ["", ""], 111, 26),
+  o("Hugo Vermeer", "NED", "", ["", ""], 112, 21),
+  o("Callum Reid", "SCO", "", ["", ""], 113, 23),
+  o("Mei Tanaka", "JPN", "", ["", ""], 114, 19),
+  o("Pieter Visser", "NED", "", ["", ""], 115, 16),
+  o("Marcus Williams", "ENG", "", ["", ""], 116, 22),
+  o("Tomas Varga", "HUN", "", ["", ""], 117, 25),
+  o("Bruno Alves", "POR", "", ["", ""], 118, 20),
+  o("Jesper Holm", "DEN", "", ["", ""], 119, 24),
+  o("Oskar Lund", "DEN", "", ["", ""], 120, 27),
+  o("Ivan Petrov", "BUL", "", ["", ""], 121, 21),
+  o("Henrik Lindqvist", "SWE", "", ["", ""], 122, 18),
+  o("Felix Weber", "GER", "", ["", ""], 123, 23),
+  o("Wyatt Brooks", "USA", "", ["", ""], 124, 20),
+  o("Andre Santos", "BRA", "", ["", ""], 125, 22),
+  o("Sven Bakker", "NED", "", ["", ""], 126, 19),
+  o("Nils Jansen", "BEL", "", ["", ""], 127, 26),
+  o("Emma Fischer", "GER", "", ["", ""], 128, 21),
+  o("Dragan Kovacevic", "SRB", "", ["", ""], 129, 24),
+  o("Emil Haugen", "NOR", "", ["", ""], 130, 25),
+  o("Leon Moreau", "FRA", "", ["", ""], 131, 20),
+  o("Kenji Sato", "JPN", "", ["", ""], 132, 18),
 ];
 
-/** The five level bots of the ordinary tournament. Dave, ChrisBell and Kjetil are in the Ly group and have the same faces there. */
+/** The five level bots of the ordinary tournament. Dave, Halfdan and Guro are in the Ly group, with the same faces and the same strength there. The two at the top stand above every international player on the world list. */
 export const LEVEL_BOTS: Opponent[] = [
-  o("Littler", "NED", "Verdens beste i vennegruppa", ["Aldri nervøs", "Maskinell"], 20, 20),
-  o("Cor Dekker", "NED", "Rolig og presis", ["Bruker god tid", "Presis"], 21, 25),
+  o("Littler", "NED", "Verdens beste i vennegruppa", ["Aldri nervøs", "Maskinell"], 20, 14),
+  o("Cor Dekker", "NED", "Rolig og presis", ["Bruker god tid", "Presis"], 21, 15.5),
   o("Dave", "NOR", "", ["", ""], 2, 30),
-  o("ChrisBell", "NOR", "", ["", ""], 1, 39),
-  o("Kjetil", "NOR", "", ["", ""], 10, 49),
+  o("Halfdan", "NOR", "", ["", ""], 16, 39),
+  o("Guro", "NOR", "", ["", ""], 107, 49),
 ];
 
 const NAMED = [...LY_REGULARS, ...INTERNATIONALS, ...LEVEL_BOTS];
 
-/** Everyone with a name and a face, once each (the level bots Dave, ChrisBell and Kjetil are in the Ly group already). */
+/** Everyone with a name and a face, once each (the level bots Dave, Halfdan and Guro are in the Ly group already). */
 export const EVERYONE: Opponent[] = [...LY_REGULARS, ...INTERNATIONALS, ...LEVEL_BOTS.filter((b) => !LY_REGULARS.some((r) => r.face === b.face))];
 const squash = (n: string) => n.toLowerCase().replace(/\s+/g, "");
 
@@ -101,18 +101,37 @@ const hash = (s: string) => {
   return h >>> 0;
 };
 
-/** Everything known about a name: the named ones as written above, any other with a country from its surname and a face from its name. */
+/**
+ * Everything known about a name: the named ones as written above, any other with a country from its surname, no face of its own (its initials
+ * stand in, see portraitSrc) and a strength from the name that keeps it behind the known names (38 to 55 mm: a name nobody knows is not better than
+ * Dave on paper).
+ */
 export function opponentOf(name: string): Opponent {
   const key = name.trim().toLowerCase();
   const named = NAMED.find((n) => squash(n.name) === squash(name));
   if (named) return named;
   const last = name.trim().split(/\s+/).slice(1).join(" ");
   const h = hash(key);
-  return { name, nat: NAT_OF_LAST[last] ?? "NOR", job: "", styles: ["", ""], face: 101 + (h % 32), med: 28 + (h % 36) };
+  return { name, nat: NAT_OF_LAST[last] ?? "NOR", job: "", styles: ["", ""], face: 0, med: 38 + (h % 18) };
 }
 
-/** The picture of a face number: 1 to 29 are the first set (p), 101 to 132 the second (n). */
+/** The picture of a face number: 1 to 29 are the first set (p), 101 to 132 the second (n). 0 is no picture (portraitSrc gives the initials then). */
 export const faceSrc = (face: number) => (face >= 100 ? `/career/opponents/n${String(face - 100).padStart(2, "0")}.webp` : `/career/opponents/p${String(face).padStart(2, "0")}.webp`);
+
+/** The initials of a name: "Mikael Berg" is MB. */
+export const initialsOf = (name: string) => name.trim().split(/\s+/).slice(0, 2).map((w) => w.charAt(0).toUpperCase()).join("");
+
+/** The colour of a name without a face, from the name: one of eight dark tones, so the initials read on them. */
+const TONES = ["#4a3b6b", "#2f5f5b", "#6b3b3b", "#3b4f6b", "#5b5a2f", "#6b3b5e", "#2f5b3b", "#4f4f4f"];
+
+/** The portrait of a name: the picture of a face it has, or its initials on a tone of its own (an SVG that any <img> draws). */
+export function portraitSrc(name: string): string {
+  const o = opponentOf(name);
+  if (o.face > 0) return faceSrc(o.face);
+  const tone = TONES[hash(name.trim().toLowerCase()) % TONES.length];
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="${tone}"/><text x="50" y="50" dy="0.36em" text-anchor="middle" font-family="system-ui, sans-serif" font-size="40" font-weight="700" fill="#f3ead8">${initialsOf(name)}</text></svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
 
 /** The country as a word for a line of text. */
 export const NATION: Record<string, string> = { NOR: "Norge", SWE: "Sverige", DEN: "Danmark", NED: "Nederland", GER: "Tyskland", ITA: "Italia", CZE: "Tsjekkia", SVK: "Slovakia", SCO: "Skottland", JPN: "Japan", USA: "USA", BRA: "Brasil", POR: "Portugal", SRB: "Serbia", BEL: "Belgia", BUL: "Bulgaria", FRA: "Frankrike", ESP: "Spania", HUN: "Ungarn", ENG: "England" };

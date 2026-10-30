@@ -1829,6 +1829,14 @@
   }
 }
 .ev {
+  /* An opening is always a dark scene, whatever the theme of the app: the colours of its text are the light ones, so they read on the picture. */
+  --color-cream: #f6efdd;
+  --color-gold-strong: #f0d080;
+  --color-text-2: #d3dad7;
+  --color-muted: #b8c2be;
+  --color-surface: rgba(0, 0, 0, 0.5);
+  --color-border: rgba(255, 255, 255, 0.28);
+  color: #f6efdd;
   --b: 0.15s;
   position: relative;
   overflow: hidden;
@@ -3613,13 +3621,17 @@ button.play-btn:disabled::after {
   color: var(--color-gold-strong);
 }
 
+/* The way out of an opening: a button of its own under the big one, not a line of grey text. */
 .ev-back {
   display: block;
+  width: min(100%, 16rem);
+  min-height: var(--control);
   margin: 0.6rem auto 0;
   padding: 0.5rem 1.2rem;
-  background: transparent;
-  border: 0;
-  color: var(--color-text-2);
+  border-radius: var(--radius-pill);
+  background: rgba(0, 0, 0, 0.38);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  color: var(--color-cream);
   font-size: var(--text-small);
   font-weight: 700;
 }
@@ -3863,7 +3875,9 @@ button.play-btn:disabled::after {
 .pf-ring { --p: 0%; display: inline-grid; place-items: center; width: 5.2rem; height: 5.2rem; border-radius: 50%; flex-shrink: 0; background: conic-gradient(var(--color-gold) var(--p), var(--color-cell) 0); padding: 0.28rem; }
 .pf-ring > * { border-radius: 50%; background: var(--color-bg); }
 .pf-tabs { display: flex; gap: 0.35rem; padding: 0.25rem; border-radius: var(--radius-pill); background: var(--color-surface); border: 1px solid var(--color-border); }
-.pf-tab { flex: 1; padding: 0.45rem 0.4rem; border-radius: var(--radius-pill); font-weight: 700; font-size: var(--text-small); color: var(--color-text-2); background: transparent; border: 0; }
+.pf-tab { flex: 1; min-width: 0; padding: 0.45rem 0.2rem; border-radius: var(--radius-pill); font-weight: 700; font-size: var(--text-small); color: var(--color-text-2); background: transparent; border: 0; white-space: nowrap; }
+/* Four tabs on a narrow phone: a little smaller, so "Rangering" is not pressed against the edge. */
+@media (max-width: 380px) { .pf-tab { font-size: var(--text-micro); padding-inline: 0.1rem; } }
 .pf-tab[aria-selected="true"] { background: var(--color-teal); color: #04201f; }
 .pf-sponsor { display: flex; align-items: center; justify-content: flex-end; gap: 0.6rem; text-align: right; }
 .pf-sponsor small { display: block; }
@@ -4025,12 +4039,13 @@ button.season-strip { min-height: 2.75rem; padding-block: 0; }
 
 /* The places to play in, as a row of pictures. */
 .venue-row { display: flex; gap: 0.6rem; overflow-x: auto; padding: 0.2rem 0.1rem 0.8rem; margin-bottom: 0.6rem; scroll-snap-type: x proximity; }
-.venue-tile { position: relative; flex: 0 0 8.6rem; height: 6.2rem; padding: 0; border-radius: var(--radius-m); overflow: hidden; border: 2px solid var(--color-border); background: var(--color-surface); text-align: left; scroll-snap-align: start; }
+.venue-tile { display: grid; grid-template-rows: 4.2rem auto; flex: 0 0 8.2rem; padding: 0; border-radius: var(--radius-m); overflow: hidden; border: 2px solid var(--color-border); background: var(--color-surface); text-align: left; scroll-snap-align: start; }
 .venue-tile[aria-checked="true"] { border-color: var(--color-teal); box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-teal) 40%, transparent); }
-.venue-tile img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.venue-name { position: absolute; inset: auto 0 0 0; display: grid; padding: 1.2rem 0.5rem 0.4rem; background: linear-gradient(transparent, rgba(0, 0, 0, 0.8)); color: var(--color-cream); }
+.venue-tile img { width: 100%; height: 100%; object-fit: cover; }
+.venue-name { display: grid; padding: 0.3rem 0.5rem 0.4rem; color: var(--color-cream); }
 .venue-name b { font-size: var(--text-small); line-height: 1.15; }
 .venue-name small { font-size: 0.68rem; color: var(--color-text-2); line-height: 1.2; }
+.venue-name b, .venue-name small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* The field of a tournament outside the career, in its opening: the faces in a row. */
 .ev-faces { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem; padding: 0; margin: 0; list-style: none; }
@@ -4119,6 +4134,10 @@ button.season-strip { min-height: 2.75rem; padding-block: 0; }
 .train-line em { font-style: normal; color: var(--color-text-2); font-size: 0.75rem; }
 .train-badge { flex: none; padding: 0.15rem 0.55rem; border-radius: var(--radius-pill); background: var(--color-gold); color: #1b1405; font-weight: 800; font-size: 0.78rem; }
 .train .drill-kicker { font-size: 0.62rem; }
+/* What else the money buys: the darts, the coach, the travel. Plain rows, the price on the button. */
+.gear { display: grid; gap: 0.4rem; padding: 0; margin: 0.2rem 0 0; list-style: none; }
+.gear-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.45rem 0.65rem; border-radius: var(--radius-m); border: 1px solid var(--color-border); background: color-mix(in srgb, var(--color-surface) 88%, transparent); }
+.gear-row .train-line em { display: block; }
 .upgrade-picture { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border-radius: var(--radius-m); border: 1px solid var(--color-border); }
 
 /* The overview of the profile: the season as its number and ten dots, the rival as a face to press, merits as a link. */

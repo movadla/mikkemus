@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { EVERYONE, INTERNATIONALS, LEVEL_BOTS, LY_REGULARS, faceSrc, opponentOf } from "./opponents";
+import { EVERYONE, INTERNATIONALS, LEVEL_BOTS, LY_REGULARS, faceSrc, initialsOf, opponentOf, portraitSrc } from "./opponents";
 import { medOfLevel, norwayRankOf, playerWorldRank, winChance, worldRankOf } from "./opponentStats";
 import { statsFor } from "./careerGame";
 import { createKnockout } from "./knockout";
@@ -20,15 +20,28 @@ describe("the people", () => {
   it("have a face of their own: no two named people share one, but the level bots that are in the Ly group", () => {
     const named = EVERYONE.map((o) => o.face);
     expect(new Set(named).size).toBe(named.length);
-    for (const b of LEVEL_BOTS.filter((x) => ["Dave", "ChrisBell", "Kjetil"].includes(x.name))) expect(LY_REGULARS.some((r) => r.face === b.face)).toBe(true);
+    for (const b of LEVEL_BOTS.filter((x) => ["Dave", "Halfdan", "Guro"].includes(x.name))) expect(LY_REGULARS.some((r) => r.face === b.face && Math.abs(r.med - b.med) <= 1)).toBe(true);
   });
 
-  it("are found by name, with the spaces left out, and a name that is not here gets a country and a face from the name", () => {
+  it("put the international players above everyone at Ly, and the two best level bots above them", () => {
+    const sharpestAtLy = Math.min(...LY_REGULARS.map((r) => r.med));
+    for (const o of INTERNATIONALS) expect(o.med, o.name).toBeLessThan(sharpestAtLy);
+    const sharpestAbroad = Math.min(...INTERNATIONALS.map((r) => r.med));
+    for (const b of LEVEL_BOTS.slice(0, 2)) expect(b.med, b.name).toBeLessThan(sharpestAbroad);
+  });
+
+  it("are found by name, with the spaces left out, and a name that is not here gets a country from the name, its initials for a face, and a strength behind the known names", () => {
     expect(opponentOf("Chris Bell").face).toBe(opponentOf("ChrisBell").face);
     expect(opponentOf("Guro").nat).toBe("NOR");
     const made = opponentOf("Anders Dahl");
     expect(made.nat).toBe("SWE");
-    expect(opponentOf("Anders Dahl").face).toBe(made.face);
+    expect(made.face).toBe(0);
+    expect(made.med).toBeGreaterThanOrEqual(38);
+    expect(made.med).toBeLessThanOrEqual(55);
+    expect(initialsOf("Anders Dahl")).toBe("AD");
+    expect(portraitSrc("Anders Dahl").startsWith("data:image/svg+xml")).toBe(true);
+    expect(portraitSrc("Anders Dahl")).toContain("AD");
+    expect(portraitSrc("Dave")).toBe(faceSrc(2));
   });
 
   it("fill the pub's field from Ly's group and the big events' from the international players", () => {

@@ -9,6 +9,7 @@
  * most three mm; it takes a few sessions to settle, and one lucky or poor session does not throw the career off.
  */
 import type { Career, TrainingSession } from "./career";
+import { coachWeight } from "./gear";
 
 export const DRILL_ROUNDS = 15;
 
@@ -52,11 +53,12 @@ export function medFromAverage(average: number): number {
 
 export const averageOf = (rounds: number[]) => (rounds.length === 0 ? 0 : rounds.reduce((s, r) => s + r, 0) / rounds.length);
 
-/** The session a set of rounds makes, from the level the career has now. */
+/** The session a set of rounds makes, from the level the career has now. A coach makes each session move the level twice as far (lib/gear.ts). */
 export function sessionFrom(career: Career, rounds: number[], now: string): TrainingSession {
   const average = oneDecimal(averageOf(rounds));
   const measured = oneDecimal(medFromAverage(average));
-  const move = clamp((measured - career.skillMed) * WEIGHT, -MAX_MOVE, MAX_MOVE);
+  const w = coachWeight(career);
+  const move = clamp((measured - career.skillMed) * WEIGHT * w, -MAX_MOVE * w, MAX_MOVE * w);
   const after = oneDecimal(clamp(career.skillMed + move, MED_MIN, MED_MAX));
   return { at: now, average, measured, before: career.skillMed, after };
 }

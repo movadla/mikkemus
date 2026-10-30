@@ -1914,13 +1914,14 @@ html[data-theme="light"] body::before {
 .cup-poster {
   flex: 0 0 min(62%, 14rem);
   scroll-snap-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: flex-end;
-  gap: 0.35rem;
-  min-height: 11.5rem;
-  padding: 1rem;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas: "emblem name" "emblem trophy";
+  align-items: center;
+  column-gap: 0.7rem;
+  row-gap: 0.1rem;
+  min-height: 4.6rem;
+  padding: 0.6rem 0.8rem;
   text-align: left;
   border-radius: var(--radius-l);
   background: linear-gradient(165deg, color-mix(in srgb, var(--cup) 26%, var(--color-surface)), var(--color-surface) 75%);
@@ -1936,9 +1937,12 @@ html[data-theme="light"] body::before {
 }
 
 .cup-poster-emblem {
-  margin-bottom: auto;
+  grid-area: emblem;
   color: var(--cup);
 }
+.cup-poster-emblem svg { width: 2.4rem; height: 2.4rem; }
+.cup-poster > :nth-child(2) { grid-area: name; }
+.cup-poster > :nth-child(3) { grid-area: trophy; }
 
 /* -- Innstillinger: a preview beside the choice: what the animation level does, and the theme as it will look -- */
 .fx-demo {

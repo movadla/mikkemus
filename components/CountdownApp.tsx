@@ -5,6 +5,7 @@ import { callOut } from "@/lib/announcer";
 import type { BotLevel } from "@/lib/botLevels";
 import { botCountdownRound, type BotRound } from "@/lib/botDarts";
 import { botDelayMs } from "@/lib/botSpeed";
+import { medOfLevel } from "@/lib/opponentStats";
 import { undoThroughBots } from "@/lib/botTurns";
 import { checkoutsOf } from "@/lib/checkout";
 import { generateConfettiRain } from "@/lib/confetti";
@@ -195,7 +196,8 @@ export function CountdownGameScreen({
   }
 
   // A bot throws its round after a pause that follows the bot speed in Innstillinger.
-  useBotTurn(botUp && finishing === null, game.turns.length, () => botDelayMs() * 2 + 300, () => playBot(botCountdownRound(left, game.doubleOut, member ? member.botLevel ?? 4 : botLevels[up])));
+  // A member's level is a MED in mm; one without is given the middle of the scale (39 mm, level 4), never a bare 4, which would be 4 mm.
+  useBotTurn(botUp && finishing === null, game.turns.length, () => botDelayMs() * 2 + 300, () => playBot(botCountdownRound(left, game.doubleOut, member ? member.botLevel ?? medOfLevel(4) : botLevels[up])));
 
   function undo() {
     haptics.undo();
@@ -424,7 +426,8 @@ export function CountdownGameScreen({
           line={(typed) => {
             if (botUp) return <span style={{ color: "var(--color-muted)" }}>{who} kaster …</span>;
             if (typed === "" && botNote && !notice) return <span style={{ color: "var(--color-text-2)" }}>{botNote}</span>;
-            if (typed === "") return <span style={{ color: notice ? "var(--color-red)" : "var(--color-muted)" }}>{notice || `${who} kaster · skriv hva runden ble`}</span>;
+            {/* The thrower is named over the board already: the line only says what to do. */}
+            if (typed === "") return <span style={{ color: notice ? "var(--color-red)" : "var(--color-muted)" }}>{notice || "Skriv hva runden ble"}</span>;
             const n = Number(typed);
             const verdict = judge(left, n, game.doubleOut);
             if (verdict === "bust") return <span style={{ color: "var(--color-red)", fontWeight: 600 }}>{n} er over streken</span>;

@@ -10,6 +10,7 @@
  */
 import type { Career } from "./career";
 import { book } from "./ledger";
+import { climbPay, dailyPay } from "./gear";
 import { trainCareer } from "./training";
 
 export const LEVEL_MIN = 1;
@@ -79,14 +80,17 @@ export function passed(r: DrillResult): boolean {
   return r.scores.slice(0, g.attempts).some((hits) => hits >= g.need);
 }
 
-/** The reward for the drill of the day. */
+/** The reward for the drill of the day (a coach can double it: dailyReward). */
 export const DAILY_REWARD = 100;
+export const dailyReward = (career: Career) => dailyPay(career, DAILY_REWARD);
 
 const hashOf = (s: string) => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
 
 /** The ladder of training: a hundred levels, each passed by making enough with three darts. Each level that is passed pays once. */
 export const CLIMB_MAX = 100;
 export const CLIMB_REWARD = 50;
+/** What a level pays this player (a coach can double it). */
+export const climbReward = (career: Career) => climbPay(career, CLIMB_REWARD);
 
 /** What three darts must make to pass a level: 40 at the first, and the most there is (180) at the hundredth. */
 export const climbTarget = (level: number) => Math.round(40 + 140 * ((clamp(level, 1, CLIMB_MAX) - 1) / (CLIMB_MAX - 1)));
@@ -100,7 +104,8 @@ export const climbOpen = (career: Career) => climbLevel(career) <= Math.min(CLIM
 /** Three darts have made this much: when it is enough for the level, the player moves up and is paid for it. */
 export function applyClimb(career: Career, score: number): Career {
   if (!climbOpen(career) || score < climbTarget(climbLevel(career))) return career;
-  return book({ ...career, money: career.money + CLIMB_REWARD, climb: { level: climbLevel(career) + 1 } }, "training", `Stigen, nivå ${climbLevel(career)}`, CLIMB_REWARD);
+  const pay = climbReward(career);
+  return book({ ...career, money: career.money + pay, climb: { level: climbLevel(career) + 1 } }, "training", `Stigen, nivå ${climbLevel(career)}`, pay);
 }
 
 /** The drill of a day: one of those the room has opened, the same for the whole day. */
@@ -130,6 +135,7 @@ export function applyDrill(career: Career, r: DrillResult, now: string): Career 
   // The drill of the day, passed for the first time that day: a streak day, and the reward.
   const day = now.slice(0, 10);
   const today = dailyOf(career, day);
-  if (ok && !today.done && today.id === r.id) return book({ ...next, money: next.money + DAILY_REWARD, daily: { day, done: true, streak: today.streak + 1, last: day } }, "training", "Dagens øvelse", DAILY_REWARD);
+  const pay = dailyReward(career);
+  if (ok && !today.done && today.id === r.id) return book({ ...next, money: next.money + pay, daily: { day, done: true, streak: today.streak + 1, last: day } }, "training", "Dagens øvelse", pay);
   return next;
 }

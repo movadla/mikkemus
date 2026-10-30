@@ -15,7 +15,7 @@ import {
   type Career, type Challenge, type GameId, type Place, type Tier, type TierId,
 } from "./career";
 import {
-  BOSSES, REP_MAX, RIVAL_WEEK, addMessage, addNews, dealsOf, WEEKS_PER_SEASON, lifeOf, lyPool, placeMeets, rivalOf, seasonOf, weekInSeason,
+  BOSSES, REP_MAX, RIVAL_WEEK, addMessage, addNews, botMed, dealsOf, WEEKS_PER_SEASON, lifeOf, lyPool, placeMeets, rivalOf, seasonOf, weekInSeason,
   type Invitation, type Life, type TeamCup, type Message, type Offer, type Rookie, type Sender, type SeasonResult, type SponsorDeal,
 } from "./careerLife";
 
@@ -32,12 +32,8 @@ export function peopleOf(career: Career): Opponent[] {
   return [...base, ...fresh];
 }
 
-/** The strength (MED in mm) of one of them now. */
-export function botMed(career: Career, name: string): number {
-  const w = lifeOf(career).world;
-  const rookie = w.rookies.find((r) => r.name === name);
-  return (rookie ? rookie.med : opponentOf(name).med) * (w.drift[name] ?? 1);
-}
+/** The strength (MED in mm) of one of them now (lib/careerLife.ts). */
+export { botMed };
 
 /** The player's place on the Norwegian list, as the list shows it. */
 export const norwayRank = (career: Career) => norwayRankOf(playerWorldRank(career.skillMed, career.points));
@@ -369,7 +365,8 @@ function endSeason(career: Career, life: Life, week: number): { life: Life; priz
   const retired = [...life.world.retired];
   const rookies = [...life.world.rookies];
   const mine = rivalOf({ ...career, life }).name;
-  const candidates = [...LY_REGULARS, ...INTERNATIONALS].filter((o) => !retired.includes(o.name) && o.med >= 33 && o.name !== mine && !Object.values(BOSSES).includes(o.name));
+  // One of the older names of either list: the weaker half of Ly, the weaker half of the international players.
+  const candidates = [...LY_REGULARS.filter((o) => o.med >= 33), ...INTERNATIONALS.filter((o) => o.med >= 25)].filter((o) => !retired.includes(o.name) && o.name !== mine && !Object.values(BOSSES).includes(o.name));
   const leaves = candidates.length > 0 && retired.length < 10 && unit(`${career.id}|${season}|retire`) < 0.7 ? candidates[Math.floor(unit(`${career.id}|${season}|retire-who`) * candidates.length)] : null;
   if (leaves) retired.push(leaves.name);
   // New players: one in place of the one who stopped, and now and then another.
@@ -472,7 +469,8 @@ export function leaveEvent(career: Career): Career {
   // In a cup of teams the player's side is the team, and the partner is part of the story.
   const side = sideOf(a, career.player);
   const team = a.invite?.team;
-  life = addNews(life, "you", team ? `${side} ${WENT[r.place]} ${tier.name}` : `${career.player} ${WENT[r.place]} ${tier.name}`, `${team ? `Sammen med ${team.mine.partner}. ` : ""}${r.prize > 0 ? `+${dollars(r.prize)} · ` : ""}+${r.points} poeng`, career.player);
+  // The news about the player says "du": the player is the reader.
+  life = addNews(life, "you", team ? `${side} ${WENT[r.place]} ${tier.name}` : `Du ${WENT[r.place]} ${tier.name}`, `${team ? `Sammen med ${team.mine.partner}. ` : ""}${r.prize > 0 ? `+${dollars(r.prize)} · ` : ""}+${r.points} poeng`, career.player);
   life = { ...life, seasonPts: life.seasonPts + r.points };
   if (r.place === "winner") {
     life = { ...life, reputation: Math.min(REP_MAX, life.reputation + 1) };

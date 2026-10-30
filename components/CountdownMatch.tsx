@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import type { TurnAggregate } from "@/lib/game";
 import type { BotLevel, TeamMember } from "@/lib/botLevels";
 import { dartsOf, newGame, roundsOf, winnerOf, type CountdownStart } from "@/lib/countdown";
+import { medOfLevel } from "@/lib/opponentStats";
 import { useRoster } from "@/lib/storage";
 import { CountdownGameScreen } from "./CountdownApp";
 
@@ -22,7 +23,8 @@ export function CountdownMatch({ players, botLevels, teamRosters, start, doubleO
       doubleOut,
       players,
       humanStart ? Object.fromEntries(players.filter((p) => botLevels[p] === undefined && !teamRosters?.[p]).map((p) => [p, humanStart])) : undefined,
-      Object.fromEntries(players.filter((p) => teamRosters?.[p]).map((p) => [p, teamRosters![p].map((x) => ({ name: x.name, isBot: x.isBot, ...(x.isBot ? { botLevel: Number(x.botLevel ?? 4) } : {}) }))])),
+      // A member's level is a step of the level scale ("4"); the game throws by a MED in mm, so it is turned into one (a bare 4 would be a 4 mm thrower, who finishes 501 in nine darts).
+      Object.fromEntries(players.filter((p) => teamRosters?.[p]).map((p) => [p, teamRosters![p].map((x) => ({ name: x.name, isBot: x.isBot, ...(x.isBot ? { botLevel: medOfLevel(Number(x.botLevel ?? 4)) } : {}) }))])),
     ),
   );
   return (

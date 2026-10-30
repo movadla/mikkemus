@@ -21,9 +21,12 @@ export function StickyAction({
   reason,
   below,
   children,
+  onBlocked,
 }: {
   onClick: () => void;
   ready: boolean;
+  /** Pressed while not ready: the screen can then say what is missing (the button is dimmed, not disabled, so the press is seen). */
+  onBlocked?: () => void;
   /** What will start: "3 spillere · 3 kryss". */
   summary?: ReactNode;
   /** The one thing that stops it, shown instead of the summary when not ready. */
@@ -46,8 +49,9 @@ export function StickyAction({
         )}
         <button
           type="button"
-          disabled={!ready}
-          onClick={onClick}
+          disabled={!ready && !onBlocked}
+          aria-disabled={!ready || undefined}
+          onClick={ready ? onClick : onBlocked}
           className={`glossy w-full rounded-xl font-semibold text-lg transition-opacity ${FOCUS_RING}`}
           style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", opacity: ready ? 1 : 0.4, minHeight: "var(--control-lg)" } as React.CSSProperties}
         >

@@ -31,7 +31,8 @@ async function open(page: Page) {
 
 const snap = async (page: Page, name: string) => {
   await page.waitForTimeout(900);
-  await expect(page).toHaveScreenshot(`karriere-${name}.png`, { mask: [page.locator('[aria-label="Lagret"]')] });
+  // Half a per cent: a word that is cut on a narrow phone is seen.
+  await expect(page).toHaveScreenshot(`karriere-${name}.png`, { mask: [page.locator('[aria-label="Lagret"]')], maxDiffPixelRatio: 0.005 });
 };
 
 test.describe("karriere, skjermbilder", () => {

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { PLACE_LABEL, TIERS, dollars, type Career } from "@/lib/career";
 import { nextRank, rankOf } from "@/lib/careerGoals";
-import { lifeOf, rivalOf, seasonOf, sponsorLogo, weekInSeason, WEEKS_PER_SEASON } from "@/lib/careerLife";
+import { lifeOf, rivalOf, seasonOf, sponsorLogo, weekInSeason, REP_MAX, WEEKS_PER_SEASON } from "@/lib/careerLife";
 import { PokalCard, RankBadge } from "./CareerTrophy";
 import { CharacterFace } from "./CharacterFigure";
 import { TrophyCabinet } from "./TrophyCabinet";
@@ -155,6 +155,17 @@ export function CareerProfile({ career, tab: first = "oversikt", commit, onChall
             <div className="pf-row">
               <dt>Treningsrom</dt>
               <dd>Nivå {career.room + 1}</dd>
+            </div>
+            {/* The name: what saying no to a challenge costs, and what brings sponsors. It is spoken of under the challenges, so it is shown. */}
+            <div className="pf-row">
+              <dt>Rykte</dt>
+              <dd>
+                <span className="season-ticks" role="img" aria-label={`Rykte ${life.reputation} av ${REP_MAX}`}>
+                  {Array.from({ length: REP_MAX }, (_, i) => (
+                    <i key={i} className={i < life.reputation ? "on" : ""} />
+                  ))}
+                </span>
+              </dd>
             </div>
             <div className="pf-row">
               <dt>Meritter</dt>

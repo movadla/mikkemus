@@ -6,7 +6,7 @@
 import type { Career } from "./career";
 import { lifeOf } from "./careerLife";
 
-export type LedgerKind = "prize" | "fee" | "duel" | "sponsor" | "season" | "training" | "room";
+export type LedgerKind = "prize" | "fee" | "duel" | "sponsor" | "season" | "training" | "room" | "gear";
 
 export type LedgerEntry = { week: number; kind: LedgerKind; label: string; amount: number };
 
@@ -19,9 +19,16 @@ export const LEDGER_KINDS: { kind: LedgerKind; name: string }[] = [
   { kind: "training", name: "Trening" },
   { kind: "fee", name: "Innskudd" },
   { kind: "room", name: "Treningsrommet" },
+  { kind: "gear", name: "Utstyr" },
 ];
 
 const KEEP = 400;
+
+/** The day the books began: a career from before it has nothing from before this day, and says so. */
+export const LEDGER_SINCE = "2026-10-30";
+
+/** Whether the career is older than the books, so what it did before them is not in them. */
+export const predatesBooks = (career: Pick<Career, "createdAt">) => career.createdAt.slice(0, 10) < LEDGER_SINCE;
 
 /** Writes a movement of money into the books (the money has already moved). Nothing moved, nothing written. */
 export function book(career: Career, kind: LedgerKind, label: string, amount: number): Career {

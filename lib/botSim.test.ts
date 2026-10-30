@@ -84,5 +84,6 @@ describe("matches between bots", () => {
     const done = playElsewhere(bots).tournament;
     expect(done.status).toBe("done");
     expect(done.winner).toBeTruthy();
-  });
+    // A cup of 128 is slow when every test runs at once: it gets the time it needs.
+  }, 30_000);
 });

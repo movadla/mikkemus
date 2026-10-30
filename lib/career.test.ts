@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { levelOfMed } from "./botLevels";
-import { rivalOf } from "./careerLife";
+import { lifeOf, rivalOf } from "./careerLife";
+import { opponentOf } from "./opponents";
 import {
   GAMES,
   REGULARS,
@@ -109,30 +110,46 @@ describe("the ladder", () => {
 });
 
 describe("the field", () => {
-  it("is eight different names with the player in it, and the bots set from the level", () => {
+  it("is eight different names with the player in it, and the bots set around the level of the step", () => {
     const field = fieldFor(fresh(), TIERS.lu, 7);
     expect(field).toHaveLength(8);
     expect(new Set(field.map((e) => e.name)).size).toBe(8);
     expect(field.filter((e) => !e.isBot).map((e) => e.name)).toEqual(["Lars"]);
-    const lo = levelOfMed(37 * 1.2 * 0.87);
-    const hi = levelOfMed(37 * 1.2 * 1.13);
-    const rival = rivalOf(fresh()).name;
-    for (const e of field) {
-      if (!e.isBot || e.name === rival) continue;
-      expect(e.skill!).toBeGreaterThanOrEqual(lo);
-      expect(e.skill!).toBeLessThanOrEqual(hi);
+    const lo = levelOfMed(37 * 1.2 * 0.72);
+    const hi = levelOfMed(37 * 1.2 * 1.4);
+    const skills = field.filter((e) => e.isBot).map((e) => e.skill!);
+    for (const s of skills) {
+      expect(s).toBeGreaterThanOrEqual(lo);
+      expect(s).toBeLessThanOrEqual(hi);
     }
+    // The one in the middle of the field throws at the centre of the step.
+    const centre = levelOfMed(37 * 1.2);
+    expect(Math.min(...skills)).toBeLessThan(centre);
+    expect(Math.max(...skills)).toBeGreaterThan(centre);
   });
 
-  it("always has the rival in it, as the sharpest, and the boss of a step above the pub", () => {
+  it("has each bot throw as the lists say: the sharpest on the list is the sharpest in the field, whoever the rival is", () => {
+    const c = fresh();
+    for (const tier of [TIERS.lu, TIERS.region, TIERS.vm]) {
+      const bots = fieldFor(c, tier, 3).filter((e) => e.isBot);
+      const byList = [...bots].sort((a, b) => opponentOf(a.name).med - opponentOf(b.name).med).map((e) => e.name);
+      const byField = [...bots].sort((a, b) => a.skill! - b.skill!).map((e) => e.name);
+      expect(byField).toEqual(byList);
+    }
+    // Guro, the weakest of Ly, never throws like Dave, the sharpest.
+    const lu = fieldFor({ ...c, life: { ...lifeOf(c), rivalPick: "Guro" } }, TIERS.lu, 3).filter((e) => e.isBot);
+    const guro = lu.find((e) => e.name === "Guro");
+    const dave = lu.find((e) => e.name === "Dave");
+    if (guro && dave) expect(guro.skill!).toBeGreaterThan(dave.skill!);
+  });
+
+  it("always has the rival in it, and the boss of a step above the pub", () => {
     const c = fresh();
     const rival = rivalOf(c).name;
     for (const seed of [1, 2, 3, 4, 5]) {
       const lu = fieldFor(c, TIERS.lu, seed);
       expect(lu.some((e) => e.name === rival)).toBe(true);
-      const sharpest = Math.min(...lu.filter((e) => e.isBot).map((e) => e.skill!));
-      expect(lu.find((e) => e.name === rival)!.skill).toBe(sharpest);
-      expect(fieldFor(c, TIERS.region, seed).some((e) => e.name === "Kjetil")).toBe(true);
+      expect(fieldFor(c, TIERS.region, seed).some((e) => e.name === "Dave")).toBe(true);
       expect(fieldFor(c, TIERS.vm, seed).some((e) => e.name === "Littler")).toBe(true);
     }
   });

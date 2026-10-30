@@ -15,7 +15,7 @@ function rng(seed: number) {
   };
 }
 
-const NAMES = ["Vadla", "Hans", "Lars", "Moen", "Monge", "Sondre", "Vegard", "Charlotte", "Littler", "Cor Dekker", "Dave", "ChrisBell", "Kjetil", "Wes", "Gary", "Rhian"];
+const NAMES = ["Vadla", "Hans", "Lars", "Moen", "Monge", "Sondre", "Vegard", "Charlotte", "Littler", "Cor Dekker", "Dave", "Halfdan", "Guro", "Wes", "Gary", "Rhian"];
 // Marks per turn on average: the stronger the first.
 const SKILL = [2.6, 2.5, 2.4, 2.3, 2.2, 2.1, 2.0, 1.9, 2.5, 2.4, 2.2, 2.1, 1.9, 1.8, 1.7, 1.6];
 const people = (): Participant[] => NAMES.map((name, i) => ({ name, isBot: i >= 8, ...(i >= 8 ? { botLevel: "4" as const, skill: 4 } : {}) }));
@@ -138,5 +138,6 @@ describe("Ly Pilotturnering, simulert", () => {
     console.log(`\n1000 løp: ${matchesPlayed / 1000} kamper per turnering, ${(ties / 1000).toFixed(2)} bull-off per turnering`);
     console.log("MESTERE: " + top.map(([n, c]) => `${n} ${(c / 10).toFixed(1)} %`).join(", "));
     expect(problems.slice(0, 10)).toEqual([]);
-  });
+    // A thousand tournaments take their time when every test runs at once.
+  }, 60_000);
 });

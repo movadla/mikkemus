@@ -12,8 +12,8 @@ export type BotLevelConfig = {
 
 export const BOT_LEVEL_ORDER: BotLevel[] = ["1", "2", "3", "4", "5", "6", "7", "8"];
 
-/** The levels offered in the pickers: the three medal tiers, then ChrisBell and Kjetil, who are modelled on real players
- *  (just under Vadla and just under Hans). Level 6 still exists for matches that already have it. */
+/** The levels offered in the pickers: the three medal tiers, then Halfdan and Guro, two of the regulars of Ly whose strength there
+ *  (lib/opponents.ts) is the one the level throws at. Level 6 still exists for matches that already have it. */
 export const BOT_LEVEL_PICKABLE: BotLevel[] = ["1", "2", "3", "4", "5"];
 
 /** Which medal a level carries, if any: gold is the strongest, as with the players it is named after. */
@@ -45,11 +45,11 @@ export const BOT_LEVELS: Record<BotLevel, BotLevelConfig> = {
   "1": { key: "1", name: "Littler", targetMed: 20 },
   "2": { key: "2", name: "Cor Dekker", targetMed: 25 },
   "3": { key: "3", name: "Dave", targetMed: 30 },
-  // Vadla's measured MED is 37.4 mm (153 darts, 2026-10-20): ChrisBell sits marginally behind that. Hans has no measured darts
-  // yet; the seeding (lib/odds/seeding.ts) puts him ~26 % behind Vadla in MED, which is ~47 mm, so Kjetil sits marginally behind that.
-  // Retune these two once Hans has been measured.
-  "4": { key: "4", name: "ChrisBell", targetMed: 39 },
-  "5": { key: "5", name: "Kjetil", targetMed: 49 },
+  // Vadla's measured MED is 37.4 mm (153 darts, 2026-10-20): level 4 sits marginally behind that. Hans has no measured darts yet; the
+  // seeding (lib/odds/seeding.ts) puts him ~26 % behind Vadla in MED, which is ~47 mm, so level 5 sits marginally behind that. The two
+  // carry the names of the regulars of Ly who throw at just these strengths in the career (lib/opponents.ts), so a name means one strength.
+  "4": { key: "4", name: "Halfdan", targetMed: 39 },
+  "5": { key: "5", name: "Guro", targetMed: 49 },
   "6": { key: "6", name: "Nivå 6", targetMed: 55 },
   // The two weakest are for the career (lib/career.ts), where the opponents are set from the player's own level and a beginner has to be
   // able to meet people who are worse than they are. They are not offered in any picker.

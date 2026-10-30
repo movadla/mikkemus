@@ -1,10 +1,10 @@
 const STEPS = ["Oppsett", "Trekning", "Turnering"];
 
-/** Where in the making of a tournament this screen is: setup, the draw, then the tournament itself. */
-export function StepStrip({ step }: { step: 0 | 1 | 2 }) {
+/** Where in the making of a tournament this screen is: setup, the draw, then the tournament itself. The career has no setup: its strip is the draw and the tournament. */
+export function StepStrip({ step, steps = STEPS }: { step: 0 | 1 | 2; steps?: string[] }) {
   return (
     <ol aria-label="Steg" className="flex items-center justify-center gap-2 mb-4 list-none p-0" style={{ fontSize: "var(--text-micro)" }}>
-      {STEPS.map((label, i) => (
+      {steps.map((label, i) => (
         <li
           key={label}
           aria-current={i === step ? "step" : undefined}
@@ -13,7 +13,7 @@ export function StepStrip({ step }: { step: 0 | 1 | 2 }) {
         >
           <span aria-hidden style={{ width: "0.4rem", height: "0.4rem", borderRadius: "50%", background: i <= step ? "var(--color-teal)" : "var(--color-border)" }} />
           {label}
-          {i < STEPS.length - 1 && (
+          {i < steps.length - 1 && (
             <span aria-hidden style={{ color: "var(--color-border)" }}>
               —
             </span>

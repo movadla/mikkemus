@@ -7,7 +7,7 @@ export type CountdownStart = 301 | 501;
 /** The most three darts can make. */
 export const MAX_ROUND = 180;
 
-/** A member of a team: who throws for it in turn, and for a bot how sharp (the level scale, 1 sharpest to 8). */
+/** A member of a team: who throws for it in turn, and for a bot how sharp, as a MED in mm (what the bots throw by, see lib/botDarts.ts). */
 export type CountdownMember = { name: string; isBot: boolean; botLevel?: number };
 
 export type CountdownTurn = {

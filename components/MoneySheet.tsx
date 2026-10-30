@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { dollars, type Career } from "@/lib/career";
-import { lastWeek, totals } from "@/lib/ledger";
+import { LEDGER_SINCE, lastWeek, predatesBooks, totals } from "@/lib/ledger";
 import { lifeOf } from "@/lib/careerLife";
 import { Sheet } from "./ui/Sheet";
 import { FOCUS_RING } from "./ui/focus";
@@ -30,6 +30,12 @@ export function MoneySheet({ career, onClose }: { career: Career; onClose: () =>
           </button>
         ))}
       </div>
+      {/* A career from before the books: what it earned and spent before them is not here, and the sheet says since when it is. */}
+      {predatesBooks(career) && (
+        <p className="mb-2" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>
+          Føres fra {LEDGER_SINCE}.
+        </p>
+      )}
       {tab === "week" ? (
         <div role="tabpanel" aria-label="Siste uke">
           {entries.length === 0 ? (
@@ -57,7 +63,7 @@ export function MoneySheet({ career, onClose }: { career: Career; onClose: () =>
       ) : (
         <div role="tabpanel" aria-label="Totalt">
           {all.byKind.length === 0 ? (
-            <p style={{ color: "var(--color-muted)" }}>Regnskapet er tomt ennå. Det føres fra nå av.</p>
+            <p style={{ color: "var(--color-muted)" }}>Regnskapet er tomt ennå.</p>
           ) : (
             <>
               <ul className="books" aria-label="Fordelt">

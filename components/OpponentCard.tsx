@@ -3,7 +3,7 @@ import type { CSSProperties, ReactNode } from "react";
 import type { Rival } from "@/lib/career";
 import { MATERIALS, type MaterialName } from "@/lib/materials";
 import { characterOf, poseSrc } from "@/lib/characters";
-import { NATION, faceSrc, opponentOf } from "@/lib/opponents";
+import { NATION, opponentOf, portraitSrc } from "@/lib/opponents";
 import { norwayRankOf, playerWorldRank, winChance, worldRankFor } from "@/lib/opponentStats";
 import { statsFor, type CareerGameSettings } from "@/lib/careerGame";
 
@@ -48,7 +48,7 @@ export function PortraitFrame({ src, metal, label, onClick, children, tint }: { 
 /** The face of an opponent in a frame, the metal following its rank. */
 export function OpponentPortrait({ name, onClick }: { name: string; onClick?: () => void }) {
   const o = opponentOf(name);
-  return <PortraitFrame src={faceSrc(o.face)} metal={metalOfRank(worldRankFor(name, o.med))} label={`Se ${name}`} onClick={onClick} />;
+  return <PortraitFrame src={portraitSrc(name)} metal={metalOfRank(worldRankFor(name, o.med))} label={`Se ${name}`} onClick={onClick} />;
 }
 
 /** A team in a frame: the faces of the two side by side, the player's own as their character. */
@@ -61,7 +61,7 @@ export function TeamPortrait({ members, me, metal = "chrome", label, onClick }: 
           const c = characterOf(me?.character);
           return (
             <span key={m} className="opp-team-pic" style={mine ? ({ background: c.tint } as CSSProperties) : undefined}>
-              <img src={mine ? poseSrc(c, "noytral") : faceSrc(opponentOf(m).face)} alt="" draggable={false} style={mine ? { objectPosition: "50% 0%", transform: "scale(1.15)", transformOrigin: "50% 0" } : undefined} />
+              <img src={mine ? poseSrc(c, "noytral") : portraitSrc(m)} alt="" draggable={false} style={mine ? { objectPosition: "50% 0%", transform: "scale(1.15)", transformOrigin: "50% 0" } : undefined} />
             </span>
           );
         })}
@@ -155,7 +155,7 @@ export function OpponentProfile({ name, med, me }: { name: string; med: number; 
     <div className="opp-profile">
       <div className="opp-profile-head">
         <div className="opp-profile-pic">
-          <PortraitFrame src={faceSrc(o.face)} metal={metalOfRank(r.world)} label={name} />
+          <PortraitFrame src={portraitSrc(name)} metal={metalOfRank(r.world)} label={name} />
         </div>
         <div className="min-w-0">
           <p className="font-display opp-profile-name">{name}</p>

@@ -17,7 +17,7 @@ import { publishShow } from "@/lib/liveMatch";
 import { medOfLevel } from "@/lib/opponentStats";
 import { opponentOf } from "@/lib/opponents";
 import { CharacterFace } from "./CharacterFigure";
-import { OpponentPortrait, OpponentProfile, type Me } from "./OpponentCard";
+import { MePortrait, OpponentPortrait, OpponentProfile, type Me } from "./OpponentCard";
 import { Avatar, TeamsContext } from "./ui/Avatar";
 import { TeamPortrait } from "./OpponentCard";
 import { Sheet } from "./ui/Sheet";
@@ -167,7 +167,7 @@ export function DrawScreen({
     <div className="animate-screen-push screen has-sticky-action cup-lamp" style={{ "--cup": colour } as React.CSSProperties}>
       <div className="screen-inner">
         <ScreenTop title="Trekning" onBack={onBack} backLabel="← Tilbake" />
-        <StepStrip step={1} />
+        {career ? <StepStrip step={0} steps={["Trekning", "Turnering"]} /> : <StepStrip step={1} />}
         {cup && <CupBanner cup={cup} />}
         {summary && !career && (
           <button type="button" onClick={onBack} className={`tactile w-full rounded-lg px-4 flex items-center justify-between gap-3 mb-4 ${FOCUS_RING}`} style={{ minHeight: "var(--control)", background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-cream)", fontSize: "var(--text-body)" }}>
@@ -239,16 +239,23 @@ export function DrawScreen({
           <div className="mb-4" aria-label="Favoritter">
             <p className="section-label mb-2">FAVORITTER</p>
             <div className="grid grid-cols-3 gap-2 fav-compact">
+              {/* The three sharpest in the field, the player among them when they are one of the three: the favourites are the favourites, whoever they are. */}
               {order
-                .filter((p) => (p.members ? (career ? p.name !== career.player : p.members.every((m) => m.isBot)) : p.isBot))
-                .map((p) => ({ p, med: p.members ? p.members.reduce((s, m) => s + medOfLevel(m.skill ?? 4), 0) / p.members.length : opponentOf(p.name).med }))
+                .filter((p) => (p.members ? (career ? true : p.members.every((m) => m.isBot)) : p.isBot || (!!career?.me && p.name === career.player)))
+                .map((p) => ({ p, mine: !!career && p.name === career.player, med: career?.me && p.name === career.player ? career.me.med : p.members ? p.members.reduce((s, m) => s + medOfLevel(m.skill ?? 4), 0) / p.members.length : opponentOf(p.name).med }))
                 .sort((x, y) => x.med - y.med)
                 .slice(0, 3)
-                .map(({ p }) => (
+                .map(({ p, mine }) => (
                   <div key={p.name} className="text-center min-w-0">
-                    {p.members ? <TeamPortrait members={p.members.map((m) => m.name)} label={`Se ${p.name}`} onClick={career?.me ? () => setProfileFor(p.name) : undefined} /> : <OpponentPortrait name={p.name} onClick={career?.me ? () => setProfileFor(p.name) : undefined} />}
+                    {mine && career?.me ? (
+                      p.members ? <TeamPortrait members={p.members.map((m) => m.name)} me={{ name: career.player, character: career.me.character }} metal="gold" label={p.name} /> : <MePortrait me={career.me} />
+                    ) : p.members ? (
+                      <TeamPortrait members={p.members.map((m) => m.name)} label={`Se ${p.name}`} onClick={career?.me ? () => setProfileFor(p.name) : undefined} />
+                    ) : (
+                      <OpponentPortrait name={p.name} onClick={career?.me ? () => setProfileFor(p.name) : undefined} />
+                    )}
                     <span className="block truncate font-display mt-1" style={{ fontSize: "var(--text-micro)", color: "var(--color-cream)" }}>
-                      {p.name}
+                      {mine ? "Du" : p.name}
                     </span>
                   </div>
                 ))}

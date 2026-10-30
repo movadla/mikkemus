@@ -5,7 +5,7 @@
  * as the weeks go by is in lib/careerWorld.ts.
  */
 import type { GameId, Place, Tier } from "./career";
-import { LY_REGULARS } from "./opponents";
+import { LY_REGULARS, opponentOf } from "./opponents";
 
 /** A season is ten weeks, and a week goes by when the player has played a tournament (or left one). */
 export const WEEKS_PER_SEASON = 10;
@@ -137,6 +137,13 @@ export const inboxCount = (life: Life) => life.inbox.filter((m) => !m.read || is
 /** Items of news the player has not seen. */
 export const unseenNews = (life: Life) => life.news.filter((n) => Number(n.id.slice(1)) > life.newsSeen).length;
 
+/** The strength (MED in mm) of one of the others now: the one the lists give the name, moved by what the seasons have done. */
+export function botMed(career: { life?: Life }, name: string): number {
+  const w = lifeOf(career).world;
+  const rookie = w.rookies.find((r) => r.name === name);
+  return (rookie ? rookie.med : opponentOf(name).med) * (w.drift[name] ?? 1);
+}
+
 /** The regulars of Ly who are still playing, and the new ones: who a field at the pub is drawn from. */
 export const lyPool = (life: Life): string[] => [...LY_REGULARS.map((r) => r.name).filter((n) => !life.world.retired.includes(n)), ...life.world.rookies.map((r) => r.name)];
 
@@ -145,7 +152,7 @@ export function welcomeLife(player: string): Life {
   return {
     ...newLife(),
     counter: 2,
-    news: [{ id: "n1", week: 1, kind: "world", headline: `${player} er ny på Ly`, text: "Fredagscupen venter. Det er gratis å være med." }],
+    news: [{ id: "n1", week: 1, kind: "world", headline: "Du er ny på Ly", text: "Fredagscupen venter. Det er gratis å være med.", who: player }],
     // Nothing in the inbox to begin with: it holds the invitations, duels and offers of sponsors, and nothing else.
     inbox: [],
   };
@@ -175,8 +182,8 @@ export function rivalOf(career: { id: string; player: string; life?: Life }): { 
   return { name, style: RIVAL_STYLES[Math.floor(hashUnit(`${career.id}|rival-style|${name}`) * RIVAL_STYLES.length)] };
 }
 
-/** The one who waits at each step above the pub: always the same, and in the field every time. The one at the top is the best of the level bots. */
-export const BOSSES: Record<"region" | "nm" | "gs" | "vm", string> = { region: "Kjetil", nm: "Emil Haugen", gs: "Max Hartmann", vm: "Littler" };
+/** The one who waits at each step above the pub: always the same, and in the field every time. The best of Ly in the region, the one at the top the best of the level bots. */
+export const BOSSES: Record<"region" | "nm" | "gs" | "vm", string> = { region: "Dave", nm: "Emil Haugen", gs: "Max Hartmann", vm: "Littler" };
 
 /** Who is sure to be in the field of a step, besides the player: the rival, and the boss of the step (when they still play). */
 export function mustPlay(career: { id: string; player: string; life?: Life }, tier: string): string[] {

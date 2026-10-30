@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { TrainingPanel, type TrainTarget } from "./TrainingPanel";
-import { LADDER, roomPicture, buyStage, dollars, hubPicture, topStep, isUnlocked, nextStage, startEvent, whyNot, whyNotBuy, type Career, type Tier } from "@/lib/career";
+import { LADDER, roomPicture, buyStage, dollars, entryCost, hubPicture, topStep, isUnlocked, nextStage, startEvent, whyNot, whyNotBuy, type Career, type Tier } from "@/lib/career";
+import { buyGear } from "@/lib/gear";
 import { cupColor } from "@/lib/botCup";
 import { TROPHY } from "@/lib/scenePalette";
 import { foilVars, frameOf } from "@/lib/materials";
@@ -10,7 +11,7 @@ import { rankOf, roomBadge } from "@/lib/careerGoals";
 import { heroButton, heroFor } from "@/lib/careerHero";
 import { careerSound, uiFeedback } from "@/lib/uiSound";
 import { newSeed } from "./careerFormat";
-import { HomeIcon, MailIcon, RoadIcon, StarIcon } from "./careerIcons";
+import { MailIcon, RoadIcon, SlotIcon, StarIcon } from "./careerIcons";
 import { CareerInbox } from "./CareerInbox";
 import { CareerInvites } from "./CareerInvites";
 import { SeasonScreen } from "./SeasonScreen";
@@ -298,7 +299,7 @@ export function Hub({ career, onBack, onExit, onPlay, onChallenge, onTrain, comm
               <PlayButton label={button.label} sub={button.sub} tone={hero.kind === "event" && hero.done ? "gold" : hero.kind === "challenge" && hero.done && hero.challenge.won ? "gold" : "teal"} onClick={press} />
             </div>
             <div className="round4 rise-in" style={{ "--d": "0.32s" } as React.CSSProperties}>
-              <RoundButton icon={<HomeIcon />} label="Trening" badge={roomBadge(career)} onClick={() => go("rooms")} />
+              <RoundButton icon={<SlotIcon id="board" />} label="Trening" badge={roomBadge(career)} onClick={() => go("rooms")} />
               <RoundButton
                 icon={<PersonIcon />}
                 label="Profil"
@@ -340,7 +341,19 @@ export function Hub({ career, onBack, onExit, onPlay, onChallenge, onTrain, comm
                   </Button>
                 </div>
               )}
-              {!compare && <TrainingPanel career={career} onTrain={onTrain} onUpgrade={() => setUpgrade(true)} today={new Date().toISOString().slice(0, 10)} />}
+              {!compare && (
+                <TrainingPanel
+                  career={career}
+                  onTrain={onTrain}
+                  onUpgrade={() => setUpgrade(true)}
+                  onBuyGear={(id) => {
+                    uiFeedback("confirm");
+                    careerSound("unlock");
+                    commit(buyGear(career, id));
+                  }}
+                  today={new Date().toISOString().slice(0, 10)}
+                />
+              )}
             </div>
           </div>
         </div>
@@ -429,7 +442,7 @@ export function Hub({ career, onBack, onExit, onPlay, onChallenge, onTrain, comm
               <div className="mt-auto sticky-play">
                 <PlayButton
                   label="SPILL"
-                  sub={selState === "active" ? "Fortsett" : selState === "locked" ? selected.qualify : selState === "short" ? selWhy ?? undefined : `${selected.name} · ${selected.fee === 0 ? "gratis" : dollars(selected.fee)}`}
+                  sub={selState === "active" ? "Fortsett" : selState === "locked" ? selected.qualify : selState === "short" ? selWhy ?? undefined : `${selected.name} · ${entryCost(career, selected) === 0 ? "gratis" : dollars(entryCost(career, selected))}`}
                   disabled={selState === "locked" || selState === "short"}
                   onClick={(e) => {
                     uiFeedback("click");

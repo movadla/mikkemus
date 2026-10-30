@@ -11,7 +11,8 @@ const ROAD_ROUND = (size?: number): string => (size === undefined ? "Gruppe" : s
 import { sponsorOutcome } from "@/lib/careerWorld";
 import { lifeOf } from "@/lib/careerLife";
 import { nextRank, rankOf, rankProgress } from "@/lib/careerGoals";
-import { winnerOf as countdownWinner, newGame as newCountdown } from "@/lib/countdown";
+import { dartsOf, roundsOf, winnerOf as countdownWinner, newGame as newCountdown, type CountdownGame } from "@/lib/countdown";
+import type { MatchLine } from "@/lib/careerStats";
 import { playFanfare } from "@/lib/fanfare";
 import { fxFlags, useFxLevel } from "@/lib/fxLevel";
 import { haptics } from "@/lib/haptics";
@@ -19,7 +20,7 @@ import { winnerOf as highstrikerWinner, newGame as newHighstriker } from "@/lib/
 import { DEFAULT_LIVES, newGame as newLava, stateOf as lavaState } from "@/lib/lava";
 import { useRoster } from "@/lib/storage";
 import { DRILL_ROUNDS, sessionFrom } from "@/lib/training";
-import { CLIMB_MAX, CLIMB_REWARD, applyClimb, climbLevel, climbOpen, climbTarget, applyDrill, dailyOf, drillLevel, drillOf, goalLine, goalOf, levelCap, passed, type DrillId, type HitsDrill } from "@/lib/drills";
+import { CLIMB_MAX, climbReward, applyClimb, climbLevel, climbOpen, climbTarget, applyDrill, dailyOf, drillLevel, drillOf, goalLine, goalOf, levelCap, passed, type DrillId, type HitsDrill } from "@/lib/drills";
 import { careerSound } from "@/lib/uiSound";
 import { levelLabel, oneDecimal } from "./careerFormat";
 import { CoinBurst } from "./CoinBurst";
@@ -32,8 +33,8 @@ import { OverRoom } from "./RoomBackdrop";
 import { ScoreKeypad } from "./ScoreKeypad";
 import { Trophy } from "./Trophy";
 import { RankBadge, TrophyArt } from "./CareerTrophy";
-import { CharacterFace, CharacterFigure } from "./CharacterFigure";
-import { OpponentPortrait } from "./OpponentCard";
+import { CharacterFigure } from "./CharacterFigure";
+import { MePortrait, OpponentPortrait } from "./OpponentCard";
 import type { TrainTarget } from "./TrainingPanel";
 import { EventIntro } from "./EventIntro";
 import { picturesFor } from "./eventPictures";
@@ -94,7 +95,14 @@ function ChallengeFlow({ career, commit, onHub }: { career: Career; commit: (c: 
   const [cd, setCd] = useState(() => newLeg(0));
   const [lava, setLava] = useState(() => newLava(DEFAULT_LIVES, [career.player, opponent]));
   const [hs, setHs] = useState(() => newHighstriker(DEFAULT_LIVES, [career.player, opponent]));
-  const settle = (winner: string | null) => commit(settleChallenge(career, winner === career.player, new Date().toISOString()));
+  // What the player threw in each leg of 501, for the statistics (a duel counts as a match like one of a cup).
+  const [lines, setLines] = useState<Omit<MatchLine, "at">[]>([]);
+  const lineOf = (g: CountdownGame): Omit<MatchLine, "at"> => {
+    const winner = countdownWinner(g);
+    const last = g.turns[g.turns.length - 1];
+    return { won: winner === career.player, darts: dartsOf(g, career.player), rounds: roundsOf(g, career.player), ...(winner === career.player && last ? { checkout: last.scored } : {}) };
+  };
+  const settle = (winner: string | null, played: Omit<MatchLine, "at">[] = [{ won: winner === career.player, darts: 0 }]) => commit(settleChallenge(career, winner === career.player, new Date().toISOString(), played));
   const giveUp = () => {
     commit(declineChallenge(career));
     onHub();
@@ -103,7 +111,9 @@ function ChallengeFlow({ career, commit, onHub }: { career: Career; commit: (c: 
   const legDone = (winner: string | null) => {
     const next = { you: score.you + (winner === career.player ? 1 : 0), them: score.them + (winner === career.player ? 0 : 1) };
     const need = Math.floor((tv?.legs ?? 1) / 2) + 1;
-    if (next.you >= need || next.them >= need) return settle(next.you >= need ? career.player : opponent);
+    const played = [...lines, lineOf(cd)];
+    if (next.you >= need || next.them >= need) return settle(next.you >= need ? career.player : opponent, played);
+    setLines(played);
     setScore(next);
     setStage("break");
   };
@@ -130,6 +140,8 @@ function ChallengeFlow({ career, commit, onHub }: { career: Career; commit: (c: 
         extra={<FaceOff career={career} opponent={opponent} named={!tv} />}
         plates={tv ? [["Honorar", dollars(tv.honorarium)], ["Til vinneren", dollars(c.stake)]] : [["Spill", GAMES[c.game].name], ["Premie", dollars(c.stake)], ...(c.risk ? [["Du risikerer", dollars(Math.min(career.money, c.risk))] as [string, string]] : [])]}
         plain={!tv}
+        // A duel has no cup to win: the two of them stand where the cup would be. A show has its own cup.
+        cup={!!tv}
         line={
           <>
             <b>{career.player}</b> mot <b>{opponent}</b>.
@@ -281,13 +293,15 @@ export function SeasonRecap({ career, onDone }: { career: Career; onDone: () => 
   );
 }
 
-/** The two who play a show, face to face, under the plates of its opening. */
+/** The two who play a show, face to face, under the plates of its opening: both in the same frame of metal (the player's as their character). A duel, with no cup over them, has them larger. */
 function FaceOff({ career, opponent, named = false }: { career: Career; opponent: string; /** The names under the faces: a duel has no other place that says who plays. */ named?: boolean }) {
-  const px = named ? 84 : 60;
+  const px = named ? 108 : 64;
   return (
     <div className="ev-faceoff" aria-label={`${career.player} mot ${opponent}`}>
       <span className="ev-face">
-        <CharacterFace id={career.profile.character} pose="kast" px={px} />
+        <span style={{ width: px }}>
+          <MePortrait me={{ name: career.player, med: career.skillMed, points: career.points, character: career.profile.character }} />
+        </span>
         {named && <small>{career.player}</small>}
       </span>
       <span className="font-display" style={{ color: "var(--color-gold-strong)", fontSize: "var(--text-num)" }}>
@@ -564,7 +578,7 @@ function ClimbFlow({ career, commit, onHub }: { career: Career; commit: (c: Care
             Nivå {passedLevel} klart
           </p>
           <p className="tabular" style={{ fontSize: "var(--text-title)", color: "var(--color-gold-strong)", fontWeight: 800 }}>
-            +{dollars(CLIMB_REWARD)}
+            +{dollars(climbReward(career))}
           </p>
           {now > CLIMB_MAX ? <p style={{ color: "var(--color-text-2)" }}>Alle {CLIMB_MAX} nivåene er klare.</p> : !climbOpen(career) && <p style={{ color: "var(--color-muted)" }}>Rommet tillater nivå {levelCap(career.room)}. Bygg ut rommet for å komme videre.</p>}
           {now <= CLIMB_MAX && climbOpen(career) && <PlayButton label="NESTE NIVÅ" onClick={() => setPassedLevel(null)} />}
