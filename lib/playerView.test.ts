@@ -179,3 +179,12 @@ describe("alle kast, alene og på lag", () => {
     expect(v.bestRun).toBe(9);
   });
 });
+
+describe("hit share over several matches", () => {
+  it("is all crosses over all crosses and misses, not an average of the matches' rounded shares", async () => {
+    const { pooledHitPct } = await import("./playerRows");
+    const m = (dartsUsed: number, hits: number, misses: number) => ({ date: "2026-10-01T10:00:00Z", won: true, dartsUsed, hitPct: Math.round((hits / (hits + misses)) * 100), cpd: 0, med: null, mhd: null, mvd: null, steps: { "20": [hits, misses] as [number, number] } });
+    // 30 darts with 60 crosses and no misses, and 30 darts with 15 crosses and 15 misses: 75 of 90 = 83 %, as a record's own totals read.
+    expect(pooledHitPct([m(30, 60, 0), m(30, 15, 15)])).toBeCloseTo((75 / 90) * 100, 5);
+  });
+});

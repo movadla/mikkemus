@@ -326,9 +326,19 @@ export function renameTeam(oldName: string, newName: string): { ok: true; name: 
   const next: PlayerRecord = { ...record, name };
   const rest = { ...roster };
   if (to !== from) delete rest[from];
+  // The matches of the others say who they were against by name: with the old name left there, a match of this team would
+  // have a side nobody owns (and fall out of the ratings).
+  const retitled: string[] = [];
+  const said = (n: string) => n.toLowerCase() === oldName.trim().toLowerCase();
+  for (const [k, r] of Object.entries(rest)) {
+    if (k === to || !r.matchHistory.some((e) => e.vs?.some(said))) continue;
+    rest[k] = { ...r, matchHistory: r.matchHistory.map((e) => (e.vs?.some(said) ? { ...e, vs: e.vs.map((v) => (said(v) ? name : v)) } : e)) };
+    retitled.push(k);
+  }
   roster = { ...rest, [to]: next };
   notify();
   upsertRow(to, next);
+  retitled.forEach((k) => upsertRow(k, rest[k]));
   if (to !== from) deleteRow(from);
   return { ok: true, name };
 }

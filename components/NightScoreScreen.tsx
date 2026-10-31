@@ -370,7 +370,7 @@ function MatchSheet({ m, canOpen, onClose, onDelete }: { m: NightMatch; /** The 
           value={value}
           onChange={(v) => {
             if (v === m.placements[0]) updateNightMatch(m.id, { override: undefined });
-            else updateNightMatch(m.id, { override: v === "draw" ? { draw: true } : { placements: placementsFor(m, v) } });
+            else updateNightMatch(m.id, { override: v === "draw" ? { draw: true } : { placements: placementsFor(m, v, resultOf(m) ?? m.placements) } });
           }}
           label="Vinner"
           options={[...m.sides.map((s: NightSide) => ({ value: s.name, label: sideLabel(s) })), { value: "draw", label: "Uavgjort" }]}

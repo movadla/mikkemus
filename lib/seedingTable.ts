@@ -6,7 +6,7 @@ import { SEED_ORDER } from "./odds/seeding";
 import { learnPrior, skillNodes, SCENARIOS, type Evidence } from "./odds/skill";
 import { MED_TO_SIGMA } from "./odds/throwModel";
 import { raceWinProbs } from "./odds/winProb";
-import { shownHitPct, type MatchHistoryEntry, type PlayerRecord } from "./playerRows";
+import { pooledHitPct, type MatchHistoryEntry, type PlayerRecord } from "./playerRows";
 import { expectedScore, PROVISIONAL_MATCHES, START_RATING } from "./rating";
 
 /** How a player has been doing over their last ten matches, next to how they usually do. */
@@ -51,11 +51,8 @@ export type SeedRow = {
 
 const entriesOf = (r: PlayerRecord): MatchHistoryEntry[] => r.matchHistory.filter((m) => m.dartsUsed > 0);
 
-/** Hit rate over matches, each weighed by its darts. */
-function weightedHit(entries: MatchHistoryEntry[]): number | null {
-  const darts = entries.reduce((s, m) => s + m.dartsUsed, 0);
-  return darts === 0 ? null : entries.reduce((s, m) => s + shownHitPct(m) * m.dartsUsed, 0) / darts;
-}
+/** Hit rate over matches: all crosses over all crosses and misses. */
+const weightedHit = pooledHitPct;
 
 function weightedMed(entries: MatchHistoryEntry[]): number | null {
   const m = entries.filter((e) => e.med !== null);

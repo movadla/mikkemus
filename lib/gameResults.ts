@@ -4,7 +4,7 @@
  * Bots are in the result, so that a game against one can be told, but they are left out of the tables: those are the people's.
  */
 import { bestRoundOf, dartsOf, remainingOf, roundsOf, tonsOf, winnerOf as countdownWinner, type CountdownGame } from "./countdown";
-import { burnedBy, stateOf as lavaState, type LavaGame } from "./lava";
+import { stateOf as lavaState, type LavaGame } from "./lava";
 import { stateOf as killerState, type KillerGame } from "./killer";
 import { ROUNDS_IN_ALL, halvingsOf, stateOf as halvitState, type HalvItGame } from "./halvit";
 import { livesLeft as highstrikerLives, winnerOf as highstrikerWinner, type HighstrikerGame } from "./highstriker";
@@ -88,7 +88,7 @@ export function lavaResult(g: LavaGame, bots: string[], id: string, playedAt: st
   if (!s.winner || g.players.length < 2) return null;
   const figures: Record<string, PlayerFigures> = {};
   for (const p of g.players) {
-    figures[p] = { ...none(), darts: s.log.filter((d) => d.player === p).length, burned: burnedBy(s, p), lostLives: g.lives - (s.lives[p] ?? 0) };
+    figures[p] = { ...none(), darts: s.log.filter((d) => d.player === p).length, burned: s.log.filter((d) => d.player === p && d.outcome === "burn").length, lostLives: g.lives - (s.lives[p] ?? 0) };
   }
   return { id, game: "lava", playedAt, winner: s.winner, players: g.players, bots: bots.filter((b) => g.players.includes(b)), figures };
 }

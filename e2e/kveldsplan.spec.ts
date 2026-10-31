@@ -80,4 +80,13 @@ test.describe("Kveldsplan", () => {
     await expect(page.getByRole("button", { name: "Start kampen" })).toBeHidden();
     await expect(page.getByText("Lars").first()).toBeVisible();
   });
+
+  test("Kveldsscore på forsiden kan gjemmes og kommer tilbake med en ny kveld", async ({ page }) => {
+    await openApp(page, "dark");
+    const stripe = page.getByRole("link", { name: /^Kveldsscore/ });
+    await page.getByRole("button", { name: "Gjem" }).click();
+    await expect(stripe).toBeHidden();
+    await page.reload();
+    await expect(page.getByRole("button", { name: "Gjem" })).toBeHidden();
+  });
 });

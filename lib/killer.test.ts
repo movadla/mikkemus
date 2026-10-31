@@ -169,3 +169,15 @@ describe("killer: winning the status back", () => {
     expect(s.hits.C).toBe(0);
   });
 });
+
+describe("killer: lives never go below nothing", () => {
+  it("a treble on a player with one life left takes one life, not three", () => {
+    let g = throwAll(newGame(1, ["A", "B", "C"]), 20, 19, 18);
+    g = throwAll(g, 20, 20, 20); // A: three crosses on the own number, a killer
+    g = throwAll(g, MISS, MISS, MISS, MISS, MISS, MISS); // B and C
+    g = throwAll(g, T(19));
+    const s = stateOf(g);
+    expect(s.lives.B).toBe(0);
+    expect(s.log[s.log.length - 1]).toMatchObject({ victim: "B", livesLost: 1, effect: "kill" });
+  });
+});

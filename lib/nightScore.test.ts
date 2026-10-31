@@ -102,3 +102,12 @@ describe("kveldsscore", () => {
     expect(c.against.A.B).toEqual({ won: 0, lost: 1 });
   });
 });
+
+describe("placementsFor: the others keep their order", () => {
+  it("overriding the winner of a match of three leaves the order of the rest as it was", () => {
+    const sides = [solo("A"), solo("B"), solo("C")];
+    // B won, then A, then C. C is made the winner: B stays ahead of A.
+    expect(placementsFor({ sides }, "C", ["B", "A", "C"])).toEqual(["C", "B", "A"]);
+    expect(placementsFor({ sides }, "C")).toEqual(["C", "A", "B"]);
+  });
+});

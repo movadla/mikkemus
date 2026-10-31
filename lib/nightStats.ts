@@ -12,6 +12,12 @@ export type HitMap = Record<string, Record<string, number>>;
 /** Where a person's own share in a team's match is kept in the HitMap, next to the sides' (a person and a team may share a name). */
 export const memberKey = (name: string): string => `~${name}`;
 
+/** Where the darts behind a share are kept in the HitMap (the weight the share counts with when matches are put together). */
+export const weightKey = (key: string): string => `#${key}`;
+
+/** The fewest darts a hit percentage must stand on to be named the best of the evening (a share kept without its darts counts as it is). */
+export const MIN_HIT_DARTS = 15;
+
 export type Entity = { kind: "player" | "team"; name: string };
 
 const live = (matches: NightMatch[]): NightMatch[] => matches.filter((m) => !m.deleted);
@@ -42,15 +48,28 @@ function figuresIn(matches: NightMatch[], e: Entity, games: NightGame[]): Fig | 
 
 /** The mean hit percentage of an entity in the Mikke Mus matches that kept it, or null. A player's is from the matches they played alone and, where kept, their own darts in a team's. */
 export function hitPctOf(matches: NightMatch[], hits: HitMap, e: Entity): number | null {
-  const got: number[] = [];
+  return hitShareOf(matches, hits, e)?.pct ?? null;
+}
+
+/** The hit percentage with the darts it stands on: each match counts with its darts (a match without them counts as one). */
+export function hitShareOf(matches: NightMatch[], hits: HitMap, e: Entity): { pct: number; darts: number } | null {
+  let sum = 0;
+  let weight = 0;
+  let darts = 0;
   for (const m of live(matches)) {
     const key = hitKey(m);
     const side = sideOf(m, e);
     if (!key || !side || !hits[key]) continue;
-    const v = e.kind === "player" && side.members.length > 1 ? hits[key][memberKey(e.name)] : hits[key][side.name];
-    if (typeof v === "number") got.push(v);
+    const at = e.kind === "player" && side.members.length > 1 ? memberKey(e.name) : side.name;
+    const v = hits[key][at];
+    if (typeof v !== "number") continue;
+    const n = hits[key][weightKey(at)];
+    const w = typeof n === "number" && n > 0 ? n : 1;
+    sum += v * w;
+    weight += w;
+    if (typeof n === "number") darts += n;
   }
-  return got.length > 0 ? got.reduce((a, b) => a + b, 0) / got.length : null;
+  return weight > 0 ? { pct: sum / weight, darts } : null;
 }
 
 export type Award = { key: string; title: string; who: string; value: string; note?: string; kind: "player" | "team" };
@@ -96,9 +115,11 @@ export function statsOf(matches: NightMatch[], hits: HitMap = {}): NightStats {
   if (steady) add({ key: "steady", title: "Mest jevn", who: steady.name, value: `${Math.round((steady.wins / steady.matches) * 100)} % seiere`, note: `${steady.wins} av ${steady.matches}` });
 
   const hit = [
-    ...players.map((name) => ({ name, kind: "player" as const, pct: hitPctOf(played, hits, { kind: "player", name }) })),
-    ...teams.map((name) => ({ name, kind: "team" as const, pct: hitPctOf(played, hits, { kind: "team", name }) })),
-  ].filter((h): h is { name: string; kind: "player" | "team"; pct: number } => h.pct !== null);
+    ...players.map((name) => ({ name, kind: "player" as const, share: hitShareOf(played, hits, { kind: "player", name }) })),
+    ...teams.map((name) => ({ name, kind: "team" as const, share: hitShareOf(played, hits, { kind: "team", name }) })),
+  ]
+    .filter((h) => h.share !== null && (h.share.darts === 0 || h.share.darts >= MIN_HIT_DARTS))
+    .map((h) => ({ name: h.name, kind: h.kind, pct: h.share!.pct }));
   const bestHitPlayer = top(hit.filter((h) => h.kind === "player"), (h) => h.pct);
   if (bestHitPlayer) add({ key: "hit", title: "Høyest treffprosent", who: bestHitPlayer.name, value: `${Math.round(bestHitPlayer.pct)} %`, note: "Mikke Mus" });
   const bestHitTeam = top(hit.filter((h) => h.kind === "team"), (h) => h.pct);

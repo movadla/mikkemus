@@ -158,9 +158,11 @@ function lineWithoutBonus(m: NightMatch): NightLine {
   return { title: m.sides.map(sideLabel).join(", "), score: "", tag: winner ? `Vinner ${sideLabel(winner)}` : "Uavgjort" };
 }
 
-/** A match with the sides as they were put in, the winner marked: for a result written in by hand or one that is overridden. */
-export function placementsFor(m: Pick<NightMatch, "sides">, winnerName: string): string[] {
-  return [winnerName, ...m.sides.map((s) => s.name).filter((n) => n !== winnerName)];
+/** The order with the winner marked. The others keep the order they had (`before`: the result as it stood), or the order the sides were put in: for a result written in by hand or one that is overridden. */
+export function placementsFor(m: Pick<NightMatch, "sides">, winnerName: string, before?: string[] | null): string[] {
+  const names = m.sides.map((s) => s.name);
+  const rest = [...(before ?? []).filter((n) => names.includes(n)), ...names].filter((n, i, all) => n !== winnerName && all.indexOf(n) === i);
+  return [winnerName, ...rest];
 }
 
 /** The evening a match belongs to: the latest one that began before it (or the first, if it was played before any began). */

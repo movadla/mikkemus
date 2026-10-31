@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { newGame as countdown, playRound as countdownRound } from "./countdown";
 import { countdownResult, highstrikerResult, lavaResult, tableOf, tablesOf, type GameResult } from "./gameResults";
 import { newGame as highstriker, playRound as highstrikerRound } from "./highstriker";
-import { newGame as lava, playDart } from "./lava";
+import { newGame as lava, playDart, stateOf } from "./lava";
 
 const AT = "2026-10-27T20:00:00.000Z";
 
@@ -93,5 +93,31 @@ describe("tableOf", () => {
   it("keeps the games apart", () => {
     const rs = [result("1", "301", "Ola", ["Ola", "Kari"], [], AT), result("2", "501", "Kari", ["Ola", "Kari"], [], AT), result("3", "lava", "Ola", ["Ola", "Kari"], [], AT)];
     expect(tablesOf(rs).map((t) => t.game)).toEqual(["301", "501", "lava"]);
+  });
+});
+
+describe("figures that stay what happened", () => {
+  it("killer: the lives a player lost are never more than the lives they had", async () => {
+    const { newGame: killer, playDart: kill } = await import("./killer");
+    const { killerResult } = await import("./gameResults");
+    const T = (n: number) => 200 + n;
+    const g = [20, 19, 20, 20, 20, 0, 0, 0, T(19)].reduce(kill, killer(1, ["A", "B"]));
+    expect(killerResult(g, "k", AT)!.figures.B.lostLives).toBe(1);
+  });
+
+  it("lava: «brent» is the sections a player set on fire, also those that were opened again", () => {
+    let g = lava(3, ["A", "B"]);
+    // A sets all 21 sections on fire in seven rounds, B misses each round.
+    const all = [...Array(20).keys()].map((i) => i + 1).concat(25);
+    for (let i = 0; i < 21; i += 3) {
+      for (const sec of all.slice(i, i + 3)) g = playDart(g, sec);
+      if (i < 18) for (let k = 0; k < 3; k++) g = playDart(g, 0);
+    }
+    // One section opened again when the last burned. B hits three that burn, and is out.
+    const burning = [...stateOf(g).burned.keys()].slice(0, 3);
+    for (const sec of burning) g = playDart(g, sec);
+    const r = lavaResult(g, [], "l", AT)!;
+    expect(r.winner).toBe("A");
+    expect(r.figures.A.burned).toBe(21);
   });
 });

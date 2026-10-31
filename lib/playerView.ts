@@ -1,5 +1,5 @@
 import { STEPS, type Step } from "./game";
-import { shownHitPct, type HitStat, type MatchHistoryEntry, type MemberStat, type PlayerRecord } from "./playerRows";
+import { hitsAndMisses, pooledHitPct, type HitStat, type MatchHistoryEntry, type MemberStat, type PlayerRecord } from "./playerRows";
 
 /**
  * A player's numbers as one person alone (Singel) and as a member of a team (Lag), and by where the darts were
@@ -26,12 +26,8 @@ export function bySource(entries: MatchHistoryEntry[], source: Source): MatchHis
 
 const usable = (entries: MatchHistoryEntry[]) => entries.filter((m) => m.dartsUsed > 0);
 
-/** Crosses per dart in percent over matches, each weighed by its darts. */
-export function weightedHit(entries: MatchHistoryEntry[]): number | null {
-  const e = usable(entries);
-  const darts = e.reduce((s, m) => s + m.dartsUsed, 0);
-  return darts === 0 ? null : e.reduce((s, m) => s + shownHitPct(m) * m.dartsUsed, 0) / darts;
-}
+/** The share of crosses over matches, all crosses over all crosses and misses (see pooledHitPct). */
+export const weightedHit = (entries: MatchHistoryEntry[]): number | null => pooledHitPct(usable(entries));
 
 /** A mean distance over matches with measured darts, weighed by the darts measured. */
 function weightedDistance(entries: MatchHistoryEntry[], key: "med" | "mhd" | "mvd"): number | null {
@@ -227,10 +223,10 @@ export function allView(player: PlayerRecord, all: PlayerRecord[]): AllView {
   const teamDarts = stats.reduce((s, m) => s + m.darts, 0);
   const tHits = stats.reduce((s, m) => s + m.hits, 0);
   const tMisses = stats.reduce((s, m) => s + m.misses, 0);
-  const hitParts: [number, number][] = [];
-  if (single.hitPct !== null && aloneDarts > 0) hitParts.push([single.hitPct, aloneDarts]);
-  if (tHits + tMisses > 0 && teamDarts > 0) hitParts.push([(tHits / (tHits + tMisses)) * 100, teamDarts]);
-  const weight = hitParts.reduce((s, [, w]) => s + w, 0);
+  // Alone and in teams as one set of crosses and misses.
+  const alone = usable(player.matchHistory).map(hitsAndMisses);
+  const allHits = alone.reduce((s, x) => s + x.hits, 0) + tHits;
+  const allMisses = alone.reduce((s, x) => s + x.misses, 0) + tMisses;
   const acc = player.accuracy;
   const tThrows = stats.reduce((s, m) => s + m.throws, 0);
   const tSumR = stats.reduce((s, m) => s + m.sumR, 0);
@@ -248,7 +244,7 @@ export function allView(player: PlayerRecord, all: PlayerRecord[]): AllView {
   return {
     aloneDarts,
     teamDarts,
-    hitPct: weight > 0 ? hitParts.reduce((s, [p, w]) => s + p * w, 0) / weight : null,
+    hitPct: allHits + allMisses > 0 ? (allHits / (allHits + allMisses)) * 100 : null,
     med: acc.throws + tThrows > 0 ? (acc.sumDistance + tSumR) / (acc.throws + tThrows) : null,
     mhd: single.mhd,
     mvd: single.mvd,

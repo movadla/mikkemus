@@ -170,3 +170,21 @@ describe("buildPlayoffBracket byes", () => {
     expect(realMatches.some((m) => !m.winner)).toBe(true);
   });
 });
+
+describe("the table ranks equal points on darts thrown", () => {
+  it("counts darts, not crosses and misses: a triple is one dart", () => {
+    const won = (id: string, w: string, darts: number, hits: number): TournamentMatch => ({
+      id,
+      round: "group",
+      groupIndex: 0,
+      participantA: w,
+      participantB: "C",
+      winner: w,
+      placements: [w, "C"],
+      stats: { [w]: { hitsByStep: {}, missesByStep: {}, hits, misses: 0, darts } },
+    });
+    // Both have 2 points. A used 30 darts for 90 crosses (triples), B 40 darts for 40 crosses: A is the faster.
+    const rows = standingsWithMovement(["A", "B", "C"], [won("m1", "A", 30, 90), won("m2", "B", 40, 40)], null);
+    expect(rows.map((r) => r.name).slice(0, 2)).toEqual(["A", "B"]);
+  });
+});

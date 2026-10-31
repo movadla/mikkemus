@@ -1,5 +1,5 @@
 import type { MatchHistoryEntry, PlayerRecord } from "./storage";
-import { shownHitPct } from "./playerRows";
+import { pooledHitPct } from "./playerRows";
 import { dayLabel } from "./formatDate";
 
 /** The hour a dart night is taken to end: a match after midnight still belongs to the evening before. */
@@ -58,7 +58,7 @@ function avg(values: number[]): number | null {
  *  their career-wide averages, which is what makes a per-night summary worth looking at. */
 export function nightAverages(stat: PlayerNightStat): { hitPct: number | null; darts: number | null } {
   return {
-    hitPct: avg(stat.matches.map((m) => shownHitPct(m))),
+    hitPct: pooledHitPct(stat.matches),
     darts: avg(stat.matches.map((m) => m.dartsUsed)),
   };
 }

@@ -155,7 +155,7 @@ export type StandingRow = {
 
 function matchDarts(stats: Record<string, TurnAggregate> | undefined, name: string): number | null {
   const s = stats?.[name];
-  return s ? s.hits + s.misses : null;
+  return s && s.darts > 0 ? s.darts : null;
 }
 
 /** The finishing order for an already-decided match — `placements` when set (always is, once a

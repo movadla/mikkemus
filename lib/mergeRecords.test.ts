@@ -105,3 +105,14 @@ describe("team names", () => {
     expect(cleanTeamName("De Røde")).not.toBe(defaultTeamName(["Vadla", "Hans"]));
   });
 });
+
+describe("mergeRecords: the figures of the members", () => {
+  it("adds up the members' own figures, so the team and its members still agree", () => {
+    const stat = (matches: number, hits: number) => ({ matches, turns: 3, darts: 9, hits, misses: 3, steps: emptyRecord("x").steps, bestRun: 3, throws: 3, sumR: 30 });
+    const a = rec("T1", { kind: "team", members: ["V", "H"], memberStats: { V: stat(1, 6) } });
+    const b = rec("T2", { kind: "team", members: ["V", "H"], memberStats: { V: stat(2, 4), H: stat(1, 2) } });
+    const m = mergeRecords([a, b], { name: "T", kind: "team", members: ["V", "H"] });
+    expect(m.memberStats?.V).toMatchObject({ matches: 3, hits: 10, misses: 6, darts: 18 });
+    expect(m.memberStats?.H).toMatchObject({ matches: 1, hits: 2 });
+  });
+});

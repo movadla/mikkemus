@@ -174,7 +174,7 @@ export function stateOf(g: KillerGame): KillerState {
       const victim = g.players.find((p) => p !== up && lives[p] > 0 && numbers[p] === number);
       if (victim && killer[up]) {
         const lost = Math.min(mult, lives[victim]);
-        lives[victim] -= mult;
+        lives[victim] = Math.max(0, lives[victim] - mult);
         // A killer who is hit and lives on is not a killer any more.
         if (lives[victim] > 0 && killer[victim]) {
           killer[victim] = false;

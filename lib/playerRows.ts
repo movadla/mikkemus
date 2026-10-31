@@ -351,5 +351,33 @@ export function shownHitPct(h: MatchHistoryEntry): number {
   return Math.min(100, h.hitPct);
 }
 
+/** The crosses and misses behind a match's hit share: counted from its rows where they are kept, otherwise worked out from the rounded share over the darts. */
+export function hitsAndMisses(h: MatchHistoryEntry): { hits: number; misses: number } {
+  if (h.steps) {
+    let hits = 0;
+    let misses = 0;
+    for (const v of Object.values(h.steps)) {
+      hits += v[0];
+      misses += v[1];
+    }
+    if (hits + misses > 0) return { hits, misses };
+  }
+  const share = shownHitPct(h) / 100;
+  return { hits: share * h.dartsUsed, misses: (1 - share) * h.dartsUsed };
+}
+
+/** The hit share over several matches as one figure: all crosses over all crosses and misses, the same as a record's own totals read. */
+export function pooledHitPct(entries: MatchHistoryEntry[]): number | null {
+  let hits = 0;
+  let misses = 0;
+  for (const m of entries) {
+    if (m.dartsUsed <= 0) continue;
+    const x = hitsAndMisses(m);
+    hits += x.hits;
+    misses += x.misses;
+  }
+  return hits + misses > 0 ? (hits / (hits + misses)) * 100 : null;
+}
+
 /** Crosses per dart for a match, in percent: what the odds are built on. */
 export const crossesPerDartPct = (h: MatchHistoryEntry): number => h.cpd ?? h.hitPct;

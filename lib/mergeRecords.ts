@@ -1,4 +1,5 @@
 import { STEPS } from "./game";
+import { mergeMemberStats } from "./memberStats";
 import type { PlayerRecord, RecordKind, RingHits } from "./playerRows";
 
 /**
@@ -48,6 +49,7 @@ export function mergeRecords(records: PlayerRecord[], into: { name: string; kind
     tripleHits: sumRing(acc.tripleHits, r.tripleHits),
     doubleHits: sumRing(acc.doubleHits, r.doubleHits),
     matchHistory: [...acc.matchHistory, ...r.matchHistory],
+    ...(acc.memberStats || r.memberStats ? { memberStats: mergeMemberStats(acc.memberStats, r.memberStats ?? {}) } : {}),
   }));
   return {
     ...merged,
