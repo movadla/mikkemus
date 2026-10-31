@@ -1,10 +1,11 @@
+import type { FigureSet } from "./nightFigures";
 import type { NightBonus } from "./bonus";
 /**
  * «Best av x»: a series of games, where the side that gets to the number of wins first (2 in a best of 3, 3 in a best of 5) wins the series. The
  * series keeps the winners of the games already played; the game that is on counts too when it has a winner, so the standing is the same on the
  * winner screen as after pressing Neste kamp.
  */
-export type Series = { bestOf: number; history: string[]; /** The feats of the games so far (extra points), to be written with the series. */ bonus?: NightBonus[] };
+export type Series = { bestOf: number; history: string[]; /** The feats of the games so far (extra points), to be written with the series. */ bonus?: NightBonus[]; /** What each person made in the games so far, to be written with the series. */ figures?: FigureSet[] };
 
 /** The lengths of a series to choose from: 1 is no series, one game. */
 export const BEST_OF_CHOICES = [1, 3, 5, 7];
@@ -34,4 +35,4 @@ export function standingText(s: Standing, sides: string[]): string {
 }
 
 /** What a game gets from the app that holds the series: the series so far, and what to tell it when a game is won or a new series begins. */
-export type SeriesWiring = Series & { onWin: (winner: string, bonus?: NightBonus[]) => void; onReset: () => void };
+export type SeriesWiring = Series & { onWin: (winner: string, bonus?: NightBonus[], figures?: FigureSet) => void; onReset: () => void };

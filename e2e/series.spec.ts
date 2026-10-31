@@ -50,5 +50,8 @@ test.describe("best av x", () => {
     await expect(line.first()).toContainText("Lars vs. Vadla");
     await expect(line.first()).toContainText("2-0");
     await expect(line.first()).toContainText("Best av 3");
+    // The figures of both games are kept with the one match: two 180s.
+    await page.getByRole("radio", { name: "Statistikk" }).click();
+    await expect(page.getByRole("list", { name: "Utmerkelser" }).getByRole("listitem").filter({ hasText: "Flest 180" })).toContainText("2");
   });
 });

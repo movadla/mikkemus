@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { countOf, eveningOf, lineOf, placementsFor, pointsOf, resultOf, tableOf, type NightMatch } from "./nightScore";
+import { countOf, eveningOf, lineOf, placementsFor, pointsOf, resultOf, tableOf, type NightMatch, comparisonOf } from "./nightScore";
 
 const solo = (name: string) => ({ name, members: [name] });
 const team = (a: string, b: string) => ({ name: `${a} og ${b}`, members: [a, b] });
@@ -78,5 +78,27 @@ describe("kveldsscore", () => {
     const rows = tableOf([m]);
     expect(rows.find((r) => r.name === "Monge")).toMatchObject({ points: 2, bonus: 1 });
     expect(lineOf(m).bonus).toBe("Monge: 180, Hans: utsjekk 100+");
+  });
+
+  it("sier hvem som har slått hvem, og hvordan to har gjort det sammen", () => {
+    const ms = [
+      match({ sides: [team("Vadla", "Erlend"), team("Monge", "Hans")], placements: ["Vadla og Erlend", "Monge og Hans"] }),
+      match({ sides: [team("Vadla", "Erlend"), team("Monge", "Hans")], placements: ["Monge og Hans", "Vadla og Erlend"] }),
+      match({ sides: [team("Vadla", "Erlend"), team("Monge", "Hans")], placements: ["Vadla og Erlend", "Monge og Hans"], deleted: true }),
+      match({ sides: [solo("Vadla"), solo("Monge")], placements: ["Vadla", "Monge"], override: { draw: true } }),
+    ];
+    const c = comparisonOf(ms);
+    expect(c.players).toEqual(["Erlend", "Hans", "Monge", "Vadla"]);
+    expect(c.against.Vadla.Monge).toEqual({ won: 1, lost: 1 });
+    expect(c.against.Monge.Vadla).toEqual({ won: 1, lost: 1 });
+    expect(c.together.find((t) => t.pair.join() === "Erlend,Vadla")).toMatchObject({ won: 1, lost: 1 });
+  });
+
+  it("i en kamp med tre sider slår en bedre plass en dårligere", () => {
+    const c = comparisonOf([match({ sides: [solo("A"), solo("B"), solo("C")], placements: ["B", "C", "A"] })]);
+    expect(c.against.B.A).toEqual({ won: 1, lost: 0 });
+    expect(c.against.C.A).toEqual({ won: 1, lost: 0 });
+    expect(c.against.B.C).toEqual({ won: 1, lost: 0 });
+    expect(c.against.A.B).toEqual({ won: 0, lost: 1 });
   });
 });

@@ -8,6 +8,7 @@
  */
 import type { Feat, NightBonus } from "./bonus";
 import { FEAT_NAMES } from "./bonus";
+import type { FigureSet } from "./nightFigures";
 
 export type NightGame = "enkeltkamp" | "turnering" | "bullduel" | "301" | "501" | "highstriker" | "lava" | "halvit" | "killer" | "annet";
 
@@ -52,6 +53,8 @@ export type NightMatch = {
   manual?: boolean;
   /** Feats that give a person an extra point (180 in 301/501, three bulls, a checkout of 100 or more), when the game was set to count them. */
   bonus?: NightBonus[];
+  /** What each person made in the game (a series: in all its games), for the statistics of the evening. From the matches written after it was added. */
+  figures?: FigureSet;
   /** The match is a series (best of 3, say): what each side won, and how long it was. The series is one match in the evening, and its winner gets the point. */
   series?: { bestOf: number; wins: Record<string, number> };
   /** Where the match can be opened from: a match page, a tournament. */
@@ -169,3 +172,48 @@ export const matchesOf = (matches: NightMatch[], evening: string): NightMatch[] 
 
 /** How many matches count in an evening (those not taken out). */
 export const countOf = (matches: NightMatch[]): number => matches.filter((m) => !m.deleted).length;
+
+export type Duel = { won: number; lost: number };
+
+/**
+ * Who has beaten whom in an evening. `against[a][b]` is how a did against b when they were on different sides: in a match of two sides the
+ * winner's people beat the other side's; with more sides, a better place beats a worse one. `together` is how pairs did on the same side.
+ * Draws and matches taken out count for nothing.
+ */
+export function comparisonOf(matches: NightMatch[]): { players: string[]; against: Record<string, Record<string, Duel>>; together: { pair: [string, string]; won: number; lost: number }[] } {
+  const against: Record<string, Record<string, Duel>> = {};
+  const together = new Map<string, { pair: [string, string]; won: number; lost: number }>();
+  const duel = (a: string, b: string): Duel => ((against[a] ??= {})[b] ??= { won: 0, lost: 0 });
+  const players = new Set<string>();
+  for (const m of matches) {
+    if (m.deleted) continue;
+    for (const s of m.sides) for (const p of s.members) players.add(p);
+    const order = resultOf(m);
+    if (!order) continue;
+    const place = (s: NightSide) => order.indexOf(s.name);
+    for (const s of m.sides) {
+      // On the same side: they won or lost together.
+      const won = place(s) === 0;
+      for (let i = 0; i < s.members.length; i++)
+        for (let j = i + 1; j < s.members.length; j++) {
+          const pair = [s.members[i], s.members[j]].sort((a, b) => a.localeCompare(b, "no")) as [string, string];
+          const t = together.get(pair.join("|")) ?? { pair, won: 0, lost: 0 };
+          if (won) t.won += 1;
+          else t.lost += 1;
+          together.set(pair.join("|"), t);
+        }
+      for (const o of m.sides) {
+        if (o === s || place(s) === -1 || place(o) === -1 || place(s) >= place(o)) continue;
+        for (const a of s.members) for (const b of o.members) {
+          duel(a, b).won += 1;
+          duel(b, a).lost += 1;
+        }
+      }
+    }
+  }
+  return {
+    players: [...players].sort((a, b) => a.localeCompare(b, "no")),
+    against,
+    together: [...together.values()].sort((x, y) => y.won - y.lost - (x.won - x.lost) || y.won - x.won),
+  };
+}

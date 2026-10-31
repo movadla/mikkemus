@@ -25,8 +25,11 @@ import {
 } from "@/lib/nightScore";
 import { currentEvening, deleteEvening, recordNightMatch, refreshNight, startNewEvening, updateNightMatch, useNightScore, type NewNightMatch } from "@/lib/nightScoreStorage";
 import type { PickedTeam, Person } from "@/lib/people";
+import { useHitMap } from "@/lib/nightHits";
 import { useRoster } from "@/lib/storage";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { NightCompare } from "./NightCompare";
+import { NightStatsView } from "./NightStatsView";
 import { GameWho, type GameMode } from "./GameWho";
 import { PlusIcon } from "./icons";
 import { ScreenTop } from "./ScreenTop";
@@ -72,7 +75,7 @@ export function NightScoreScreen() {
   const matches = useMemo(() => (evening ? matchesOf(night.matches, evening.id) : []), [night.matches, evening]);
   const live = matches.filter((m) => !m.deleted);
   const rows = useMemo(() => tableOf(matches), [matches]);
-  const [tab, setTab] = useState<"tabell" | "kamper">("tabell");
+  const [tab, setTab] = useState<"tabell" | "kamper" | "sammenlign" | "statistikk">("tabell");
   const [open, setOpen] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [confirmNew, setConfirmNew] = useState(false);
@@ -81,6 +84,7 @@ export function NightScoreScreen() {
   const [undo, setUndo] = useState<string | null>(null);
   const suggestions = useSuggestions(night.matches);
   const photos = new Map(roster.map((r) => [r.name, r.photo]));
+  const hits = useHitMap();
   const openMatch = matches.find((m) => m.id === open) ?? null;
   const history = !limited && evening && groupNights(roster).some((n) => n.date === nightOf(evening.startedAt)) ? `/kveld/${nightOf(evening.startedAt)}` : null;
 
@@ -183,12 +187,18 @@ export function NightScoreScreen() {
             options={[
               { value: "tabell", label: "Tabell" },
               { value: "kamper", label: live.length > 0 ? `Kamper (${live.length})` : "Kamper" },
+              { value: "sammenlign", label: "Sammenlign" },
+              { value: "statistikk", label: "Statistikk" },
             ]}
           />
         </div>
 
         {!evening || matches.length === 0 ? (
           <EmptyState title="Ingen kamper i kveld ennå" hint="Kampene kommer inn av seg selv når de er ferdige, eller du kan legge dem inn for hånd." />
+        ) : tab === "statistikk" ? (
+          <NightStatsView matches={matches} hits={hits} photos={photos} />
+        ) : tab === "sammenlign" ? (
+          <NightCompare matches={matches} />
         ) : tab === "tabell" ? (
           <ol className="kv-table" aria-label="Tabell">
             {rows.map((r, i) => (

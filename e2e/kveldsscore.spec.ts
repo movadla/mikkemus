@@ -102,4 +102,36 @@ test.describe("Kveldsscore", () => {
     await expect(list).toContainText("Vant");
     await expect(page.getByText("1–0 · 1 poeng")).toBeVisible();
   });
+
+  test("Sammenlign viser hvem som har slått hvem", async ({ page }) => {
+    await openApp(page, "dark");
+    await playMatch(page);
+    await page.getByRole("button", { name: "Til forsiden" }).click();
+    await page.getByRole("link", { name: /Kveldsscore/ }).click();
+    await page.getByRole("radio", { name: "Sammenlign" }).click();
+    const grid = page.getByRole("table", { name: "Mot hverandre" });
+    await expect(grid.locator("tbody tr").filter({ hasText: /^Lars/ })).toContainText("1–0");
+    await expect(grid.locator("tbody tr").filter({ hasText: /^Vadla/ })).toContainText("0–1");
+  });
+
+  test("Statistikk viser utmerkelser og tall for kvelden", async ({ page }) => {
+    await openApp(page, "dark");
+    await playMatch(page);
+    await page.getByRole("button", { name: "Til forsiden" }).click();
+    await page.getByRole("link", { name: /Kveldsscore/ }).click();
+    await page.getByRole("radio", { name: "Statistikk" }).click();
+    const awards = page.getByRole("list", { name: "Utmerkelser" });
+    await expect(awards.getByRole("listitem").filter({ hasText: "Best totalt" })).toContainText("Lars");
+    await expect(awards.getByRole("listitem").filter({ hasText: "Flest 180" })).toContainText("Lars");
+    await expect(awards.getByRole("listitem").filter({ hasText: "Beste runde" })).toContainText("180");
+    await expect(awards.getByRole("listitem").filter({ hasText: "Beste utsjekk" })).toContainText("121");
+    await page.screenshot({ path: "test-results/kveldsstatistikk.png", fullPage: true });
+    // One person's evening opens from the name, and two can be set against each other.
+    await awards.getByRole("button", { name: "Lars" }).first().click();
+    await expect(page.getByRole("dialog", { name: "Lars i kveld" })).toContainText("1–0");
+    await page.getByRole("dialog", { name: "Lars i kveld" }).getByRole("button", { name: "Lukk" }).last().click();
+    const cmp = page.getByRole("table", { name: "Sammenligning" });
+    await expect(cmp).toContainText("Dueller mot hverandre");
+    await expect(cmp).toContainText("Beste runde");
+  });
 });

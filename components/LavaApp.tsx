@@ -43,6 +43,7 @@ import { GameVenue, VenueSection } from "./GameVenue";
 import { GameWho, type GameMode } from "./GameWho";
 import { SideAvatar } from "./SideAvatar";
 import { needsStart } from "@/lib/startChoice";
+import { lavaFigures, type FigureSet } from "@/lib/nightFigures";
 import { startWakeLock } from "@/lib/wakeLock";
 import { StartChoice } from "./StartChoice";
 import { SeriesPicker, SeriesSummary, seriesLine } from "./SeriesPicker";
@@ -78,6 +79,7 @@ export function LavaApp({ onExitToHome }: { onExitToHome: () => void }) {
   const [bestOf, setBestOf] = useState(1);
   /** The winners of the games of the series so far. */
   const [history, setHistory] = useState<string[]>([]);
+  const [figuresHistory, setFiguresHistory] = useState<FigureSet[]>([]);
   /** Doubles and trebles as sections of their own (under Avanserte innstillinger). */
   const [rings, setRings] = useState(false);
   const [game, setGame] = useState<LavaGame | null>(null);
@@ -159,7 +161,8 @@ export function LavaApp({ onExitToHome }: { onExitToHome: () => void }) {
       <LavaGameScreen game={game} setGame={setGame} botLevels={botLevels} photos={photos} onHome={onExitToHome} onNew={() => {
           setGame(null);
           setHistory([]);
-        }} series={bestOf > 1 ? { bestOf, history, onWin: (w) => setHistory((h) => [...h, w]), onReset: () => setHistory([]) } : undefined} />
+          setFiguresHistory([]);
+        }} series={bestOf > 1 ? { bestOf, history, figures: figuresHistory, onWin: (w, _b, f) => { setHistory((h) => [...h, w]); if (f) setFiguresHistory((x) => [...x, f]); }, onReset: () => { setHistory([]); setFiguresHistory([]); } } : undefined} />
     </GameVenue>
   );
 }
@@ -200,7 +203,7 @@ export function LavaGameScreen({
   const isBotThrower = (n: string) => isBot(n) || Object.values(game.rosters ?? {}).some((r) => r.some((m) => m.name === n && m.isBot));
   const std = series ? standing(series, game.players, winner) : null;
   const nightWinner = series ? (std?.decided ?? null) : winner;
-  useRecordNight(nightWinner, game.darts.length === 0, (id) => (career || !nightWinner ? null : lavaNight(game, nightWinner, Object.keys(botLevels), id, series && std ? { bestOf: series.bestOf, wins: std.wins } : undefined)));
+  useRecordNight(nightWinner, game.darts.length === 0, (id) => (career || !nightWinner ? null : lavaNight(game, nightWinner, Object.keys(botLevels), id, series && std ? { bestOf: series.bestOf, wins: std.wins } : undefined, series?.figures)));
   useRecordResult(career || game.rosters ? null : winner, game.darts.length === 0, (id, at) => lavaResult(game, Object.keys(botLevels), id, at));
   const rain = useMemo(() => (winner && fx.confetti ? generateConfettiRain(fx.bigConfetti ? 60 : 36) : []), [winner, fx.confetti, fx.bigConfetti]);
 
@@ -288,7 +291,7 @@ export function LavaGameScreen({
                 variant="primary"
                 size="lg"
                 onClick={() => {
-                  if (series && winner) (std?.decided ? series.onReset : () => series.onWin(winner))();
+                  if (series && winner) (std?.decided ? series.onReset : () => series.onWin(winner, undefined, lavaFigures(game)))();
                   setGame(newGame(game.lives, game.players, game.fields, game.rosters));
                 }}
               >

@@ -43,6 +43,7 @@ import { ScreenTop } from "./ScreenTop";
 import { commitPeople, commitTeams } from "./SetupScreen";
 import { SideAvatar } from "./SideAvatar";
 import { needsStart } from "@/lib/startChoice";
+import { halvitFigures, type FigureSet } from "@/lib/nightFigures";
 import { startWakeLock } from "@/lib/wakeLock";
 import { StartChoice } from "./StartChoice";
 import { StickyAction } from "./StickyAction";
@@ -64,6 +65,7 @@ export function HalvItApp({ onExitToHome }: { onExitToHome: () => void }) {
   const [bestOf, setBestOf] = useState(1);
   /** The winners of the games of the series so far. */
   const [history, setHistory] = useState<string[]>([]);
+  const [figuresHistory, setFiguresHistory] = useState<FigureSet[]>([]);
   /** Both members of a team throw in every round. */
   const [both, setBoth] = useState(false);
   const [game, setGame] = useState<HalvItGame | null>(null);
@@ -120,7 +122,8 @@ export function HalvItApp({ onExitToHome }: { onExitToHome: () => void }) {
       <HalvItGameScreen game={game} setGame={setGame} photos={photos} onHome={onExitToHome} onNew={() => {
           setGame(null);
           setHistory([]);
-        }} series={bestOf > 1 ? { bestOf, history, onWin: (w) => setHistory((h) => [...h, w]), onReset: () => setHistory([]) } : undefined} />
+          setFiguresHistory([]);
+        }} series={bestOf > 1 ? { bestOf, history, figures: figuresHistory, onWin: (w, _b, f) => { setHistory((h) => [...h, w]); if (f) setFiguresHistory((x) => [...x, f]); }, onReset: () => { setHistory([]); setFiguresHistory([]); } } : undefined} />
     </GameVenue>
   );
 }
@@ -139,7 +142,7 @@ export function HalvItGameScreen({ game, setGame, photos, onHome, onNew, series 
   const target = ROUNDS[Math.min(round, ROUNDS_IN_ALL) - 1];
   const std = series ? standing(series, game.players, winner) : null;
   const nightWinner = series ? (std?.decided ?? null) : winner;
-  useRecordNight(nightWinner, game.entries.length === 0, (id) => (nightWinner ? halvitNight(game, nightWinner, id, series && std ? { bestOf: series.bestOf, wins: std.wins } : undefined) : null));
+  useRecordNight(nightWinner, game.entries.length === 0, (id) => (nightWinner ? halvitNight(game, nightWinner, id, series && std ? { bestOf: series.bestOf, wins: std.wins } : undefined, series?.figures) : null));
   useRecordResult(game.rosters ? null : winner, game.entries.length === 0, (id, at) => halvitResult(game, id, at));
   const rain = useMemo(() => (winner && fx.confetti ? generateConfettiRain(fx.bigConfetti ? 60 : 36) : []), [winner, fx.confetti, fx.bigConfetti]);
 
@@ -223,7 +226,7 @@ export function HalvItGameScreen({ game, setGame, photos, onHome, onNew, series 
               variant="primary"
               size="lg"
               onClick={() => {
-                if (series && winner) (std?.decided ? series.onReset : () => series.onWin(winner))();
+                if (series && winner) (std?.decided ? series.onReset : () => series.onWin(winner, undefined, halvitFigures(game)))();
                 setGame(newGame(game.players, game.rosters, game.both));
               }}
             >

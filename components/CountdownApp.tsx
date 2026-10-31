@@ -52,6 +52,7 @@ import { GameVenue, VenueSection } from "./GameVenue";
 import { GameWho, type GameMode } from "./GameWho";
 import { SideAvatar } from "./SideAvatar";
 import { needsStart } from "@/lib/startChoice";
+import { countdownFigures, type FigureSet } from "@/lib/nightFigures";
 import { startWakeLock } from "@/lib/wakeLock";
 import { StartChoice } from "./StartChoice";
 import { SeriesPicker, SeriesSummary, seriesLine } from "./SeriesPicker";
@@ -87,6 +88,7 @@ export function CountdownApp({ onExitToHome }: { onExitToHome: () => void }) {
   /** Extra points for feats (180, three bulls, a checkout of 100 or more), and the feats of the games of the series so far. */
   const [bonus, setBonus] = useState<BonusSettings>(NO_BONUS);
   const [bonusHistory, setBonusHistory] = useState<NightBonus[]>([]);
+  const [figuresHistory, setFiguresHistory] = useState<FigureSet[]>([]);
   const [doubleOut, setDoubleOut] = useState(true);
   const [game, setGame] = useState<CountdownGame | null>(null);
   const [botLevels, setBotLevels] = useState<Record<string, BotLevel>>({});
@@ -162,12 +164,15 @@ export function CountdownApp({ onExitToHome }: { onExitToHome: () => void }) {
           setGame(null);
           setHistory([]);
           setBonusHistory([]);
-        }} bonus={bonus} series={bestOf > 1 ? { bestOf, history, bonus: bonusHistory, onWin: (w, b) => {
+          setFiguresHistory([]);
+        }} bonus={bonus} series={bestOf > 1 ? { bestOf, history, bonus: bonusHistory, figures: figuresHistory, onWin: (w, b, f) => {
           setHistory((h) => [...h, w]);
           setBonusHistory((x) => [...x, ...(b ?? [])]);
+          if (f) setFiguresHistory((x) => [...x, f]);
         }, onReset: () => {
           setHistory([]);
           setBonusHistory([]);
+          setFiguresHistory([]);
         } } : undefined} />
     </GameVenue>
   );
@@ -226,7 +231,7 @@ export function CountdownGameScreen({
   const isBotThrower = (n: string) => isBot(n) || Object.values(game.rosters ?? {}).some((r) => r.some((m) => m.name === n && m.isBot));
   const std = series ? standing(series, game.players, winner) : null;
   const nightWinner = series ? (std?.decided ?? null) : winner;
-  useRecordNight(nightWinner, game.turns.length === 0, (id) => (career || !nightWinner ? null : countdownNight(game, nightWinner, Object.keys(botLevels), id, series && std ? { bestOf: series.bestOf, wins: std.wins } : undefined, [...(series?.bonus ?? []), ...countdownBonuses(game, bonus)])));
+  useRecordNight(nightWinner, game.turns.length === 0, (id) => (career || !nightWinner ? null : countdownNight(game, nightWinner, Object.keys(botLevels), id, series && std ? { bestOf: series.bestOf, wins: std.wins } : undefined, [...(series?.bonus ?? []), ...countdownBonuses(game, bonus)], series?.figures)));
   useRecordResult(career || game.rosters ? null : winner, game.turns.length === 0, (id, at) => countdownResult(game, Object.keys(botLevels), id, at));
   const rain = useMemo(() => (winner && fx.confetti ? generateConfettiRain(fx.bigConfetti ? 60 : 36) : []), [winner, fx.confetti, fx.bigConfetti]);
 
@@ -371,7 +376,7 @@ export function CountdownGameScreen({
                 variant="primary"
                 size="lg"
                 onClick={() => {
-                  if (series && winner) (std?.decided ? series.onReset : () => series.onWin(winner, countdownBonuses(game, bonus)))();
+                  if (series && winner) (std?.decided ? series.onReset : () => series.onWin(winner, countdownBonuses(game, bonus), countdownFigures(game, winner)))();
                   setGame(newGame(game.start, game.doubleOut, game.players, game.starts, game.rosters));
                 }}
               >
