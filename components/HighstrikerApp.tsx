@@ -12,6 +12,7 @@ import { highstrikerResult } from "@/lib/gameResults";
 import { useRecordResult } from "@/lib/gameResultsStorage";
 import { highstrikerNight } from "@/lib/nightGames";
 import { useRecordNight } from "@/lib/nightScoreStorage";
+import { useAutostart, type PlanLink, type PlanSetup } from "@/lib/nightPlan";
 import { haptics } from "@/lib/haptics";
 import { towerScale, towerShare } from "@/lib/roundTier";
 import {
@@ -88,14 +89,15 @@ function Stairs({ game, height = "4rem", count = 6 }: { game: HighstrikerGame; h
  * Highstriker: three lives each, and every round has to be more than the round before. Written in the same way as 301 and 501, and it
  * says in big numbers what the round has to be. A life that goes breaks in front of everyone; the last one standing wins.
  */
-export function HighstrikerApp({ onExitToHome }: { onExitToHome: () => void }) {
-  const [people, setPeople] = useState<Person[]>([]);
-  const [mode, setMode] = useState<GameMode>("individual");
-  const [teams, setTeams] = useState<PickedTeam[]>([]);
-  const [advanced, setAdvanced] = useState(false);
-  const [lives, setLives] = useState(DEFAULT_LIVES);
+export function HighstrikerApp({ onExitToHome, plan }: { onExitToHome: () => void; plan?: PlanLink }) {
+  const init = plan?.setup as PlanSetup | undefined;
+  const [people, setPeople] = useState<Person[]>(init?.people ?? []);
+  const [mode, setMode] = useState<GameMode>(init?.mode ?? "individual");
+  const [teams, setTeams] = useState<PickedTeam[]>(init?.teams ?? []);
+  const [advanced, setAdvanced] = useState(init?.advanced ?? false);
+  const [lives, setLives] = useState(init?.lives ?? DEFAULT_LIVES);
   /** Best av x: 1 is one game. */
-  const [bestOf, setBestOf] = useState(1);
+  const [bestOf, setBestOf] = useState(init?.bestOf ?? 1);
   /** The winners of the games of the series so far. */
   const [history, setHistory] = useState<string[]>([]);
   const [figuresHistory, setFiguresHistory] = useState<FigureSet[]>([]);
@@ -104,8 +106,25 @@ export function HighstrikerApp({ onExitToHome }: { onExitToHome: () => void }) {
   const photos = new Map(useRoster().map((r) => [r.name, r.photo]));
   const [venue, setVenue] = useGameVenue("highstriker");
 
+  const problem = (mode === "team" ? teamSetupProblem(teams, true, 2) : people.length > 0 && people.every((p) => p.isBot) ? "Velg minst én spiller" : individualSetupProblem(people.map((p) => p.name), false, 2)) || null;
+  const begin = () => {
+    if (mode === "team") {
+      // A team has its lives together, and its members throw a round each, in turn.
+      commitTeams(teams);
+      setBotLevels({});
+      setGame(newGame(lives, teams.map((t) => t.name), rostersOf(teams)));
+      return;
+    }
+    commitPeople(people);
+    const split = splitPeople(people);
+    setBotLevels(split.botLevels);
+    setGame(newGame(lives, split.players));
+  };
+  const summary = setupSummary([mode === "team" ? `${teams.length} lag` : `${people.length} spillere`, `${lives} liv`]);
+  const press = () => (plan?.planning ? plan.onPlan({ mode, people, teams, advanced, bestOf, lives }, summary) : begin());
+  useAutostart(plan?.autostart, !problem, begin);
+
   if (!game) {
-    const problem = (mode === "team" ? teamSetupProblem(teams, true, 2) : people.length > 0 && people.every((p) => p.isBot) ? "Velg minst én spiller" : individualSetupProblem(people.map((p) => p.name), false, 2)) || null;
     return (
       <div className="animate-screen-push screen has-sticky-action">
         <div className="screen-inner">
@@ -147,24 +166,12 @@ export function HighstrikerApp({ onExitToHome }: { onExitToHome: () => void }) {
           )}
           <VenueSection value={venue} onChange={setVenue} />
           <StickyAction
-            onClick={() => {
-              if (mode === "team") {
-                // A team has its lives together, and its members throw a round each, in turn.
-                commitTeams(teams);
-                setBotLevels({});
-                setGame(newGame(lives, teams.map((t) => t.name), rostersOf(teams)));
-                return;
-              }
-              commitPeople(people);
-              const split = splitPeople(people);
-              setBotLevels(split.botLevels);
-              setGame(newGame(lives, split.players));
-            }}
+            onClick={press}
             ready={!problem}
-            summary={setupSummary([mode === "team" ? `${teams.length} lag` : `${people.length} spillere`, `${lives} liv`])}
+            summary={summary}
             reason={problem}
           >
-            Start kampen
+            {plan?.planning ? "Legg i planen" : "Start kampen"}
           </StickyAction>
         </div>
       </div>

@@ -15,6 +15,7 @@ import { countdownResult } from "@/lib/gameResults";
 import { useRecordResult } from "@/lib/gameResultsStorage";
 import { countdownNight } from "@/lib/nightGames";
 import { useRecordNight } from "@/lib/nightScoreStorage";
+import { useAutostart, type PlanLink, type PlanSetup } from "@/lib/nightPlan";
 import { tierOf } from "@/lib/roundTier";
 import {
   DARTS_PER_ROUND,
@@ -78,28 +79,46 @@ const oneDecimal = (n: number) => n.toFixed(1).replace(".", ",");
  * round is written in on a keypad, and one that can only be what it says (19 and up) goes in by itself, with nothing to confirm. When a
  * round takes someone to nothing they say how many darts the last round took, so the average of three darts is right.
  */
-export function CountdownApp({ onExitToHome }: { onExitToHome: () => void }) {
-  const [people, setPeople] = useState<Person[]>([]);
-  const [mode, setMode] = useState<GameMode>("individual");
-  const [teams, setTeams] = useState<PickedTeam[]>([]);
-  const [start, setStart] = useState<CountdownStart>(501);
-  const [advanced, setAdvanced] = useState(false);
+export function CountdownApp({ onExitToHome, plan }: { onExitToHome: () => void; plan?: PlanLink }) {
+  const init = plan?.setup as PlanSetup | undefined;
+  const [people, setPeople] = useState<Person[]>(init?.people ?? []);
+  const [mode, setMode] = useState<GameMode>(init?.mode ?? "individual");
+  const [teams, setTeams] = useState<PickedTeam[]>(init?.teams ?? []);
+  const [start, setStart] = useState<CountdownStart>(init?.start ?? 501);
+  const [advanced, setAdvanced] = useState(init?.advanced ?? false);
   /** Best av x: 1 is one game. */
-  const [bestOf, setBestOf] = useState(1);
+  const [bestOf, setBestOf] = useState(init?.bestOf ?? 1);
   /** The winners of the games of the series so far. */
   const [history, setHistory] = useState<string[]>([]);
   /** Extra points for feats (180, three bulls, a checkout of 100 or more), and the feats of the games of the series so far. */
-  const [bonus, setBonus] = useState<BonusSettings>(NO_BONUS);
+  const [bonus, setBonus] = useState<BonusSettings>(init?.bonus ?? NO_BONUS);
   const [bonusHistory, setBonusHistory] = useState<NightBonus[]>([]);
   const [figuresHistory, setFiguresHistory] = useState<FigureSet[]>([]);
-  const [doubleOut, setDoubleOut] = useState(true);
+  const [doubleOut, setDoubleOut] = useState(init?.doubleOut ?? true);
   const [game, setGame] = useState<CountdownGame | null>(null);
   const [botLevels, setBotLevels] = useState<Record<string, BotLevel>>({});
   const photos = new Map(useRoster().map((r) => [r.name, r.photo]));
   const [venue, setVenue] = useGameVenue("countdown");
 
+  const problem = (mode === "team" ? teamSetupProblem(teams, true, 2) : people.length > 0 && people.every((p) => p.isBot) ? "Velg minst én spiller" : individualSetupProblem(people.map((p) => p.name), false)) || null;
+  const begin = () => {
+    if (mode === "team") {
+      // A team has one score, and its members throw a round each, in turn: a bot among them throws its own round.
+      commitTeams(teams);
+      setBotLevels({});
+      setGame(newGame(start, doubleOut, teams.map((t) => t.name), undefined, rostersOf(teams)));
+      return;
+    }
+    commitPeople(people);
+    const split = splitPeople(people);
+    setBotLevels(split.botLevels);
+    setGame(newGame(start, doubleOut, split.players));
+  };
+  const summary = setupSummary([mode === "team" ? `${teams.length} lag` : `${people.length} ${people.length === 1 ? "spiller" : "spillere"}`, String(start)]);
+  const press = () => (plan?.planning ? plan.onPlan({ mode, people, teams, advanced, bestOf, start, bonus, doubleOut }, summary) : begin());
+  useAutostart(plan?.autostart, !problem, begin);
+
   if (!game) {
-    const problem = (mode === "team" ? teamSetupProblem(teams, true, 2) : people.length > 0 && people.every((p) => p.isBot) ? "Velg minst én spiller" : individualSetupProblem(people.map((p) => p.name), false)) || null;
     return (
       <div className="animate-screen-push screen has-sticky-action">
         <div className="screen-inner">
@@ -137,24 +156,12 @@ export function CountdownApp({ onExitToHome }: { onExitToHome: () => void }) {
           </div>
           <VenueSection value={venue} onChange={setVenue} />
           <StickyAction
-            onClick={() => {
-              if (mode === "team") {
-                // A team has one score, and its members throw a round each, in turn: a bot among them throws its own round.
-                commitTeams(teams);
-                setBotLevels({});
-                setGame(newGame(start, doubleOut, teams.map((t) => t.name), undefined, rostersOf(teams)));
-                return;
-              }
-              commitPeople(people);
-              const split = splitPeople(people);
-              setBotLevels(split.botLevels);
-              setGame(newGame(start, doubleOut, split.players));
-            }}
+            onClick={press}
             ready={!problem}
-            summary={setupSummary([mode === "team" ? `${teams.length} lag` : `${people.length} ${people.length === 1 ? "spiller" : "spillere"}`, String(start)])}
+            summary={summary}
             reason={problem}
           >
-            Start kampen
+            {plan?.planning ? "Legg i planen" : "Start kampen"}
           </StickyAction>
         </div>
       </div>

@@ -1,8 +1,11 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAccess } from "@/lib/access";
-import { loadActiveMatch } from "@/lib/activeMatch";
+import { clearActiveMatch, loadActiveMatch } from "@/lib/activeMatch";
+import { getPlanSession, setPlanSession, whoOf, type PlanGame, type PlanLink, type PlanSession, type PlannedMatch } from "@/lib/nightPlan";
+import { addPlanned, changePlanned } from "@/lib/nightScoreStorage";
 import { useNavSpace } from "@/lib/navSpace";
 import { finishSpotifyLogin } from "@/lib/spotify";
 import { preloadRoster, useRoster, useRosterLoaded } from "@/lib/storage";
@@ -44,6 +47,10 @@ type Mode = "home" | "single" | "tournament" | "bullduel" | "countdown" | "highs
 
 const TOURNAMENTS_OFFERED = true;
 
+/** The way into each game of the plan. */
+const MODE_OF: Record<PlanGame, Mode> = { enkeltkamp: "single", countdown: "countdown", highstriker: "highstriker", lava: "lava", halvit: "halvit", killer: "killer" };
+const newId = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`);
+
 /** A way in to a kind of game: its icon above its name, or beside it when it has the whole row to itself. */
 function Tile({ icon, label, onClick, wide = false, expanded, controls }: { icon: React.ReactNode; label: string; onClick: () => void; wide?: boolean; expanded?: boolean; controls?: string }) {
   return (
@@ -72,6 +79,9 @@ export function AppRoot() {
   const [showRules, setShowRules] = useState(false);
   // The other games (301 / 501, Highstriker, Lava and what comes) are under one tile, opened on request.
   const [moreOpen, setMoreOpen] = useState(false);
+  // A game opened from the plan of the evening (Kveldsplan): to put a match in the plan, to change one, or to play the next.
+  const [plan, setPlan] = useState<PlanSession | null>(null);
+  const router = useRouter();
   const [welcomed, setWelcomed] = useState(true);
   const loaded = useRosterLoaded();
   // Only connected while the home screen itself is showing — MikkeMusApp/TournamentApp own their
@@ -99,6 +109,21 @@ export function AppRoot() {
     window.history.replaceState({}, "", "/");
     if (m === "turnering") setMode("tournament");
     if (m === "regler") setShowRules(true);
+  }, []);
+
+  // Sent here by the plan: /?plan, with what the plan asked for kept in the plan session. Any other way here ends the session, so that a match
+  // played later is not counted as the planned one.
+  useEffect(() => {
+    const asked = new URLSearchParams(window.location.search).has("plan");
+    const session = asked ? getPlanSession() : null;
+    if (!session) {
+      setPlanSession(null);
+      return;
+    }
+    // The address is left as it is: this runs twice in development, and the second time must still find what the plan asked for.
+    if (session.kind === "play" && session.game === "enkeltkamp") clearActiveMatch();
+    setPlan(session);
+    setMode(MODE_OF[session.game]);
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
 
@@ -130,14 +155,37 @@ export function AppRoot() {
     );
   }
   if (showRules) return <RulesIntro onDone={() => setShowRules(false)} />;
-  if (mode === "single") return <MikkeMusApp onExitToHome={() => setMode("home")} />;
+  // Out of a game: to the plan when it was opened from there, otherwise to the front page.
+  const leave = () => {
+    if (plan) {
+      setPlanSession(null);
+      setPlan(null);
+      router.push("/kveld");
+      return;
+    }
+    setMode("home");
+  };
+  const link: PlanLink | undefined = plan
+    ? {
+        setup: plan.setup,
+        planning: plan.kind !== "play",
+        autostart: plan.kind === "play",
+        onPlan: (setup, label) => {
+          const item: PlannedMatch = { id: plan.plannedId ?? newId(), game: plan.game, setup, who: whoOf(setup), label };
+          if (plan.kind === "edit") changePlanned(plan.eveningId, item.id, { setup, who: item.who, label });
+          else addPlanned(plan.eveningId, item);
+          leave();
+        },
+      }
+    : undefined;
+  if (mode === "single") return <MikkeMusApp onExitToHome={leave} plan={link} />;
   if (mode === "tournament") return <TournamentApp onExitToHome={() => setMode("home")} />;
   if (mode === "bullduel") return <BullDuelApp onExitToHome={() => setMode("home")} />;
-  if (mode === "lava") return <LavaApp onExitToHome={() => setMode("home")} />;
-  if (mode === "killer") return <KillerApp onExitToHome={() => setMode("home")} />;
-  if (mode === "halvit") return <HalvItApp onExitToHome={() => setMode("home")} />;
-  if (mode === "highstriker") return <HighstrikerApp onExitToHome={() => setMode("home")} />;
-  if (mode === "countdown") return <CountdownApp onExitToHome={() => setMode("home")} />;
+  if (mode === "lava") return <LavaApp onExitToHome={leave} plan={link} />;
+  if (mode === "killer") return <KillerApp onExitToHome={leave} plan={link} />;
+  if (mode === "halvit") return <HalvItApp onExitToHome={leave} plan={link} />;
+  if (mode === "highstriker") return <HighstrikerApp onExitToHome={leave} plan={link} />;
+  if (mode === "countdown") return <CountdownApp onExitToHome={leave} plan={link} />;
   if (mode === "career" && !limited) return <CareerApp onExitToHome={() => setMode("home")} />;
 
   // Tournaments and the other games are open to the limited code too; Karriere is for the full code only.
@@ -180,7 +228,15 @@ export function AppRoot() {
           )}
         </section>
 
-        <NightStripe />
+        <NightStripe
+          onNext={(eveningId, p) => {
+            const session: PlanSession = { kind: "play", eveningId, game: p.game, plannedId: p.id, setup: p.setup };
+            setPlanSession(session);
+            if (p.game === "enkeltkamp") clearActiveMatch();
+            setPlan(session);
+            setMode(MODE_OF[p.game]);
+          }}
+        />
 
         {/* The hero is already Enkeltkamp when nothing is under way, so its tile is only there when the hero is something else. */}
         {/* One tile has the whole row, as it should look; two or three share it. */}

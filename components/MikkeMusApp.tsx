@@ -32,6 +32,7 @@ import { finishState } from "@/lib/finishState";
 import { computeOddsOffThread } from "@/lib/odds/client";
 import { saveMatchArchive } from "@/lib/matchArchive";
 import { recordNightMatch } from "@/lib/nightScoreStorage";
+import type { PlanLink } from "@/lib/nightPlan";
 import { mikkeBull3 } from "@/lib/bonus";
 import type { OddsMatch } from "@/lib/odds/match";
 import { fairPrice } from "@/lib/bet/ledger";
@@ -213,6 +214,8 @@ type MikkeMusAppProps = {
    *  and into aborting a tournament match (which would otherwise strand the player on the generic,
    *  disconnected SetupScreen instead of back where they actually came from). */
   onExitToHome?: () => void;
+  /** Opened from the plan of the evening (Kveldsplan): its setup is the starting point, and the setup screen is for the plan or starts by itself. */
+  plan?: PlanLink;
 };
 
 const RESULT_WRITTEN_KEY = "mikke-mus-result-written";
@@ -232,7 +235,7 @@ function markResultWritten(matchId: string): void {
   }
 }
 
-export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRosters, initialVariant, onMatchComplete, onExitToHome }: MikkeMusAppProps = {}) {
+export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRosters, initialVariant, onMatchComplete, onExitToHome, plan }: MikkeMusAppProps = {}) {
   const [screen, setScreen] = useState<Screen>("setup");
   // How much happens on screen — see lib/fxLevel.ts. Read as a React value here for what the
   // render decides; the handlers read getFxLevel() fresh instead, so a change takes effect on
@@ -445,7 +448,9 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   // are excluded from finalizeMatch's persistence calls (see there).
   const [botLevels, setBotLevels] = useState<Record<string, BotLevel>>({});
   // The setup as it was when the match started: coming back from the match (Avslutt kamp) lands on it again, instead of an empty one.
-  const [setupDraft, setSetupDraft] = useState<SetupDraft | undefined>(undefined);
+  const [setupDraft, setSetupDraft] = useState<SetupDraft | undefined>(plan?.setup as SetupDraft | undefined);
+  // From «Neste» the match starts by itself, once: coming back to the setup does not start it again.
+  const [planAutostart, setPlanAutostart] = useState(plan?.autostart ?? false);
   // Per-team roster, set once at startGame — absent entirely for individual (non-team) matches.
   const [teamRosters, setTeamRosters] = useState<Record<string, TeamMember[]>>({});
   // One-off guests, set once at startGame from SetupScreen's picks — never ensurePlayer'd and,
@@ -2834,7 +2839,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     // takes effect, so keep it as a harmless fallback rather than special-casing it away.
     return (
       <>
-        <SetupScreen draft={setupDraft} onDraft={setSetupDraft} onStart={startGame} onHome={onExitToHome} scolia={summarizeScolia(scolia.state)} />
+        <SetupScreen draft={setupDraft} onDraft={setSetupDraft} plan={plan ? { ...plan, autostart: planAutostart } : undefined} onAutostarted={() => setPlanAutostart(false)} onStart={startGame} onHome={onExitToHome} scolia={summarizeScolia(scolia.state)} />
       </>
     );
   }

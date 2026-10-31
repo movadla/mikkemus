@@ -9,6 +9,7 @@ import { useGameVenue } from "@/lib/gameVenue";
 import { useRecordResult } from "@/lib/gameResultsStorage";
 import { halvitNight } from "@/lib/nightGames";
 import { useRecordNight } from "@/lib/nightScoreStorage";
+import { useAutostart, type PlanLink, type PlanSetup } from "@/lib/nightPlan";
 import {
   BULL_VALUES,
   ROUNDS,
@@ -57,24 +58,38 @@ import { FOCUS_RING } from "./ui/focus";
  * Halv It: ten rounds with a target each. Hit it and the points go on the score; miss it and the whole score is halved. Written in the way of the other
  * games for the rounds that have a sum, with a large Bom; the rounds that are a yes or a no are two large buttons. Alone, against each other, or as teams.
  */
-export function HalvItApp({ onExitToHome }: { onExitToHome: () => void }) {
-  const [people, setPeople] = useState<Person[]>([]);
-  const [mode, setMode] = useState<GameMode>("individual");
-  const [teams, setTeams] = useState<PickedTeam[]>([]);
-  const [advanced, setAdvanced] = useState(false);
+export function HalvItApp({ onExitToHome, plan }: { onExitToHome: () => void; plan?: PlanLink }) {
+  const init = plan?.setup as PlanSetup | undefined;
+  const [people, setPeople] = useState<Person[]>(init?.people ?? []);
+  const [mode, setMode] = useState<GameMode>(init?.mode ?? "individual");
+  const [teams, setTeams] = useState<PickedTeam[]>(init?.teams ?? []);
+  const [advanced, setAdvanced] = useState(init?.advanced ?? false);
   /** Best av x: 1 is one game. */
-  const [bestOf, setBestOf] = useState(1);
+  const [bestOf, setBestOf] = useState(init?.bestOf ?? 1);
   /** The winners of the games of the series so far. */
   const [history, setHistory] = useState<string[]>([]);
   const [figuresHistory, setFiguresHistory] = useState<FigureSet[]>([]);
   /** Both members of a team throw in every round. */
-  const [both, setBoth] = useState(false);
+  const [both, setBoth] = useState(init?.both ?? false);
   const [game, setGame] = useState<HalvItGame | null>(null);
   const photos = new Map(useRoster().map((r) => [r.name, r.photo]));
   const [venue, setVenue] = useGameVenue("halvit");
 
+  const problem = (mode === "team" ? teamSetupProblem(teams, false, 1) : individualSetupProblem(people.map((p) => p.name), false, 1)) || null;
+  const begin = () => {
+    if (mode === "team") {
+      commitTeams(teams);
+      setGame(newGame(teams.map((t) => t.name), rostersOf(teams), both));
+      return;
+    }
+    commitPeople(people);
+    setGame(newGame(splitPeople(people).players));
+  };
+  const summary = setupSummary([mode === "team" ? `${teams.length} lag` : `${people.length} ${people.length === 1 ? "spiller" : "spillere"}`, "10 runder"]);
+  const press = () => (plan?.planning ? plan.onPlan({ mode, people, teams, advanced, bestOf, both }, summary) : begin());
+  useAutostart(plan?.autostart, !problem, begin);
+
   if (!game) {
-    const problem = (mode === "team" ? teamSetupProblem(teams, false, 1) : individualSetupProblem(people.map((p) => p.name), false, 1)) || null;
     return (
       <div className="animate-screen-push screen has-sticky-action">
         <div className="screen-inner">
@@ -98,20 +113,12 @@ export function HalvItApp({ onExitToHome }: { onExitToHome: () => void }) {
           </div>
           <VenueSection value={venue} onChange={setVenue} />
           <StickyAction
-            onClick={() => {
-              if (mode === "team") {
-                commitTeams(teams);
-                setGame(newGame(teams.map((t) => t.name), rostersOf(teams), both));
-                return;
-              }
-              commitPeople(people);
-              setGame(newGame(splitPeople(people).players));
-            }}
+            onClick={press}
             ready={!problem}
-            summary={setupSummary([mode === "team" ? `${teams.length} lag` : `${people.length} ${people.length === 1 ? "spiller" : "spillere"}`, "10 runder"])}
+            summary={summary}
             reason={problem}
           >
-            Start kampen
+            {plan?.planning ? "Legg i planen" : "Start kampen"}
           </StickyAction>
         </div>
       </div>

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useSyncExternalStore } from "react";
 import type { Evening, NightMatch } from "./nightScore";
+import { activePlanned, moved, type PlannedMatch } from "./nightPlan";
 import { supabase } from "./supabaseClient";
 
 /**
@@ -128,6 +129,9 @@ export function useNightScore(): NightSnapshot {
   return useSyncExternalStore(subscribe, () => snap, () => EMPTY);
 }
 
+/** What is written down right now, for code that is not a component (and for the tests). */
+export const nightSnapshot = (): NightSnapshot => snap;
+
 /** The evening that is on: the one that began last. */
 export const currentEvening = (s: NightSnapshot): Evening | null => [...s.evenings].sort((a, b) => b.startedAt.localeCompare(a.startedAt))[0] ?? null;
 
@@ -139,9 +143,9 @@ async function write(kind: "evening" | "match", id: string, at: string, data: Ev
 }
 
 /** A new evening begins now: the matches from here on belong to it. */
-export function startNewEvening(): void {
+export function startNewEvening(opts: { plan?: boolean } = {}): void {
   whenLoaded(() => {
-    const e: Evening = { id: newId(), startedAt: new Date().toISOString() };
+    const e: Evening = { id: newId(), startedAt: new Date().toISOString(), ...(opts.plan ? { plan: [] } : {}) };
     set({ evenings: [e, ...snap.evenings] });
     void write("evening", e.id, e.startedAt, e);
   });
@@ -150,10 +154,16 @@ export function startNewEvening(): void {
 export type NewNightMatch = Omit<NightMatch, "evening" | "at"> & { at?: string };
 
 /** Writes a match into the evening that is on (an evening is begun if there is none). The same id is only written once. */
-export function recordNightMatch(input: NewNightMatch): void {
+export function recordNightMatch(input: NewNightMatch, opts: { force?: boolean } = {}): void {
   whenLoaded(() => {
     if (snap.matches.some((m) => m.id === input.id)) return;
-    let evening = currentEvening(snap);
+    const planned = input.planned ?? activePlanned() ?? undefined;
+    const now = currentEvening(snap);
+    // An evening with a plan counts the matches played from it, and what is put in by hand: nothing else. A planned match counts once.
+    if (now?.plan && !planned && !opts.force) return;
+    if (planned && snap.matches.some((m) => m.planned === planned && !m.deleted)) return;
+    input = planned ? { ...input, planned } : input;
+    let evening = now;
     if (!evening) {
       evening = { id: newId(), startedAt: input.at ?? new Date().toISOString() };
       set({ evenings: [evening, ...snap.evenings] });
@@ -165,6 +175,20 @@ export function recordNightMatch(input: NewNightMatch): void {
     void write("match", m.id, m.at, m);
   });
 }
+
+/** Changes the plan of an evening: what the evening has planned, in the order it is played. */
+function setPlan(eveningId: string, change: (plan: PlannedMatch[]) => PlannedMatch[]): void {
+  const e = snap.evenings.find((x) => x.id === eveningId);
+  if (!e) return;
+  const next: Evening = { ...e, plan: change(e.plan ?? []) };
+  set({ evenings: snap.evenings.map((x) => (x.id === eveningId ? next : x)) });
+  void write("evening", next.id, next.startedAt, next);
+}
+
+export const addPlanned = (eveningId: string, p: PlannedMatch): void => setPlan(eveningId, (plan) => [...plan, p]);
+export const changePlanned = (eveningId: string, id: string, patch: Partial<PlannedMatch>): void => setPlan(eveningId, (plan) => plan.map((p) => (p.id === id ? { ...p, ...patch } : p)));
+export const removePlanned = (eveningId: string, id: string): void => setPlan(eveningId, (plan) => plan.filter((p) => p.id !== id));
+export const movePlanned = (eveningId: string, id: string, by: number): void => setPlan(eveningId, (plan) => moved(plan, plan.findIndex((p) => p.id === id), by));
 
 /** Changes a match: an override, or taking it out of the evening and putting it back. */
 export function updateNightMatch(id: string, patch: Partial<NightMatch>): void {

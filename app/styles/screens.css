@@ -1932,3 +1932,4 @@ html[data-fx="normal"] .hs-hit { animation: hs-shake 520ms ease-in-out both; }
 .ns-compare-row span { font-weight: 700; }
 .ns-compare-duel { background: var(--color-cell); }
 .ns-better { color: var(--color-teal); }
+.kv-line--played { opacity: 0.6; }

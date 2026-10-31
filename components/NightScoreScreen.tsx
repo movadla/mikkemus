@@ -29,8 +29,10 @@ import { useHitMap } from "@/lib/nightHits";
 import { useRoster } from "@/lib/storage";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { NightCompare } from "./NightCompare";
+import { NightPlanView } from "./NightPlanView";
 import { NightStatsView } from "./NightStatsView";
 import { GameWho, type GameMode } from "./GameWho";
+import { isPlayed } from "@/lib/nightPlan";
 import { PlusIcon } from "./icons";
 import { ScreenTop } from "./ScreenTop";
 import { Avatar } from "./ui/Avatar";
@@ -75,7 +77,11 @@ export function NightScoreScreen() {
   const matches = useMemo(() => (evening ? matchesOf(night.matches, evening.id) : []), [night.matches, evening]);
   const live = matches.filter((m) => !m.deleted);
   const rows = useMemo(() => tableOf(matches), [matches]);
-  const [tab, setTab] = useState<"tabell" | "kamper" | "sammenlign" | "statistikk">("tabell");
+  // An evening with a plan opens on the plan.
+  const [chosenTab, setTab] = useState<"plan" | "tabell" | "kamper" | "sammenlign" | "statistikk" | null>(null);
+  const planned = evening?.plan;
+  const tab = chosenTab === "plan" && !planned ? "tabell" : (chosenTab ?? (planned ? "plan" : "tabell"));
+  const toPlay = planned ? planned.filter((p) => !isPlayed(p, matches)).length : 0;
   const [open, setOpen] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [confirmNew, setConfirmNew] = useState(false);
@@ -95,6 +101,13 @@ export function NightScoreScreen() {
     return () => clearTimeout(t);
   }, [undo]);
 
+  // A new evening starts empty, on its plan: the matches are set up there, in advance.
+  function newEvening() {
+    setChosen(null);
+    setTab("plan");
+    startNewEvening({ plan: true });
+  }
+
   const index = evening ? evenings.findIndex((e) => e.id === evening.id) : -1;
   const step = (d: number) => {
     const next = evenings[index + d];
@@ -109,8 +122,8 @@ export function NightScoreScreen() {
           backHref="/mer"
           sub={evening ? `${dayLabel(evening.startedAt)} · fra ${timeLabel(evening.startedAt)}` : undefined}
           right={
-            isCurrent && live.length > 0 ? (
-              <button type="button" onClick={() => setConfirmNew(true)} className={`tactile px-3 rounded-lg ${FOCUS_RING}`} style={{ minHeight: "var(--control)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)", fontSize: "var(--text-small)", fontWeight: 700 }}>
+            isCurrent || !evening ? (
+              <button type="button" onClick={() => (live.length > 0 || (planned?.length ?? 0) > 0 ? setConfirmNew(true) : newEvening())} className={`tactile px-3 rounded-lg ${FOCUS_RING}`} style={{ minHeight: "var(--control)", background: "var(--color-surface)", color: "var(--color-cream)", border: "1px solid var(--color-border)", fontSize: "var(--text-small)", fontWeight: 700 }}>
                 Ny kveld
               </button>
             ) : undefined
@@ -118,15 +131,14 @@ export function NightScoreScreen() {
         />
         {confirmNew && (
           <ConfirmDialog
-            message="Starte en ny kveld? Kampene så langt blir liggende på denne kvelden."
+            message="Starte en ny kveld? Kampene og planen så langt blir liggende på denne kvelden."
             buttons={[
               { label: "Behold denne", onClick: () => setConfirmNew(false), background: "var(--color-green)" },
               {
                 label: "Ny kveld",
                 onClick: () => {
                   setConfirmNew(false);
-                  setChosen(null);
-                  startNewEvening();
+                  newEvening();
                 },
                 background: "var(--color-teal)",
                 color: "var(--color-bg)",
@@ -165,13 +177,13 @@ export function NightScoreScreen() {
           </div>
         )}
 
-        {isCurrent && live.length === 0 && suggestions.length > 0 && (
+        {isCurrent && !planned && live.length === 0 && suggestions.length > 0 && (
           <div className="kv-suggest" role="region" aria-label="Kamper fra i kveld">
             <p>
               <b>{suggestions.length === 1 ? "1 kamp" : `${suggestions.length} kamper`}</b> er allerede spilt i kveld. Skal de være med?
             </p>
             <div className="flex gap-2">
-              <Button variant="primary" onClick={() => suggestions.forEach((s) => recordNightMatch(s))}>
+              <Button variant="primary" onClick={() => suggestions.forEach((s) => recordNightMatch(s, { force: true }))}>
                 Legg til {suggestions.length === 1 ? "kampen" : "alle"}
               </Button>
             </div>
@@ -185,6 +197,7 @@ export function NightScoreScreen() {
             label="Kveldsscore"
             fit
             options={[
+              ...(planned ? [{ value: "plan" as const, label: toPlay > 0 ? `Plan (${toPlay})` : "Plan" }] : []),
               { value: "tabell", label: "Tabell" },
               { value: "kamper", label: live.length > 0 ? `Kamper (${live.length})` : "Kamper" },
               { value: "sammenlign", label: "Sammenlign" },
@@ -193,8 +206,10 @@ export function NightScoreScreen() {
           />
         </div>
 
-        {!evening || matches.length === 0 ? (
-          <EmptyState title="Ingen kamper i kveld ennå" hint="Kampene kommer inn av seg selv når de er ferdige, eller du kan legge dem inn for hånd." />
+        {tab === "plan" && evening && planned ? (
+          <NightPlanView evening={evening} matches={matches} />
+        ) : !evening || matches.length === 0 ? (
+          <EmptyState title="Ingen kamper i kveld ennå" hint={planned ? "Kampene i planen kommer inn når de er spilt." : "Trykk «Ny kveld» for å sette opp kampene i forkant, eller legg dem inn for hånd."} />
         ) : tab === "statistikk" ? (
           <NightStatsView matches={matches} hits={hits} photos={photos} />
         ) : tab === "sammenlign" ? (
@@ -319,7 +334,7 @@ const RULES: { title: string; text: string }[] = [
   { title: "Best av x", text: "Spilles det en serie (best av 3, 5 eller 7), er hele serien én kamp. Den som vinner flest spill først vinner serien og får poenget." },
   { title: "Ekstrapoeng", text: "Er ekstrapoeng slått på under Avanserte innstillinger, gir 180, tre i bull og utsjekk på 100 eller mer ett poeng mer til den som gjorde det, uansett hvem som vant." },
   { title: "Hvilke kamper", text: "Bare kamper der alle er mennesker teller. Kamper mot boter kommer ikke med." },
-  { title: "Kvelden", text: "En kveld varer til du trykker «Ny kveld». Kampene kommer inn av seg selv når de er ferdige, i alle spill." },
+  { title: "Kvelden", text: "En kveld varer til du trykker «Ny kveld». Under Plan setter du opp kampene i forkant, med innstillingene, og trykker bare Neste. Kampene i planen kommer inn av seg selv når de er ferdige. Utenfor planen telles bare det du legger inn for hånd." },
   { title: "Rette og slette", text: "Du kan overstyre vinneren (eller velge uavgjort), legge inn en kamp for hånd og slette en kamp eller hele kvelden. Det rører ikke statistikken til spillerne." },
 ];
 
@@ -428,7 +443,7 @@ function AddMatchSheet({ onClose }: { onClose: () => void }) {
         disabled={!ready}
         onClick={() => {
           if (!chosen) return;
-          recordNightMatch({ id: newId(), game, sides, placements: placementsFor({ sides }, chosen), manual: true });
+          recordNightMatch({ id: newId(), game, sides, placements: placementsFor({ sides }, chosen), manual: true }, { force: true });
           onClose();
         }}
       >

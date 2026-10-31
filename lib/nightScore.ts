@@ -9,6 +9,7 @@
 import type { Feat, NightBonus } from "./bonus";
 import { FEAT_NAMES } from "./bonus";
 import type { FigureSet } from "./nightFigures";
+import type { PlannedMatch } from "./nightPlan";
 
 export type NightGame = "enkeltkamp" | "turnering" | "bullduel" | "301" | "501" | "highstriker" | "lava" | "halvit" | "killer" | "annet";
 
@@ -57,11 +58,14 @@ export type NightMatch = {
   figures?: FigureSet;
   /** The match is a series (best of 3, say): what each side won, and how long it was. The series is one match in the evening, and its winner gets the point. */
   series?: { bestOf: number; wins: Record<string, number> };
+  /** The planned match (Kveldsplan) this match was played as. */
+  planned?: string;
   /** Where the match can be opened from: a match page, a tournament. */
   source?: { kind: "match"; id: string } | { kind: "tournament"; id: string } | { kind: "game"; id: string };
 };
 
-export type Evening = { id: string; startedAt: string };
+/** An evening: when it began, and (for one set up in advance) its plan. An evening with a plan counts only the matches played from it. */
+export type Evening = { id: string; startedAt: string; plan?: PlannedMatch[] };
 
 /** The places that give points in a match of three or more sides. */
 export const PLACE_POINTS = [3, 2, 1];

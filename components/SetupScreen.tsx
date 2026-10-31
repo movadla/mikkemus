@@ -20,6 +20,7 @@ import { StickyAction } from "./StickyAction";
 import { TeamPicker } from "./TeamPicker";
 import { Segmented } from "./ui/Segmented";
 import { SwitchRow } from "./ui/Switch";
+import { useAutostart, type PlanLink } from "@/lib/nightPlan";
 
 /** The two ways to play (or any other pair or trio of options), as one segmented control. */
 export function ModeToggle<T extends string>({
@@ -90,6 +91,8 @@ export function SetupScreen({
   onHome,
   draft,
   onDraft,
+  plan,
+  onAutostarted,
   title = "Enkeltkamp",
   variantSelectable = true,
   scolia = null,
@@ -114,6 +117,10 @@ export function SetupScreen({
   draft?: SetupDraft;
   /** Told what is chosen at the moment the match is started. */
   onDraft?: (draft: SetupDraft) => void;
+  /** Opened from a plan (Kveldsplan): the button puts the setup in the plan, or the match starts by itself with the setup. */
+  plan?: PlanLink;
+  /** Told when the match has started by itself, so that it does not do it again when the player comes back to the setup. */
+  onAutostarted?: () => void;
   /** Overridden by other modes (e.g. Bull-duell) that reuse this same player picker. */
   title?: React.ReactNode;
   /** Whether the crosses-per-row choice is offered — Bull-duell has its own game and hides it. */
@@ -176,6 +183,15 @@ export function SetupScreen({
       bonusBull3
     );
   }
+
+  const snapshot: SetupDraft = { mode, variant, people, teams, statsOff, advanced, exactEntry, bonusBull3, tvungen, venue };
+  const planSummary = setupSummary([mode === "team" ? `${teams.length} lag` : `${people.length} ${people.length === 1 ? "spiller" : "spillere"}`, crosses]);
+  const startNow = mode === "team" ? startTeamGame : startIndividualGame;
+  const press = () => (plan?.planning ? plan.onPlan(snapshot, planSummary) : startNow());
+  useAutostart(plan?.autostart && !!draft, mode === "team" ? !teamProblem : !individualProblem, () => {
+    onAutostarted?.();
+    startNow();
+  });
 
   const noStatsToggle = <SwitchRow label="Spill uten at statistikken teller" checked={statsOff || tvungen} onChange={setStatsOff} />;
 
@@ -257,13 +273,13 @@ export function SetupScreen({
             <PlayerPicker people={people} onChange={setPeople} botsAllowed={botsAllowed} guests matchCard />
             {variantSelectable && <div className="mt-4">{advancedSettings}</div>}
             <StickyAction
-              onClick={startIndividualGame}
+              onClick={press}
               ready={!individualProblem}
               summary={setupSummary([`${people.length} ${people.length === 1 ? "spiller" : "spillere"}`, crosses])}
               reason={individualProblem}
               below={!variantSelectable ? noStatsToggle : undefined}
             >
-              Start kampen
+              {plan?.planning ? "Legg i planen" : "Start kampen"}
             </StickyAction>
           </>
         )}
@@ -273,13 +289,13 @@ export function SetupScreen({
             <TeamPicker teams={teams} onChange={setTeams} botsAllowed={botsAllowed} />
             {variantSelectable && <div className="mt-4">{advancedSettings}</div>}
             <StickyAction
-              onClick={startTeamGame}
+              onClick={press}
               ready={!teamProblem}
               summary={setupSummary([`${teams.length} lag`, crosses])}
               reason={teamProblem}
               below={!variantSelectable ? noStatsToggle : undefined}
             >
-              Start kampen
+              {plan?.planning ? "Legg i planen" : "Start kampen"}
             </StickyAction>
           </>
         )}
