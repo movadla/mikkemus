@@ -15,6 +15,8 @@ export type ThrowerTeam = {
   members: Thrower[];
   /** Index into `members` of whoever throws now. */
   activeIdx: number;
+  /** Who throws after this turn: the one up on the next side (the other team, or the next player), not a teammate. */
+  next?: Thrower & { side: string };
 };
 
 /** A kit colour at some opacity — the bar is tinted in the team's own colour when it is up. */
@@ -138,7 +140,7 @@ export function ThrowerBar({
   /** A tap on the thrower's picture or name: the caller opens the thrower's numbers. */
   onOpen?: () => void;
 }) {
-  // The rest of the team in the order they come up next, so the first of them is the next thrower.
+  // The rest of the team, in the order they throw their later turns. They are not «neste»: the next to throw is on the other side (team.next).
   const mates = team ? team.members.map((_, i) => team.members[(team.activeIdx + 1 + i) % team.members.length]).slice(0, team.members.length - 1) : [];
   // The card above the board is kept low so the whole board is on the screen (the bull too) without scrolling.
   const photoSize = compact ? 44 : 56;
@@ -216,13 +218,13 @@ export function ThrowerBar({
         </p>
       )}
       {mates.length > 0 && (
-        <div className="flex items-end gap-2 shrink-0" aria-label={`Neste på laget: ${mates.map((m) => m.name).join(", ")}`}>
+        <div className="flex items-end gap-2 shrink-0" aria-label={`Resten av laget: ${mates.map((m) => m.name).join(", ")}`}>
           {mates.map((m, i) => {
             const inner = (
               <>
                 {!compact && (
                   <span style={{ color: i === 0 ? "var(--color-muted)" : "transparent", fontSize: "var(--text-micro)", letterSpacing: "0.1em", textTransform: "uppercase", lineHeight: 1.2 }}>
-                    neste
+                    laget
                   </span>
                 )}
                 <Avatar who={m} size={compact ? 26 : 38} active={false} />
@@ -254,6 +256,21 @@ export function ThrowerBar({
               </span>
             );
           })}
+        </div>
+      )}
+      {team?.next && (
+        <div className="flex flex-col items-center shrink-0" aria-label={`Neste som kaster: ${team.next.name}, ${team.next.side}`} style={{ maxWidth: compact ? 44 : 64 }}>
+          {!compact && (
+            <span style={{ color: "var(--color-teal)", fontSize: "var(--text-micro)", letterSpacing: "0.1em", textTransform: "uppercase", lineHeight: 1.2, fontWeight: 700 }}>
+              neste
+            </span>
+          )}
+          <Avatar who={team.next} size={compact ? 26 : 38} active={false} />
+          {!compact && (
+            <span className="truncate w-full text-center" style={{ color: "var(--color-cream)", fontSize: "var(--text-micro)" }}>
+              {team.next.name}
+            </span>
+          )}
         </div>
       )}
     </div>

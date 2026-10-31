@@ -2885,7 +2885,13 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     if (activeRoster && activeRoster.length > 0) {
       const activeIdx = (teamMemberIdx[activePlayer] ?? 0) % activeRoster.length;
       const members = activeRoster.map((m) => toThrower(m.name, m.isBot));
-      throwerTeam = { name: activePlayer, photo: getPlayerRecord(activePlayer)?.photo ?? null, members, activeIdx };
+      // The next to throw is on the next side: that side's member whose turn it is (a lone player is themselves). With the stand rule the same
+      // team can throw again, which is shown on the bar by «Står – kaster igjen», not here.
+      const nextSide = players[(currentIdx + 1) % players.length];
+      const nextRoster = teamRosters[nextSide];
+      const nextMember = nextRoster && nextRoster.length > 0 ? nextRoster[(teamMemberIdx[nextSide] ?? 0) % nextRoster.length] : null;
+      const next = nextSide && nextSide !== activePlayer ? { ...(nextMember ? toThrower(nextMember.name, nextMember.isBot) : toThrower(nextSide, botLevels[nextSide] !== undefined)), side: nextSide } : undefined;
+      throwerTeam = { name: activePlayer, photo: getPlayerRecord(activePlayer)?.photo ?? null, members, activeIdx, ...(next ? { next } : {}) };
       thrower = rewound !== null ? { name: activePlayer, isBot: false, photo: null } : members[activeIdx];
     } else {
       thrower = toThrower(activePlayer, activeBotLevel !== null);

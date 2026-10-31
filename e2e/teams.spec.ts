@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { PIN, openApp } from "./helpers";
+import { PIN, openApp, startPast } from "./helpers";
 
 /** Lag på kamp: the four teams used most, and «Mer» for the rest. */
 test.describe("lag på kamp", () => {
@@ -60,5 +60,23 @@ test.describe("lag på kamp", () => {
     await page.getByRole("link", { name: "Spillere" }).first().click();
     await expect(page.getByRole("heading", { name: "Lag" }).or(page.getByText("LAG", { exact: true })).first()).toBeVisible();
     await expect(page.getByRole("link", { name: /Lars og Per/ }).first()).toBeVisible();
+  });
+
+  test("neste som kaster er på det andre laget, ikke makkeren", async ({ page }) => {
+    const names = ["Lars og Per", "Ola og Kari"];
+    await page.addInitScript((list) => {
+      localStorage.setItem("mikke-mus-team-cards", JSON.stringify(list.map((name, i) => ({ name, members: name.split(" og "), lastUsed: 1000 - i }))));
+    }, names);
+    await openApp(page, "dark");
+    await page.getByRole("button", { name: "Ny kamp" }).click();
+    await page.getByRole("radio", { name: "Lag" }).click();
+    const group = page.getByRole("group", { name: "Lag" });
+    await group.getByRole("button", { name: /Lars og Per/ }).click();
+    await group.getByRole("button", { name: /Ola og Kari/ }).click();
+    await page.getByRole("button", { name: /Start/ }).first().click();
+    await startPast(page);
+    // Lars throws; Per is the rest of the team, and the next to throw is Ola on the other team.
+    await expect(page.getByLabel(/^Resten av laget: Per/)).toBeVisible();
+    await expect(page.getByLabel(/^Neste som kaster: Ola, Ola og Kari/)).toBeVisible();
   });
 });
