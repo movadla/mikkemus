@@ -6,6 +6,7 @@ import { nextRank, rankOf } from "@/lib/careerGoals";
 import { lifeOf, rivalOf, seasonOf, sponsorLogo, weekInSeason, REP_MAX, WEEKS_PER_SEASON } from "@/lib/careerLife";
 import { PokalCard, RankBadge } from "./CareerTrophy";
 import { CharacterFace } from "./CharacterFigure";
+import { CHARACTERS } from "@/lib/characters";
 import { TrophyCabinet } from "./TrophyCabinet";
 import { RankingList } from "./RankingList";
 import { OpponentPortrait } from "./OpponentCard";
@@ -48,7 +49,7 @@ const TABS: { id: ProfileTab; label: string }[] = [
  */
 export function CareerProfile({ career, tab: first = "oversikt", commit, onChallenge }: { career: Career; tab?: ProfileTab; commit?: (c: Career) => void; /** Goes to the duel when the rival has been challenged. */ onChallenge?: () => void }) {
   const [tab, setTab] = useState<ProfileTab>(first);
-  const [rivalSheet, setRivalSheet] = useState<"rival" | "pick" | "merits" | null>(null);
+  const [rivalSheet, setRivalSheet] = useState<"rival" | "pick" | "merits" | "character" | null>(null);
   const next = nextRank(career);
   const life = lifeOf(career);
   const rival = rivalOf(career);
@@ -87,6 +88,11 @@ export function CareerProfile({ career, tab: first = "oversikt", commit, onChall
               {career.points} av {next.min} poeng til {next.name}
               {life.seasonPts > 0 ? ` · ${life.seasonPts} denne sesongen` : ""}
             </p>
+          )}
+          {commit && (
+            <button type="button" className={`pf-link tactile ${FOCUS_RING}`} onClick={() => setRivalSheet("character")}>
+              Bytt karakter
+            </button>
           )}
         </div>
       </div>
@@ -309,6 +315,28 @@ export function CareerProfile({ career, tab: first = "oversikt", commit, onChall
               Bytt rival
             </Button>
           </div>
+        </Sheet>
+      )}
+      {rivalSheet === "character" && (
+        <Sheet title="Velg karakter" onClose={() => setRivalSheet(null)}>
+          <ul className="pf-pick" aria-label="Karakterer">
+            {CHARACTERS.map((c) => (
+              <li key={c.id}>
+                <button
+                  type="button"
+                  className={`pf-pick-row tactile ${FOCUS_RING}`}
+                  aria-pressed={c.id === career.profile.character}
+                  onClick={() => {
+                    commit?.({ ...career, profile: { ...career.profile, character: c.id } });
+                    setRivalSheet(null);
+                  }}
+                >
+                  <CharacterFace id={c.id} px={44} />
+                  <b>{c.name}</b>
+                </button>
+              </li>
+            ))}
+          </ul>
         </Sheet>
       )}
       {rivalSheet === "pick" && (

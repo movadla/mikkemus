@@ -4245,3 +4245,4 @@ button.season-strip { min-height: 2.75rem; padding-block: 0; }
 .season-cal-skip { margin-bottom: 1rem; }
 .msg-stake { display: grid; gap: 0.35rem; margin: 0.6rem 0; }
 .msg-stake input[type="range"] { width: 100%; accent-color: var(--color-gold); }
+.pf-link { display: inline-block; margin-top: 0.25rem; padding: 0.2rem 0; background: none; border: 0; color: var(--color-gold-strong); font-size: var(--text-small); font-weight: 700; text-decoration: underline; text-underline-offset: 0.2em; }
