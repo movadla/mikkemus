@@ -39,6 +39,7 @@ import type { Me } from "./OpponentCard";
 import type { Place } from "@/lib/career";
 import { KnockoutOverview } from "./KnockoutOverview";
 import { MikkeMusApp } from "./MikkeMusApp";
+import { ShowOverlay } from "./show/ShowOverlay";
 import { TournamentHistoryScreen } from "./TournamentHistoryScreen";
 import { TournamentSetupScreen } from "./TournamentSetupScreen";
 import { TournamentOpening } from "./TournamentOpening";
@@ -486,7 +487,7 @@ function TournamentInner({ onExitToHome, career, onVenue }: { onExitToHome: () =
   }
 
   if (screen === "final" && tournament && currentMatch && career) {
-    if (currentMatch.bracketRoundSize === 1 && !currentMatch.isBronzeMatch) return <FinalIntro tournament={tournament} match={currentMatch} prizes={career.prizes} onStart={() => setScreen("match")} onBack={() => setScreen("overview")} />;
+    if (currentMatch.bracketRoundSize === 1 && !currentMatch.isBronzeMatch) return <FinalIntro tournament={tournament} match={currentMatch} me={career.me} prizes={career.prizes} onStart={() => setScreen("match")} onBack={() => setScreen("overview")} />;
     const { botLevels, teamRosters } = botSetupForMatch(tournament, currentMatch);
     const names = matchParticipants(currentMatch);
     // The house's own side is the one with a person in it (a team has members); the other is the bot, or the team of bots.
@@ -505,10 +506,20 @@ function TournamentInner({ onExitToHome, career, onVenue }: { onExitToHome: () =
     const { botLevels, teamRosters } = botSetupForMatch(tournament, currentMatch);
     // A cup of the career played as 501 or 301: one leg to nothing, not a game of Mikke Mus.
     const countdown = tournament.cup?.countdown;
+    // The show around the match (only drawn with the show code): the player and whoever they meet.
+    const sides = matchParticipants(currentMatch);
+    const showLine = career ? <ShowOverlay key={currentMatch.id} player={career.me?.name ?? ""} opponent={sides.find((n) => n !== career.me?.name)} /> : null;
     if (countdown) {
-      return <CountdownMatch key={currentMatch.id} players={matchParticipants(currentMatch)} botLevels={botLevels} teamRosters={teamRosters} start={countdown.start} doubleOut={countdown.doubleOut} humanStart={countdown.humanStart} onDone={handleMatchComplete} onAbort={handleMatchAbort} />;
+      return (
+        <>
+          {showLine}
+          <CountdownMatch key={currentMatch.id} players={matchParticipants(currentMatch)} botLevels={botLevels} teamRosters={teamRosters} start={countdown.start} doubleOut={countdown.doubleOut} humanStart={countdown.humanStart} onDone={handleMatchComplete} onAbort={handleMatchAbort} />
+        </>
+      );
     }
     return (
+      <>
+      {showLine}
       <MikkeMusApp
         initialPlayers={matchParticipants(currentMatch)}
         initialBotLevels={botLevels}
@@ -517,6 +528,7 @@ function TournamentInner({ onExitToHome, career, onVenue }: { onExitToHome: () =
         onMatchComplete={handleMatchComplete}
         onExitToHome={handleMatchAbort}
       />
+      </>
     );
   }
 

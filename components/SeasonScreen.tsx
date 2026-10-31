@@ -5,6 +5,7 @@ import { isOpen, lifeOf, seasonOf, weekInSeason, WEEKS_PER_SEASON } from "@/lib/
 import { peopleOf } from "@/lib/careerWorld";
 import { CharacterFace } from "./CharacterFigure";
 import { Avatar } from "./ui/Avatar";
+import { SeasonFilmButton } from "./show/SeasonFilm";
 
 /**
  * The season as a thing that is going on: the weeks as ticks, the finale at the end of it for the eight best, the table as it stands (the best five
@@ -64,6 +65,7 @@ export function SeasonScreen({ career }: { career: Career }) {
           )}
         </ol>
       </div>
+      {life.seasons[0] && <SeasonFilmButton career={career} result={life.seasons[0]} label={`Se sesong ${life.seasons[0].season} som film`} />}
       {waiting.length > 0 && (
         <div>
           <p className="section-label mb-2">UTLØPER SNART</p>

@@ -8,10 +8,16 @@ describe("the codes", () => {
     for (const wrong of ["1234", "6968", "9669", "0000", "696", "96960", "abcd", " 6969", "", "9696\n"]) expect(await checkPin(wrong), wrong).toBeNull();
   });
 
+  it("opens the show door with 9999: the full app with the show around the career", async () => {
+    expect(await checkPin("9999")).toBe("show");
+    expect(await checkPin("9998")).toBeNull();
+  });
+
   it("works with the small hash where SHA-256 is missing", () => {
     // The same codes through the fallback: the stored values are what this gives.
     expect(fnv1a("mikke-mus-pin:9696")).toBe("8d3fe786");
     expect(fnv1a("mikke-mus-pin:6969")).toBe("12093a46");
+    expect(fnv1a("mikke-mus-pin:9999")).toBe("b4aa1e");
     expect(fnv1a("mikke-mus-pin:6968")).not.toBe("12093a46");
   });
 
@@ -19,6 +25,7 @@ describe("the codes", () => {
     const source = (await import("node:fs")).readFileSync(new URL("./pin.ts", import.meta.url), "utf8");
     expect(source).not.toContain("6969\"");
     expect(source).not.toContain("9696\"");
+    expect(source).not.toContain("9999\"");
   });
 
   it("locks for longer each time", () => {

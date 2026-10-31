@@ -9,7 +9,10 @@ import { bracketRoundLabel, matchParticipants } from "@/lib/tournament";
 /** The round a win was in, for the road of the night: short for the last three (kvart, semi, finale), the full name for the earlier ones. */
 const ROAD_ROUND = (size?: number): string => (size === undefined ? "Gruppe" : size === 4 ? "Kvart" : size === 2 ? "Semi" : bracketRoundLabel(size));
 import { sponsorOutcome } from "@/lib/careerWorld";
-import { lifeOf } from "@/lib/careerLife";
+import { lifeOf, rivalOf } from "@/lib/careerLife";
+import { NewspaperButton } from "./show/Newspaper";
+import { RivalQuip } from "./show/RivalNote";
+import { SeasonFilmButton } from "./show/SeasonFilm";
 import { nextRank, rankOf, rankProgress } from "@/lib/careerGoals";
 import { dartsOf, roundsOf, winnerOf as countdownWinner, newGame as newCountdown, type CountdownGame } from "@/lib/countdown";
 import type { MatchLine } from "@/lib/careerStats";
@@ -25,6 +28,7 @@ import { careerSound } from "@/lib/uiSound";
 import { levelLabel, oneDecimal } from "./careerFormat";
 import { CoinBurst } from "./CoinBurst";
 import { CountdownGameScreen } from "./CountdownApp";
+import { ShowOverlay } from "./show/ShowOverlay";
 import { HighstrikerGameScreen } from "./HighstrikerApp";
 import { ArrowLeftIcon, BoltIcon, CoinIcon, TrophyIcon } from "./icons";
 import { LavaGameScreen } from "./LavaApp";
@@ -179,7 +183,7 @@ function ChallengeFlow({ career, commit, onHub }: { career: Career; commit: (c: 
     );
   }
   if (c.game === "501") {
-    return <CountdownGameScreen key={leg} game={cd} setGame={setCd} botLevels={botLevels} photos={photos} onHome={giveUp} onNew={() => undefined} career={{ onDone: () => legDone(countdownWinner(cd)), giveUp: true }} />;
+    return <><ShowOverlay player={career.player} opponent={opponent} /><CountdownGameScreen key={leg} game={cd} setGame={setCd} botLevels={botLevels} photos={photos} onHome={giveUp} onNew={() => undefined} career={{ onDone: () => legDone(countdownWinner(cd)), giveUp: true }} /></>;
   }
   if (c.game === "lava") {
     return <LavaGameScreen game={lava} setGame={setLava} botLevels={botLevels} photos={photos} onHome={giveUp} onNew={() => undefined} career={{ onDone: () => settle(lavaState(lava).winner) }} />;
@@ -221,6 +225,7 @@ function ChallengeResult({ career, c, onDone }: { career: Career; c: Challenge; 
             </p>
           )}
           {!won && paid > 0 && <p style={{ color: "var(--color-text-2)" }}>Tapt, men honoraret er ditt.</p>}
+          {c.opponent.name === rivalOf(career).name && <RivalQuip career={career} name={c.opponent.name} playerWon={won} />}
           <NextGoal career={career} />
         </div>
         {paid > 0 && <CoinBurst />}
@@ -288,6 +293,7 @@ export function SeasonRecap({ career, onDone }: { career: Career; onDone: () => 
           })()}
         </div>
         {s.prize > 0 && <CoinBurst />}
+        <SeasonFilmButton career={career} result={s} />
         <PlayButton label="NY SESONG" tone={best ? "gold" : "teal"} onClick={onDone} />
       </div>
     </div>
@@ -464,6 +470,9 @@ export function Result({ career, a, onDone }: { career: Career; a: ActiveEvent; 
         .sort((x, y) => (y.bracketRoundSize ?? 0) - (x.bracketRoundSize ?? 0))
         .map((x) => ({ round: ROAD_ROUND(x.bracketRoundSize), name: matchParticipants(x).find((n) => n !== career.player) }))
         .filter((x): x is { round: string; name: string } => !!x.name);
+  // The show: the rival has a word after a tournament in which the two met.
+  const rival = rivalOf(career).name;
+  const metRival = knockedOutBy === rival || beaten.some((b) => b.name === rival);
   const rivalLine = !won && knockedOutBy && rec && rec.l >= 2 && rec.l > rec.w ? `${knockedOutBy} har slått deg ${rec.l} ganger. En seier over ham neste gang gir ${dollars(REVENGE_BONUS)} ekstra.` : null;
   // The sounds of the moment: a win is a fanfare and a cheer, whatever place it is a pay-out for is a touch.
   useEffect(() => {
@@ -516,7 +525,9 @@ export function Result({ career, a, onDone }: { career: Career; a: ActiveEvent; 
             ...opened.map((t) => ({ icon: <TrophyIcon className="w-5 h-5" />, tone: "teal", title: `Ny turnering: ${t.short}`, sound: true })),
           ]}
         />
+        {metRival && <RivalQuip career={career} name={rival} playerWon={knockedOutBy !== rival} />}
         {r.prize > 0 && <CoinBurst />}
+        <NewspaperButton career={career} a={a} />
         <PlayButton label={r.prize > 0 ? "HENT" : "OK"} tone={r.prize > 0 ? "gold" : "teal"} onClick={onDone} />
       </div>
     </div>

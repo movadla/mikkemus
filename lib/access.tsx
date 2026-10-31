@@ -12,9 +12,9 @@ const AccessContext = createContext<AccessLevel>("full");
 
 export const AccessProvider = AccessContext.Provider;
 
-export function useAccess(): { level: AccessLevel; limited: boolean } {
+export function useAccess(): { level: AccessLevel; limited: boolean; /** The code that has the show around the career (lib/show.ts). */ show: boolean } {
   const level = useContext(AccessContext);
-  return { level, limited: level === "limited" };
+  return { level, limited: level === "limited", show: level === "show" };
 }
 
 /** The pages the limited code cannot open: statistics (with seeding and records), the nights and matches they lead to,

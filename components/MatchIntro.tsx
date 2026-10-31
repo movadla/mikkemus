@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { announce } from "@/lib/announcer";
+import { useAccess } from "@/lib/access";
 import { cupColor } from "@/lib/botCup";
 import type { Place } from "@/lib/career";
 import { TIER_LOOK, foilVars } from "@/lib/materials";
-import { medOfLevel } from "@/lib/opponentStats";
+import { medOfLevel, playerWorldRank, worldRankFor } from "@/lib/opponentStats";
+import { opponentOf } from "@/lib/opponents";
 import { bracketRoundLabel, matchParticipants, type Tournament, type TournamentMatch } from "@/lib/tournament";
 import { FlameIcon } from "./icons";
 import { SnowIcon } from "./careerIcons";
@@ -12,6 +14,8 @@ import { ChanceMeter, CompareRows, MePortrait, OpponentPortrait, OpponentProfile
 import { PlayButton } from "./PlayButton";
 import { Sheet } from "./ui/Sheet";
 import { ArrowLeftIcon } from "./icons";
+import { WalkOn } from "./show/WalkOn";
+import { faceOffOf, rankPlate, shouldWalkOn } from "./show/WalkOnLogic";
 
 /** The place a player has at least reached once they have won a match of this round (the one they lose in next). */
 const FLOOR_AFTER_WIN: Record<number, Place | "winner"> = { 1: "winner", 2: "final", 4: "semi", 8: "quarter", 16: "r16", 32: "r32" };
@@ -40,6 +44,7 @@ export function formWord(you: number, opponent: number): "hot" | "even" | "cold"
  */
 export function MatchIntro({ tournament, match, player, me, level, opponentLevel, onStart, onBack }: { tournament: Tournament; match: TournamentMatch; player: string; me: Me; /** The player's level on the bots' scale. */ level: number; opponentLevel: number; prizes: Partial<Record<Place, number>>; onStart: () => void; onBack: () => void }) {
   const [profile, setProfile] = useState(false);
+  const { show } = useAccess();
   const [a, b] = matchParticipants(match);
   const opponent = (a === player ? b : a) ?? "";
   const colour = cupColor(tournament.cup?.kind);
@@ -54,6 +59,9 @@ export function MatchIntro({ tournament, match, player, me, level, opponentLevel
   // The entrance: before a semi-final and a final the two are called out by the voice of the app, and the screen says it is a big one.
   const big = !match.isBronzeMatch && (match.bracketRoundSize ?? 99) <= 2;
   const round = bracketRoundLabel(match.bracketRoundSize ?? 1, match.isBronzeMatch);
+  // Show: a walk-on in full screen before a semi-final and a final, once per visit of this screen (the state is only read when the screen opens).
+  const [walking, setWalking] = useState(() => shouldWalkOn({ show, big, team: !!me.members }));
+  const faceOff = show ? faceOffOf(me.rivals?.[opponent]) : null;
   useEffect(() => {
     if (big) announce(`${round}! ${player}, mot ${opponent}!`);
   }, [big, round, player, opponent]);
@@ -107,12 +115,19 @@ export function MatchIntro({ tournament, match, player, me, level, opponentLevel
             </p>
           </div>
         </div>
+        {faceOff && (
+          <p className="faceoff">
+            {faceOff.score}
+            <small>{faceOff.last}</small>
+          </p>
+        )}
         <CompareRows me={me} opponent={opponent} med={med} />
         <div className="flex-1 flex flex-col items-center justify-center gap-3">
           <ChanceMeter me={me} med={med} />
         </div>
         <PlayButton label="KAST" onClick={onStart} />
       </div>
+      {walking && <WalkOn player={player} character={me.character} playerRank={rankPlate(playerWorldRank(me.med, me.points))} opponent={opponent} opponentRank={rankPlate(worldRankFor(opponent, opponentOf(opponent).med))} colour={colour} onDone={() => setWalking(false)} />}
       {profile && (
         <Sheet title={opponent} onClose={() => setProfile(false)}>
           {theirs ? theirs.map((m) => <OpponentProfile key={m.name} name={m.name} med={medOfLevel(m.skill ?? Number(m.botLevel ?? 4))} me={{ ...me, members: undefined }} />) : <OpponentProfile name={opponent} med={med} me={me} />}

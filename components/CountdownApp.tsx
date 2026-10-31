@@ -39,6 +39,7 @@ import {
   type CountdownStart,
 } from "@/lib/countdown";
 import { haptics } from "@/lib/haptics";
+import { emitShow } from "@/lib/showBus";
 import { splitPeople, type PickedTeam, type Person } from "@/lib/people";
 import { standing, type SeriesWiring } from "@/lib/series";
 import { NO_BONUS, countdownBonuses, type BonusSettings, type NightBonus } from "@/lib/bonus";
@@ -71,6 +72,16 @@ import { Segmented } from "./ui/Segmented";
 import { Sheet } from "./ui/Sheet";
 import { SwitchRow } from "./ui/Switch";
 import { FOCUS_RING } from "./ui/focus";
+
+/** Tells the show what a round was (only said in the career, where there is a show). `verdict` is what judge() made of it. */
+function sayRound(game: CountdownGame, player: string, scored: number, verdict: "bust" | "finish" | "counts") {
+  if (verdict === "bust") emitShow({ kind: "bust", player });
+  else if (verdict === "finish") {
+    emitShow({ kind: "checkout", player, points: scored });
+    emitShow({ kind: "match", winner: player, loser: game.players.find((p) => p !== player) });
+  } else if (scored === 180) emitShow({ kind: "180", player });
+  else if (scored >= 100) emitShow({ kind: "ton", player, points: scored });
+}
 
 const oneDecimal = (n: number) => n.toFixed(1).replace(".", ",");
 
@@ -283,6 +294,7 @@ export function CountdownGameScreen({
       setSlam(game.turns.length + 1);
       if (fx.ringSlam) playFanfare();
     }
+    if (career) sayRound(game, up, scored, verdict);
     setGame(playRound(game, scored, undefined, asked === "yes"));
   }
 
@@ -298,6 +310,7 @@ export function CountdownGameScreen({
       setSlam(game.turns.length + 1);
       if (fx.ringSlam) playFanfare();
     }
+    if (career) sayRound(game, up, r.scored, r.bust ? "bust" : r.finished ? "finish" : "counts");
     setGame(playRound(game, r.scored, r.darts));
   }
 
@@ -489,6 +502,7 @@ export function CountdownGameScreen({
                 onClick={() => {
                   haptics.win();
                   setFinishing(null);
+                  if (career) sayRound(game, up, finishing, "finish");
                   setGame(playRound(game, finishing, n, finishBull));
                 }}
                 className={key}

@@ -10,6 +10,7 @@ import { MailIcon } from "./careerIcons";
 import { BoltIcon, CoinIcon, TrophyIcon, TvIcon } from "./icons";
 import { Button } from "./ui/Button";
 import { FOCUS_RING } from "./ui/focus";
+import { RivalNote } from "./show/RivalNote";
 
 /** What a message is, in one word and one symbol, so the list can be read at a glance: an invitation, a challenge someone asks for, a show, a sponsor, or a note. */
 function kindOf(m: Message): {
@@ -152,6 +153,7 @@ export function CareerInbox({
                   </p>
                   {/* The sponsors' message says what they pay for (a place in the quarter-final); it is read before the deals. */}
                   <p>{m.body}</p>
+                  {m.from.role === "Rival" && offer.kind === "challenge" && <RivalNote career={career} name={m.from.name} />}
                   {offer.kind === "invite" && <InviteFacts offer={offer} />}
                   {offer.kind === "challenge" && (
                     <ul className="msg-chips" aria-label="Om utfordringen">

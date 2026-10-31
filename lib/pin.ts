@@ -13,13 +13,17 @@ const SALT = "mikke-mus-pin:";
  * players and bots, but cannot delete a team or a player, and sees no statistics, seeding, records, betting or big
  * screen (see lib/access.tsx for what that hides). Like the code itself, that is a lock on a door and not a safe.
  */
-export type AccessLevel = "full" | "limited";
+export type AccessLevel = "full" | "limited" | "show";
+
+/** The codes, in the order they are tried. «show» is the app as «full» has it, with the show around the career switched on (lib/show.ts): a trial of the ideas before the other codes get them. */
+const LEVELS: AccessLevel[] = ["full", "limited", "show"];
 
 /** For each code: the SHA-256 of the salt and the code, for browsers that have it (every page served over https does),
  *  and the same check by a small hash, for the places without SHA-256 (a page on a plain-http address). */
 const CODES: Record<AccessLevel, { sha: string; fnv: string }> = {
   full: { sha: "a0d81b08f4c615b4d226e07cff10a4f4e64d04dbf3e1fe7cb77f81a1e3990c25", fnv: "8d3fe786" },
   limited: { sha: "d6e832e3d218b86e71d41e82ff332526bd64435e287da101a8b1c49b4a02d949", fnv: "12093a46" },
+  show: { sha: "2aed0a12e95ea9fe387513ccd4a1744bbcdae2b3ee92d2584d2e6ea63c6da01c", fnv: "b4aa1e" },
 };
 
 /** FNV-1a, 32 bits: a few lines, no dependencies, same answer everywhere. */
@@ -44,7 +48,7 @@ export async function checkPin(pin: string): Promise<AccessLevel | null> {
   if (pin.length !== PIN_LENGTH || [...pin].some((ch) => ch < "0" || ch > "9")) return null;
   const sha = await sha256Hex(SALT + pin);
   const fnv = sha === null ? fnv1a(SALT + pin) : null;
-  for (const level of ["full", "limited"] as const) {
+  for (const level of LEVELS) {
     if (sha !== null ? sha === CODES[level].sha : fnv === CODES[level].fnv) return level;
   }
   return null;
@@ -60,7 +64,7 @@ const rememberValue = (level: AccessLevel) => `${level}:${CODES[level].sha.slice
 export function rememberedLevel(): AccessLevel | null {
   try {
     const stored = localStorage.getItem(REMEMBER_KEY);
-    return (["full", "limited"] as const).find((level) => stored === rememberValue(level)) ?? null;
+    return LEVELS.find((level) => stored === rememberValue(level)) ?? null;
   } catch {
     return null;
   }

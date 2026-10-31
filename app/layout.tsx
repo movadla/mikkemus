@@ -10,6 +10,9 @@ import "./globals.css";
 // The rest of the styles, in the order they were in globals.css: the screens of the games, then the career.
 import "./styles/screens.css";
 import "./styles/career.css";
+import "./styles/show-walkon.css";
+import "./styles/show-live.css";
+import "./styles/show-hub.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

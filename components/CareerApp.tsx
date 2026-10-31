@@ -36,6 +36,8 @@ import { StarIcon } from "./careerIcons";
 import { Hub } from "./CareerHub";
 import { ChallengePlay, Result, TrainingPlay } from "./CareerScreens";
 import { EventIntro } from "./EventIntro";
+import { useAccess } from "@/lib/access";
+import { BIG_STEPS, previouslyOf } from "@/lib/show";
 import { OpponentPortrait, TeamPortrait } from "./OpponentCard";
 
 
@@ -540,6 +542,7 @@ function Play({ career, commit, onHub }: { career: Career; commit: (c: Career) =
   const team = a.invite?.team;
   const side = sideOf(a, career.player);
   const teams = Object.fromEntries(a.entrants.filter((p) => p.members).map((p) => [p.name, p.members!.map((m) => m.name)]));
+  const { show } = useAccess();
   // The scene before the draw is only for an event that has just been entered, not one that is picked up again.
   const [intro, setIntro] = useState(!a.tournament && !a.result);
   if (a.result) {
@@ -563,6 +566,8 @@ function Play({ career, commit, onHub }: { career: Career; commit: (c: Career) =
         player={career.player}
         character={career.profile.character}
         onDone={() => setIntro(false)}
+        // The show: before the opening of the national championship, the Grand Slam and the world championship, the last three results.
+        previously={show && !a.invite && BIG_STEPS.includes(a.tier) ? previouslyOf(career) : undefined}
         extra={<FieldPreview career={career} field={a.entrants} />}
         plain
         music

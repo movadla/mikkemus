@@ -19,6 +19,8 @@ import { RankUp, SeasonRecap } from "./CareerScreens";
 import { CareerNews } from "./CareerNews";
 import { sponsorLogo } from "@/lib/careerLife";
 import { SeasonCalendar } from "./SeasonCalendar";
+import { TrophyShelf } from "./show/TrophyShelf";
+import { WeekCard } from "./show/WeekCard";
 import { inboxCount, isOpen, lifeOf, RIVAL_WEEKS, seasonOf, unseenNews, weekInSeason, WEEKS_PER_SEASON } from "@/lib/careerLife";
 import { markNewsSeen } from "@/lib/careerWorld";
 import { CareerHud } from "./CareerHud";
@@ -271,6 +273,7 @@ export function Hub({ career, onBack, onExit, onPlay, onChallenge, onTrain, comm
     return (
       <OverRoom stage={career.room} src={hubPicture(topStep(career))} focus="50% 35%" clear>
         {news && <span className="room-news-ring" aria-hidden />}
+        <WeekCard career={career} />
         <span className="char-home" aria-hidden>
           <CharacterFigure id={career.profile.character} pose={hero.kind === "event" && hero.done ? "jubel" : "noytral"} glow patch={lifeOf(career).sponsor ? sponsorLogo(lifeOf(career).sponsor!.name) : undefined} />
         </span>
@@ -286,6 +289,7 @@ export function Hub({ career, onBack, onExit, onPlay, onChallenge, onTrain, comm
                 Nytt i rommet: <b>{news}</b>
               </button>
             )}
+            <TrophyShelf career={career} />
             <div className="flex-1" />
             <div className="room-text char-home-text rise-in" style={{ "--d": "0.1s" } as React.CSSProperties}>
               <p className="font-display" style={{ fontSize: "var(--text-num)", lineHeight: 1.05, color: "var(--color-cream)" }}>

@@ -1,4 +1,5 @@
-import { Fragment, useEffect } from "react";
+import { Fragment, useEffect, useState } from "react";
+import { useAccess } from "@/lib/access";
 import { careerSound } from "@/lib/uiSound";
 import { cupColor } from "@/lib/botCup";
 import { dollars, type Place } from "@/lib/career";
@@ -9,17 +10,27 @@ import { Avatar } from "./ui/Avatar";
 import { ArrowLeftIcon, CoinIcon } from "./icons";
 import { PlayButton } from "./PlayButton";
 import { CupEmblem } from "./ui/CupEmblem";
+import type { Me } from "./OpponentCard";
+import { WalkOn } from "./show/WalkOn";
+import { rankPlate, shouldWalkOn } from "./show/WalkOnLogic";
+import { playerWorldRank, worldRankFor } from "@/lib/opponentStats";
+import { opponentOf } from "@/lib/opponents";
 
 /**
  * The moment before a final of the career: the room goes dark, a light finds the cup, and the two who are left walk in from either side
  * with FINALEN between them. It takes a few seconds and then waits for the button, so nobody is rushed into the match.
  */
-export function FinalIntro({ tournament, match, prizes, onStart, onBack }: { tournament: Tournament; match: TournamentMatch; /** What the places pay, for the line under the cup. */ prizes?: Partial<Record<Place, number>>; onStart: () => void; onBack?: () => void }) {
+export function FinalIntro({ tournament, match, prizes, me, onStart, onBack }: { tournament: Tournament; match: TournamentMatch; /** What the places pay, for the line under the cup. */ prizes?: Partial<Record<Place, number>>; /** Show: the player, for the walk-on (the character and the rank). Without it the walk-on uses the cup's human side and the first character. */ me?: Me; onStart: () => void; onBack?: () => void }) {
   const roster = useRoster();
-  useEffect(() => {
-    careerSound("crowd-2");
-  }, []);
+  const { show } = useAccess();
   const [a, b] = matchParticipants(match);
+  // Show: the walk-on comes first, once per visit of this screen; the crowd is then the walk-on's, and the final's own comes after it.
+  const humans = [a, b].filter((n) => !tournament.participants.find((p) => p.name === n)?.isBot);
+  const walker = me?.name && [a, b].includes(me.name) ? me.name : humans.length === 1 ? humans[0] : null;
+  const [walking, setWalking] = useState(() => shouldWalkOn({ show, big: true, team: !!me?.members }) && !!walker);
+  useEffect(() => {
+    if (!walking) careerSound("crowd-2");
+  }, [walking]);
   const colour = cupColor(tournament.cup?.kind);
   const side = (name: string) => {
     const p = tournament.participants.find((x) => x.name === name);
@@ -72,6 +83,17 @@ export function FinalIntro({ tournament, match, prizes, onStart, onBack }: { tou
           <PlayButton label="KAST" onClick={onStart} />
         </div>
       </div>
+      {walking && walker && (
+        <WalkOn
+          player={walker}
+          character={me?.character}
+          playerRank={me ? rankPlate(playerWorldRank(me.med, me.points)) : ""}
+          opponent={walker === a ? b : a}
+          opponentRank={rankPlate(worldRankFor(walker === a ? b : a, opponentOf(walker === a ? b : a).med))}
+          colour={colour}
+          onDone={() => setWalking(false)}
+        />
+      )}
     </div>
   );
 }

@@ -56,6 +56,7 @@ import type { OddsRow } from "./OddsBar";
 import { logOddsMatch, type OddsSnapshot } from "@/lib/oddsLog";
 import { useShowOdds } from "@/lib/oddsSetting";
 import { haptics } from "@/lib/haptics";
+import { emitShow } from "@/lib/showBus";
 import { uiSound } from "@/lib/uiSound";
 import type { VenueId } from "@/lib/venues";
 import { crowdForStreak, playCrowd, playHitStreakSound, playStreakFanfare, playMatchDartSound, playTapSound, playWalkOnTune, playWinBoom, primeAudio, warmAudio } from "@/lib/fanfare";
@@ -1147,15 +1148,20 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     if (closed && !replayingRef.current) {
       setClosedStep({ token: ++pulseTokenRef.current, step: closed.step });
       haptics.close();
+      if (!Number.isNaN(Number(closed.step))) emitShow({ kind: "closed", player: activePlayer, number: Number(closed.step) });
     }
 
     // A triple or double has landed: the word and the shockwave (Full party).
     if (hit && !replayingRef.current && parsed.kind === "number" && (parsed.ring === "T" || parsed.ring === "D")) {
       emitFx({ type: "ring", label: `${parsed.ring === "T" ? "TRIPPEL" : "DOBBEL"} ${parsed.number}` });
+      if (parsed.ring === "T") emitShow({ kind: "triple", player: activePlayer, number: parsed.number });
     }
 
     // The inner bull: a bullseye (Full party).
-    if (hit && !replayingRef.current && parsed.kind === "bull" && parsed.ring === "inner") emitFx({ type: "bull" });
+    if (hit && !replayingRef.current && parsed.kind === "bull" && parsed.ring === "inner") {
+      emitFx({ type: "bull" });
+      emitShow({ kind: "bull", player: activePlayer });
+    }
 
     // Three triples on the active number, in one turn.
     if (
@@ -2709,6 +2715,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       setWinnerStats(stats);
       setWinnerLuck(luckByPlayer);
       setWinner(activePlayer);
+      if (!replayingRef.current) emitShow({ kind: "match", winner: activePlayer, loser: players.find((p) => p !== activePlayer) });
       // Ranks everyone by how close they were to finishing at this exact moment — for a normal
       // 2-player match this is trivially [winner, loser]; for a tournament pod with 3+ players it
       // approximates 2nd/3rd place without playing the match out further (see remainingMarks).

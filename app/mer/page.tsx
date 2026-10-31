@@ -28,7 +28,7 @@ export default function MorePage() {
         </div>
         {/* A way out, where it is found: log out and type the other code to see the app as someone with it does. */}
         <div className="group-list mt-4 md:max-w-xl">
-          <Row leading={<LogOutIcon className={icon} />} title="Logg ut" subtitle={`Du er inne med ${level === "limited" ? "den begrensede koden" : "hele koden"}`} onClick={forgetDevice} plain />
+          <Row leading={<LogOutIcon className={icon} />} title="Logg ut" subtitle={`Du er inne med ${level === "limited" ? "den begrensede koden" : level === "show" ? "visningskoden" : "hele koden"}`} onClick={forgetDevice} plain />
         </div>
       </div>
     </div>
