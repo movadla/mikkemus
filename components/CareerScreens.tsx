@@ -94,7 +94,8 @@ function ChallengeFlow({ career, commit, onHub }: { career: Career; commit: (c: 
   const botLevels = { [opponent]: medOfLevel(c.opponent.skill) };
   const [cd, setCd] = useState(() => newLeg(0));
   const [lava, setLava] = useState(() => newLava(DEFAULT_LIVES, [career.player, opponent]));
-  const [hs, setHs] = useState(() => newHighstriker(DEFAULT_LIVES, [career.player, opponent]));
+  // The duel on television is five lives each; the player throws first.
+  const [hs, setHs] = useState(() => newHighstriker(tv?.lives ?? DEFAULT_LIVES, [career.player, opponent]));
   // What the player threw in each leg of 501, for the statistics (a duel counts as a match like one of a cup).
   const [lines, setLines] = useState<Omit<MatchLine, "at">[]>([]);
   const lineOf = (g: CountdownGame): Omit<MatchLine, "at"> => {
@@ -130,7 +131,7 @@ function ChallengeFlow({ career, commit, onHub }: { career: Career; commit: (c: 
     );
   }
   if (stage === "intro") {
-    const detail = tv ? (tv.humanStart !== tv.theirStart ? `${career.player} starter på ${tv.humanStart}, ${opponent} på ${tv.theirStart}.` : `Best av ${tv.legs}.`) : c.risk ? `Taper du, mister du ${dollars(Math.min(career.money, c.risk))}.` : "Én runde.";
+    const detail = tv ? (tv.lives ? `Highstriker, ett leg, ${tv.lives} liv. Du kaster først.` : tv.humanStart !== tv.theirStart ? `${career.player} starter på ${tv.humanStart}, ${opponent} på ${tv.theirStart}.` : `Best av ${tv.legs}.`) : c.risk ? `Taper du, mister du ${dollars(Math.min(career.money, c.risk))}.` : "Én runde.";
     return (
       <EventIntro
         tier={challengeTier(c)}
@@ -138,7 +139,7 @@ function ChallengeFlow({ career, commit, onHub }: { career: Career; commit: (c: 
         character={career.profile.character}
         label="SPILL"
         extra={<FaceOff career={career} opponent={opponent} named={!tv} />}
-        plates={tv ? [["Honorar", dollars(tv.honorarium)], ["Til vinneren", dollars(c.stake)]] : [["Spill", GAMES[c.game].name], ["Premie", dollars(c.stake)], ...(c.risk ? [["Du risikerer", dollars(Math.min(career.money, c.risk))] as [string, string]] : [])]}
+        plates={tv ? [...(tv.honorarium > 0 ? [["Honorar", dollars(tv.honorarium)] as [string, string]] : []), ["Til vinneren", dollars(c.stake)]] : [["Spill", GAMES[c.game].name], ["Premie", dollars(c.stake)], ...(c.risk ? [["Du risikerer", dollars(Math.min(career.money, c.risk))] as [string, string]] : [])]}
         plain={!tv}
         // A duel has no cup to win: the two of them stand where the cup would be. A show has its own cup.
         cup={!!tv}
@@ -445,7 +446,7 @@ export function Result({ career, a, onDone }: { career: Career; a: ActiveEvent; 
   const tier = eventTier(a);
   const won = r.place === "winner";
   const sponsor = sponsorOutcome(career);
-  const opened = tier.opens && tier.opens.places.includes(r.place) ? TIERS[tier.opens.tier] : null;
+  const opened = (tier.opens ?? []).filter((o) => o.places.includes(r.place)).map((o) => TIERS[o.tier]);
   const fx = fxFlags(useFxLevel());
   // The one who knocked the player out, and how many times they have now: a rival has the better of them twice and more, and a win over them pays more.
   const team = a.invite?.team;
@@ -512,7 +513,7 @@ export function Result({ career, a, onDone }: { career: Career; a: ActiveEvent; 
             ...(r.revenge ? [{ icon: <BoltIcon className="w-5 h-5" />, tone: "gold", title: `Revansje: du slo ${r.revenge.names.join(" og ")}`, text: `+${dollars(r.revenge.bonus)}` }] : []),
             ...(rivalLine && knockedOutBy && rec ? [{ icon: <BoltIcon className="w-5 h-5" />, tone: "red", title: `${knockedOutBy} har slått deg ${rec.l} ganger`, text: `En seier neste gang gir ${dollars(REVENGE_BONUS)} ekstra` }] : []),
             ...(sponsor ? [{ icon: <CoinIcon className="w-5 h-5" />, tone: sponsor.met ? "gold" : "muted", title: sponsor.met ? `${sponsor.name} betaler ${dollars(sponsor.pay)}` : `${sponsor.name} betaler ikke denne gangen`, text: sponsor.met ? undefined : `Ville ha deg blant de ${sponsor.need === "quarter" ? "åtte" : "fire"} beste` }] : []),
-            ...(opened ? [{ icon: <TrophyIcon className="w-5 h-5" />, tone: "teal", title: `Ny turnering: ${opened.short}`, sound: true }] : []),
+            ...opened.map((t) => ({ icon: <TrophyIcon className="w-5 h-5" />, tone: "teal", title: `Ny turnering: ${t.short}`, sound: true })),
           ]}
         />
         {r.prize > 0 && <CoinBurst />}

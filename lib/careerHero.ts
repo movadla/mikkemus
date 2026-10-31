@@ -5,12 +5,14 @@
  */
 import { nextToThrow } from "./botSim";
 import { bracketRoundLabel, matchParticipants, type Tournament } from "./tournament";
-import { GAMES, LADDER, TIERS, dollars, eventTier, whyNot, type Career, type Challenge, type Tier } from "./career";
+import { lifeOf, weekInSeason } from "./careerLife";
+import { GAMES, LADDER, TIERS, dollars, eventTier, whyNotNow, type Career, type Challenge, type Tier } from "./career";
 
 export type Hero =
   | { kind: "event"; tier: Tier; /** The round of the next match, or null when there is none for the player. */ round: string | null; opponent: string | null; drawn: boolean; done: boolean; prize: number }
   | { kind: "challenge"; challenge: Challenge; done: boolean }
-  | { kind: "enter"; tier: Tier };
+  /** `why` is set when nothing can be entered this week: the home screen then leads to the calendar. */
+  | { kind: "enter"; tier: Tier; why?: string };
 
 export function heroFor(career: Career): Hero {
   const a = career.active;
@@ -21,9 +23,10 @@ export function heroFor(career: Career): Hero {
     return { kind: "event", tier, round: next?.round ?? null, opponent: next?.opponent ?? null, drawn: !!a.tournament, done: false, prize: 0 };
   }
   if (career.challenge) return { kind: "challenge", challenge: career.challenge, done: career.challenge.won !== null };
-  if (career.played === 0) return { kind: "enter", tier: TIERS.lu };
-  const enter = [...LADDER].reverse().find((t) => whyNot(career, t) === null) ?? TIERS.lu;
-  return { kind: "enter", tier: enter };
+  if (career.played === 0 && lifeOf(career).week === 1) return { kind: "enter", tier: TIERS.lu };
+  const enter = [...LADDER].reverse().find((t) => whyNotNow(career, t) === null);
+  if (enter) return { kind: "enter", tier: enter };
+  return { kind: "enter", tier: TIERS.lu, why: `Uke ${weekInSeason(lifeOf(career).week)}` };
 }
 
 /** "Semifinale" is "semifinalen" in a sentence; "8-delsfinale" stays. */
@@ -31,6 +34,7 @@ const inSentence = (round: string) => (round.toLowerCase().endsWith("finale") ? 
 
 /** What the main button says: one word, and a small line under it for where it leads. */
 export function heroButton(hero: Hero): { label: string; sub: string } {
+  if (hero.kind === "enter" && hero.why) return { label: "SESONG", sub: hero.why };
   if (hero.kind === "enter") return { label: "SPILL", sub: `${hero.tier.short} · ${hero.tier.fee === 0 ? "gratis" : dollars(hero.tier.fee)}` };
   if (hero.kind === "challenge") {
     const c = hero.challenge;

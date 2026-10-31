@@ -44,7 +44,7 @@ describe("goals", () => {
     const g = goalsOf({ ...fresh(), money: 5000 }).find((x) => x.id === "tournament")!;
     expect(g.title).toBe("Norgesmesterskapet");
     expect(g.progress).toBeNull();
-    expect(g.line).toBe("Krever topp 4 i Regionmesterskapet");
+    expect(g.line).toBe("Krever topp 8 i Regionmesterskapet");
   });
 
   it("measures the rank in points between the title the player has and the next", () => {

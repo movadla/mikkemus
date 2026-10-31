@@ -1,8 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { newCareer, offerChallenge, openCup, setTournament, settleChallenge, startEvent, finishEvent, type Career } from "./career";
+import { lifeOf } from "./careerLife";
+import type { TierId } from "./career";
+import { weekOfInvite, weekOfTier } from "./careerCalendar";
+import type { Invitation } from "./careerLife";
+import { newCareer, offerChallenge, openCup, setTournament, settleChallenge, startEvent as realStartEvent, finishEvent, type Career } from "./career";
 import { heroButton, heroFor } from "./careerHero";
 import { nextPlayable, recordKnockoutResult } from "./knockout";
 import { matchParticipants } from "./tournament";
+
+/** The week of the plan a step (or an invitation) is played in: the tests sign up in it. */
+const inItsWeek = (c: Career, tier: TierId, invite?: { key: string }): Career => ({ ...c, life: { ...lifeOf(c), week: invite ? weekOfInvite(invite.key) : weekOfTier(tier) } });
+const startEvent = (c: Career, tier: TierId, seed: number, invite?: Invitation) => realStartEvent(inItsWeek(c, tier, invite), tier, seed, invite);
 
 const AT = "2026-10-28T20:00:00.000Z";
 const fresh = (): Career => newCareer("Lars", "dyktig", AT);
@@ -23,8 +31,14 @@ describe("the main button of the home screen", () => {
   });
 
   it("goes to the biggest step the player can enter: the regional championship once there is money for it", () => {
-    expect(heroButton(heroFor({ ...fresh(), played: 1, money: 500 }))).toEqual({ label: "SPILL", sub: "Region · $200" });
-    expect(heroButton(heroFor({ ...fresh(), played: 1, money: 20000, qualified: ["nm"] })).sub).toMatch(/^NM · /);
+    const inWeek = (week: number, over: Partial<Career>): Career => ({ ...fresh(), played: 1, ...over, life: { ...lifeOf(fresh()), week } });
+    expect(heroButton(heroFor(inWeek(3, { money: 500 })))).toEqual({ label: "SPILL", sub: "Region · $200" });
+    expect(heroButton(heroFor(inWeek(5, { money: 20000, qualified: ["nm"] }))).sub).toMatch(/^NM · /);
+  });
+
+  it("leads to the calendar in a week with nothing to enter", () => {
+    const week2: Career = { ...fresh(), played: 1, money: 500, life: { ...lifeOf(fresh()), week: 2 } };
+    expect(heroButton(heroFor(week2))).toEqual({ label: "SESONG", sub: "Uke 2" });
   });
 
   it("is the cup that is going, with the round and the opponent under the word", () => {

@@ -15,7 +15,8 @@ import {
   type DartsId,
   type HomeId,
 } from "@/lib/career";
-import { botMed, leaveAbandoned, leaveEvent } from "@/lib/careerWorld";
+import { botMed, chooseRival, leaveAbandoned, leaveEvent } from "@/lib/careerWorld";
+import { LY_REGULARS } from "@/lib/opponents";
 import { rivalOf } from "@/lib/careerLife";
 import { deleteCareer, loadCareers, mergeCareers, readLocalCareers, saveCareer } from "@/lib/careerStorage";
 import { ensurePlayer, useRoster } from "@/lib/storage";
@@ -119,8 +120,8 @@ function CareerAppInner({ onExitToHome }: { onExitToHome: () => void }) {
         <NewCareer
           taken={careers.map((c) => c.id)}
           onBack={careers.length > 0 ? () => setCreating(false) : onExitToHome}
-          onCreate={(player, level, profile) => {
-            const c = newCareer(player, level, new Date().toISOString(), profile);
+          onCreate={(player, level, profile, rival) => {
+            const c = chooseRival(newCareer(player, level, new Date().toISOString(), profile), rival);
             commit(c);
             setId(c.id);
             setCreating(false);
@@ -239,7 +240,7 @@ function StoryIntro({ onDone }: { onDone: () => void }) {
 }
 
 /** Two steps: who and how good, then the look and the start (the shirt, the darts, the place). */
-type NewCareerProps = { taken: string[]; onBack: () => void; onCreate: (player: string, level: string, profile: { home: HomeId; darts: DartsId; character: string; game: CareerGame; doubleOut: boolean }) => void };
+type NewCareerProps = { taken: string[]; onBack: () => void; onCreate: (player: string, level: string, profile: { home: HomeId; darts: DartsId; character: string; game: CareerGame; doubleOut: boolean }, rival: string) => void };
 
 /** The setup happens where the career begins: the pub Ly, dimmed behind the steps. */
 function NewCareer(props: NewCareerProps) {
@@ -265,6 +266,8 @@ function NewCareerSteps({ taken, onBack, onCreate }: NewCareerProps) {
   const [level, setLevel] = useState("dyktig");
   const [darts, setDarts] = useState<DartsId>("steel");
   const [character, setCharacter] = useState(DEFAULT_CHARACTER);
+  // The rival: one of the regulars of Ly. Until one is picked it is the one the career gives.
+  const [rivalPicked, setRivalPicked] = useState<string | null>(null);
   // A swipe over the figure (or an arrow) moves to the next character, round the ring.
   const swipeFrom = useRef<number | null>(null);
   const stepCharacter = (d: number) => {
@@ -296,6 +299,7 @@ function NewCareerSteps({ taken, onBack, onCreate }: NewCareerProps) {
     setNameError("");
   };
   const record = roster.find((r) => r.name === player);
+  const rivalName = rivalPicked ?? (record ? rivalOf({ id: careerId(record.name), player: record.name }).name : "");
 
   if (story) {
     return (
@@ -314,7 +318,7 @@ function NewCareerSteps({ taken, onBack, onCreate }: NewCareerProps) {
     return (
       <div className="animate-screen-push screen has-sticky-action career-skin wizard">
         <div className="screen-inner">
-          <ScreenTop title="Spill og piler" onBack={() => setStep(2)} sub={<span style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>{record.name}</span>} />
+          <ScreenTop title="Spill, piler og rival" onBack={() => setStep(2)} sub={<span style={{ color: "var(--color-muted)", fontSize: "var(--text-small)" }}>{record.name}</span>} />
           <Steps step={3} />
           {changing ? (
             <>
@@ -348,6 +352,18 @@ function NewCareerSteps({ taken, onBack, onCreate }: NewCareerProps) {
               <Button onClick={() => setChanging(true)}>Endre</Button>
             </div>
           )}
+          <p className="section-label mb-2">RIVAL</p>
+          <p className="level-about mb-2">Rivalen utfordrer deg to ganger i sesongen, og du velger selv hvor mye du satser. Du kan bytte senere.</p>
+          <div className="player-grid mb-4" role="radiogroup" aria-label="Rival">
+            {LY_REGULARS.filter((r) => r.name.toLowerCase() !== record.name.trim().toLowerCase()).map((r) => (
+              <button key={r.name} type="button" role="radio" aria-checked={rivalName === r.name} onClick={() => setRivalPicked(r.name)} className={`player-tile tactile ${FOCUS_RING}`}>
+                <span className="pf-rival-face">
+                  <OpponentPortrait name={r.name} />
+                </span>
+                <span className="truncate">{r.name}</span>
+              </button>
+            ))}
+          </div>
           <div className="mb-3 rise-in" style={{ padding: "0.8rem 0.9rem", borderRadius: "var(--radius-m)", background: "var(--color-surface)", border: "1px solid var(--color-gold)" }}>
             <p className="section-label" style={{ color: "var(--color-gold-strong)" }}>
               FØRSTE TURNERING
@@ -357,7 +373,7 @@ function NewCareerSteps({ taken, onBack, onCreate }: NewCareerProps) {
             </p>
             <p style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>Fredagskveld på puben · Gratis</p>
           </div>
-          <StickyAction onClick={() => onCreate(record.name, level, { home: "garage", darts, character, ...gameSettings })} ready reason={null}>
+          <StickyAction onClick={() => onCreate(record.name, level, { home: "garage", darts, character, ...gameSettings }, rivalName)} ready reason={null}>
             Start karrieren
           </StickyAction>
         </div>

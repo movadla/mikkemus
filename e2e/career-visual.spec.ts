@@ -44,7 +44,7 @@ test.describe("karriere, skjermbilder", () => {
     await page.getByRole("button", { name: /^Trening/ }).click();
     await snap(page, "trening");
     await page.getByRole("button", { name: "Tilbake" }).first().click();
-    await page.getByRole("button", { name: /^Turneringer/ }).click();
+    await page.getByRole("button", { name: /^Sesong/ }).click();
     await snap(page, "turneringer");
     await page.getByRole("button", { name: "Tilbake" }).first().click();
     await page.getByRole("button", { name: /^Profil/ }).click();

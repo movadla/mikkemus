@@ -70,6 +70,21 @@ export function InviteFacts({ offer }: { offer: Extract<Message["offer"], { kind
   );
 }
 
+/** How much to put on a match: from a lowest to a highest, in steps, and no more than the player has. The loser pays the same. */
+function StakePicker({ range, money, value, onChange }: { range: { min: number; max: number; step: number }; money: number; value: number; onChange: (v: number) => void }) {
+  const max = Math.max(range.min, Math.min(range.max, Math.floor(money / range.step) * range.step));
+  const shown = Math.min(max, Math.max(range.min, value));
+  return (
+    <div className="msg-stake">
+      <label htmlFor="stake" className="section-label">
+        DU SATSER {dollars(shown)}
+      </label>
+      <input id="stake" type="range" min={range.min} max={max} step={range.step} value={shown} onChange={(e) => onChange(Number(e.target.value))} aria-valuetext={dollars(shown)} />
+      <p className="msg-why">Vinner du, får du {dollars(shown)}. Taper du, mister du {dollars(shown)}.</p>
+    </div>
+  );
+}
+
 /** The inbox: the people who write, the offers they make and how long they last. Answering is two buttons, and a yes takes the player on to what it was for. */
 export function CareerInbox({
   career,
@@ -86,6 +101,8 @@ export function CareerInbox({
   const [open, setOpen] = useState<string | null>(null);
   // The offers of a sponsor are shown when the player asks to see them.
   const [deals, setDeals] = useState<string | null>(null);
+  // What the player puts on a match against the rival, by message.
+  const [stakes, setStakes] = useState<Record<string, number>>({});
   if (life.inbox.length === 0) return <p style={{ color: "var(--color-muted)" }}>Ingen meldinger.</p>;
   const toggle = (m: Message) => {
     const next = open === m.id ? null : m.id;
@@ -139,11 +156,11 @@ export function CareerInbox({
                   {offer.kind === "challenge" && (
                     <ul className="msg-chips" aria-label="Om utfordringen">
                       {/* The game is in the body ("Lava, én runde"), so the chips say the rest: where, what it wins, what a loss costs. */}
-                      {offer.tv && (offer.tv.humanStart !== offer.tv.theirStart ? <li>Du starter på {offer.tv.humanStart}</li> : <li>Best av {offer.tv.legs}</li>)}
-                      {offer.tv && <li>Honorar {dollars(offer.tv.honorarium)}</li>}
+                      {offer.tv && (offer.tv.lives ? <li>Ett leg · {offer.tv.lives} liv</li> : offer.tv.humanStart !== offer.tv.theirStart ? <li>Du starter på {offer.tv.humanStart}</li> : <li>Best av {offer.tv.legs}</li>)}
+                      {offer.tv && offer.tv.honorarium > 0 && <li>Honorar {dollars(offer.tv.honorarium)}</li>}
                       {/* A challenge is always played somewhere: at Ly, or in the studio when it is a show. */}
                       <li>{offer.tv ? "I TV-studioet" : "På Ly"}</li>
-                      <li>Vinner {dollars(offer.stake)}</li>
+                      <li>Vinner {dollars(offer.range ? (stakes[m.id] ?? offer.stake) : offer.stake)}</li>
                       {offer.risk > 0 && <li>Ved tap: −{dollars(offer.risk)}</li>}
                     </ul>
                   )}
@@ -204,10 +221,13 @@ export function CareerInbox({
                       <Button onClick={() => setOpen(null)}>Til info</Button>
                     </div>
                   )}
+                  {m.state === "open" && offer.kind === "challenge" && offer.range && (
+                    <StakePicker range={offer.range} money={career.money} value={stakes[m.id] ?? offer.stake} onChange={(v) => setStakes((s) => ({ ...s, [m.id]: v }))} />
+                  )}
                   {m.state === "open" && words && (
                     <>
                       <div className="msg-actions">
-                        <Button variant="primary" disabled={!!why} onClick={() => answer(m, true)}>
+                        <Button variant="primary" disabled={!!why} onClick={() => answer(m, true, offer.kind === "challenge" && offer.range ? (stakes[m.id] ?? offer.stake) : 0)}>
                           {words[0]}
                         </Button>
                         <Button onClick={() => answer(m, false)}>{words[1]}</Button>

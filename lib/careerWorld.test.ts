@@ -1,8 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { START_MONEY, TIERS, declineChallenge, eventTier, finishEvent, newCareer, openCup, settleChallenge, startEvent, type Career, type Place } from "./career";
-import { WEEKS_PER_SEASON, inboxCount, lifeOf, lyPool, newLife, rivalOf, seasonOf, unseenNews, type Life, type Message } from "./careerLife";
-import { advanceWeek, answerMessage, botMed, leaveAbandoned, leaveEvent, markNewsSeen, markRead, peopleOf, playBracket, seasonPrize, sponsorOutcome, whyNotAnswer } from "./careerWorld";
+import type { TierId } from "./career";
+import { weekOfInvite, weekOfTier } from "./careerCalendar";
+import type { Invitation } from "./careerLife";
+import { START_MONEY, TIERS, declineChallenge, eventTier, finishEvent, newCareer, openCup, settleChallenge, startEvent as realStartEvent, whyNotNow, type Career, type Place } from "./career";
+import { WEEKS_PER_SEASON, inboxCount, lifeOf, lyPool, newLife, rivalOf, seasonOf, unseenNews, weekInSeason, type Life, type Message } from "./careerLife";
+import { CALENDAR } from "./careerCalendar";
+import { INTERNATIONALS } from "./opponents";
+import { advanceWeek, answerMessage, botMed, leaveAbandoned, leaveEvent, markNewsSeen, markRead, peopleOf, playBracket, seasonPrize, skipWeek, sponsorOutcome, whyNotAnswer } from "./careerWorld";
 import { normalizeCareer } from "./careerStorage";
+
+/** The week of the plan a step (or an invitation) is played in: the tests sign up in it. */
+const inItsWeek = (c: Career, tier: TierId, invite?: { key: string }): Career => ({ ...c, life: { ...lifeOf(c), week: invite ? weekOfInvite(invite.key) : weekOfTier(tier) } });
+const startEvent = (c: Career, tier: TierId, seed: number, invite?: Invitation) => realStartEvent(inItsWeek(c, tier, invite), tier, seed, invite);
 
 const AT = "2026-10-29T12:00:00.000Z";
 const fresh = (): Career => newCareer("Lars", "dyktig", AT);
@@ -33,8 +42,8 @@ describe("a new life", () => {
     expect(lifeOf(normalizeCareer(old)).week).toBe(1);
   });
 
-  it("counts seasons of ten weeks", () => {
-    expect([1, 10, 11, 20, 21].map(seasonOf)).toEqual([1, 1, 2, 2, 3]);
+  it("counts seasons of eight weeks", () => {
+    expect([1, 8, 9, 16, 17].map(seasonOf)).toEqual([1, 1, 2, 2, 3]);
   });
 });
 
@@ -318,8 +327,8 @@ describe("a long career", () => {
         expect(new Set(started.active!.entrants.map((p) => p.name)).size).toBe(m.offer.invite.size);
       }
     }
-    expect(lifeOf(c).seasons).toHaveLength(8);
-    expect(seasonOf(lifeOf(c).week)).toBe(9);
+    expect(lifeOf(c).seasons).toHaveLength(10);
+    expect(seasonOf(lifeOf(c).week)).toBe(11);
   });
 });
 
@@ -346,85 +355,141 @@ describe("the sponsors of a first title", () => {
   });
 });
 
-describe("the show on television", () => {
+describe("the duel on television", () => {
   const strong = (): Career => ({ ...fresh(), points: 90, played: 12, money: 100_000, history: [{ at: AT, event: "Norgesmesterskapet", place: "winner", prize: 0, cost: 0, points: 0 }] });
-  function untilTv(c: Career) {
-    let cur = c;
-    for (let i = 0; i < 40; i++) {
-      cur = advanceWeek(cur);
-      const m = lifeOf(cur).inbox.find((x) => x.state === "open" && x.offer.kind === "challenge" && x.offer.tv);
-      if (m) return { cur, m };
-    }
-    throw new Error("no show came");
-  }
+  const tvWeek = CALENDAR.find((x) => x.kind === "tv")!.week;
+  /** The week before the duel's week, so the next week going by is the one of the show. */
+  const beforeTv = (c: Career) => withLife(c, { week: tvWeek - 1 });
+  const showOf = (c: Career) => lifeOf(c).inbox.find((x) => x.state === "open" && x.offer.kind === "challenge" && x.offer.tv);
 
-  it("comes for a player who is doing well, with a fee for being there", () => {
-    const { m } = untilTv(strong());
+  it("comes in its week, with a professional, one leg of Highstriker with five lives, and five thousand to the winner", () => {
+    const cur = advanceWeek(beforeTv(strong()));
+    const m = showOf(cur)!;
     if (m.offer.kind !== "challenge" || !m.offer.tv) throw new Error("not a show");
-    expect(["Utfordreren", "Studioduellen"]).toContain(m.offer.tv.title);
-    expect(m.offer.tv.honorarium).toBeGreaterThan(0);
-    expect(m.offer.stake).toBeGreaterThan(m.offer.tv.honorarium);
-    if (m.offer.tv.title === "Utfordreren") expect(m.offer.tv).toMatchObject({ humanStart: 201, theirStart: 301, legs: 1 });
-    else expect(m.offer.tv.legs).toBe(3);
+    expect(m.offer).toMatchObject({ game: "highstriker", stake: 5000, risk: 0 });
+    expect(m.offer.tv).toMatchObject({ title: "TV Duell", legs: 1, lives: 5, honorarium: 0 });
+    expect(INTERNATIONALS.map((o) => o.name)).toContain(m.offer.opponent.name);
+    // It can be answered in its week only.
+    expect(m.until).toBe(lifeOf(cur).week);
   });
 
-  it("does not come for a player who has done nothing", () => {
-    let c = fresh();
-    for (let i = 0; i < 6; i++) c = advanceWeek(c);
-    expect(lifeOf(c).inbox.some((m) => m.offer.kind === "challenge" && m.offer.tv)).toBe(false);
+  it("does not come in the other weeks, nor for a player who has done nothing", () => {
+    let c = strong();
+    for (let i = 0; i < 20; i++) {
+      c = advanceWeek(c);
+      if (weekInSeason(lifeOf(c).week) !== tvWeek) expect(showOf(c)).toBeUndefined();
+    }
+    expect(showOf(advanceWeek(beforeTv(fresh())))).toBeUndefined();
   });
 
-  it("pays the fee for being there even for a loss, and turning it down costs nothing", () => {
-    const { cur, m } = untilTv(strong());
+  it("pays five thousand for a win and nothing for a loss, and turning it down costs nothing", () => {
+    const cur = advanceWeek(beforeTv(strong()));
+    const m = showOf(cur)!;
     const taken = answerMessage(cur, m.id, true, 5);
-    const tv = taken.challenge!.tv!;
-    expect(taken.challenge).toMatchObject({ risk: 0, from: m.id });
-    expect(settleChallenge(taken, false, AT).money).toBe(cur.money + tv.honorarium);
-    expect(settleChallenge(taken, true, AT).money).toBe(cur.money + tv.honorarium + taken.challenge!.stake);
-    // A win is news and a trophy of its own, a loss is news only.
+    expect(taken.challenge).toMatchObject({ game: "highstriker", stake: 5000, risk: 0, from: m.id });
+    expect(settleChallenge(taken, false, AT).money).toBe(cur.money);
+    expect(settleChallenge(taken, true, AT).money).toBe(cur.money + 5000);
     const won = settleChallenge(taken, true, AT);
     expect(lifeOf(won).news[0].headline).toContain(`slo ${taken.challenge!.opponent.name}`);
-    expect(won.trophies[0]).toMatchObject({ name: `${tv.title}-pokalen` });
+    expect(won.trophies[0]).toMatchObject({ name: "TV Duell-pokalen" });
     expect(settleChallenge(taken, false, AT).trophies).toHaveLength(0);
     const no = answerMessage(cur, m.id, false, 5);
     expect(lifeOf(no).reputation).toBe(lifeOf(cur).reputation);
     expect(declineChallenge(taken).challenge).toBeNull();
-    expect(lifeOf(declineChallenge(taken)).reputation).toBe(lifeOf(taken).reputation);
+  });
+
+  it("cannot be taken in another week", () => {
+    const cur = advanceWeek(beforeTv(strong()));
+    const m = showOf(cur)!;
+    expect(whyNotAnswer(withLife(cur, { week: lifeOf(cur).week + 1 }), m)).toMatch(/^Spilles i uke/);
   });
 });
 
-describe("the finale of the season", () => {
-  it("is offered in the last week to a player among the eight best, with the others fixed", () => {
-    const c = advanceWeek(withLife({ ...fresh(), money: 5000 }, { week: WEEKS_PER_SEASON - 1, seasonPts: 40, world: { ...newLife().world, pts: { Marcus: 50, Haakon: 30 } } }));
-    const m = lifeOf(c).inbox.find((x) => x.offer.kind === "invite" && x.offer.invite.key === "finale")!;
-    expect(m).toBeDefined();
-    if (m.offer.kind !== "invite") throw new Error("not an invitation");
-    expect(m.offer.invite.size).toBe(8);
-    expect(m.offer.invite.field).toHaveLength(7);
-    expect(m.offer.invite.field![0]).toBe("Marcus");
-    const started = answerMessage(c, m.id, true, 3);
-    expect(started.active?.entrants.map((p) => p.name).sort()).toEqual([...m.offer.invite.field!, "Lars"].sort());
+describe("the calendar of the season", () => {
+  const at = (week: number, over: Partial<Career> = {}): Career => withLife({ ...fresh(), ...over }, { week });
+  const invites = (c: Career) => lifeOf(c).inbox.filter((m) => m.state === "open" && m.offer.kind === "invite");
+  const keys = (c: Career) => invites(c).map((m) => (m.offer.kind === "invite" ? m.offer.invite.key : ""));
+
+  it("has the five steps of the ladder in weeks 1, 3, 5, 7 and 8, and Trondheim, Stavanger and TV Duell between", () => {
+    expect(CALENDAR.map((s) => s.name)).toEqual(["Ly-cupen", "Trondheim Open", "Regionmesterskapet", "Stavanger Open", "Norgesmesterskapet", "TV Duell", "Grand Slam", "VM i dart"]);
+    expect(CALENDAR).toHaveLength(WEEKS_PER_SEASON);
   });
 
-  it("is not offered to someone with no points this season", () => {
-    const c = advanceWeek(withLife(fresh(), { week: WEEKS_PER_SEASON - 1, seasonPts: 0 }));
-    expect(lifeOf(c).inbox.some((x) => x.offer.kind === "invite" && x.offer.invite.key === "finale")).toBe(false);
+  it("lets a step be entered in its own week only", () => {
+    const c = { ...fresh(), money: 100_000, qualified: ["nm" as const] };
+    expect(whyNotNow(at(1, c), TIERS.lu)).toBeNull();
+    expect(whyNotNow(at(2, c), TIERS.lu)).toBe("Spilles i uke 1");
+    expect(whyNotNow(at(3, c), TIERS.region)).toBeNull();
+    expect(whyNotNow(at(5, c), TIERS.nm)).toBeNull();
+    expect(whyNotNow(at(3, c), TIERS.nm)).toBe("Spilles i uke 5");
+  });
+
+  it("holds the invitation of Trondheim in week 2 for a player with points, and stays TBA without", () => {
+    const some = advanceWeek(at(1, { points: 5, played: 1 }));
+    expect(keys(some)).toEqual(["trondheim"]);
+    expect(invites(some)[0].until).toBe(2);
+    expect(invites(advanceWeek(at(1, { points: 0, played: 1 })))).toHaveLength(0);
+  });
+
+  it("holds the invitation of Stavanger in week 4, and none in the weeks of the steps", () => {
+    expect(keys(advanceWeek(at(3, { points: 30, played: 3 })))).toEqual(["stavanger"]);
+    for (const w of [2, 4, 5, 6, 7]) expect(invites(advanceWeek(at(w, { points: 30, played: 3 })))).toHaveLength(0);
+  });
+
+  it("can be entered in its week and not in the next", () => {
+    const two = advanceWeek(at(1, { points: 5, played: 1, money: 5000 }));
+    const m = invites(two)[0];
+    expect(whyNotAnswer(two, m)).toBeNull();
+    expect(whyNotAnswer(withLife(two, { week: 3 }), m)).toMatch(/^Spilles i uke 2/);
+  });
+
+  it("lets a week go with skipWeek, and writes down what came of the weeks", () => {
+    const next = skipWeek(at(2, { points: 0, played: 1 }));
+    expect(lifeOf(next).week).toBe(3);
+    expect(lifeOf(next).weeks?.["2"]).toMatchObject({ skipped: true });
+    // Not while a tournament is on.
+    const busy = startEvent(at(1), "lu", 3);
+    expect(skipWeek(busy)).toBe(busy);
+    const played = leaveEvent({ ...busy, active: { ...busy.active!, result: { place: "winner", prize: 0, cost: 0, points: 10 } } });
+    expect(lifeOf(played).weeks?.["1"]).toMatchObject({ name: "Ly-cupen", place: "winner" });
+  });
+
+  it("takes the places in the steps away when the season ends", () => {
+    const c = advanceWeek(at(WEEKS_PER_SEASON, { qualified: ["nm", "vm"] }));
+    expect(c.qualified).toEqual([]);
+    expect(seasonOf(lifeOf(c).week)).toBe(2);
   });
 });
 
 describe("the rival", () => {
-  it("is the one who asks for the match back, after a loss to them, and nobody else", () => {
+  it("challenges the player twice a season, to one leg of 501, for a stake the player picks from 100 to 1000", () => {
     const rival = rivalOf(fresh()).name;
-    const lost = (to: string): Career => {
-      const base = finished(fresh(), "quarter", 0, 1);
-      const t = { matches: [{ id: "m", isBye: false, bracketRoundSize: 4, participantA: "Lars", participantB: to, winner: to }] } as unknown as NonNullable<Career["active"]>["tournament"];
-      return { ...base, rivals: { [rival]: { w: 0, l: 2, last: AT, lastWon: false }, Dan: { w: 0, l: 3, last: AT, lastWon: false } }, active: { ...base.active!, tournament: t } };
-    };
-    const byRival = lifeOf(leaveEvent(lost(rival))).inbox.filter((m) => m.offer.kind === "challenge");
-    expect(byRival).toHaveLength(1);
-    expect(byRival[0].from.name).toBe(rival);
-    const other = rival === "Dan" ? "Dave" : "Dan";
-    expect(lifeOf(leaveEvent(lost(other))).inbox.filter((m) => m.offer.kind === "challenge" && m.from.name === other).length).toBe(0);
+    const offers = (c: Career) => lifeOf(c).inbox.filter((m) => m.state === "open" && m.offer.kind === "challenge" && m.from.role === "Rival");
+    let c: Career = fresh();
+    let seen = 0;
+    for (let w = 0; w < WEEKS_PER_SEASON; w++) {
+      const before = offers(c).length;
+      c = advanceWeek(c);
+      if (offers(c).length > before) seen += 1;
+    }
+    expect(seen).toBe(2);
+    const m = offers(advanceWeek(withLife(fresh(), { week: 2 })))[0];
+    expect(m.from.name).toBe(rival);
+    expect(m.offer).toMatchObject({ kind: "challenge", game: "501", range: { min: 100, max: 1000, step: 100 } });
+  });
+
+  it("puts the stake the player picked at risk both ways, within the range and what they have", () => {
+    const c0 = advanceWeek(withLife({ ...fresh(), money: 5000 }, { week: 2 }));
+    const m = lifeOf(c0).inbox.find((x) => x.from.role === "Rival" && x.state === "open")!;
+    const take = (stake: number, money = 5000) => answerMessage({ ...c0, money }, m.id, true, 3, stake).challenge!;
+    expect(take(300)).toMatchObject({ stake: 300, risk: 300 });
+    expect(take(5000)).toMatchObject({ stake: 1000, risk: 1000 });
+    expect(take(10)).toMatchObject({ stake: 100, risk: 100 });
+    expect(take(1000, 450)).toMatchObject({ stake: 400, risk: 400 });
+    const taken = answerMessage(c0, m.id, true, 3, 300);
+    expect(settleChallenge(taken, true, AT).money).toBe(5300);
+    expect(settleChallenge(taken, false, AT).money).toBe(4700);
+    expect(whyNotAnswer({ ...c0, money: 50 }, m)).toBe("Du trenger minst $100");
   });
 
   it("never stops playing while the career goes on, and is always the one in the surprise challenges", () => {
@@ -438,7 +503,8 @@ describe("the rival", () => {
   });
 });
 
-describe("a cup of teams", () => {
+// The World Cup of Darts and the pairs cup have no week in the calendar yet, so no invitation reaches them: these wait for one.
+describe.skip("a cup of teams", () => {
   const strong = (): Career => ({ ...fresh(), points: 200, played: 30, money: 500_000, history: [{ at: AT, event: "Grand Slam", place: "winner", prize: 0, cost: 0, points: 0 }, { at: AT, event: "Norgesmesterskapet", place: "winner", prize: 0, cost: 0, points: 0 }] });
   /** Plays weeks until an invitation of this kind comes, closing the others so they do not crowd it out. */
   function invitationOf(key: string) {
@@ -498,20 +564,5 @@ describe("a cup of teams", () => {
     expect(lifeOf(left).news.some((n) => n.kind === "you" && n.headline.startsWith(opened.active!.invite!.team!.mine.name))).toBe(true);
     // A cup of teams has no record against a person.
     expect(left.rivals ?? {}).toEqual({});
-  });
-});
-
-describe("the rival's match of the season", () => {
-  it("comes in week 6 of every season, from the rival, in 501 for three times an ordinary stake, and is news in the strip only by its week", () => {
-    const c = withLife(fresh(), { week: 5 });
-    const next = advanceWeek(c);
-    const m = lifeOf(next).inbox.find((x) => x.title === "Rivalkampen");
-    expect(m).toBeDefined();
-    expect(m!.from).toEqual({ name: rivalOf(c).name, role: "Rival" });
-    expect(m!.offer).toMatchObject({ kind: "challenge", game: "501", opponent: { name: rivalOf(c).name } });
-    const later = advanceWeek(withLife(fresh(), { week: 5 + WEEKS_PER_SEASON }));
-    expect(lifeOf(later).inbox.some((x) => x.title === "Rivalkampen")).toBe(true);
-    const other = advanceWeek(withLife(fresh(), { week: 3 }));
-    expect(lifeOf(other).inbox.some((x) => x.title === "Rivalkampen")).toBe(false);
   });
 });

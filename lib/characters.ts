@@ -20,6 +20,15 @@ export const CHARACTERS: Character[] = [
   { id: "c03", name: "Skjegg og tatoveringer", tint: "#e8553a", poses: poses("c03", ["noytral", "jubel", "skuffet", "kast"]) },
   { id: "c02", name: "Skallen", tint: "#4cc24a", poses: poses("c02", ["noytral", "jubel", "skuffet", "kast"]) },
   { id: "c09", name: "Solbriller og caps", tint: "#2ec4b6", poses: poses("c09", ["noytral", "jubel", "skuffet", "kast"]) },
+  // The names of these are placeholders until the owner gives them their own.
+  { id: "c10", name: "Skalle i stripet drakt", tint: "#f5a623", poses: poses("c10", ["noytral", "jubel", "skuffet", "kast"]) },
+  { id: "c11", name: "Langt skjegg og kenguru", tint: "#2e9e4f", poses: poses("c11", ["noytral", "jubel", "skuffet", "kast"]) },
+  { id: "c12", name: "Grått hår og blå drakt", tint: "#2f7bff", poses: poses("c12", ["noytral", "jubel", "skuffet", "kast"]) },
+  { id: "c13", name: "Krøller og lilla drakt", tint: "#c43ad6", poses: poses("c13", ["noytral", "jubel", "skuffet", "kast"]) },
+  { id: "c14", name: "Blondt hår og rød drakt", tint: "#e0352f", poses: poses("c14", ["noytral", "jubel", "skuffet", "kast"]) },
+  { id: "c15", name: "Bar overkropp", tint: "#d98a5f", poses: poses("c15", ["noytral", "jubel", "skuffet", "kast"]) },
+  { id: "c16", name: "Langt hår og gul drakt", tint: "#f2c200", poses: poses("c16", ["noytral", "jubel", "skuffet", "kast"]) },
+  { id: "c17", name: "Smoking", tint: "#9aa3b2", poses: poses("c17", ["noytral", "jubel", "skuffet", "kast"]) },
 ];
 
 export const DEFAULT_CHARACTER = CHARACTERS[0].id;

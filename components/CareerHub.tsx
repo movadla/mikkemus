@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { TrainingPanel, type TrainTarget } from "./TrainingPanel";
-import { LADDER, roomPicture, buyStage, dollars, entryCost, hubPicture, topStep, isUnlocked, nextStage, startEvent, whyNot, whyNotBuy, type Career, type Tier } from "@/lib/career";
+import { LADDER, roomPicture, buyStage, dollars, entryCost, hubPicture, topStep, isUnlocked, nextStage, startEvent, whyNotNow, whyNotBuy, type Career, type Tier } from "@/lib/career";
 import { buyGear } from "@/lib/gear";
 import { cupColor } from "@/lib/botCup";
 import { TROPHY } from "@/lib/scenePalette";
@@ -18,7 +18,8 @@ import { SeasonScreen } from "./SeasonScreen";
 import { RankUp, SeasonRecap } from "./CareerScreens";
 import { CareerNews } from "./CareerNews";
 import { sponsorLogo } from "@/lib/careerLife";
-import { inboxCount, isOpen, lifeOf, RIVAL_WEEK, seasonOf, unseenNews, weekInSeason, WEEKS_PER_SEASON } from "@/lib/careerLife";
+import { SeasonCalendar } from "./SeasonCalendar";
+import { inboxCount, isOpen, lifeOf, RIVAL_WEEKS, seasonOf, unseenNews, weekInSeason, WEEKS_PER_SEASON } from "@/lib/careerLife";
 import { markNewsSeen } from "@/lib/careerWorld";
 import { CareerHud } from "./CareerHud";
 import { RankBadge, TrophyArt } from "./CareerTrophy";
@@ -40,20 +41,20 @@ import { FOCUS_RING } from "./ui/focus";
 
 type View = "home" | "rooms" | "road" | "profile" | "inbox" | "season";
 
-const TITLE: Record<Exclude<View, "home">, string> = { rooms: "Trening", road: "Turneringer", profile: "Profil", inbox: "Meldinger", season: "Sesongen" };
+const TITLE: Record<Exclude<View, "home">, string> = { rooms: "Trening", road: "Sesong", profile: "Profil", inbox: "Meldinger", season: "Sesongtabellen" };
 
-/** Where the career is in its season: ten ticks, the weeks that are played filled in. */
+/** Where the career is in its season: eight ticks, the weeks that are played filled in. */
 function SeasonStrip({ career, onOpen }: { career: Career; onOpen: () => void }) {
   const life = lifeOf(career);
   const week = weekInSeason(life.week);
   return (
-    <button type="button" className={`season-strip tabular tactile ${FOCUS_RING}`} aria-label={`Sesongen: sesong ${seasonOf(life.week)}, uke ${week} av ${WEEKS_PER_SEASON}, rivalkampen i uke ${RIVAL_WEEK}`} onClick={onOpen}>
+    <button type="button" className={`season-strip tabular tactile ${FOCUS_RING}`} aria-label={`Sesongen: sesong ${seasonOf(life.week)}, uke ${week} av ${WEEKS_PER_SEASON}, rivalutfordringer i uke ${RIVAL_WEEKS.join(" og ")}`} onClick={onOpen}>
       <span>
         Sesong {seasonOf(life.week)} · uke {week}
       </span>
       <span className="season-ticks" aria-hidden>
         {Array.from({ length: WEEKS_PER_SEASON }, (_, i) => (
-          <i key={i} className={`${i < week - 1 ? "on" : i === week - 1 ? "now" : ""} ${i === RIVAL_WEEK - 1 ? "rival" : ""}`} />
+          <i key={i} className={`${i < week - 1 ? "on" : i === week - 1 ? "now" : ""} ${RIVAL_WEEKS.includes(i + 1) ? "rival" : ""}`} />
         ))}
       </span>
     </button>
@@ -127,14 +128,15 @@ export function Hub({ career, onBack, onExit, onPlay, onChallenge, onTrain, comm
   const press = (e: React.MouseEvent<HTMLButtonElement>) => {
     uiFeedback("click");
     markTipSeen("play");
-    if (hero.kind === "enter") enter(hero.tier.id, e.currentTarget);
+    if (hero.kind === "enter" && hero.why) go("road");
+    else if (hero.kind === "enter") enter(hero.tier.id, e.currentTarget);
     else if (hero.kind === "event") onPlay();
     else onChallenge();
   };
   const button = heroButton(hero);
   // Something beyond the pub is open and has not been entered: the road button says so.
   const invited = lifeOf(career).inbox.some((m) => m.offer.kind === "invite" && isOpen(m));
-  const roadDot = invited || (!career.active && !career.challenge && LADDER.some((t) => t.id !== "lu" && whyNot(career, t) === null));
+  const roadDot = invited || (!career.active && !career.challenge && LADDER.some((t) => t.id !== "lu" && whyNotNow(career, t) === null));
   const buy = () => {
     const was = career.room;
     const bought = nextStage(career);
@@ -308,7 +310,7 @@ export function Hub({ career, onBack, onExit, onPlay, onChallenge, onTrain, comm
                   go("profile");
                 }}
               />
-              <RoundButton icon={<RoadIcon />} label="Turneringer" badge={roadDot} onClick={() => go("road")} />
+              <RoundButton icon={<RoadIcon />} label="Sesong" badge={roadDot} onClick={() => go("road")} />
               <RoundButton icon={<MailIcon />} label="Meldinger" badge={inboxCount(lifeOf(career)) > 0 || unseenNews(lifeOf(career)) > 0} onClick={() => go("inbox")} />
             </div>
           </div>
@@ -318,7 +320,7 @@ export function Hub({ career, onBack, onExit, onPlay, onChallenge, onTrain, comm
   }
 
   const selected = LADDER.find((t) => t.id === (picked ?? (hero.kind === "challenge" ? "lu" : hero.tier.id))) ?? LADDER[0];
-  const selWhy = career.active?.tier === selected.id ? null : whyNot(career, selected);
+  const selWhy = career.active?.tier === selected.id ? null : whyNotNow(career, selected);
   const selState = career.active?.tier === selected.id ? "active" : !isUnlocked(career, selected) ? "locked" : selWhy ? "short" : "open";
   const next = nextStage(career);
   const buyWhy = whyNotBuy(career);
@@ -391,6 +393,7 @@ export function Hub({ career, onBack, onExit, onPlay, onChallenge, onTrain, comm
 
           {view === "road" && (
             <>
+              <SeasonCalendar career={career} commit={commit} />
               <CareerInvites career={career} commit={commit} onPlay={onPlay} />
               {/* The ladder as a road: a line down the side with a stop for each step, green where the cup is won, gold for the next one to take. */}
               <ul className="space-y-2 tourney-path" aria-label="Turneringer" style={{ paddingBottom: "6.5rem" }}>

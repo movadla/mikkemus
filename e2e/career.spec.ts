@@ -44,7 +44,7 @@ async function toCareer(page: Page, withCareer = true) {
 
 const saved = (page: Page) => page.evaluate(() => JSON.parse(localStorage.getItem("mikke-mus-career:lars") ?? "null"));
 const play = (page: Page, name: RegExp | string) => page.getByRole("button", { name });
-const place = (page: Page, name: "Trening" | "Profil" | "Turneringer" | "Meldinger") => page.getByRole("button", { name: new RegExp(`^${name}`) });
+const place = (page: Page, name: "Trening" | "Profil" | "Sesong" | "Meldinger") => page.getByRole("button", { name: new RegExp(`^${name}`) });
 
 test.describe("karriere", () => {
   test.skip(!PIN, "E2E_PIN is not set");
@@ -118,7 +118,7 @@ test.describe("karriere", () => {
     await expect.poll(async () => (await saved(page)).profile.game).toBe("501");
     await page.keyboard.press("Escape");
     // The pub's cup in 501: the comparison before the match has the figures of 501, not of Mikke Mus.
-    await place(page, "Turneringer").click();
+    await place(page, "Sesong").click();
     await page.getByRole("list", { name: "Turneringer" }).getByRole("button", { name: /^Ly-cupen/ }).click();
     await play(page, "SPILL Ly-cupen · gratis").click();
     await page.waitForTimeout(3300);
@@ -269,7 +269,7 @@ test.describe("karriere", () => {
     await expect(page.getByRole("progressbar", { name: "Neste rang: Regionspiller" })).toBeVisible();
     await page.getByRole("button", { name: "Tilbake" }).click();
     // Four round buttons. The room has no dot: the first step costs $500 and there is $300.
-    for (const name of ["Trening", "Profil", "Turneringer", "Meldinger"] as const) await expect(place(page, name)).toBeVisible();
+    for (const name of ["Trening", "Profil", "Sesong", "Meldinger"] as const) await expect(place(page, name)).toBeVisible();
     await expect(page.getByRole("button", { name: "Trening, nytt" })).toHaveCount(0);
     // Nothing else: no lists, no explanations, no second row of tabs.
     await expect(page.getByRole("navigation", { name: "Karriere" })).toHaveCount(0);
@@ -279,7 +279,7 @@ test.describe("karriere", () => {
   test("turneringer: alle med krav, pris og premie, de låste sier hva som kreves, og Ly-cupen spilles til trekning og omlasting", async ({ page }) => {
     await toCareer(page);
     await page.getByRole("button", { name: /Lars/ }).click();
-    await place(page, "Turneringer").click();
+    await place(page, "Sesong").click();
     const list = page.getByRole("list", { name: "Turneringer" });
     for (const name of ["Ly-cupen", "Regionmesterskapet", "Norgesmesterskapet", "Grand Slam", "VM i dart"]) await expect(list.getByRole("button", { name: new RegExp("^" + name) })).toBeVisible();
     // What it takes, what it costs, who plays, and the first prize.
@@ -291,7 +291,7 @@ test.describe("karriere", () => {
     await expect(list.getByRole("button", { name: /^VM i dart/ })).toContainText("$150");
     // A locked one says what it takes in the button, and the button is shut.
     await list.getByRole("button", { name: /^Norgesmesterskapet/ }).click();
-    await expect(play(page, /^SPILL Krever topp 4 i Regionmesterskapet/)).toBeDisabled();
+    await expect(play(page, /^SPILL Krever topp 8 i Regionmesterskapet/)).toBeDisabled();
     await list.getByRole("button", { name: /^Ly-cupen/ }).click();
     await play(page, "SPILL Ly-cupen · gratis").click();
     // The scene of the pub, then the draw of the tournaments, with the career's field in it.

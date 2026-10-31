@@ -13,6 +13,7 @@ import { book } from "./ledger";
 import { dartsBonus, feeDiscount } from "./gear";
 import { matchLines, withLines, type MatchLine } from "./careerStats";
 import type { LedgerEntry } from "./ledger";
+import { notThisWeek } from "./careerCalendar";
 import { addNews, botMed, lifeOf, lyPool, mustPlay, rivalOf, welcomeLife, REP_MAX, type Invitation, type Life, type Tv } from "./careerLife";
 import { INTERNATIONALS, LY_REGULARS } from "./opponents";
 import { countdownOf, gameOf, type CareerGame } from "./careerGame";
@@ -54,7 +55,7 @@ export type Tier = {
   /** About how long it takes the player, for the card. */
   minutes: number;
   /** Who it opens: placing like this here qualifies the player for the next step, once. */
-  opens?: { tier: TierId; places: Place[] };
+  opens?: { tier: TierId; places: Place[] }[];
   /** How the step is entered, for the card: nothing to say for those that only cost money. */
   qualify?: string;
 };
@@ -93,7 +94,7 @@ export const TIERS: Record<TierId, Tier> = {
     points: { winner: 25, final: 15, semi: 8, quarter: 4, r16: 1 },
     factor: 1.18,
     minutes: 50,
-    opens: { tier: "nm", places: ["winner", "final", "semi"] },
+    opens: [{ tier: "nm", places: ["winner", "final", "semi", "quarter"] }],
   },
   nm: {
     id: "nm",
@@ -111,8 +112,11 @@ export const TIERS: Record<TierId, Tier> = {
     points: { winner: 60, final: 36, semi: 20, quarter: 10, r16: 3 },
     factor: 1.14,
     minutes: 60,
-    qualify: "Krever topp 4 i Regionmesterskapet",
-    opens: { tier: "gs", places: ["winner"] },
+    qualify: "Krever topp 8 i Regionmesterskapet",
+    opens: [
+      { tier: "gs", places: ["winner", "final", "semi"] },
+      { tier: "vm", places: ["winner", "final"] },
+    ],
   },
   gs: {
     id: "gs",
@@ -130,8 +134,8 @@ export const TIERS: Record<TierId, Tier> = {
     points: { winner: 120, final: 70, semi: 40, quarter: 20, r16: 8 },
     factor: 1.12,
     minutes: 60,
-    qualify: "Krever seier i Norgesmesterskapet",
-    opens: { tier: "vm", places: ["winner", "final"] },
+    qualify: "Krever topp 4 i Norgesmesterskapet",
+    opens: [{ tier: "vm", places: ["winner", "final", "semi", "quarter"] }],
   },
   vm: {
     id: "vm",
@@ -149,7 +153,7 @@ export const TIERS: Record<TierId, Tier> = {
     points: { winner: 400, final: 240, semi: 140, quarter: 70, r16: 30, r32: 8 },
     factor: 1.22,
     minutes: 90,
-    qualify: "Krever topp 2 i Grand Slam",
+    qualify: "Krever topp 8 i Grand Slam eller topp 2 i Norgesmesterskapet",
   },
 };
 
@@ -423,6 +427,9 @@ export function whyNot(career: Career, tier: Tier): string | null {
   return null;
 }
 
+/** Why the player cannot sign up for this step this week, or null when they can: the money and the qualification, and that it is the one of the week (lib/careerCalendar.ts). */
+export const whyNotNow = (career: Career, tier: Tier): string | null => whyNot(career, tier) ?? notThisWeek(career, tier);
+
 /** The scene behind the home screen: the hall of the biggest step the player has reached (public/career/hub-<step>.jpg). */
 export const hubPicture = (tier: Tier) => `/career/hub-${tier.id}.jpg`;
 
@@ -437,7 +444,7 @@ export const prizePool = (tier: Tier) => Object.values(tier.prizes).reduce((s, n
 /** Signs up for an event: the fee is paid and the field is made. The draw comes next, and with it the cup. */
 export function startEvent(career: Career, tierId: TierId, seed: number, invite?: Invitation): Career {
   const tier = invite ?? TIERS[tierId];
-  if (whyNot(career, tier)) return career;
+  if (whyNotNow(career, tier)) return career;
   const cost = entryCost(career, tier);
   const active: ActiveEvent = { id: `${career.id}-${seed}`, tier: tierId, seed, cost, entrants: fieldFor(career, tier, seed), cup: cupFor(career, tier, seed), tournament: null, result: null, ...(invite ? { invite } : {}) };
   // The qualification is for this one entry (an invitation uses none).
@@ -492,10 +499,10 @@ export function finishEvent(career: Career, now: string): Career {
   const result: EventResult = { place, prize: (tier.prizes[place] ?? 0) + bonus + (a.invite?.honorarium ?? 0), cost: a.cost, points: tier.points[place] ?? 0, ...(bonus ? { revenge: { names: revenge, bonus } } : {}) };
   const entry: HistoryEntry = { at: now, event: tier.name, place, prize: result.prize, cost: result.cost, points: result.points };
   const won = place === "winner";
-  const opens = tier.opens && tier.opens.places.includes(place) ? tier.opens.tier : null;
+  const opens = (tier.opens ?? []).filter((o) => o.places.includes(place)).map((o) => o.tier);
   return book(withLines({
     ...career,
-    qualified: opens && !career.qualified.includes(opens) ? [...career.qualified, opens] : career.qualified,
+    qualified: [...career.qualified, ...opens.filter((o) => !career.qualified.includes(o))],
     money: career.money + result.prize,
     points: career.points + result.points,
     titles: career.titles + (won ? 1 : 0),

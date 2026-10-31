@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { GEAR, buyGear, coachWeight, dartsBonus, feeDiscount, gearBadge, gearNow, nextGear, whyNotBuyGear } from "./gear";
 import { TIERS, entryCost, factorFor, newCareer, startEvent, whyNot } from "./career";
+import { lifeOf } from "./careerLife";
 import { climbReward, dailyReward } from "./drills";
 import { sessionFrom } from "./training";
 
@@ -69,7 +70,7 @@ describe("the gear", () => {
     expect(entryCost(train, TIERS.lu)).toBe(0);
     const fly = buyGear(train, "travel");
     expect(entryCost(fly, TIERS.nm)).toBe(530);
-    const entered = startEvent(fly, "nm", 1);
+    const entered = startEvent({ ...fly, life: { ...lifeOf(fly), week: 5 } }, "nm", 1);
     expect(fly.money - entered.money).toBe(530);
     // The money it takes is the money it costs.
     expect(whyNot({ ...fly, money: 600, active: null }, TIERS.nm)).toBeNull();

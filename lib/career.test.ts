@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { weekOfInvite, weekOfTier } from "./careerCalendar";
+import type { Invitation } from "./careerLife";
 import { levelOfMed } from "./botLevels";
 import { lifeOf, rivalOf } from "./careerLife";
 import { opponentOf } from "./opponents";
@@ -32,13 +34,17 @@ import {
   setTournament,
   settleChallenge,
   stakeFor,
-  startEvent,
+  startEvent as realStartEvent,
   whyNot,
   type Career,
   type TierId,
 } from "./career";
 import { nextPlayable, recordKnockoutResult } from "./knockout";
 import { matchParticipants } from "./tournament";
+
+/** The week of the plan a step (or an invitation) is played in: the tests sign up in it. */
+const inItsWeek = (c: Career, tier: TierId, invite?: { key: string }): Career => ({ ...c, life: { ...lifeOf(c), week: invite ? weekOfInvite(invite.key) : weekOfTier(tier) } });
+const startEvent = (c: Career, tier: TierId, seed: number, invite?: Invitation) => realStartEvent(inItsWeek(c, tier, invite), tier, seed, invite);
 
 const AT = "2026-10-28T20:00:00.000Z";
 const fresh = (level = "dyktig") => newCareer("Lars", level, AT);
@@ -104,7 +110,7 @@ describe("the ladder", () => {
     for (const id of ["nm", "gs", "vm"] as const) {
       expect(isUnlocked(c, TIERS[id])).toBe(false);
       expect(whyNot(c, TIERS[id])).toBe(TIERS[id].qualify);
-      expect(startEvent(c, id, 1)).toBe(c);
+      expect(startEvent(c, id, 1).active).toBeNull();
     }
   });
 });
@@ -207,7 +213,7 @@ describe("signing up", () => {
     expect(c.active).toMatchObject({ cost: 0, tournament: null, result: null, tier: "lu" });
     expect(c.active!.entrants).toHaveLength(8);
     expect(c.active!.cup).toMatchObject({ kind: "lu", name: "Ly-cupen", career: true });
-    expect(startEvent(c, "lu", 2)).toBe(c);
+    expect(startEvent(c, "lu", 2).active).toBe(c.active);
   });
 
   it("costs the fee at the regional championship, and needs the money", () => {
@@ -217,7 +223,7 @@ describe("signing up", () => {
     expect(c.active!.entrants).toHaveLength(16);
     const poor = { ...fresh(), money: 150 };
     expect(whyNot(poor, TIERS.region)).toBe("Mangler $50");
-    expect(startEvent(poor, "region", 1)).toBe(poor);
+    expect(startEvent(poor, "region", 1).active).toBeNull();
   });
 
   it("will not take a second event while one is going", () => {
@@ -315,22 +321,25 @@ describe("paying out", () => {
 describe("qualifying", () => {
   const after = (tier: TierId, wins: number, qualified: TierId[] = []) => finishEvent(playOut(entered(rich(100000, qualified), tier), wins), AT);
 
-  it("opens the national championship for the best four of the regional one", () => {
+  it("opens the national championship for the best eight of the regional one", () => {
     expect(after("region", 4).qualified).toEqual(["nm"]);
     expect(after("region", 3).qualified).toEqual(["nm"]);
     expect(after("region", 2).qualified).toEqual(["nm"]);
-    expect(after("region", 1).qualified).toEqual([]);
+    expect(after("region", 1).qualified).toEqual(["nm"]);
+    expect(after("region", 0).qualified).toEqual([]);
   });
 
-  it("opens Grand Slam for the winner of the national championship only", () => {
-    expect(after("nm", 4, ["nm"]).qualified).toEqual(["gs"]);
-    expect(after("nm", 3, ["nm"]).qualified).toEqual([]);
+  it("opens Grand Slam for the best four of the national championship, and the world championship for the best two", () => {
+    expect(after("nm", 4, ["nm"]).qualified.sort()).toEqual(["gs", "vm"]);
+    expect(after("nm", 3, ["nm"]).qualified.sort()).toEqual(["gs", "vm"]);
+    expect(after("nm", 2, ["nm"]).qualified).toEqual(["gs"]);
+    expect(after("nm", 1, ["nm"]).qualified).toEqual([]);
   });
 
-  it("opens the world championship for the first or second of Grand Slam", () => {
+  it("opens the world championship for the best eight of Grand Slam", () => {
     expect(after("gs", 4, ["gs"]).qualified).toEqual(["vm"]);
-    expect(after("gs", 3, ["gs"]).qualified).toEqual(["vm"]);
-    expect(after("gs", 2, ["gs"]).qualified).toEqual([]);
+    expect(after("gs", 1, ["gs"]).qualified).toEqual(["vm"]);
+    expect(after("gs", 0, ["gs"]).qualified).toEqual([]);
   });
 
   it("is for one entry: signing up spends it", () => {

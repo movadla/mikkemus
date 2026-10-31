@@ -7,11 +7,14 @@
 import type { GameId, Place, Tier } from "./career";
 import { LY_REGULARS, opponentOf } from "./opponents";
 
-/** A season is ten weeks, and a week goes by when the player has played a tournament (or left one). */
-export const WEEKS_PER_SEASON = 10;
+/** A season is eight weeks, each with a tournament or a happening (lib/careerCalendar.ts), and a week goes by when the player has played it, left it, or let it go. */
+export const WEEKS_PER_SEASON = 8;
 
-/** The week of each season the rival asks for the big match of the season (lib/careerWorld.ts). */
-export const RIVAL_WEEK = 6;
+/** The weeks of each season the rival challenges the player to a leg of 501, for a stake the player picks (lib/careerWorld.ts). */
+export const RIVAL_WEEKS = [3, 7];
+
+/** What the player can put on a match against the rival, in dollars. */
+export const RIVAL_STAKE = { min: 100, max: 1000, step: 100, start: 500 };
 
 /** The best a name can be. It starts in the middle: saying no to what people ask costs some, playing what they ask earns some. */
 export const REP_MAX = 10;
@@ -48,7 +51,7 @@ export type Invitation = Tier & {
 };
 
 /** A game made for television: a title, what it pays for being there, how many legs, and where each side starts (a head start for the one who starts lower). */
-export type Tv = { title: string; honorarium: number; legs: 1 | 3; humanStart: number; theirStart: number };
+export type Tv = { title: string; honorarium: number; legs: 1 | 3; humanStart: number; theirStart: number; /** The lives each side has, in a game that has them (Highstriker). */ lives?: number };
 
 export type Sender = { name: string; role: string };
 
@@ -61,7 +64,7 @@ export type Sponsor = SponsorDeal & { left: number; misses: number; earned: numb
 /** What a message holds that can be answered. */
 export type Offer =
   | { kind: "invite"; invite: Invitation }
-  | { kind: "challenge"; game: GameId; opponent: { name: string; skill: number }; stake: number; risk: number; tv?: Tv }
+  | { kind: "challenge"; game: GameId; opponent: { name: string; skill: number }; stake: number; risk: number; tv?: Tv; /** The player picks the stake in this range, and puts the same at risk. */ range?: { min: number; max: number; step: number } }
   | { kind: "sponsor"; /** The deals on offer: one is signed. */ deals?: SponsorDeal[]; /** A career saved when each deal was a message of its own. */ deal?: SponsorDeal }
   | { kind: "info" };
 
@@ -95,6 +98,9 @@ export type World = { drift: Record<string, number>; retired: string[]; rookies:
 
 export type SeasonResult = { season: number; rank: number; points: number; prize: number; winner: string; /** The best five of the table, for the recap. Absent on a season from before it was kept. */ table?: { name: string; pts: number }[] };
 
+/** One week played: the name of what was played and where the player came, or that the week was let go. */
+export type WeekLog = { name: string; place?: Place; skipped?: true };
+
 export type Life = {
   /** The week of the career, from 1. */
   week: number;
@@ -108,6 +114,8 @@ export type Life = {
   sponsor: Sponsor | null;
   world: World;
   seasons: SeasonResult[];
+  /** What came of the weeks played, by the week of the career: the tournament and the place, or a week that was let go. */
+  weeks?: Record<string, WeekLog>;
   /** The last season whose recap the player has seen. */
   recapSeen?: number;
   /** The rival the player has chosen (one of the regulars of Ly); absent: the one the career gives. */
