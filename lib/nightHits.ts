@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { HitMap } from "./nightStats";
+import { memberKey, type HitMap } from "./nightStats";
 import { shownHitPct } from "./playerRows";
 import { useRoster, useTeamRecords } from "./storage";
 
@@ -13,6 +13,8 @@ export function useHitMap(): HitMap {
       for (const e of rec.matchHistory) {
         if (!e.matchId) continue;
         (map[e.matchId] ??= {})[rec.name] = shownHitPct(e);
+        // A team's match also tells each member's own share, under their name with the team mark.
+        for (const [who, h] of Object.entries(e.hitsByMember ?? {})) if (h.hits + h.misses > 0) map[e.matchId][memberKey(who)] = (h.hits / (h.hits + h.misses)) * 100;
       }
     return map;
   }, [roster, teams]);

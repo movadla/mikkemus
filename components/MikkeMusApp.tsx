@@ -2299,7 +2299,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       const accuracy = accuracyTotalsRef.current[p];
       if (accuracy) recordAccuracyTotals(p, accuracy);
       // In a team, each member's own numbers go on the team's record, next to the team's.
-      if (roster) recordMemberStats(p, memberDeltas(finalTurnLog[p] ?? [], roster.map((m) => m.name), accuracy?.byMember));
+      const memberDelta = roster ? memberDeltas(finalTurnLog[p] ?? [], roster.map((m) => m.name), accuracy?.byMember) : undefined;
+      if (memberDelta) recordMemberStats(p, memberDelta);
       const luckTotals = luckTotalsRef.current[p];
       if (luckTotals) recordLuckTotals(p, luckTotals);
       const ringHits = ringHitsRef.current[p];
@@ -2324,6 +2325,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
         steps: Object.fromEntries(STEPS.filter((s) => (aggregate.hitsByStep[s] ?? 0) + (aggregate.missesByStep[s] ?? 0) > 0).map((s) => [s, [aggregate.hitsByStep[s] ?? 0, aggregate.missesByStep[s] ?? 0]])),
         // Darts per row, for the chart under the player's statistics — the side's, and in a team each member's own.
         rowDarts: rowCosts(finalTurnLog[p] ?? []),
+        ...(memberDelta ? { hitsByMember: Object.fromEntries(Object.entries(memberDelta).map(([name, d]) => [name, { hits: d.hits, misses: d.misses }])) } : {}),
         ...(roster
           ? {
               rowDartsByMember: Object.fromEntries(

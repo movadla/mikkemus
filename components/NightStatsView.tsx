@@ -51,7 +51,7 @@ export function NightStatsView({ matches, hits, photos }: { matches: NightMatch[
       </ChartFrame>
 
       {stats.hits.length > 0 && (
-        <ChartFrame title="TREFFPROSENT" caption="Fra Mikke Mus-kampene. En spillers tall er bare fra kamper de spilte alene, lag har sine egne.">
+        <ChartFrame title="TREFFPROSENT" caption="Fra Mikke Mus-kampene. Alle som har kastet i Mikke Mus er med: egne kamper og egne kast i lag. Lag har i tillegg sitt eget tall. Lagkamper spilt før dette ble lagret mangler per person.">
           <Bars rows={stats.hits.map((h) => ({ name: h.name, value: h.pct, total: 100, label: `${Math.round(h.pct)} %`, team: h.kind === "team" }))} onOpen={setPerson} />
         </ChartFrame>
       )}

@@ -47,6 +47,8 @@ export type MatchHistoryEntry = {
   rowDarts?: Partial<Record<Step, number>>;
   /** In a team's match, the same for each member's own darts. */
   rowDartsByMember?: Record<string, Partial<Record<Step, number>>>;
+  /** In a team's match, the crosses and misses of each member: what the evening's hit percentage per person reads. Absent on matches from before it was kept. */
+  hitsByMember?: Record<string, { hits: number; misses: number }>;
   won: boolean;
   dartsUsed: number;
   /** The share of crosses among crosses and misses, 0–100, as every screen reads «treff». Matches from before

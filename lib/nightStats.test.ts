@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Fig } from "./nightFigures";
 import type { NightMatch } from "./nightScore";
-import { compare, hitPctOf, playerNight, statsOf } from "./nightStats";
+import { compare, hitPctOf, memberKey, playerNight, statsOf } from "./nightStats";
 
 const fig = (over: Partial<Fig>): Fig => ({ darts: 0, points: 0, rounds: 0, best: 0, tons: 0, s180: 0, burned: 0, lostLives: 0, kills: 0, finish: 0, ...over });
 const solo = (name: string) => ({ name, members: [name] });
@@ -53,6 +53,15 @@ describe("kveldens statistikk", () => {
     const h = { mt: { "A/C": 50, "B/D": 30 } };
     expect(hitPctOf([t], h, { kind: "player", name: "A" })).toBeNull();
     expect(hitPctOf([t], h, { kind: "team", name: "A/C" })).toBe(50);
+  });
+
+  it("treffprosent for en spiller teller også egne kast i lag når de er lagret, og alle kommer med i listen", () => {
+    const t = match({ id: "t1", game: "enkeltkamp", sides: [team("A", "C"), team("B", "D")], placements: ["A/C", "B/D"], source: { kind: "match", id: "mt" } });
+    const h = { mt: { "A/C": 50, "B/D": 30, [memberKey("A")]: 60, [memberKey("C")]: 40, [memberKey("B")]: 30, [memberKey("D")]: 30 } };
+    expect(hitPctOf([t], h, { kind: "player", name: "A" })).toBe(60);
+    const names = statsOf([t], h).hits.filter((x) => x.kind === "player").map((x) => x.name);
+    expect(names.slice(0, 2)).toEqual(["A", "C"]);
+    expect([...names].sort()).toEqual(["A", "B", "C", "D"]);
   });
 
   it("sammenligner to spillere og hvem som har slått hvem", () => {

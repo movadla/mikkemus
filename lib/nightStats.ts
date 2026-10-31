@@ -9,6 +9,9 @@ import { NIGHT_GAME_NAMES, comparisonOf, pointsOf, resultOf, tableOf, type Night
 /** The hit percentage each side got in a Mikke Mus match, by match id and the name of the side (a player, or a team). */
 export type HitMap = Record<string, Record<string, number>>;
 
+/** Where a person's own share in a team's match is kept in the HitMap, next to the sides' (a person and a team may share a name). */
+export const memberKey = (name: string): string => `~${name}`;
+
 export type Entity = { kind: "player" | "team"; name: string };
 
 const live = (matches: NightMatch[]): NightMatch[] => matches.filter((m) => !m.deleted);
@@ -37,15 +40,14 @@ function figuresIn(matches: NightMatch[], e: Entity, games: NightGame[]): Fig | 
   return figs.length > 0 ? sum(figs) : null;
 }
 
-/** The mean hit percentage of an entity in the Mikke Mus matches that kept it, or null. A player's own is only from matches they played alone. */
+/** The mean hit percentage of an entity in the Mikke Mus matches that kept it, or null. A player's is from the matches they played alone and, where kept, their own darts in a team's. */
 export function hitPctOf(matches: NightMatch[], hits: HitMap, e: Entity): number | null {
   const got: number[] = [];
   for (const m of live(matches)) {
     const key = hitKey(m);
     const side = sideOf(m, e);
     if (!key || !side || !hits[key]) continue;
-    if (e.kind === "player" && side.members.length > 1) continue;
-    const v = hits[key][side.name];
+    const v = e.kind === "player" && side.members.length > 1 ? hits[key][memberKey(e.name)] : hits[key][side.name];
     if (typeof v === "number") got.push(v);
   }
   return got.length > 0 ? got.reduce((a, b) => a + b, 0) / got.length : null;
