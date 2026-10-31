@@ -645,7 +645,7 @@ test.describe("karriere", () => {
     };
     await page.waitForTimeout(1500);
     await check();
-    for (const tab of ["Turneringer", "Trening", "Profil", "Meldinger"] as const) {
+    for (const tab of ["Sesong", "Trening", "Profil", "Meldinger"] as const) {
       await place(page, tab).click();
       await page.waitForTimeout(700);
       await check();
