@@ -89,4 +89,17 @@ test.describe("Kveldsscore", () => {
     await expect(page.getByText("Ingen kamper i kveld ennå")).toBeVisible();
     await expect(page.getByRole("list", { name: "Tabell" })).toHaveCount(0);
   });
+
+  test("kampene står også på spillerens egen side", async ({ page }) => {
+    await openApp(page, "dark");
+    await playMatch(page);
+    await page.getByRole("button", { name: "Til forsiden" }).click();
+    await page.getByRole("link", { name: "Spillere" }).click();
+    await page.getByRole("link", { name: /Lars/ }).first().click();
+    const list = page.getByRole("list", { name: "Kamper i Kveldsscore" });
+    await expect(list.getByRole("listitem")).toHaveCount(1);
+    await expect(list).toContainText("Lars vs. Vadla");
+    await expect(list).toContainText("Vant");
+    await expect(page.getByText("1–0 · 1 poeng")).toBeVisible();
+  });
 });

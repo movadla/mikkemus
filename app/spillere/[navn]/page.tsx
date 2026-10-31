@@ -17,6 +17,7 @@ import { PlayerKitEditor, TeamKitEditor, WalkOnPicker } from "@/components/KitSe
 import { TeamKit } from "@/components/TeamKit";
 import { teamKitsOf } from "@/lib/storage";
 import { EditIcon, TrashIcon } from "@/components/icons";
+import { PlayerNightMatches } from "@/components/PlayerNightMatches";
 import { PlayerCard } from "@/components/ui/PlayerCard";
 import { CountUp } from "@/components/ui/CountUp";
 import { Button } from "@/components/ui/Button";
@@ -276,6 +277,8 @@ export default function PlayerDetailPage() {
             </div>
           </Section>
         )}
+
+        {!limited && <PlayerNightMatches name={player.name} isTeam={isTeam} />}
 
         {!limited && (
           <Button href="/statistikk" block>
