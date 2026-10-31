@@ -16,7 +16,7 @@ async function begin(page: Page, players = ["Lars", "Vadla"]) {
 const keys = async (page: Page, digits: string) => {
   for (const d of digits) await page.getByRole("group", { name: "Tastatur" }).getByRole("button", { name: d, exact: true }).click();
 };
-const side = (page: Page, name: string) => page.getByRole("list", { name: "Stilling" }).getByRole("listitem").filter({ hasText: name });
+const side = (page: Page, name: string) => page.getByRole("list", { name: "Stilling" }).getByRole("listitem").filter({ has: page.getByText(name, { exact: true }) });
 const bom = (page: Page) => page.getByRole("button", { name: /^BOM · halverer|^Bom/ });
 
 test.describe("Halv It", () => {

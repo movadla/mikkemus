@@ -29,6 +29,7 @@ import {
 import { splitPeople, type PickedTeam, type Person } from "@/lib/people";
 import { standing, type SeriesWiring } from "@/lib/series";
 import { rostersOf } from "@/lib/teamGame";
+import { WhoLine } from "./WhoLine";
 import { medOfLevel } from "@/lib/opponentStats";
 import { fieldOfLabel } from "@/lib/lava";
 import { useGameVenue } from "@/lib/gameVenue";
@@ -158,7 +159,7 @@ export function LavaApp({ onExitToHome }: { onExitToHome: () => void }) {
 
   return (
     <GameVenue venue={venue}>
-      <LavaGameScreen game={game} setGame={setGame} botLevels={botLevels} photos={photos} onHome={onExitToHome} onNew={() => {
+      <LavaGameScreen game={game} setGame={setGame} botLevels={botLevels} photos={photos} onHome={onExitToHome} onSetup={() => setGame(null)} onNew={() => {
           setGame(null);
           setHistory([]);
           setFiguresHistory([]);
@@ -174,6 +175,7 @@ export function LavaGameScreen({
   photos,
   onHome,
   onNew,
+  onSetup,
   career,
   series,
 }: {
@@ -183,6 +185,8 @@ export function LavaGameScreen({
   photos: Map<string, string | null | undefined>;
   onHome: () => void;
   onNew: () => void;
+  /** Back to the setup, everything as chosen: the setup of a game is kept by the screen that started it. */
+  onSetup?: () => void;
   /** A challenge of the career: the result is not kept with the statistics, the winner screen goes on, and leaving gives it up. */
   career?: { onDone: () => void };
   /** A series (best of x) the game is one of. */
@@ -330,12 +334,13 @@ export function LavaGameScreen({
           message={career ? "Gi opp utfordringen?" : "Avslutte kampen?"}
           buttons={[
             { label: "Fortsett spill", onClick: () => setConfirmExit(false), background: "var(--color-green)" },
+            ...(onSetup ? [{ label: "Til oppsettet", onClick: onSetup, background: "var(--color-teal)" }] : []),
             { label: career ? "Gi opp" : "Avslutt kamp", onClick: onHome, background: "var(--color-red)" },
           ]}
         />
       )}
       <div className="screen-inner">
-        <ScreenTop title="Lava" onBack={() => setConfirmExit(true)} backLabel={career ? "Gi opp" : "Avslutt kampen"} sub={series ? seriesLine(series, game.players, null) : undefined} />
+        <ScreenTop title="Lava" onBack={() => (onSetup && game.darts.length === 0 ? onSetup() : setConfirmExit(true))} backLabel={career ? "Gi opp" : "Tilbake"} sub={series ? seriesLine(series, game.players, null) : undefined} />
         <ul className="grid grid-cols-2 gap-2 mb-3" aria-label="Stilling">
           {game.players.map((p) => {
             const active = p === up;
@@ -365,6 +370,7 @@ export function LavaGameScreen({
                   ) : (
                     <Hearts total={game.lives} left={livesLeft(state, p)} fresh={hit} size="w-4 h-4" />
                   )}
+                  {game.rosters && active && !out && !winner && <WhoLine now={game.rosters[p] ? who : undefined} next={state.next} />}
                 </div>
               </li>
             );

@@ -25,6 +25,7 @@ import {
   leastToKeep,
   livesLeft,
   newGame,
+  nextUp,
   playRound,
   playerUp,
   targetOf,
@@ -35,6 +36,7 @@ import {
 import { splitPeople, type PickedTeam, type Person } from "@/lib/people";
 import { standing, type SeriesWiring } from "@/lib/series";
 import { rostersOf } from "@/lib/teamGame";
+import { WhoLine } from "./WhoLine";
 import { medOfLevel } from "@/lib/opponentStats";
 import { useGameVenue } from "@/lib/gameVenue";
 import { individualSetupProblem, setupSummary, teamSetupProblem } from "@/lib/setupProblem";
@@ -171,7 +173,7 @@ export function HighstrikerApp({ onExitToHome }: { onExitToHome: () => void }) {
 
   return (
     <GameVenue venue={venue}>
-      <HighstrikerGameScreen game={game} setGame={setGame} botLevels={botLevels} photos={photos} onHome={onExitToHome} onNew={() => {
+      <HighstrikerGameScreen game={game} setGame={setGame} botLevels={botLevels} photos={photos} onHome={onExitToHome} onSetup={() => setGame(null)} onNew={() => {
           setGame(null);
           setHistory([]);
           setFiguresHistory([]);
@@ -187,6 +189,7 @@ export function HighstrikerGameScreen({
   photos,
   onHome,
   onNew,
+  onSetup,
   career,
   series,
 }: {
@@ -196,6 +199,8 @@ export function HighstrikerGameScreen({
   photos: Map<string, string | null | undefined>;
   onHome: () => void;
   onNew: () => void;
+  /** Back to the setup, everything as chosen: the setup of a game is kept by the screen that started it. */
+  onSetup?: () => void;
   /** A challenge of the career: the result is not kept with the statistics, the winner screen goes on, and leaving gives it up. */
   career?: { onDone: () => void };
   /** A series (best of x) the game is one of. */
@@ -221,6 +226,7 @@ export function HighstrikerGameScreen({
   // A team throws one member at a time: it is the member who is a bot or not, and the member who is named.
   const member = memberUp(game);
   const who = member?.name ?? up;
+  const next = game.rosters && !winner ? nextUp(game) : null;
   const botUp = !winner && (member ? member.isBot : isBot(up));
   const isBotThrower = (n: string) => isBot(n) || Object.values(game.rosters ?? {}).some((r) => r.some((m) => m.name === n && m.isBot));
   useRecordResult(career || game.rosters ? null : winner, game.turns.length === 0, (id, at) => highstrikerResult(game, Object.keys(botLevels), id, at));
@@ -374,6 +380,7 @@ export function HighstrikerGameScreen({
           message={career ? "Gi opp utfordringen?" : "Avslutte kampen?"}
           buttons={[
             { label: "Fortsett spill", onClick: () => setConfirmExit(false), background: "var(--color-green)" },
+            ...(onSetup ? [{ label: "Til oppsettet", onClick: onSetup, background: "var(--color-teal)" }] : []),
             { label: career ? "Gi opp" : "Avslutt kamp", onClick: onHome, background: "var(--color-red)" },
           ]}
         />
@@ -382,8 +389,8 @@ export function HighstrikerGameScreen({
         <ScreenTop
           title="Highstriker"
           sub={series ? seriesLine(series, game.players, null) : undefined}
-          onBack={() => setConfirmExit(true)}
-          backLabel={career ? "Gi opp" : "Avslutt kampen"}
+          onBack={() => (onSetup && game.turns.length === 0 ? onSetup() : setConfirmExit(true))}
+          backLabel={career ? "Gi opp" : "Tilbake"}
           right={
             <span className="inline-flex items-center gap-2">
               <button
@@ -429,11 +436,7 @@ export function HighstrikerGameScreen({
                   </p>
                   <Hearts total={game.lives} left={left} fresh={hit} beat={isLast} size={active && !out ? "w-7 h-7" : "w-4 h-4"} />
                   {isLast && <p className="last-label">SISTE LIV</p>}
-                  {game.rosters?.[p] && active && !out && (
-                    <p className="cd-recent">
-                      <span>Nå: {who}</span>
-                    </p>
-                  )}
+                  {game.rosters && active && !out && !winner && <WhoLine now={game.rosters[p] ? who : undefined} next={next} />}
                   {out && outTurn && (
                     <p style={{ color: "var(--color-text-2)", fontSize: "var(--text-small)" }}>
                       Ute i runde {Math.floor(outAt / game.players.length) + 1} med {outTurn.scored}

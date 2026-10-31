@@ -14,3 +14,18 @@ export function rostersOf(teams: PickedTeam[]): Record<string, SideMember[]> {
     ]),
   );
 }
+
+/** Who throws after the side that is up: the next side, and for a team the member whose turn it is on it. */
+export type NextUp<M extends { name: string }> = { side: string; member: M | null };
+
+/** The member of a side whose round it is, from the rounds the side has thrown (null for a lone player). */
+export function memberAfter<M extends { name: string }>(rosters: Record<string, M[]> | undefined, side: string, rounds: number): M | null {
+  const roster = rosters?.[side];
+  return roster && roster.length > 0 ? roster[rounds % roster.length] : null;
+}
+
+/** What to call the next to throw: the member of a team with the team's name after, or the lone player. */
+export function nextName(next: NextUp<{ name: string }> | null): string | null {
+  if (!next) return null;
+  return next.member ? `${next.member.name} (${next.side})` : next.side;
+}

@@ -2,6 +2,7 @@
  * Highstriker: each round the thrower writes in what the three darts made, and it has to be more than the one before them made. Not more,
  * and a life is lost. Whoever is out of lives is out; the last one standing wins. The first round has nothing to beat.
  */
+import { memberAfter, type NextUp } from "./teamGame";
 export const DEFAULT_LIVES = 3;
 export const MIN_LIVES = 1;
 export const MAX_LIVES = 9;
@@ -79,6 +80,16 @@ export function memberUp(g: HighstrikerGame): HighstrikerMember | null {
   const roster = g.rosters?.[side];
   if (!roster || roster.length === 0) return null;
   return roster[g.turns.filter((t) => t.player === side).length % roster.length];
+}
+
+/** Who throws after the round that is up: the next side in order that still has a life and, for a team, the member whose turn it is on it. */
+export function nextUp(g: HighstrikerGame): NextUp<HighstrikerMember> | null {
+  const from = g.players.indexOf(playerUp(g));
+  for (let step = 1; step < g.players.length; step++) {
+    const side = g.players[(from + step) % g.players.length];
+    if (!isOut(g, side)) return { side, member: memberAfter(g.rosters, side, g.turns.filter((t) => t.player === side).length) };
+  }
+  return null;
 }
 
 export function playRound(g: HighstrikerGame, scored: number): HighstrikerGame {

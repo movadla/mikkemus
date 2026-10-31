@@ -118,7 +118,10 @@ export function ThrowerBar({
   flush = false,
   onPickMate,
   onOpen,
+  nextUp,
 }: {
+  /** Who throws after this turn when the thrower is not on a team (the team carries its own next). */
+  nextUp?: Thrower & { side: string };
   thrower: Thrower;
   team: ThrowerTeam | null;
   /** The team's shirt, drawn beside its name. */
@@ -141,6 +144,7 @@ export function ThrowerBar({
   onOpen?: () => void;
 }) {
   // The rest of the team, in the order they throw their later turns. They are not «neste»: the next to throw is on the other side (team.next).
+  const upNext = team?.next ?? nextUp;
   const mates = team ? team.members.map((_, i) => team.members[(team.activeIdx + 1 + i) % team.members.length]).slice(0, team.members.length - 1) : [];
   // The card above the board is kept low so the whole board is on the screen (the bull too) without scrolling.
   const photoSize = compact ? 44 : 56;
@@ -258,17 +262,17 @@ export function ThrowerBar({
           })}
         </div>
       )}
-      {team?.next && (
-        <div className="flex flex-col items-center shrink-0" aria-label={`Neste som kaster: ${team.next.name}, ${team.next.side}`} style={{ maxWidth: compact ? 44 : 64 }}>
+      {upNext && (
+        <div className="flex flex-col items-center shrink-0" aria-label={`Neste som kaster: ${upNext.name}, ${upNext.side}`} style={{ maxWidth: compact ? 44 : 64 }}>
           {!compact && (
             <span style={{ color: "var(--color-teal)", fontSize: "var(--text-micro)", letterSpacing: "0.1em", textTransform: "uppercase", lineHeight: 1.2, fontWeight: 700 }}>
               neste
             </span>
           )}
-          <Avatar who={team.next} size={compact ? 26 : 38} active={false} />
+          <Avatar who={upNext} size={compact ? 26 : 38} active={false} />
           {!compact && (
             <span className="truncate w-full text-center" style={{ color: "var(--color-cream)", fontSize: "var(--text-micro)" }}>
-              {team.next.name}
+              {upNext.name}
             </span>
           )}
         </div>

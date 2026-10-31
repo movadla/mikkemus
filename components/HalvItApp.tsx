@@ -30,6 +30,7 @@ import { standing, type SeriesWiring } from "@/lib/series";
 import { individualSetupProblem, setupSummary, teamSetupProblem } from "@/lib/setupProblem";
 import { useRoster } from "@/lib/storage";
 import { rostersOf } from "@/lib/teamGame";
+import { WhoLine } from "./WhoLine";
 import { uiSound } from "@/lib/uiSound";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { GameVenue, VenueSection } from "./GameVenue";
@@ -119,7 +120,7 @@ export function HalvItApp({ onExitToHome }: { onExitToHome: () => void }) {
 
   return (
     <GameVenue venue={venue}>
-      <HalvItGameScreen game={game} setGame={setGame} photos={photos} onHome={onExitToHome} onNew={() => {
+      <HalvItGameScreen game={game} setGame={setGame} photos={photos} onHome={onExitToHome} onSetup={() => setGame(null)} onNew={() => {
           setGame(null);
           setHistory([]);
           setFiguresHistory([]);
@@ -129,7 +130,7 @@ export function HalvItApp({ onExitToHome }: { onExitToHome: () => void }) {
 }
 
 
-export function HalvItGameScreen({ game, setGame, photos, onHome, onNew, series }: { game: HalvItGame; setGame: (g: HalvItGame) => void; photos: Map<string, string | null | undefined>; onHome: () => void; onNew: () => void; /** A series (best of x) the game is one of. */ series?: SeriesWiring }) {
+export function HalvItGameScreen({ game, setGame, photos, onHome, onNew, onSetup, series }: { game: HalvItGame; setGame: (g: HalvItGame) => void; photos: Map<string, string | null | undefined>; onHome: () => void; onNew: () => void; /** Back to the setup, everything as chosen. */ onSetup?: () => void; /** A series (best of x) the game is one of. */ series?: SeriesWiring }) {
   // The screen stays on while the game is up: a phone that locks between rounds loses the sound and the board.
   useEffect(() => startWakeLock(), []);
   const [confirmExit, setConfirmExit] = useState(false);
@@ -269,6 +270,7 @@ export function HalvItGameScreen({ game, setGame, photos, onHome, onNew, series 
           message="Avslutte kampen?"
           buttons={[
             { label: "Fortsett spill", onClick: () => setConfirmExit(false), background: "var(--color-green)" },
+            ...(onSetup ? [{ label: "Til oppsettet", onClick: onSetup, background: "var(--color-teal)" }] : []),
             { label: "Avslutt kamp", onClick: onHome, background: "var(--color-red)" },
           ]}
         />
@@ -277,8 +279,8 @@ export function HalvItGameScreen({ game, setGame, photos, onHome, onNew, series 
         <ScreenTop
           title="Halv It"
           sub={series ? seriesLine(series, game.players, null) : undefined}
-          onBack={() => setConfirmExit(true)}
-          backLabel="Avslutt kampen"
+          onBack={() => (onSetup && game.entries.length === 0 ? onSetup() : setConfirmExit(true))}
+          backLabel="Tilbake"
           right={
             <span className="inline-flex items-center gap-2">
               <button
@@ -330,10 +332,8 @@ export function HalvItGameScreen({ game, setGame, photos, onHome, onNew, series 
                     <p className="font-display truncate" style={{ fontSize: "var(--text-title)", lineHeight: 1.1 }}>
                       {p}
                     </p>
-                    {game.rosters?.[p] && active ? (
-                      <p className="cd-recent">
-                        <span>Nå: {who}{state.part.of === 2 ? ` (${state.part.n} av 2)` : ""}</span>
-                      </p>
+                    {game.rosters && active && !winner ? (
+                      <WhoLine now={game.rosters[p] ? who : undefined} extra={state.part.of === 2 ? ` (${state.part.n} av 2)` : ""} next={state.next} />
                     ) : (
                       recent.length > 0 && (
                         <p className="cd-recent" aria-label={`Siste runder: ${recent.map((t) => (t.halved ? "halvert" : t.entry.points)).join(", ")}`}>

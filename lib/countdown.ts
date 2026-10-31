@@ -2,6 +2,8 @@
  * The plain countdown games, 301 and 501: each round the thrower says what the three darts made, the number comes off what is left, and
  * whoever gets to exactly nothing wins. Nothing here knows about darts one by one: a round is a total from 0 to 180.
  */
+import { checkoutsOf } from "./checkout";
+import { memberAfter, type NextUp } from "./teamGame";
 export type CountdownStart = 301 | 501;
 
 /** The most three darts can make. */
@@ -56,6 +58,13 @@ export function remainingOf(g: CountdownGame, player: string): number {
 /** Who throws next: the players in turn, one round each. */
 export function playerUp(g: CountdownGame): string {
   return g.players[g.turns.length % g.players.length];
+}
+
+/** Who throws after the round that is up: the next side in order and, for a team, the member whose turn it is on it. Null when there is no other side. */
+export function nextUp(g: CountdownGame): NextUp<CountdownMember> | null {
+  if (g.players.length < 2) return null;
+  const side = g.players[(g.turns.length + 1) % g.players.length];
+  return { side, member: memberAfter(g.rosters, side, g.turns.filter((t) => t.player === side).length) };
 }
 
 /** What a round written in would be, from what the thrower has left: it counts, it is over the line, or it is the finish. */
@@ -142,4 +151,15 @@ export function leaderOf(g: CountdownGame): string | null {
   if (g.turns.length === 0) return null;
   const left = g.players.map((p) => ({ p, n: remainingOf(g, p) })).sort((a, b) => a.n - b.n);
   return left.length > 1 && left[0].n === left[1].n ? null : left[0].p;
+}
+
+/** The finish of each side but the one up, for those that have one: shown while the other side throws. */
+export function finishesOfOthers(game: CountdownGame, up: string) {
+  const out: { p: string; way: string[] }[] = [];
+  for (const p of game.players) {
+    if (p === up) continue;
+    const w = checkoutsOf(remainingOf(game, p), game.doubleOut, 1)[0];
+    if (w) out.push({ p, way: w });
+  }
+  return out;
 }

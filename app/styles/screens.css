@@ -1754,6 +1754,7 @@ html[data-fx="simple"] .trophy-shine { animation: none; }
 .cd-right { display: flex; flex-direction: column; flex: 1.15 1 0; min-height: 0; }
 .cd-right .cd-pad { flex: 1 1 0; }
 .cd-way-bar { display: flex; align-items: center; justify-content: center; gap: 0.6rem; margin-bottom: 0.5rem; min-height: 2.6rem; padding: 0.2rem 0.75rem; border-radius: var(--radius-pill); background: color-mix(in srgb, var(--color-gold) 14%, var(--color-surface)); border: 1px solid color-mix(in srgb, var(--color-gold) 55%, transparent); }
+.cd-way-bar--other { opacity: 0.85; border-style: dashed; }
 .cd-way-label { font-size: var(--text-micro); letter-spacing: 0.14em; font-weight: 800; color: var(--color-gold-strong); }
 .cd-way-bar .dart-chip { font-size: 1.15rem; padding: 0.15rem 0.7rem; }
 .cd-ready { border-color: var(--color-gold) !important; box-shadow: var(--elevation-1), 0 0 18px color-mix(in srgb, var(--color-gold) 45%, transparent); }
@@ -1778,6 +1779,7 @@ html[data-fx="simple"] .cd-bust, html[data-fx="simple"] .cd-bust .cd-num { anima
 .cd-board--grid .cd-card:not(.cd-card--up) .cd-who { flex-direction: column; align-items: flex-start; }
 .cd-board--grid .cd-recent { display: none; }
 .cd-board--grid .cd-card--up .cd-recent { display: flex; }
+.cd-board--grid .cd-recent--who { display: flex; }
 /* A big screen: the score on the left, the keypad on the right. */
 @media (orientation: landscape) and (min-width: 1000px) {
   .cd-fill { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); column-gap: 1.5rem; max-width: min(100%, 76rem); height: calc(100dvh - 2rem); min-height: 0; }

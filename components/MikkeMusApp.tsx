@@ -114,7 +114,7 @@ import { type BotLevel, type TeamMember } from "@/lib/botLevels";
 import { useScolia } from "@/lib/useScolia";
 import { requestRecalibration } from "@/lib/scoliaCommands";
 import { extractImageUrls } from "@/lib/extractImageUrls";
-import { SetupScreen } from "./SetupScreen";
+import { SetupScreen, type SetupDraft } from "./SetupScreen";
 import { GameScreen } from "./GameScreen";
 import { WinnerScreen } from "./WinnerScreen";
 import { WinDive } from "./WinDive";
@@ -444,6 +444,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   // startGame from SetupScreen's picks. Bots are never written via ensurePlayer and
   // are excluded from finalizeMatch's persistence calls (see there).
   const [botLevels, setBotLevels] = useState<Record<string, BotLevel>>({});
+  // The setup as it was when the match started: coming back from the match (Avslutt kamp) lands on it again, instead of an empty one.
+  const [setupDraft, setSetupDraft] = useState<SetupDraft | undefined>(undefined);
   // Per-team roster, set once at startGame — absent entirely for individual (non-team) matches.
   const [teamRosters, setTeamRosters] = useState<Record<string, TeamMember[]>>({});
   // One-off guests, set once at startGame from SetupScreen's picks — never ensurePlayer'd and,
@@ -2751,6 +2753,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
    *  quietly dropped the match from the players' statistics. */
   function newMatch() {
     flushMatchResults();
+    setSetupDraft(undefined);
     setScreen("setup");
     setPlayers([]);
   }
@@ -2771,6 +2774,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   }
 
   function playAgain() {
+    setSetupDraft(undefined);
     if (onMatchComplete && winner) {
       flushMatchResults();
       clearActiveMatch();
@@ -2830,7 +2834,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     // takes effect, so keep it as a harmless fallback rather than special-casing it away.
     return (
       <>
-        <SetupScreen onStart={startGame} onHome={onExitToHome} scolia={summarizeScolia(scolia.state)} />
+        <SetupScreen draft={setupDraft} onDraft={setSetupDraft} onStart={startGame} onHome={onExitToHome} scolia={summarizeScolia(scolia.state)} />
       </>
     );
   }
@@ -2883,6 +2887,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   });
   let thrower: Thrower | null = null;
   let throwerTeam: ThrowerTeam | null = null;
+  let throwerNext: (Thrower & { side: string }) | undefined;
   if (activePlayer) {
     if (activeRoster && activeRoster.length > 0) {
       const activeIdx = (teamMemberIdx[activePlayer] ?? 0) % activeRoster.length;
@@ -2897,6 +2902,13 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       thrower = rewound !== null ? { name: activePlayer, isBot: false, photo: null } : members[activeIdx];
     } else {
       thrower = toThrower(activePlayer, activeBotLevel !== null);
+      // A lone thrower with a team after them: who of that team throws next.
+      const nextSide = players[(currentIdx + 1) % players.length];
+      const nextRoster = nextSide ? teamRosters[nextSide] : undefined;
+      if (nextRoster && nextRoster.length > 0 && nextSide !== activePlayer) {
+        const m = nextRoster[(teamMemberIdx[nextSide] ?? 0) % nextRoster.length];
+        throwerNext = { ...toThrower(m.name, m.isBot), side: nextSide };
+      }
     }
   }
 
@@ -3007,6 +3019,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       <GameScreen
         thrower={thrower}
         throwerTeam={throwerTeam}
+        throwerNext={throwerNext}
         throwerStood={!!activePlayer && rewound === null && stoodByTeam[activePlayer] === true}
         throwerRun={throwerRun}
         throwerAnimate={fxLevel !== "normal"}

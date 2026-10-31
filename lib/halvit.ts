@@ -7,6 +7,7 @@
  * each throw made, in order; everything else (whose throw it is, the scores, the round) is worked out from it, so taking one back is taking the last
  * one off. After the tenth round, the entries are the darts at the bull of the tie-break: a hit (points 0, not a bom) or a bom.
  */
+import { memberAfter, type NextUp } from "./teamGame";
 export const ROUNDS_IN_ALL = 10;
 
 /** How a round is written in: the sum the darts made, a yes or a no, or the bull with a value of its own. */
@@ -109,6 +110,8 @@ export type HalvItState = {
   round: number;
   up: string;
   member: HalvItMember | null;
+  /** Who throws after this side: the next in the round, and who of it when it is a team. Null at the end of a round of the tie-break, where who goes on is not known yet. */
+  next: NextUp<HalvItMember> | null;
   /** The side is the last of the round, so that the round ends with it. */
   tieBreak: boolean;
   /** Which of the throws of the round this is, when a team throws two (1 or 2), and how many there are. */
@@ -190,7 +193,9 @@ export function stateOf(g: HalvItGame): HalvItState {
     hits = [];
   }
   const up = winner ? log[log.length - 1].player : order[at];
-  return { scores, log, round, up, member: winner ? null : memberOf(up), tieBreak: round > ROUNDS_IN_ALL, part: { n: sub + 1, of: winner ? 1 : throwsOf(up) }, contenders: round > ROUNDS_IN_ALL ? order : [], winner };
+  const nextSide = winner ? null : at + 1 < order.length ? order[at + 1] : round < ROUNDS_IN_ALL ? order[0] : null;
+  const next = nextSide && nextSide !== up ? { side: nextSide, member: memberAfter(g.rosters, nextSide, thrown[nextSide] ?? 0) } : null;
+  return { scores, log, round, up, member: winner ? null : memberOf(up), next, tieBreak: round > ROUNDS_IN_ALL, part: { n: sub + 1, of: winner ? 1 : throwsOf(up) }, contenders: round > ROUNDS_IN_ALL ? order : [], winner };
 }
 
 /** A throw taken in: nothing happens once there is a winner. */

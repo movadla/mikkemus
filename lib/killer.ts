@@ -11,6 +11,7 @@
  * taking the last one off.
  */
 import { BULL, MISS, fieldKind, fieldNumber } from "./lava";
+import { memberAfter, type NextUp } from "./teamGame";
 
 export const DEFAULT_LIVES = 3;
 export const MIN_LIVES = 1;
@@ -74,6 +75,8 @@ export type KillerState = {
   thrown: number;
   /** Who throws, when the side up is a team. */
   member: KillerMember | null;
+  /** Who throws after this round: the next side, and who of it when it is a team. */
+  next: NextUp<KillerMember> | null;
   log: KillerDart[];
   round: KillerDart[];
   winner: string | null;
@@ -200,7 +203,10 @@ export function stateOf(g: KillerGame): KillerState {
       round = [];
     }
   }
-  return { phase, numbers, hits, killer, regain, lives, kills, rounds, up, thrown, member: winner ? null : memberOf(up), log, round, winner };
+  // While the numbers are taken, the next is the next side without one (its first member throws); after that, the next side still in.
+  const nextSide = winner ? null : phase === "claim" ? (g.players.find((p) => p !== up && numbers[p] === null) ?? g.players[0]) : nextAlive(up);
+  const next = nextSide && nextSide !== up ? { side: nextSide, member: phase === "claim" ? memberAfter(g.rosters, nextSide, 0) : memberAfter(g.rosters, nextSide, rounds[nextSide]) } : null;
+  return { phase, numbers, hits, killer, regain, lives, kills, rounds, up, thrown, member: winner ? null : memberOf(up), next, log, round, winner };
 }
 
 /** A dart thrown. Nothing happens once there is a winner. */

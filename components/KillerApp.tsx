@@ -32,6 +32,7 @@ import { standing, type SeriesWiring } from "@/lib/series";
 import { individualSetupProblem, setupSummary, teamSetupProblem } from "@/lib/setupProblem";
 import { useRoster } from "@/lib/storage";
 import { rostersOf } from "@/lib/teamGame";
+import { WhoLine } from "./WhoLine";
 import { uiSound } from "@/lib/uiSound";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { GameVenue, VenueSection } from "./GameVenue";
@@ -175,7 +176,7 @@ export function KillerApp({ onExitToHome }: { onExitToHome: () => void }) {
 
   return (
     <GameVenue venue={venue}>
-      <KillerGameScreen game={game} setGame={setGame} photos={photos} onHome={onExitToHome} onNew={() => {
+      <KillerGameScreen game={game} setGame={setGame} photos={photos} onHome={onExitToHome} onSetup={() => setGame(null)} onNew={() => {
           setGame(null);
           setHistory([]);
           setFiguresHistory([]);
@@ -184,7 +185,7 @@ export function KillerApp({ onExitToHome }: { onExitToHome: () => void }) {
   );
 }
 
-export function KillerGameScreen({ game, setGame, photos, onHome, onNew, series }: { game: KillerGame; setGame: (g: KillerGame) => void; photos: Map<string, string | null | undefined>; onHome: () => void; onNew: () => void; /** A series (best of x) the game is one of. */ series?: SeriesWiring }) {
+export function KillerGameScreen({ game, setGame, photos, onHome, onNew, onSetup, series }: { game: KillerGame; setGame: (g: KillerGame) => void; photos: Map<string, string | null | undefined>; onHome: () => void; onNew: () => void; /** Back to the setup, everything as chosen. */ onSetup?: () => void; /** A series (best of x) the game is one of. */ series?: SeriesWiring }) {
   // The screen stays on while the game is up: a phone that locks between rounds loses the sound and the board.
   useEffect(() => startWakeLock(), []);
   const [confirmExit, setConfirmExit] = useState(false);
@@ -323,6 +324,7 @@ export function KillerGameScreen({ game, setGame, photos, onHome, onNew, series 
           message="Avslutte kampen?"
           buttons={[
             { label: "Fortsett spill", onClick: () => setConfirmExit(false), background: "var(--color-green)" },
+            ...(onSetup ? [{ label: "Til oppsettet", onClick: onSetup, background: "var(--color-teal)" }] : []),
             { label: "Avslutt kamp", onClick: onHome, background: "var(--color-red)" },
           ]}
         />
@@ -331,8 +333,8 @@ export function KillerGameScreen({ game, setGame, photos, onHome, onNew, series 
         <ScreenTop
           title="Killer"
           sub={series ? seriesLine(series, game.players, null) : undefined}
-          onBack={() => setConfirmExit(true)}
-          backLabel="Avslutt kampen"
+          onBack={() => (onSetup && game.darts.length === 0 ? onSetup() : setConfirmExit(true))}
+          backLabel="Tilbake"
           right={
             <span className="inline-flex items-center gap-2">
               <button
@@ -371,7 +373,7 @@ export function KillerGameScreen({ game, setGame, photos, onHome, onNew, series 
                   {out ? "UTE" : phase === "claim" ? (number === null ? "venter" : "har tall") : isKiller ? "KILLER" : state.regain[p] || livesLeft(state, p) < game.lives ? "treff deg selv for liv" : `${state.hits[p]} av ${HITS_TO_KILLER} til killer`}
                 </p>
                 {!out && phase === "play" && <Hearts total={game.lives} left={livesLeft(state, p)} fresh={false} size="w-4 h-4" />}
-                {game.rosters?.[p] && active && !out && <p className="cd-recent"><span>Nå: {who}</span></p>}
+                {game.rosters && active && !out && !winner && <WhoLine now={game.rosters[p] ? who : undefined} next={state.next} />}
               </li>
             );
           })}

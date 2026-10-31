@@ -19,7 +19,7 @@ async function begin(page: Page, game: string) {
 const keys = async (page: Page, digits: string) => {
   for (const d of digits) await page.getByRole("group", { name: "Tastatur" }).getByRole("button", { name: d, exact: true }).click();
 };
-const side = (page: Page, name: string) => page.getByRole("list", { name: "Stilling" }).getByRole("listitem").filter({ hasText: name });
+const side = (page: Page, name: string) => page.getByRole("list", { name: "Stilling" }).getByRole("listitem").filter({ has: page.getByText(name, { exact: true }) });
 
 test.describe("lagspill i de andre spillene", () => {
   test.skip(!PIN, "E2E_PIN is not set");
@@ -27,6 +27,7 @@ test.describe("lagspill i de andre spillene", () => {
   test("301/501: ett tall for laget, og makkerne kaster hver sin runde", async ({ page }) => {
     await begin(page, "301 / 501");
     await expect(side(page, "Lars og Per")).toContainText("Nå: Lars");
+    await expect(side(page, "Lars og Per")).toContainText("Neste: Ola (Ola og Kari)");
     await keys(page, "60");
     await expect(side(page, "Lars og Per")).toContainText("441");
     await expect(side(page, "Ola og Kari")).toContainText("Nå: Ola");

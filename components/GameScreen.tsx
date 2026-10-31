@@ -152,6 +152,8 @@ type Props = {
   /** Who is throwing — see ThrowerBar. For a team, `throwerTeam` carries the rest of it. */
   thrower: Thrower | null;
   throwerTeam: ThrowerTeam | null;
+  /** Who throws after a lone thrower, when a team is among the sides. */
+  throwerNext?: (Thrower & { side: string }) | undefined;
   /** The thrower kept their place under the stand rule. */
   throwerStood: boolean;
   /** Darts in a row that counted for the thrower, this turn included — see lib/turnStats.ts. */
@@ -756,6 +758,7 @@ export function GameScreen({
   pendingChoices,
   thrower,
   throwerTeam,
+  throwerNext,
   throwerStood,
   throwerRun,
   throwerAnimate,
@@ -945,9 +948,12 @@ export function GameScreen({
   /** Every player has finished this row, so it's settled history rather than live board. */
   const allClosed = (s: Step) => players.length > 0 && players.every((p) => (progress[p]?.[s] ?? 0) >= target);
 
+  // Leaving: with nothing thrown yet there is nothing to lose, so it goes straight back to the setup; otherwise the player is asked.
+  const askLeave = () => (!canUndo && dartsThisTurn === 0 ? onAbort() : setShowHomeConfirm(true));
+
   // The settings of the match: in the sheet in portrait, in the (i) panel in landscape.
   const chromeProps = {
-    onHome: () => setShowHomeConfirm(true),
+    onHome: () => askLeave(),
     announcerOn,
     onToggleAnnouncer: () => {
       const next = !announcerOn;
@@ -1001,7 +1007,7 @@ export function GameScreen({
         <div className="game-header landscape-tight flex items-center gap-2 mb-2 max-w-3xl mx-auto w-full shrink-0">
           <button
             type="button"
-            onClick={() => setShowHomeConfirm(true)}
+            onClick={() => askLeave()}
             className={`tactile rounded-lg text-sm inline-flex items-center justify-center gap-2 px-3 h-11 ${FOCUS_RING}`}
             style={{ background: "var(--color-surface)", color: "var(--color-cream)" }}
           >
@@ -1097,7 +1103,7 @@ export function GameScreen({
             )}
             <ChromeControls
               stacked
-              onHome={() => setShowHomeConfirm(true)}
+              onHome={() => askLeave()}
               announcerOn={announcerOn}
               onToggleAnnouncer={() => {
                 const next = !announcerOn;
@@ -1216,7 +1222,7 @@ export function GameScreen({
           <div className="scroll-hint-right absolute top-0 right-0 bottom-0 w-8 z-20 pointer-events-none" aria-hidden />
         )}
         {!compactLandscape && thrower && <div className="shrink-0">
-          <ThrowerBar key={turnToken} thrower={thrower} team={throwerTeam} kit={throwerTeam ? kits[throwerTeam.name] : null} stood={throwerStood} run={throwerRun} darts={activePlayer ? (dartsThrown[activePlayer] ?? 0) + dartsThisTurn : undefined} fire={fxFire} animate={throwerAnimate} onPickMate={choiceInteractive && !rewound ? setSwitchTo : undefined} onOpen={!rewound && !limited ? () => setSheetOpen(true) : undefined} flush />
+          <ThrowerBar key={turnToken} nextUp={throwerNext} thrower={thrower} team={throwerTeam} kit={throwerTeam ? kits[throwerTeam.name] : null} stood={throwerStood} run={throwerRun} darts={activePlayer ? (dartsThrown[activePlayer] ?? 0) + dartsThisTurn : undefined} fire={fxFire} animate={throwerAnimate} onPickMate={choiceInteractive && !rewound ? setSwitchTo : undefined} onOpen={!rewound && !limited ? () => setSheetOpen(true) : undefined} flush />
           {/* The three darts of this turn sit right under the name, where the eye already is. */}
           {!rewound && (
             <div className="shot-strip">
@@ -1470,7 +1476,7 @@ export function GameScreen({
         <div className="live-side">
           {thrower && (
             <div className="mb-1 shrink-0">
-              <ThrowerBar key={turnToken} thrower={thrower} team={throwerTeam} kit={throwerTeam ? kits[throwerTeam.name] : null} stood={throwerStood} run={throwerRun} fire={fxFire} animate={throwerAnimate} onPickMate={choiceInteractive && !rewound ? setSwitchTo : undefined} onOpen={!rewound && !limited ? () => setSheetOpen(true) : undefined} compact />
+              <ThrowerBar key={turnToken} nextUp={throwerNext} thrower={thrower} team={throwerTeam} kit={throwerTeam ? kits[throwerTeam.name] : null} stood={throwerStood} run={throwerRun} fire={fxFire} animate={throwerAnimate} onPickMate={choiceInteractive && !rewound ? setSwitchTo : undefined} onOpen={!rewound && !limited ? () => setSheetOpen(true) : undefined} compact />
             </div>
           )}
           {odds && (

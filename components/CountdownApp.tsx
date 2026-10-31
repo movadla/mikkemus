@@ -23,8 +23,10 @@ import {
   dartsOf,
   judge,
   leaderOf,
+  finishesOfOthers,
   memberUp,
   newGame,
+  nextUp,
   playRound,
   playerUp,
   remainingOf,
@@ -40,6 +42,7 @@ import { splitPeople, type PickedTeam, type Person } from "@/lib/people";
 import { standing, type SeriesWiring } from "@/lib/series";
 import { NO_BONUS, countdownBonuses, type BonusSettings, type NightBonus } from "@/lib/bonus";
 import { rostersOf } from "@/lib/teamGame";
+import { WhoLine } from "./WhoLine";
 import { useGameVenue } from "@/lib/gameVenue";
 import { individualSetupProblem, setupSummary, teamSetupProblem } from "@/lib/setupProblem";
 import { useRoster } from "@/lib/storage";
@@ -160,7 +163,7 @@ export function CountdownApp({ onExitToHome }: { onExitToHome: () => void }) {
 
   return (
     <GameVenue venue={venue}>
-      <CountdownGameScreen game={game} setGame={setGame} botLevels={botLevels} photos={photos} onHome={onExitToHome} onNew={() => {
+      <CountdownGameScreen game={game} setGame={setGame} botLevels={botLevels} photos={photos} onHome={onExitToHome} onSetup={() => setGame(null)} onNew={() => {
           setGame(null);
           setHistory([]);
           setBonusHistory([]);
@@ -189,6 +192,7 @@ export function CountdownGameScreen({
   photos,
   onHome,
   onNew,
+  onSetup,
   career,
   series,
   bonus,
@@ -199,6 +203,8 @@ export function CountdownGameScreen({
   photos: Map<string, string | null | undefined>;
   onHome: () => void;
   onNew: () => void;
+  /** Back to the setup, everything as chosen: the setup of a game is kept by the screen that started it. */
+  onSetup?: () => void;
   career?: { onDone: () => void; /** A challenge, not a leg of a cup: leaving gives it up. */ giveUp?: boolean };
   /** A series (best of x) the game is one of. */
   series?: SeriesWiring;
@@ -222,11 +228,14 @@ export function CountdownGameScreen({
   const up = playerUp(game);
   const left = remainingOf(game, up);
   const way = checkoutsOf(left, game.doubleOut, 1)[0] ?? null;
+  // The others who have a finish too: it is shown while the other side throws, so they can see what they have.
+  const waysOfOthers = useMemo(() => (winner ? [] : finishesOfOthers(game, up)), [game, up, winner]);
   const leader = leaderOf(game);
   const isBot = (p: string) => botLevels[p] !== undefined;
   // A team throws one member at a time: it is the member who is a bot or not, and the member who is named.
   const member = memberUp(game);
   const who = member?.name ?? up;
+  const next = game.rosters && !winner ? nextUp(game) : null;
   const botUp = !winner && (member ? member.isBot : isBot(up));
   const isBotThrower = (n: string) => isBot(n) || Object.values(game.rosters ?? {}).some((r) => r.some((m) => m.name === n && m.isBot));
   const std = series ? standing(series, game.players, winner) : null;
@@ -417,6 +426,7 @@ export function CountdownGameScreen({
           message={career?.giveUp ? "Gi opp utfordringen?" : career ? "Ta en pause? Kampen er lagret." : "Avslutte kampen?"}
           buttons={[
             { label: "Fortsett spill", onClick: () => setConfirmExit(false), background: "var(--color-green)" },
+            ...(onSetup ? [{ label: "Til oppsettet", onClick: onSetup, background: "var(--color-teal)" }] : []),
             { label: career?.giveUp ? "Gi opp" : career ? "Pause" : "Avslutt kamp", onClick: onHome, background: career && !career.giveUp ? "var(--color-teal)" : "var(--color-red)" },
           ]}
         />
@@ -487,8 +497,8 @@ export function CountdownGameScreen({
         <ScreenTop
           title={String(game.start)}
           sub={series ? seriesLine(series, game.players, null) : undefined}
-          onBack={() => setConfirmExit(true)}
-          backLabel={career?.giveUp ? "Gi opp" : career ? "Pause" : "Avslutt kampen"}
+          onBack={() => (onSetup && game.turns.length === 0 ? onSetup() : setConfirmExit(true))}
+          backLabel={career?.giveUp ? "Gi opp" : career ? "Pause" : "Tilbake"}
           right={
             <span className="inline-flex items-center gap-2">
               <button
@@ -564,10 +574,8 @@ export function CountdownGameScreen({
                     <p className="font-display truncate" style={{ fontSize: "var(--text-title)", lineHeight: 1.1 }}>
                       {p}
                     </p>
-                    {game.rosters?.[p] && active ? (
-                      <p className="cd-recent">
-                        <span>Nå: {who}</span>
-                      </p>
+                    {game.rosters && active && !winner ? (
+                      <WhoLine now={game.rosters[p] ? who : undefined} next={next} />
                     ) : (
                       recent.length > 0 && (
                       <p className="cd-recent" aria-label={`Siste runder: ${recent.map((t) => (t.bust ? "over" : t.scored)).join(", ")}`}>
@@ -600,10 +608,16 @@ export function CountdownGameScreen({
           {/* The way out, over the keypad, as large as the keys: only when there is one. */}
           {way && (
             <div className="cd-way-bar">
-              <span className="cd-way-label">UT</span>
+              <span className="cd-way-label">{game.players.length > 2 || waysOfOthers.length > 0 ? `${up} UT` : "UT"}</span>
               <CheckoutChips way={way} />
             </div>
           )}
+          {waysOfOthers.map((o) => (
+            <div key={o.p} className="cd-way-bar cd-way-bar--other" aria-label={`Utsjekk for ${o.p}`}>
+              <span className="cd-way-label">{o.p} UT</span>
+              <CheckoutChips way={o.way} />
+            </div>
+          ))}
           <div className="cd-pad" inert={botUp} style={{ opacity: botUp ? 0.45 : 1, transition: "opacity var(--pull)" }}>
             <ScoreKeypad
               fill

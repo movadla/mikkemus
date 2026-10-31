@@ -71,9 +71,25 @@ export function commitTeams(teams: PickedTeam[]) {
   commitPeople(teamPeople(teams));
 }
 
+/** Everything chosen on the setup screen: kept when the match starts, so that going back from the match lands on the same setup. */
+export type SetupDraft = {
+  mode: "individual" | "team";
+  variant: GameVariant;
+  people: Person[];
+  teams: PickedTeam[];
+  statsOff: boolean;
+  advanced: boolean;
+  exactEntry: boolean;
+  bonusBull3: boolean;
+  tvungen: boolean;
+  venue: VenueId;
+};
+
 export function SetupScreen({
   onStart,
   onHome,
+  draft,
+  onDraft,
   title = "Enkeltkamp",
   variantSelectable = true,
   scolia = null,
@@ -94,6 +110,10 @@ export function SetupScreen({
     bonusBull3?: boolean
   ) => void;
   onHome?: () => void;
+  /** The setup as it was when the match was started: shown again when the player comes back from the match. */
+  draft?: SetupDraft;
+  /** Told what is chosen at the moment the match is started. */
+  onDraft?: (draft: SetupDraft) => void;
   /** Overridden by other modes (e.g. Bull-duell) that reuse this same player picker. */
   title?: React.ReactNode;
   /** Whether the crosses-per-row choice is offered — Bull-duell has its own game and hides it. */
@@ -101,20 +121,21 @@ export function SetupScreen({
   /** The board's status, for the dot in the screen top. */
   scolia?: { label: string; color: string } | null;
 }) {
-  const [mode, setMode] = useState<"individual" | "team">("individual");
-  const [variant, setVariant] = useState<GameVariant>("standard");
-  const [people, setPeople] = useState<Person[]>([]);
-  const [teams, setTeams] = useState<PickedTeam[]>([]);
+  const [mode, setMode] = useState<"individual" | "team">(draft?.mode ?? "individual");
+  const [variant, setVariant] = useState<GameVariant>(draft?.variant ?? "standard");
+  const [people, setPeople] = useState<Person[]>(draft?.people ?? []);
+  const [teams, setTeams] = useState<PickedTeam[]>(draft?.teams ?? []);
   // Ticked under the start button: the match is played without a trace in the statistics.
-  const [statsOff, setStatsOff] = useState(false);
+  const [statsOff, setStatsOff] = useState(draft?.statsOff ?? false);
   // Avanserte innstillinger: off by default. In it: crosses per row (three, as everyone plays it), the stand rule for teams, how much happens
   // on screen, and keying in every dart.
-  const [advanced, setAdvanced] = useState(false);
-  const [exactEntry, setExactEntry] = useState(false);
-  const [bonusBull3, setBonusBull3] = useState(false);
+  const [advanced, setAdvanced] = useState(draft?.advanced ?? false);
+  const [exactEntry, setExactEntry] = useState(draft?.exactEntry ?? false);
+  const [bonusBull3, setBonusBull3] = useState(draft?.bonusBull3 ?? false);
   // «Tvungen Tvunget»: the hard way to play it. It does not count in the statistics, but the match still counts in Kveldsscore.
-  const [tvungen, setTvungen] = useState(false);
-  const [venue, setVenue] = useState<VenueId>("lu");
+  const [tvungen, setTvungen] = useState(draft?.tvungen ?? false);
+  const [venue, setVenue] = useState<VenueId>(draft?.venue ?? "lu");
+  const keepDraft = () => onDraft?.({ mode, variant, people, teams, statsOff, advanced, exactEntry, bonusBull3, tvungen, venue });
 
   // The longer games have no bots — see botsSupported. Bots already added when the length is
   // changed are not removed behind the user's back; the start button waits until they are.
@@ -129,6 +150,7 @@ export function SetupScreen({
   function startIndividualGame() {
     if (individualProblem) return;
     commitPeople(people);
+    keepDraft();
     const { players, botLevels, guestPlayers } = splitPeople(people);
     // The stand rule belongs to team play; a lone player has no one to hand over to.
     onStart(players, botLevels, undefined, guestPlayers, withStandRule(variant, false), statsOff || tvungen, exactEntry, venue, bonusBull3);
@@ -137,6 +159,7 @@ export function SetupScreen({
   function startTeamGame() {
     if (teamProblem) return;
     commitTeams(teams);
+    keepDraft();
     const teamRosters: Record<string, TeamMember[]> = {};
     teams.forEach((t) => {
       teamRosters[t.name] = t.members.map(toMember);

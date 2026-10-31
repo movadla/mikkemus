@@ -10,6 +10,7 @@
  * The game is a list of darts in the order they were thrown; everything else (who is up, what is lava, the lives) is worked out from it, so
  * taking a dart back is taking the last one off.
  */
+import { memberAfter, type NextUp } from "./teamGame";
 export const DEFAULT_LIVES = 3;
 export const MIN_LIVES = 1;
 export const MAX_LIVES = 9;
@@ -93,6 +94,8 @@ export type LavaState = {
   round: LavaDart[];
   /** Who throws the round now going on, when the side up is a team. */
   member: LavaMember | null;
+  /** Who throws after this round: the next side still in, and who of it when it is a team. */
+  next: NextUp<LavaMember> | null;
   winner: string | null;
 };
 
@@ -173,7 +176,9 @@ export function stateOf(g: LavaGame): LavaState {
       round = [];
     }
   }
-  return { burned, lives, up, thrown, log, round, member: memberOf(up), winner };
+  const after = winner ? up : nextAlive(up);
+  const next = after !== up ? { side: after, member: memberAfter(g.rosters, after, done[after] ?? 0) } : null;
+  return { burned, lives, up, thrown, log, round, member: memberOf(up), next, winner };
 }
 
 /** A dart thrown: a section, or MISS. Nothing happens once there is a winner. */
