@@ -17,7 +17,7 @@ import { PlayerKitEditor, TeamKitEditor, WalkOnPicker } from "@/components/KitSe
 import { TeamKit } from "@/components/TeamKit";
 import { teamKitsOf } from "@/lib/storage";
 import { EditIcon, TrashIcon } from "@/components/icons";
-import { PlayerNightMatches } from "@/components/PlayerNightMatches";
+import { PlayerNightMatches, useNightRecord } from "@/components/PlayerNightMatches";
 import { PlayerCard } from "@/components/ui/PlayerCard";
 import { CountUp } from "@/components/ui/CountUp";
 import { Button } from "@/components/ui/Button";
@@ -77,6 +77,8 @@ export default function PlayerDetailPage() {
   const roster = useRoster();
   const loaded = useRosterLoaded();
   const player = roster.find((p) => p.name.toLowerCase() === name.toLowerCase());
+  // The matches of Kveldsscore: a team match is kept with the team, so a person who mostly plays in teams has few of their own.
+  const night = useNightRecord(player?.name, player?.kind === "team");
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [editing, setEditing] = useState(false);
   // The limited code deletes no player or team, and sees no seeding, rating, record or form.
@@ -223,7 +225,7 @@ export default function PlayerDetailPage() {
             photo={player.photo}
             morph
             members={isTeam ? player.members : undefined}
-            caption={isTeam ? "Lag" : `${player.matchesPlayed} ${player.matchesPlayed === 1 ? "kamp" : "kamper"}`}
+            caption={isTeam ? "Lag" : player.matchesPlayed === 0 && night.matches > 0 ? `${night.matches} ${night.matches === 1 ? "kamp" : "kamper"} i Kveldsscore` : `${player.matchesPlayed} ${player.matchesPlayed === 1 ? "kamp" : "kamper"}`}
             figure={!limited && seed ? <CountUp value={Math.round(seed.rating)} /> : undefined}
             figureLabel={!limited && seed ? "RATING" : undefined}
           >
@@ -246,12 +248,17 @@ export default function PlayerDetailPage() {
 
           {!limited && (
             <>
-              <div className={`grid gap-2 mt-4 ${(cups > 0 ? 1 : 0) + (seed ? 1 : 0) === 2 ? "grid-cols-3" : "grid-cols-2"}`}>
+              <div className={`grid gap-2 mt-4 ${1 + (cups > 0 ? 1 : 0) + (seed ? 1 : 0) + (night.matches > 0 ? 1 : 0) === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
                 {cups > 0 && <Fact label="POKALER">{cups}</Fact>}
                 {seed && <Fact label="SEEDING">{seed.rank}.</Fact>}
                 <Fact label="KAMPER">
                   {player.matchesWon}–{player.matchesPlayed - player.matchesWon}
                 </Fact>
+                {night.matches > 0 && (
+                  <Fact label="KVELDSSCORE">
+                    {night.won}–{night.lost}
+                  </Fact>
+                )}
               </div>
 
               <div className="mt-4 p-3" style={{ background: "var(--color-cell)", borderRadius: "var(--radius-s)" }}>

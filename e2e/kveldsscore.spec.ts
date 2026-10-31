@@ -101,6 +101,9 @@ test.describe("Kveldsscore", () => {
     await expect(list).toContainText("Lars vs. Vadla");
     await expect(list).toContainText("Vant");
     await expect(page.getByText("1–0 · 1 poeng")).toBeVisible();
+    // The top card counts them too, so a person who has played only 301 does not read «0 kamper».
+    await expect(page.getByText("1 kamp i Kveldsscore")).toBeVisible();
+    await expect(page.getByText("KVELDSSCORE", { exact: true })).toBeVisible();
   });
 
   test("Sammenlign viser hvem som har slått hvem", async ({ page }) => {

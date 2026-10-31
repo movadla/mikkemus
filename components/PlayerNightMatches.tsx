@@ -18,6 +18,13 @@ function resultFor(m: NightMatch, name: string, isTeam: boolean): "won" | "lost"
   return order[0] === side.name ? "won" : "lost";
 }
 
+/** How many matches the player (or team) has in Kveldsscore, from all evenings, and how they went. */
+export function useNightRecord(name: string | undefined, isTeam: boolean): { matches: number; won: number; lost: number } {
+  const { matches } = useNightScore();
+  const mine = name ? matches.filter((m) => !m.deleted && resultFor(m, name, isTeam) !== null) : [];
+  return { matches: mine.length, won: mine.filter((m) => resultFor(m, name!, isTeam) === "won").length, lost: mine.filter((m) => resultFor(m, name!, isTeam) === "lost").length };
+}
+
 /**
  * Every match of Kveldsscore the player (or team) is in, from all evenings, newest first: the personal side of the evening score, with the
  * points they got. Matches taken out of the evening are not shown.
