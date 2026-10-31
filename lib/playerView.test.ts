@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { bullRowAfterDuel, emptyRecord, emptyStepStats, type MatchHistoryEntry, type MemberStat } from "./playerRows";
-import { bySource, rowDartsOver, rowsOver, singleView, teamView } from "./playerView";
+import { allView, bySource, rowDartsOver, rowsOver, singleView, teamView } from "./playerView";
 
 const match = (i: number, won: boolean, hitPct: number, med: number | null = null, darts = 60): MatchHistoryEntry => ({ date: `2026-10-${String(i + 1).padStart(2, "0")}`, won, dartsUsed: darts, hitPct, med, mhd: med, mvd: med, ...(med !== null ? { throws: darts } : {}) });
 const rec = (name: string, h: MatchHistoryEntry[], over: object = {}) => ({ ...emptyRecord(name), matchesPlayed: h.length, matchesWon: h.filter((m) => m.won).length, matchHistory: h, ...over });
@@ -146,5 +146,36 @@ describe("bull-duell and the BULL row", () => {
   it("adds the scoring darts as hits and the rest as misses, and nothing else", () => {
     expect(bullRowAfterDuel({ hits: 4, misses: 6 }, { throws: 9, redHits: 2, greenHits: 3 })).toEqual({ hits: 9, misses: 10 });
     expect(bullRowAfterDuel({ hits: 0, misses: 0 }, { throws: 3, redHits: 0, greenHits: 0 })).toEqual({ hits: 0, misses: 3 });
+  });
+});
+
+describe("alle kast, alene og på lag", () => {
+  it("legger kastene i lag til spillerens egne, så den som mest spiller på lag ikke står tom", () => {
+    const steps = emptyStepStats();
+    steps["20"] = { hits: 4, misses: 6 };
+    const person = rec("Erlend", []);
+    const team = {
+      ...rec("Vadla/Erlend", []),
+      kind: "team" as const,
+      members: ["Vadla", "Erlend"],
+      memberStats: { Erlend: member({ darts: 90, hits: 45, misses: 45, steps, throws: 30, sumR: 900, bestRun: 7 }) },
+    };
+    const v = allView(person, [person, team]);
+    expect(v.aloneDarts).toBe(0);
+    expect(v.teamDarts).toBe(90);
+    expect(v.hitPct).toBe(50);
+    expect(v.med).toBe(30);
+    expect(v.bestRun).toBe(7);
+    expect(v.rows!.find((r) => r.step === "20")).toMatchObject({ hits: 4, misses: 6 });
+  });
+
+  it("veier egne kast og lagkast etter antall piler", () => {
+    const own = rec("Per", [match(0, true, 40, null, 60)], { steps: emptyStepStats(), bestRun: 3, accuracy: { ...emptyRecord("x").accuracy, throws: 10, sumDistance: 200 } });
+    const team = { ...rec("Per/Ola", []), kind: "team" as const, members: ["Per", "Ola"], memberStats: { Per: member({ darts: 60, hits: 45, misses: 15, throws: 10, sumR: 400, bestRun: 9 }) } };
+    const v = allView(own, [own, team]);
+    // 40 % over 60 darts alone, 75 % over 60 in the team.
+    expect(v.hitPct).toBeCloseTo(57.5, 6);
+    expect(v.med).toBe(30);
+    expect(v.bestRun).toBe(9);
   });
 });

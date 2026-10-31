@@ -197,3 +197,65 @@ export function teamView(player: PlayerRecord, all: PlayerRecord[], source: Sour
     ownMatches: memberStats.reduce((s, m) => s + m.matches, 0),
   };
 }
+
+/**
+ * Every dart a person has thrown, alone and in teams, as one set of numbers: how often the darts counted, the distance from the middle, the
+ * hits on each row and the darts spent on each. Kept as totals, so it exists for «Begge» only. Matches, wins and rating are not in it: they
+ * are the person's alone.
+ */
+export type AllView = {
+  /** Darts thrown alone, and in teams (the person's own, from the figures kept per member). */
+  aloneDarts: number;
+  teamDarts: number;
+  hitPct: number | null;
+  med: number | null;
+  mhd: number | null;
+  mvd: number | null;
+  bestRun: number | null;
+  rows: RowStat[] | null;
+  rowDarts: Record<Step, number> | null;
+  rowDartsMatches: number;
+  rowDartsApprox: number;
+};
+
+export function allView(player: PlayerRecord, all: PlayerRecord[]): AllView {
+  const single = singleView(player, "both");
+  const team = teamView(player, all, "both");
+  const teams = all.filter((t) => t.kind === "team" && (t.members ?? []).some((m) => same(m, player.name)));
+  const stats: MemberStat[] = teams.map((t) => Object.entries(t.memberStats ?? {}).find(([k]) => same(k, player.name))?.[1]).filter((s): s is MemberStat => !!s);
+  const aloneDarts = usable(player.matchHistory).reduce((s, m) => s + m.dartsUsed, 0);
+  const teamDarts = stats.reduce((s, m) => s + m.darts, 0);
+  const tHits = stats.reduce((s, m) => s + m.hits, 0);
+  const tMisses = stats.reduce((s, m) => s + m.misses, 0);
+  const hitParts: [number, number][] = [];
+  if (single.hitPct !== null && aloneDarts > 0) hitParts.push([single.hitPct, aloneDarts]);
+  if (tHits + tMisses > 0 && teamDarts > 0) hitParts.push([(tHits / (tHits + tMisses)) * 100, teamDarts]);
+  const weight = hitParts.reduce((s, [, w]) => s + w, 0);
+  const acc = player.accuracy;
+  const tThrows = stats.reduce((s, m) => s + m.throws, 0);
+  const tSumR = stats.reduce((s, m) => s + m.sumR, 0);
+  const steps = {} as Record<Step, HitStat>;
+  STEPS.forEach(
+    (s) =>
+      (steps[s] = {
+        hits: (player.steps[s]?.hits ?? 0) + stats.reduce((a, m) => a + (m.steps[s]?.hits ?? 0), 0),
+        misses: (player.steps[s]?.misses ?? 0) + stats.reduce((a, m) => a + (m.steps[s]?.misses ?? 0), 0),
+      }),
+  );
+  const rowDarts = single.rowDarts || team.rowDarts ? ({} as Record<Step, number>) : null;
+  if (rowDarts) STEPS.forEach((s) => (rowDarts[s] = (single.rowDarts?.[s] ?? 0) + (team.rowDarts?.[s] ?? 0)));
+  const runs = [player.bestRun ?? 0, ...stats.map((m) => m.bestRun)];
+  return {
+    aloneDarts,
+    teamDarts,
+    hitPct: weight > 0 ? hitParts.reduce((s, [p, w]) => s + p * w, 0) / weight : null,
+    med: acc.throws + tThrows > 0 ? (acc.sumDistance + tSumR) / (acc.throws + tThrows) : null,
+    mhd: single.mhd,
+    mvd: single.mvd,
+    bestRun: Math.max(...runs) > 0 ? Math.max(...runs) : null,
+    rows: rowsOf(steps),
+    rowDarts,
+    rowDartsMatches: single.rowDartsMatches + team.rowDartsMatches,
+    rowDartsApprox: single.rowDartsApprox + team.rowDartsApprox,
+  };
+}

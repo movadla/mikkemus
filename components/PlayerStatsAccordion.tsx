@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { STEP_LABELS } from "@/lib/game";
-import { SOURCES, singleView, teamView, type Source, type View } from "@/lib/playerView";
+import { SOURCES, allView, singleView, teamView, type AllView, type Source, type View } from "@/lib/playerView";
 import { ratingOf, type PlayerRecord } from "@/lib/storage";
 import { coachTips, sumBias } from "@/lib/coach";
 import { memberHitPct, memberMed } from "@/lib/memberStats";
@@ -212,8 +212,35 @@ function MemberTable({ team }: { team: PlayerRecord }) {
   );
 }
 
+/** Every dart, alone and in teams: how often they counted, how far from the middle, and on each row. */
+function AllPanel({ player, all }: { player: PlayerRecord; all: PlayerRecord[] }) {
+  const v: AllView = allView(player, all);
+  if (v.aloneDarts + v.teamDarts === 0) return <p style={{ color: "var(--color-muted)", fontSize: "var(--text-body)" }}>Ingen kast ennå.</p>;
+  const asView = { rows: v.rows, rowDarts: v.rowDarts, rowDartsMatches: v.rowDartsMatches, rowDartsApprox: v.rowDartsApprox } as View;
+  return (
+    <>
+      <TileGroup label="Alle kast">
+        <Tile label="PILER" value={String(v.aloneDarts + v.teamDarts)} />
+        <Tile label="TREFF %" value={pct(v.hitPct)} />
+        <Tile label="LENGSTE SERIE" value={num(v.bestRun)} />
+      </TileGroup>
+      <TileGroup label="Avstand fra midten" help>
+        <Tile label="SNITT" value={mm(v.med)} />
+        <Tile label="SIDEAVVIK" value={mm(v.mhd)} />
+        <Tile label="HØYDEAVVIK" value={mm(v.mvd)} />
+      </TileGroup>
+      <p className="mt-3" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>
+        {v.aloneDarts} piler alene og {v.teamDarts} i lag. Kamper, seiere og rating teller bare det du har spilt alene. Sideavvik og høydeavvik er fra kastene alene.
+      </p>
+      <Rows view={asView} />
+      <RowDarts view={asView} who={player.name} source="both" />
+    </>
+  );
+}
+
 function Panel({ player, all, source, onSource }: { player: PlayerRecord; all: PlayerRecord[]; source: Source; onSource: (s: Source) => void }) {
-  const [pickedTab, setTab] = useState<"single" | "team">("single");
+  // Everything thrown, alone and in teams, is the first thing shown for a person who has thrown in a team.
+  const [pickedTab, setTab] = useState<"all" | "single" | "team">(() => (player.kind !== "team" && teamView(player, all, "both").ownDarts > 0 ? "all" : "single"));
   // A team record is one thing, not a person who plays alone and in teams: it has the single view and nothing else.
   const isTeamRecord = player.kind === "team";
   const tab = isTeamRecord ? "single" : pickedTab;
@@ -225,7 +252,7 @@ function Panel({ player, all, source, onSource }: { player: PlayerRecord; all: P
     <div className="px-4 pb-4 pt-1">
       {!isTeamRecord && (
         <div className="mb-3">
-          <Segmented value={tab} onChange={setTab} label="Alene eller på lag" options={[{ value: "single", label: "Singel" }, { value: "team", label: "Lag" }]} />
+          <Segmented value={tab} onChange={setTab} label="Alene eller på lag" options={[{ value: "all", label: "Alle kast" }, { value: "single", label: "Singel" }, { value: "team", label: "Lag" }]} fit />
         </div>
       )}
 
@@ -233,7 +260,13 @@ function Panel({ player, all, source, onSource }: { player: PlayerRecord; all: P
         <Segmented value={source} onChange={onSource} label="Hvor kastene er registrert" options={SOURCES.map((x) => ({ value: x.value, label: x.label }))} />
       </div>
 
-      {tab === "single" ? (
+      {tab === "all" ? (
+        source !== "both" ? (
+          <p style={{ color: "var(--color-muted)", fontSize: "var(--text-body)" }}>Alle kast er samlet over det som er lagret som totaler, og vises under Begge.</p>
+        ) : (
+          <AllPanel player={player} all={all} />
+        )
+      ) : tab === "single" ? (
         single.matches === 0 && source === "both" ? (
           <p style={{ color: "var(--color-muted)", fontSize: "var(--text-body)" }}>{isTeamRecord ? "Ingen kamper ennå." : "Ingen singelkamper ennå."}</p>
         ) : (
