@@ -13,7 +13,7 @@ import { loadActiveTournamentId } from "@/lib/tournamentStorage";
 import { useScolia } from "@/lib/useScolia";
 import dynamic from "next/dynamic";
 import { HeroMascot } from "./HeroMascot";
-import { BoltIcon, BullseyeIcon, DartIcon, DoubleIcon, FlameIcon, GridIcon, HeartIcon, KeypadIcon, TrophyIcon } from "./icons";
+import { ArrowLeftIcon, BoltIcon, BullseyeIcon, DartIcon, DoubleIcon, FlameIcon, HeartIcon, KeypadIcon, TrophyIcon } from "./icons";
 import { RulesIntro } from "./RulesIntro";
 import { NightStripe } from "./NightStripe";
 import { ScoliaDot, summarizeScolia } from "./ScoliaStatusBadge";
@@ -43,7 +43,7 @@ const HalvItApp = dynamic(() => import("./HalvItApp").then((m) => m.HalvItApp), 
 const CountdownApp = dynamic(() => import("./CountdownApp").then((m) => m.CountdownApp), { loading });
 const CareerApp = dynamic(() => import("./CareerApp").then((m) => m.CareerApp), { loading });
 
-type Mode = "home" | "single" | "tournament" | "bullduel" | "countdown" | "highstriker" | "lava" | "halvit" | "killer" | "career";
+type Mode = "home" | "new" | "single" | "tournament" | "bullduel" | "countdown" | "highstriker" | "lava" | "halvit" | "killer" | "career";
 
 const TOURNAMENTS_OFFERED = true;
 
@@ -52,19 +52,57 @@ const MODE_OF: Record<PlanGame, Mode> = { enkeltkamp: "single", countdown: "coun
 const newId = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`);
 
 /** A way in to a kind of game: its icon above its name, or beside it when it has the whole row to itself. */
-function Tile({ icon, label, onClick, wide = false, expanded, controls }: { icon: React.ReactNode; label: string; onClick: () => void; wide?: boolean; expanded?: boolean; controls?: string }) {
+function Tile({ icon, label, onClick, wide = false, big = false, sub }: { icon: React.ReactNode; label: string; onClick: () => void; wide?: boolean; /** The first and biggest choice of a list. */ big?: boolean; sub?: string }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      aria-expanded={expanded}
-      aria-controls={controls}
-      className={`tactile flex items-center justify-center ${wide ? "flex-row gap-3 w-full" : "flex-col gap-2"} ${FOCUS_RING}`}
-      style={{ minHeight: wide ? "4.25rem" : "5.5rem", borderRadius: "var(--radius-m)", background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-cream)", fontSize: "var(--text-body)", fontWeight: 600 }}
+      className={`tactile flex items-center justify-center ${wide || big ? "flex-row gap-3 w-full" : "flex-col gap-2"} ${FOCUS_RING}`}
+      style={{ minHeight: big ? "7rem" : wide ? "4.25rem" : "5.5rem", borderRadius: "var(--radius-m)", background: "var(--color-surface)", border: big ? "1px solid var(--color-teal)" : "1px solid var(--color-border)", color: "var(--color-cream)", fontSize: big ? "var(--text-title)" : "var(--text-body)", fontWeight: 600 }}
     >
       <span style={{ color: "var(--color-teal)" }}>{icon}</span>
-      {label}
+      <span className="flex flex-col items-start text-left">
+        {label}
+        {sub && <small style={{ color: "var(--color-muted)", fontSize: "var(--text-small)", fontWeight: 400 }}>{sub}</small>}
+      </span>
     </button>
+  );
+}
+
+/** What "Nytt spill" opens: Mikke Mus as the big first choice, and the other games under it. */
+function NewGame({ onBack, onPick, onTurnering }: { onBack: () => void; onPick: (m: Mode) => void; onTurnering: () => void }) {
+  useNavSpace(true);
+  return (
+    <div className="animate-screen-enter screen">
+      <div className="screen-inner wide">
+        <div className="flex items-center gap-3 mb-4">
+          <button
+            type="button"
+            onClick={onBack}
+            aria-label="Tilbake"
+            className={`tactile inline-flex items-center justify-center ${FOCUS_RING}`}
+            style={{ width: "var(--control)", height: "var(--control)", borderRadius: "var(--radius-pill)", background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-cream)" }}
+          >
+            <ArrowLeftIcon className="w-5 h-5" />
+          </button>
+          <h1 className="font-display" style={{ fontSize: "var(--text-title)", color: "var(--color-cream)" }}>
+            Nytt spill
+          </h1>
+        </div>
+        <div className="grid gap-2 mb-6">
+          <Tile big icon={<DartIcon className="w-8 h-8" />} label="Mikke Mus" sub="Enkeltkamp" onClick={() => onPick("single")} />
+          <div className="grid grid-cols-2 gap-2" role="group" aria-label="Andre spill">
+            <Tile icon={<BullseyeIcon className="w-6 h-6" />} label="Bull-duell" onClick={() => onPick("bullduel")} />
+            <Tile icon={<KeypadIcon className="w-6 h-6" />} label="301 / 501" onClick={() => onPick("countdown")} />
+            <Tile icon={<HeartIcon className="w-6 h-6" />} label="Highstriker" onClick={() => onPick("highstriker")} />
+            <Tile icon={<FlameIcon className="w-6 h-6" />} label="Lava" onClick={() => onPick("lava")} />
+            <Tile icon={<DoubleIcon className="w-6 h-6" />} label="Halv It" onClick={() => onPick("halvit")} />
+            <Tile icon={<BoltIcon className="w-6 h-6" />} label="Killer" onClick={() => onPick("killer")} />
+          </div>
+        </div>
+      </div>
+      <BottomNav current="spill" onTurnering={onTurnering} />
+    </div>
   );
 }
 
@@ -77,8 +115,6 @@ export function AppRoot() {
   const [matchUnderway, setMatchUnderway] = useState<string[] | null>(null);
   // The rules introduction, on request (the address ?m=regler, from Mer). The first-time showing is MikkeMusApp's.
   const [showRules, setShowRules] = useState(false);
-  // The other games (301 / 501, Highstriker, Lava and what comes) are under one tile, opened on request.
-  const [moreOpen, setMoreOpen] = useState(false);
   // A game opened from the plan of the evening (Kveldsplan): to put a match in the plan, to change one, or to play the next.
   const [plan, setPlan] = useState<PlanSession | null>(null);
   const router = useRouter();
@@ -178,6 +214,7 @@ export function AppRoot() {
         },
       }
     : undefined;
+  if (mode === "new") return <NewGame onBack={() => setMode("home")} onPick={setMode} onTurnering={() => setMode("tournament")} />;
   if (mode === "single") return <MikkeMusApp onExitToHome={leave} plan={link} />;
   if (mode === "tournament") return <TournamentApp onExitToHome={() => setMode("home")} />;
   if (mode === "bullduel") return <BullDuelApp onExitToHome={() => setMode("home")} />;
@@ -204,69 +241,48 @@ export function AppRoot() {
         </h1>
 
         <div className="wide-columns">
+        {resume && (
+          <section
+            className="mb-4 text-center p-4"
+            style={{ borderRadius: "var(--radius-l)", background: "var(--color-panel)", border: "1px solid var(--color-border)", boxShadow: "var(--elevation-1)" }}
+          >
+            <p className="section-label mb-1">{resume.label.toUpperCase()}</p>
+            <p className="font-display mb-4" style={{ fontSize: "var(--text-title)", color: "var(--color-cream)" }}>
+              {resume.title}
+            </p>
+            <Button variant="primary" size="lg" block onClick={resume.go}>
+              Fortsett
+            </Button>
+          </section>
+        )}
         <section
-          className="mb-6 text-center p-4"
+          className="mb-4 text-center p-4"
           style={{ borderRadius: "var(--radius-l)", background: "var(--color-panel)", border: "1px solid var(--color-border)", boxShadow: "var(--elevation-1)" }}
         >
-          {resume ? (
-            <>
-              <p className="section-label mb-1">{resume.label.toUpperCase()}</p>
-              <p className="font-display mb-4" style={{ fontSize: "var(--text-title)", color: "var(--color-cream)" }}>
-                {resume.title}
-              </p>
-              <Button variant="primary" size="lg" block onClick={resume.go}>
-                Fortsett
-              </Button>
-            </>
-          ) : (
-            <>
-              <HeroMascot small />
-              <Button variant="primary" size="lg" block icon={<DartIcon className="w-5 h-5" />} onClick={() => setMode("single")}>
-                Ny kamp
-              </Button>
-            </>
-          )}
+          <HeroMascot small />
+          <Button variant="primary" size="lg" block icon={<DartIcon className="w-5 h-5" />} onClick={() => setMode("new")}>
+            Nytt spill
+          </Button>
         </section>
 
-        <NightStripe
-          onNext={(eveningId, p) => {
-            const session: PlanSession = { kind: "play", eveningId, game: p.game, plannedId: p.id, setup: p.setup };
-            setPlanSession(session);
-            if (p.game === "enkeltkamp") clearActiveMatch();
-            setPlan(session);
-            setMode(MODE_OF[p.game]);
-          }}
-        />
+        {/* The front page is three ways in: a new game, a tournament and (with the full code) the career. */}
+        <div className="grid gap-2 mb-6">
+          <Tile wide icon={<TrophyIcon className="w-6 h-6" />} label="Turnering" onClick={() => setMode("tournament")} />
+          {!limited && <Tile wide icon={<TrophyIcon className="w-6 h-6" />} label="Karriere" onClick={() => setMode("career")} />}
+        </div>
 
-        {/* The hero is already Enkeltkamp when nothing is under way, so its tile is only there when the hero is something else. */}
-        {/* One tile has the whole row, as it should look; two or three share it. */}
-        {(() => {
-          const tiles = (resume ? 1 : 0) + (tournamentsOn ? 1 : 0) + 2;
-          return (
-            <div className={`grid gap-2 mb-6 ${tiles === 1 ? "grid-cols-1" : tiles === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
-              {resume && <Tile icon={<DartIcon className="w-6 h-6" />} label="Enkeltkamp" onClick={() => setMode("single")} />}
-              {tournamentsOn && <Tile icon={<TrophyIcon className="w-6 h-6" />} label="Turnering" onClick={() => setMode("tournament")} />}
-              <Tile wide={tiles === 1} icon={<BullseyeIcon className="w-6 h-6" />} label="Bull-duell" onClick={() => setMode("bullduel")} />
-              <Tile icon={<GridIcon className="w-6 h-6" />} label="Andre spill" onClick={() => setMoreOpen((o) => !o)} expanded={moreOpen} controls="andre-spill" />
-            </div>
-          );
-        })()}
-        {moreOpen && (
-          <div id="andre-spill" className="grid grid-cols-3 gap-2 mb-6 -mt-4 animate-screen-enter" role="group" aria-label="Andre spill">
-            <Tile icon={<KeypadIcon className="w-6 h-6" />} label="301 / 501" onClick={() => setMode("countdown")} />
-            <Tile icon={<HeartIcon className="w-6 h-6" />} label="Highstriker" onClick={() => setMode("highstriker")} />
-            <Tile icon={<FlameIcon className="w-6 h-6" />} label="Lava" onClick={() => setMode("lava")} />
-            <Tile icon={<DoubleIcon className="w-6 h-6" />} label="Halv It" onClick={() => setMode("halvit")} />
-            <Tile icon={<BoltIcon className="w-6 h-6" />} label="Killer" onClick={() => setMode("killer")} />
-          </div>
-        )}
-        {/* Karriere is behind the full code while it is built. */}
+        {/* The plan of the evening stays at the foot, for the full code. */}
         {!limited && (
-          <div className="mb-6">
-            <Tile wide icon={<TrophyIcon className="w-6 h-6" />} label="Karriere" onClick={() => setMode("career")} />
-          </div>
+          <NightStripe
+            onNext={(eveningId, p) => {
+              const session: PlanSession = { kind: "play", eveningId, game: p.game, plannedId: p.id, setup: p.setup };
+              setPlanSession(session);
+              if (p.game === "enkeltkamp") clearActiveMatch();
+              setPlan(session);
+              setMode(MODE_OF[p.game]);
+            }}
+          />
         )}
-
         </div>
 
       </div>

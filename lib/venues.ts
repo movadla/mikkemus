@@ -35,19 +35,18 @@ export const VENUES: Venue[] = [
   { id: "stavanger", name: "Fargegata", line: "Fargerike trehus", tier: "nm", key: "stavanger" },
 ];
 
+/** The places a tournament or a game between friends can be played in, to choose from: the pub, Ally Pally and the TV studio (the owner's choice). The others stand on for the cups that are fixed to a place. */
+export const PICKABLE: VenueId[] = ["lu", "vm", "tv"];
+
 export const venueOf = (id: VenueId): Venue => VENUES.find((v) => v.id === id) ?? VENUES[0];
 
 /** The place a cup against bots fits: the European championship is a Grand Slam in looks and trophy. */
 const OF_CUP: Record<CupKind, VenueId> = { vm: "vm", em: "gs", gs: "gs", nm: "nm", open: "lu", lu: "lu", region: "region" };
 export const venueForCup = (kind: CupKind): VenueId => OF_CUP[kind];
 
-/** The place that fits a tournament of this many, when nothing is chosen: a pub for a few, an arena for many. */
+/** The place that fits a tournament of this many, when nothing is chosen: the pub for a few, Ally Pally for many. */
 export function venueForSize(entrants: number): VenueId {
-  if (entrants <= 8) return "lu";
-  if (entrants <= 16) return "region";
-  if (entrants <= 32) return "nm";
-  if (entrants <= 64) return "gs";
-  return "vm";
+  return entrants <= 8 ? "lu" : "vm";
 }
 
 /** The place nothing has been chosen for. */

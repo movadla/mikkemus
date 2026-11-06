@@ -4,7 +4,7 @@ import { PIN, openApp, startMatch } from "./helpers";
 /** Killer: et tall hver, tre treff på det for å bli killer, og så tar killeren liv fra de andre. */
 async function begin(page: Page) {
   await openApp(page, "dark");
-  await page.getByRole("button", { name: "Andre spill" }).click();
+  await page.getByRole("button", { name: "Nytt spill" }).click();
   await page.getByRole("button", { name: "Killer" }).click();
   for (const name of ["Lars", "Vadla"]) {
     await page.getByRole("button", { name: "Ny spiller" }).click();

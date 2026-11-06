@@ -3005,6 +3005,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       {showLineup && !showRules && (
         <LineupIntro
           onDone={() => setShowLineup(false)}
+          venue={onMatchComplete ? undefined : matchVenue}
           sides={players.map((p) => {
             const rec = getPlayerRecord(p);
             return {

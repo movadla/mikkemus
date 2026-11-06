@@ -58,7 +58,7 @@ export async function startPast(page: Page) {
   if (await skip.isVisible({ timeout: 3000 }).catch(() => false)) await skip.click();
   const cards = page.getByRole("dialog", { name: "Oppstilling" });
   if (await cards.isVisible({ timeout: 3000 }).catch(() => false)) {
-    await cards.getByRole("button", { name: "Fortsett" }).click();
+    await cards.getByRole("button", { name: /^(Fortsett|Start kampen)$/ }).click();
     await expect(cards).toBeHidden();
   }
 }

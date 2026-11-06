@@ -6,7 +6,7 @@ async function begin(page: Page, game: "301 / 501" | "Highstriker" | "Lava") {
   // The fastest bots, so the test does not wait for them.
   await page.addInitScript(() => localStorage.setItem("mikke-mus-bot-speed", "instant"));
   await openApp(page, "dark");
-  await page.getByRole("button", { name: "Andre spill" }).click();
+  await page.getByRole("button", { name: "Nytt spill" }).click();
   await page.getByRole("button", { name: game }).click();
   await page.getByRole("button", { name: "Ny spiller" }).click();
   await page.getByPlaceholder("Spillernavn").fill("Lars");
@@ -27,7 +27,7 @@ test.describe("boter i de andre spillene", () => {
   test("en bot alene er ikke nok: det må være minst én spiller", async ({ page }) => {
     await page.addInitScript(() => localStorage.setItem("mikke-mus-bot-speed", "instant"));
     await openApp(page, "dark");
-    await page.getByRole("button", { name: "Andre spill" }).click();
+    await page.getByRole("button", { name: "Nytt spill" }).click();
     await page.getByRole("button", { name: "301 / 501" }).click();
     await page.getByRole("button", { name: "Bot", exact: true }).click();
     await page.locator("div.grid-cols-3 button").first().click();

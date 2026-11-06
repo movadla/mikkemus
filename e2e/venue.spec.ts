@@ -20,12 +20,12 @@ test.describe("sted for turneringen", () => {
     await addPlayers(page, ["Lars", "Vadla", "Moen", "Hans"]);
     // The place is on the screen, with the one chosen marked.
     const places = page.getByRole("radiogroup", { name: "Sted" });
-    // Four players fit a pub; another place can be picked.
+    // Four players fit a pub; Ally Pally can be picked.
     await expect(places.getByRole("radio", { name: /^Ly/ })).toBeChecked();
-    await places.getByRole("radio", { name: /Rompuben Moss/ }).click();
+    await places.getByRole("radio", { name: /Ally Pally/ }).click();
     await page.getByRole("button", { name: /^Neste · \d+ spillere?$/ }).click();
     // The opening: the name of the place and the trophy, then on to the draw.
-    await expect(page.getByRole("list", { name: "Om turneringen" }).getByText("Rompuben Moss")).toBeVisible();
+    await expect(page.getByRole("list", { name: "Om turneringen" }).getByText("Ally Pally")).toBeVisible();
     await expect(page.getByLabel("Feltet")).toBeVisible();
     await page.getByRole("button", { name: "TREKK" }).waitFor({ timeout: 10_000 });
     const check = async () => {
@@ -37,10 +37,10 @@ test.describe("sted for turneringen", () => {
     await expect(page.getByRole("heading", { name: "Trekning" })).toBeVisible();
     await page.waitForTimeout(5000);
     await check();
-    await expect(page.locator(".room-backdrop-img")).toHaveAttribute("src", /region-inside/);
+    await expect(page.locator(".room-backdrop-img")).toHaveAttribute("src", /vm-inside/);
     await page.getByRole("button", { name: "Start", exact: true }).click();
     // The place is kept for the tournament, on this device.
-    await expect.poll(async () => page.evaluate(() => Object.values(JSON.parse(localStorage.getItem("mikke-mus-venues") ?? "{}")))).toContain("region");
+    await expect.poll(async () => page.evaluate(() => Object.values(JSON.parse(localStorage.getItem("mikke-mus-venues") ?? "{}")))).toContain("vm");
   });
 
   test("mot boter: Grand Slam spilles i Civic Hall, og favorittene har portrett", async ({ page }) => {
@@ -66,14 +66,15 @@ test.describe("sted for turneringen", () => {
 
   test("enkeltkamp: stedet velges under Avanserte innstillinger (Ly som standard), og følger kampen", async ({ page }) => {
     await openApp(page, "dark");
-    await page.getByRole("button", { name: "Ny kamp" }).click();
+    await page.getByRole("button", { name: "Nytt spill" }).click();
+    await page.getByRole("button", { name: "Mikke Mus" }).click();
     await addPlayers(page, ["Lars", "Vadla"]);
     await page.getByRole("switch", { name: /Avanserte innstillinger/ }).click();
     const places = page.getByRole("radiogroup", { name: "Sted" });
     await expect(places.getByRole("radio", { name: /^Ly/ })).toBeChecked();
-    await places.getByRole("radio", { name: /Civic Hall/ }).click();
+    await places.getByRole("radio", { name: /TV-studio/ }).click();
     await page.getByRole("button", { name: /Start/ }).first().click();
     // The place is kept with the match, so the cup of the place is on the winner screen after a reload too.
-    await expect.poll(async () => page.evaluate(() => JSON.parse(localStorage.getItem("mikke-mus-active-match") ?? "{}").venue)).toBe("gs");
+    await expect.poll(async () => page.evaluate(() => JSON.parse(localStorage.getItem("mikke-mus-active-match") ?? "{}").venue)).toBe("tv");
   });
 });

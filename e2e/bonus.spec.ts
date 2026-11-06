@@ -11,7 +11,7 @@ test.describe("ekstrapoeng", () => {
 
   test("301: 180, tre bull (spørsmål ved 150) og utsjekk 100+ gir poeng i Kveldsscore", async ({ page }) => {
     await openApp(page, "dark");
-    await page.getByRole("button", { name: "Andre spill" }).click();
+    await page.getByRole("button", { name: "Nytt spill" }).click();
     await page.getByRole("button", { name: "301 / 501" }).click();
     for (const name of ["Lars", "Vadla"]) {
       await page.getByRole("button", { name: "Ny spiller" }).click();

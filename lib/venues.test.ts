@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { VENUES, defaultVenue, saveVenue, venueForCup, venueForSize, venueOf, venueOfTournament } from "./venues";
+import { PICKABLE, VENUES, defaultVenue, saveVenue, venueForCup, venueForSize, venueOf, venueOfTournament } from "./venues";
 
 const tournament = (id: string, n: number, kind?: "em" | "vm") => ({ id, cup: kind ? ({ kind } as never) : undefined, participants: Array.from({ length: n }, (_, i) => ({ name: `p${i}`, isBot: false })) });
 
@@ -13,9 +13,14 @@ describe("the places of a tournament", () => {
   });
 
   it("fits a tournament of friends by its size: a pub for a few, an arena for many", () => {
-    expect([4, 8, 9, 16, 17, 32, 33, 64, 65, 128].map(venueForSize)).toEqual(["lu", "lu", "region", "region", "nm", "nm", "gs", "gs", "vm", "vm"]);
+    expect([4, 8, 9, 16, 17, 32, 33, 64, 65, 128].map(venueForSize)).toEqual(["lu", "lu", "vm", "vm", "vm", "vm", "vm", "vm", "vm", "vm"]);
     expect(defaultVenue(undefined, 8)).toBe("lu");
     expect(defaultVenue("em", 8)).toBe("gs");
+  });
+
+  it("offers three places to choose from: the pub, Ally Pally and the studio", () => {
+    expect(PICKABLE).toEqual(["lu", "vm", "tv"]);
+    expect(PICKABLE.map((id) => venueOf(id).name)).toEqual(["Ly", "Ally Pally", "TV-studio"]);
   });
 
   it("stands every place on a step of the career, and keeps the ones with pictures of their own by key", () => {

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { VENUES, type VenueId } from "./venues";
+import { PICKABLE, VENUES, type VenueId } from "./venues";
 
 /** The games that are played in a place of their own choosing, and that remember it (on this device) until the next time. */
 export type VenueGame = "countdown" | "lava" | "highstriker" | "halvit" | "killer";
@@ -14,7 +14,7 @@ export function useGameVenue(game: VenueGame): [VenueId, (v: VenueId) => void] {
     const t = setTimeout(() => {
       try {
         const saved = localStorage.getItem(key(game));
-        const found = VENUES.find((v) => v.id === saved);
+        const found = VENUES.find((v) => v.id === saved && PICKABLE.includes(v.id));
         if (found) setVenue(found.id);
       } catch {
         /* not kept: the pub */

@@ -13,7 +13,8 @@ test.describe("lag på kamp", () => {
       localStorage.setItem("mikke-mus-team-cards", JSON.stringify(cards));
     }, names);
     await openApp(page, "dark");
-    await page.getByRole("button", { name: "Ny kamp" }).click();
+    await page.getByRole("button", { name: "Nytt spill" }).click();
+    await page.getByRole("button", { name: "Mikke Mus" }).click();
     await page.getByRole("radio", { name: "Lag" }).click();
 
     const group = page.getByRole("group", { name: "Lag" });
@@ -36,7 +37,8 @@ test.describe("lag på kamp", () => {
       localStorage.setItem("mikke-mus-team-cards", JSON.stringify(list.map((name, i) => ({ name, members: name.split(" og "), lastUsed: 1000 - i }))));
     }, names);
     await openApp(page, "dark");
-    await page.getByRole("button", { name: "Ny kamp" }).click();
+    await page.getByRole("button", { name: "Nytt spill" }).click();
+    await page.getByRole("button", { name: "Mikke Mus" }).click();
     await page.getByRole("radio", { name: "Lag" }).click();
     await page.getByRole("button", { name: "Flere lag (1)" }).click();
     const group = page.getByRole("group", { name: "Lag" });
@@ -52,7 +54,8 @@ test.describe("lag på kamp", () => {
       localStorage.setItem("mikke-mus-team-cards", JSON.stringify([{ name: "Lars og Per", members: ["Lars", "Per"], lastUsed: 1000 }]));
     });
     await openApp(page, "dark");
-    await page.getByRole("button", { name: "Ny kamp" }).click();
+    await page.getByRole("button", { name: "Nytt spill" }).click();
+    await page.getByRole("button", { name: "Mikke Mus" }).click();
     await page.getByRole("radio", { name: "Lag" }).click();
     await expect(page.getByRole("group", { name: "Lag" }).getByRole("button", { name: /Lars og Per/ })).toBeVisible();
     // Without having played: the team is in Spillere, under Lag.
@@ -68,7 +71,8 @@ test.describe("lag på kamp", () => {
       localStorage.setItem("mikke-mus-team-cards", JSON.stringify(list.map((name, i) => ({ name, members: name.split(" og "), lastUsed: 1000 - i }))));
     }, names);
     await openApp(page, "dark");
-    await page.getByRole("button", { name: "Ny kamp" }).click();
+    await page.getByRole("button", { name: "Nytt spill" }).click();
+    await page.getByRole("button", { name: "Mikke Mus" }).click();
     await page.getByRole("radio", { name: "Lag" }).click();
     const group = page.getByRole("group", { name: "Lag" });
     await group.getByRole("button", { name: /Lars og Per/ }).click();

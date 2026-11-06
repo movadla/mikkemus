@@ -7,6 +7,9 @@ import { KitStage } from "./TeamKit";
 import { Avatar } from "./ui/Avatar";
 import { formatOdds } from "@/lib/odds/price";
 import { portraitSrc } from "@/lib/opponents";
+import { startIntroMusic, type IntroTrack } from "@/lib/uiSound";
+import { venueOf, type VenueId } from "@/lib/venues";
+import { picturesFor } from "./eventPictures";
 
 export type LineupSide = {
   name: string;
@@ -32,6 +35,23 @@ export type LineupSide = {
   /** Matches played: a win count says nothing without it, so the wins are shown as «2 av 8» and compared as a share. */
   played?: number;
 };
+
+/** What a place has around the line-up of a match played in it: the film (public/career, from the career), the song and the colour of the spotlights. */
+const VENUE_SHOW: Partial<Record<VenueId, { film: string; track: IntroTrack; beam: string }>> = {
+  lu: { film: "/career/pub-intro.mp4", track: "intro", beam: "#f4b860" },
+  vm: { film: "/career/walkon/vm.mp4", track: "intro-vm", beam: "#8fb4ff" },
+  tv: { film: "/career/tv-duel-intro.mp4", track: "intro-gs", beam: "#c68bff" },
+};
+const BEAMS: [string, number, number][] = [["18%", 14, 0.5], ["50%", 10, 0.4], ["82%", 14, 0.5], ["34%", 20, 0.3], ["66%", 20, 0.3]];
+
+/** The film of the place, once, muted (the song of the place plays over it); a tap, the end or a film that cannot be played goes on. */
+function VenueFilm({ src, onDone }: { src: string; onDone: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[59] bg-black" onClick={onDone}>
+      <video src={src} className="absolute inset-0 w-full h-full object-cover" muted autoPlay playsInline preload="auto" onEnded={onDone} onError={onDone} />
+    </div>
+  );
+}
 
 /** The bars start to grow once the cards have turned in. */
 const GROW_AFTER_MS = 900;
@@ -66,8 +86,16 @@ const share = (r: Row, v: number) => (r.low ? 1 / v / (1 / r.a + 1 / r.b) : r.a 
  * «Fortsett» is pressed, so the figures can be read for as long as it takes, and then the board is there: there is no count down.
  * Three or more sides are listed instead of split in two. Every level but Enkel — see lib/fxLevel.ts.
  */
-export function LineupIntro({ sides, onDone }: { sides: LineupSide[]; onDone: () => void }) {
+export function LineupIntro({ sides, onDone, venue }: { sides: LineupSide[]; onDone: () => void; /** The place the match is played in: its picture behind the cards, its name on top, its song and spotlights, and its film when «Start kampen» is pressed. */ venue?: VenueId }) {
   const [grow, setGrow] = useState(false);
+  const place = venue ? venueOf(venue) : null;
+  const show = venue ? VENUE_SHOW[venue] : undefined;
+  const pics = place ? picturesFor({ id: place.tier, key: place.key }) : undefined;
+  const [film, setFilm] = useState(false);
+  // The song of the place, from when the cards come up until they are left.
+  useEffect(() => (show ? startIntroMusic(show.track) : undefined), [show]);
+  // Reduced motion goes straight on: the film is not played to someone who has asked for less movement.
+  const start = () => (show && !film && !window.matchMedia("(prefers-reduced-motion: reduce)").matches ? setFilm(true) : onDone());
   // A big screen (a TV, a laptop) gets larger cards, as the board does: read across a room.
   const [big] = useState(() => typeof window !== "undefined" && window.matchMedia("(min-width: 1000px) and (min-height: 600px)").matches);
   // The cards come in once the faces are loaded and decoded (or after a short wait), so they never turn in empty and then jump to the finished card.
@@ -166,6 +194,20 @@ export function LineupIntro({ sides, onDone }: { sides: LineupSide[]; onDone: ()
       className="fixed inset-0 z-[58] flex items-center justify-center animate-screen-enter"
       style={{ background: "var(--color-bg)" }}
     >
+      {pics && (
+        <div aria-hidden className="absolute inset-0 overflow-hidden" style={{ pointerEvents: "none" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element -- one fixed picture from public/career */}
+          <img src={pics.outside} alt="" className="absolute inset-0 w-full h-full" style={{ objectFit: "cover", objectPosition: pics.outsideFocus }} />
+          <div className="absolute inset-0" style={{ background: "linear-gradient(rgba(5, 8, 16, 0.55), rgba(5, 8, 16, 0.82))" }} />
+          {show && BEAMS.map(([x, a, o], i) => <div key={i} className="ev-beam" style={{ "--x": x, "--a": `${a}deg`, "--bo": o, "--beam": show.beam, "--b": `${i * 0.25}s` } as React.CSSProperties} />)}
+        </div>
+      )}
+      {place && (
+        <div className="absolute left-0 right-0 text-center px-4" style={{ top: "max(4.5rem, calc(env(safe-area-inset-top) + 3rem))" }}>
+          <p className="font-display" style={{ fontSize: "var(--text-micro)", letterSpacing: "0.28em", color: "var(--color-muted)" }}>ENKELTKAMP</p>
+          <h1 className="font-display" style={{ fontSize: "clamp(1.9rem, 9vw, 3rem)", lineHeight: 1.05, color: "var(--color-cream)", textShadow: "0 2px 18px rgba(0,0,0,0.6)" }}>{place.name}</h1>
+        </div>
+      )}
       {two && (
         <div
           aria-hidden
@@ -224,12 +266,13 @@ export function LineupIntro({ sides, onDone }: { sides: LineupSide[]; onDone: ()
       <button
         type="button"
         autoFocus
-        onClick={onDone}
+        onClick={start}
         className="glossy absolute rounded-full font-semibold outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]"
         style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", left: "50%", bottom: "7%", transform: "translateX(-50%)", minHeight: "var(--control-lg)", padding: "0 2.5rem", fontSize: "var(--text-title)", animation: "lineup-count 300ms 500ms ease-out both" } as React.CSSProperties}
       >
-        Fortsett
+        {place ? "Start kampen" : "Fortsett"}
       </button>
+      {film && show && <VenueFilm src={show.film} onDone={onDone} />}
     </div>
   );
 }

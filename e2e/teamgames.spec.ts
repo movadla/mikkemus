@@ -9,7 +9,7 @@ async function begin(page: Page, game: string) {
     localStorage.setItem("mikke-mus-team-cards", JSON.stringify(list.map((name, i) => ({ name, members: name.split(" og "), lastUsed: 1000 - i }))));
   }, NAMES);
   await openApp(page, "dark");
-  await page.getByRole("button", { name: "Andre spill" }).click();
+  await page.getByRole("button", { name: "Nytt spill" }).click();
   await page.getByRole("button", { name: game }).click();
   await page.getByRole("radio", { name: "Lag" }).click();
   const group = page.getByRole("group", { name: "Lag" });

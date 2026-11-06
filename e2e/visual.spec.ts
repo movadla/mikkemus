@@ -27,7 +27,8 @@ test.describe("skjermbilder", () => {
 
     test(`oppsett av enkeltkamp (${theme})`, async ({ page }) => {
       await openApp(page, theme);
-      await page.getByRole("button", { name: "Ny kamp" }).click();
+      await page.getByRole("button", { name: "Nytt spill" }).click();
+      await page.getByRole("button", { name: "Mikke Mus" }).click();
       await page.waitForTimeout(500);
       await expect(page).toHaveScreenshot(`enkeltkamp-oppsett-${theme}.png`);
     });

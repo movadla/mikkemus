@@ -4,7 +4,7 @@ import { PIN, openApp, startMatch } from "./helpers";
 /** Halv It: ti runder med hvert sitt mål. Treff og poengene legges til, bom og hele poengsummen halveres (rundet opp). */
 async function begin(page: Page, players = ["Lars", "Vadla"]) {
   await openApp(page, "dark");
-  await page.getByRole("button", { name: "Andre spill" }).click();
+  await page.getByRole("button", { name: "Nytt spill" }).click();
   await page.getByRole("button", { name: "Halv It" }).click();
   for (const name of players) {
     await page.getByRole("button", { name: "Ny spiller" }).click();
@@ -62,7 +62,7 @@ test.describe("Halv It", () => {
       localStorage.setItem("mikke-mus-team-cards", JSON.stringify(list.map((name, i) => ({ name, members: name.split(" og "), lastUsed: 1000 - i }))));
     }, ["Lars og Per", "Ola og Kari"]);
     await openApp(page, "dark");
-    await page.getByRole("button", { name: "Andre spill" }).click();
+    await page.getByRole("button", { name: "Nytt spill" }).click();
     await page.getByRole("button", { name: "Halv It" }).click();
     await page.getByRole("radio", { name: "Lag" }).click();
     const group = page.getByRole("group", { name: "Lag" });
@@ -82,7 +82,7 @@ test.describe("Halv It", () => {
       localStorage.setItem("mikke-mus-team-cards", JSON.stringify(["Lars og Per", "Ola og Kari"].map((name, i) => ({ name, members: name.split(" og "), lastUsed: 1000 - i }))));
     });
     await openApp(page, "dark");
-    await page.getByRole("button", { name: "Andre spill" }).click();
+    await page.getByRole("button", { name: "Nytt spill" }).click();
     await page.getByRole("button", { name: "Halv It" }).click();
     await page.getByRole("radio", { name: "Lag" }).click();
     const group = page.getByRole("group", { name: "Lag" });

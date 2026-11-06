@@ -7,7 +7,8 @@ test.describe("modus i kampen", () => {
 
   test("valget ligger over Kamp-menyen, og man kommer tilbake fra Enkel", async ({ page }) => {
     await openApp(page, "dark");
-    await page.getByRole("button", { name: "Ny kamp" }).click();
+    await page.getByRole("button", { name: "Nytt spill" }).click();
+    await page.getByRole("button", { name: "Mikke Mus" }).click();
     for (const name of ["Lars", "Vadla"]) {
       await page.getByRole("button", { name: "Ny spiller" }).click();
       await page.getByPlaceholder("Spillernavn").fill(name);

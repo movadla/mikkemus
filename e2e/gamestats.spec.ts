@@ -55,7 +55,7 @@ test.describe("statistikk for de andre spillene", () => {
   test("et ferdig spill skrives, og Angre tar resultatet tilbake", async ({ page }) => {
     await openApp(page, "dark");
     const writes = await withResults(page, []);
-    await page.getByRole("button", { name: "Andre spill" }).click();
+    await page.getByRole("button", { name: "Nytt spill" }).click();
     await page.getByRole("button", { name: "301 / 501" }).click();
     for (const name of ["Lars", "Vadla"]) {
       await page.getByRole("button", { name: "Ny spiller" }).click();

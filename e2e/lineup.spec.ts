@@ -5,9 +5,34 @@ import { PIN, openApp } from "./helpers";
 test.describe("kortene før kamp", () => {
   test.skip(!PIN, "E2E_PIN is not set");
 
+  test("filmen til stedet spilles når Start kampen trykkes, og et trykk går videre til brettet", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    await openApp(page, "dark");
+    await page.getByRole("button", { name: "Nytt spill" }).click();
+    await page.getByRole("button", { name: "Mikke Mus" }).click();
+    for (const name of ["Lars", "Vadla"]) {
+      await page.getByRole("button", { name: "Ny spiller" }).click();
+      await page.getByPlaceholder("Spillernavn").fill(name);
+      await page.getByRole("button", { name: "Legg til" }).click();
+    }
+    await page.getByRole("button", { name: /Start/ }).first().click();
+    const skip = page.getByRole("button", { name: "Hopp over" });
+    if (await skip.isVisible({ timeout: 3000 }).catch(() => false)) await skip.click();
+    const cards = page.getByRole("dialog", { name: "Oppstilling" });
+    // The place is the name on top (Ly is the pub), with its picture behind the two cards.
+    await expect(cards.getByRole("heading", { name: "Ly" })).toBeVisible();
+    await cards.getByRole("button", { name: "Start kampen" }).click();
+    const film = cards.locator("video");
+    await expect(film).toBeVisible();
+    await expect(film).toHaveAttribute("src", "/career/pub-intro.mp4");
+    await film.click();
+    await expect(cards).toBeHidden({ timeout: 2000 });
+  });
+
   test("vanlig modus viser kortene, og Fortsett går rett til brettet", async ({ page }) => {
     await openApp(page, "dark");
-    await page.getByRole("button", { name: "Ny kamp" }).click();
+    await page.getByRole("button", { name: "Nytt spill" }).click();
+    await page.getByRole("button", { name: "Mikke Mus" }).click();
     for (const name of ["Lars", "Vadla"]) {
       await page.getByRole("button", { name: "Ny spiller" }).click();
       await page.getByPlaceholder("Spillernavn").fill(name);
@@ -24,7 +49,7 @@ test.describe("kortene før kamp", () => {
     // Nothing counts down by itself: they stay until Fortsett.
     await page.waitForTimeout(2500);
     await expect(cards).toBeVisible();
-    await cards.getByRole("button", { name: "Fortsett" }).click();
+    await cards.getByRole("button", { name: /^(Fortsett|Start kampen)$/ }).click();
     // And then the board, with no 3, 2, 1.
     await expect(cards).toBeHidden({ timeout: 1000 });
     await expect(page.getByText("Kast!")).toHaveCount(0);
@@ -35,7 +60,8 @@ test.describe("kortene før kamp", () => {
     // Registered after the one that sets Vanlig, so it runs after it on the next load.
     await page.addInitScript(() => localStorage.setItem("mikke-mus-fx-level", "simple"));
     await page.reload();
-    await page.getByRole("button", { name: "Ny kamp" }).click();
+    await page.getByRole("button", { name: "Nytt spill" }).click();
+    await page.getByRole("button", { name: "Mikke Mus" }).click();
     for (const name of ["Lars", "Vadla"]) {
       await page.getByRole("button", { name: "Ny spiller" }).click();
       await page.getByPlaceholder("Spillernavn").fill(name);

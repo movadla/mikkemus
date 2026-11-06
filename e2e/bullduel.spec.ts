@@ -7,6 +7,7 @@ test.describe("bull-duell", () => {
 
   test("først til starter på 10 og kan flyttes til 99, eller best av 3 piler", async ({ page }) => {
     await openApp(page, "dark");
+    await page.getByRole("button", { name: "Nytt spill" }).click();
     await page.getByRole("button", { name: "Bull-duell" }).first().click();
     for (const name of ["Lars", "Vadla"]) {
       await page.getByRole("button", { name: "Ny spiller" }).click();

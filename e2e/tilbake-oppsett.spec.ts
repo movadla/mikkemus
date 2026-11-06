@@ -4,7 +4,7 @@ import { PIN, openApp, startMatch, startPast } from "./helpers";
 /** Back from a match that has been started lands on the setup as it was, instead of an empty one. */
 async function setup301(page: Page) {
   await openApp(page, "dark");
-  await page.getByRole("button", { name: "Andre spill" }).click();
+  await page.getByRole("button", { name: "Nytt spill" }).click();
   await page.getByRole("button", { name: "301 / 501" }).click();
   for (const name of ["Lars", "Vadla"]) {
     await page.getByRole("button", { name: "Ny spiller" }).click();
@@ -44,7 +44,8 @@ test.describe("tilbake til oppsettet i Mikke Mus", () => {
 
   test("avslutt før noe er kastet gir oppsettet tilbake med spillerne og valgene", async ({ page }) => {
     await openApp(page, "dark");
-    await page.getByRole("button", { name: "Ny kamp" }).click();
+    await page.getByRole("button", { name: "Nytt spill" }).click();
+    await page.getByRole("button", { name: "Mikke Mus" }).click();
     for (const name of ["Lars", "Vadla"]) {
       await page.getByRole("button", { name: "Ny spiller" }).click();
       await page.getByPlaceholder("Spillernavn").fill(name);

@@ -3,7 +3,7 @@ import { PIN, openApp, startMatch } from "./helpers";
 
 /** Kveldsscore: kampene kommer inn av seg selv, tabellen gir ett poeng for en seier, og en kamp kan overstyres, slettes og legges inn for hånd. */
 async function playMatch(page: Page) {
-  await page.getByRole("button", { name: "Andre spill" }).click();
+  await page.getByRole("button", { name: "Nytt spill" }).click();
   await page.getByRole("button", { name: "301 / 501" }).click();
   for (const name of ["Lars", "Vadla"]) {
     await page.getByRole("button", { name: "Ny spiller" }).click();

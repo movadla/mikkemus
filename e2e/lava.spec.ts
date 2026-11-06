@@ -5,7 +5,7 @@ import { PIN, THEMES, openApp, startMatch } from "./helpers";
 /** Lava: a section that is hit is lava for everyone from then on, and a dart in it costs a life. */
 async function begin(page: Page, theme: "dark" | "light", lives?: number, rings = false) {
   await openApp(page, theme);
-  await page.getByRole("button", { name: "Andre spill" }).click();
+  await page.getByRole("button", { name: "Nytt spill" }).click();
   await page.getByRole("button", { name: "Lava" }).click();
   for (const name of ["Lars", "Vadla"]) {
     await page.getByRole("button", { name: "Ny spiller" }).click();
@@ -27,15 +27,12 @@ const card = (page: Page, name: string) => page.getByRole("list", { name: "Still
 test.describe("Lava", () => {
   test.skip(!PIN, "E2E_PIN is not set");
 
-  test("de andre spillene ligger under én flis på forsiden", async ({ page }) => {
+  test("de andre spillene ligger under Nytt spill, med Mikke Mus som det store første valget", async ({ page }) => {
     await openApp(page, "dark");
     await expect(page.getByRole("button", { name: "Lava" })).toHaveCount(0);
-    const more = page.getByRole("button", { name: "Andre spill" });
-    await expect(more).toHaveAttribute("aria-expanded", "false");
-    await more.click();
-    await expect(more).toHaveAttribute("aria-expanded", "true");
-    for (const name of ["301 / 501", "Highstriker", "Lava"]) await expect(page.getByRole("button", { name })).toBeVisible();
-    await more.click();
+    await page.getByRole("button", { name: "Nytt spill" }).click();
+    for (const name of ["Mikke Mus", "Bull-duell", "301 / 501", "Highstriker", "Lava", "Halv It", "Killer"]) await expect(page.getByRole("button", { name })).toBeVisible();
+    await page.getByRole("button", { name: "Tilbake" }).click();
     await expect(page.getByRole("button", { name: "Lava" })).toHaveCount(0);
   });
 

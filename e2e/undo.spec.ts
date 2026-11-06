@@ -4,7 +4,8 @@ import { PIN, openApp, startPast } from "./helpers";
 /** Angre after Bekreft: the turn that was confirmed opens again as it was, and the triple/double question can be answered again. */
 async function start(page: Page) {
   await openApp(page, "dark");
-  await page.getByRole("button", { name: "Ny kamp" }).click();
+  await page.getByRole("button", { name: "Nytt spill" }).click();
+  await page.getByRole("button", { name: "Mikke Mus" }).click();
   for (const name of ["Lars", "Vadla"]) {
     await page.getByRole("button", { name: "Ny spiller" }).click();
     await page.getByPlaceholder("Spillernavn").fill(name);
