@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { LY_REGULARS } from "./opponents";
 import { botSetupForMatch, buildCupParticipants, levelForMatch, makeCup, pickNames, pickPilotBots, stageOffset, botSkill, CUP_TYPES, PILOT_BOTS, PILOT_BOTS_ALWAYS } from "./botCup";
 import { medForSkill } from "./knockoutSeeding";
 import type { Participant } from "./tournament";
@@ -171,23 +172,23 @@ describe("the teams of bots", () => {
   const cup = makeCup("vm", "4", true, 7);
   const own: Participant[] = [{ name: "Vadla og Hans", isBot: false, members: [{ name: "Vadla", isBot: false }, { name: "Hans", isBot: false }] }];
 
-  it("are made of the named bots, and called after them", () => {
+  it("are made of the regulars of Ly, and called after them", () => {
     const all = buildCupParticipants("team", own, 4, cup);
     const bots = all.slice(1);
     expect(bots).toHaveLength(3);
     const used = bots.flatMap((b) => b.members!.map((m) => m.name));
-    // Six names are needed: all of them are bots of the pilot's, none is one of the player's own.
-    const named = PILOT_BOTS.map((p) => p.name);
+    // Six names are needed: all of them are regulars of Ly, none is one of the player's own.
+    const named = LY_REGULARS.map((p) => p.name);
     for (const n of used) expect(named).toContain(n);
     expect(new Set(used).size).toBe(6);
     for (const b of bots) expect(b.name).toBe(b.members!.map((m) => m.name.split(" ")[0]).join(" og "));
   });
 
-  it("run out of the named bots and go on with real names, each once", () => {
+  it("run out of the regulars and go on with real names, each once", () => {
     const all = buildCupParticipants("team", own, 12, cup);
     const used = all.slice(1).flatMap((b) => b.members!.map((m) => m.name));
     expect(used).toHaveLength(22);
     expect(new Set(used).size).toBe(22);
-    expect(PILOT_BOTS.every((p) => used.includes(p.name))).toBe(true);
+    expect(LY_REGULARS.every((p) => used.includes(p.name))).toBe(true);
   });
 });
