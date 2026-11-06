@@ -436,6 +436,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   const exactEntryRef = useRef(false);
   // The place of a single match, chosen under Avanserte innstillinger (Ly unless it is changed): its cup is on the winner screen.
   const [matchVenue, setMatchVenue] = useState<VenueId>("lu");
+  const [matchVenueBg, setMatchVenueBg] = useState(false);
   /** Three crosses on the bull in a turn: an extra point in Kveldsscore. */
   const [bonusBull3, setBonusBull3] = useState(false);
   const [exactEntry, setExactEntryState] = useState(false);
@@ -672,6 +673,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       setSkipStats(restored.skipStats ?? false);
       setExactEntry(restored.exactEntry ?? false);
       setMatchVenue(restored.venue ?? "lu");
+      setMatchVenueBg(restored.venueBg ?? false);
       setBonusBull3(restored.bonusBull3 ?? false);
       setPlayers(restored.players);
       writeProgress(restored.progress);
@@ -768,6 +770,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       skipStats,
       exactEntry,
       venue: matchVenue,
+      venueBg: matchVenueBg,
       bonusBull3,
       players,
       progress,
@@ -815,6 +818,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     skipStats,
     exactEntry,
     matchVenue,
+    matchVenueBg,
     bonusBull3,
     players,
     progress,
@@ -1418,11 +1422,13 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     startStatsOff = false,
     startExactEntry = false,
     startVenue: VenueId = "lu",
-    startBonusBull3 = false
+    startBonusBull3 = false,
+    startVenueBg = false
   ) {
     setSkipStats(startStatsOff);
     setExactEntry(startExactEntry);
     setMatchVenue(startVenue);
+    setMatchVenueBg(startVenueBg);
     setBonusBull3(startBonusBull3);
     // A new match starts with a freshly calibrated board. It used to be done by hand with «Kalibrer» before every match: the
     // board can still be part-way through the last visit (a match is won on the first or second dart), and would then count the
@@ -2805,7 +2811,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
    *  WinnerScreen call site below). */
   function rematch() {
     flushMatchResults();
-    startGame(players, botLevels, teamRosters, guestPlayers, variant, skipStatsRef.current, exactEntryRef.current, matchVenue, bonusBull3);
+    startGame(players, botLevels, teamRosters, guestPlayers, variant, skipStatsRef.current, exactEntryRef.current, matchVenue, bonusBull3, matchVenueBg);
   }
 
   /**
@@ -3038,7 +3044,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       {scoliaEnabled && screen !== "game" && <ScoliaStatusBadge state={scolia.state} />}
       <CameraImages images={cameraImages} />
       <GameScreen
-        venue={onMatchComplete ? undefined : matchVenue}
+        venue={onMatchComplete || !matchVenueBg ? undefined : matchVenue}
         thrower={thrower}
         throwerTeam={throwerTeam}
         throwerNext={throwerNext}

@@ -41,9 +41,9 @@ export type LineupSide = {
 
 /** What a place has around the line-up of a match played in it: the film (public/career, from the career), the song and the colour of the spotlights. */
 const VENUE_SHOW: Partial<Record<VenueId, { film: string; track: IntroTrack; beam: string }>> = {
-  lu: { film: "/career/pub-intro.mp4", track: "intro", beam: "#f4b860" },
-  vm: { film: "/career/walkon/vm.mp4", track: "intro-vm", beam: "#8fb4ff" },
-  tv: { film: "/career/tv-duel-intro.mp4", track: "intro-gs", beam: "#c68bff" },
+  lu: { film: "/career/pub-intro.mp4", track: "intro", beam: "var(--pic-beam-lu)" },
+  vm: { film: "/career/walkon/vm.mp4", track: "intro-vm", beam: "var(--pic-beam-vm)" },
+  tv: { film: "/career/tv-duel-intro.mp4", track: "intro-gs", beam: "var(--pic-beam-tv)" },
 };
 const BEAMS: [string, number, number][] = [["18%", 14, 0.5], ["50%", 10, 0.4], ["82%", 14, 0.5], ["34%", 20, 0.3], ["66%", 20, 0.3]];
 
@@ -75,7 +75,7 @@ function VenueFilm({ src, onDone }: { src: string; onDone: () => void }) {
           onDone();
         }}
         className="absolute rounded-full font-semibold outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]"
-        style={{ right: "max(1rem, env(safe-area-inset-right))", bottom: "max(1.25rem, calc(env(safe-area-inset-bottom) + 0.75rem))", minHeight: "var(--control)", padding: "0 1.25rem", background: "rgba(8, 12, 16, 0.62)", color: "#f4efe6", border: "1px solid rgba(244, 239, 230, 0.4)", WebkitBackdropFilter: "blur(6px)", backdropFilter: "blur(6px)" }}
+        style={{ right: "max(1rem, env(safe-area-inset-right))", bottom: "max(1.25rem, calc(env(safe-area-inset-bottom) + 0.75rem))", minHeight: "var(--control)", padding: "0 1.25rem", background: "var(--pic-glass)", color: "var(--pic-ink)", border: "1px solid var(--pic-line)", WebkitBackdropFilter: "blur(6px)", backdropFilter: "blur(6px)" }}
       >
         Hopp over
       </button>
@@ -133,8 +133,8 @@ export function LineupIntro({ sides, onDone, onBack, venue }: { sides: LineupSid
   // The cards come in when the film is over.
   const shown = ready && !film;
   // Over the picture of a place the writing is light, whatever the theme.
-  const ink = place ? "#f4efe6" : "var(--color-cream)";
-  const soft = place ? "rgba(244, 239, 230, 0.72)" : "var(--color-muted)";
+  const ink = place ? "var(--pic-ink)" : "var(--color-cream)";
+  const soft = place ? "var(--pic-soft)" : "var(--color-muted)";
   const rows = compareRows(sides);
 
   useEffect(() => {
@@ -207,9 +207,9 @@ export function LineupIntro({ sides, onDone, onBack, venue }: { sides: LineupSid
             );
           })}
           {s.chance !== undefined && (
-            <span className="absolute font-display rounded-lg px-2 py-1" style={{ left: 8, top: 8, background: "rgba(8, 12, 16, 0.62)", color: "var(--color-gold-strong)", fontSize: "var(--text-num)", lineHeight: 1 }}>
+            <span className="absolute font-display rounded-lg px-2 py-1" style={{ left: 8, top: 8, background: "var(--pic-glass)", color: "var(--color-gold-strong)", fontSize: "var(--text-num)", lineHeight: 1 }}>
               {Math.round(s.chance * 100)}
-              <small style={{ display: "block", fontFamily: "var(--font-sans)", fontSize: "var(--text-micro)", letterSpacing: "0.14em", color: "rgba(244, 239, 230, 0.8)" }}>SJANSE</small>
+              <small style={{ display: "block", fontFamily: "var(--font-sans)", fontSize: "var(--text-micro)", letterSpacing: "0.14em", color: "var(--pic-faint)" }}>SJANSE</small>
             </span>
           )}
         </div>
@@ -286,7 +286,7 @@ export function LineupIntro({ sides, onDone, onBack, venue }: { sides: LineupSid
         <div aria-hidden className="absolute inset-0 overflow-hidden" style={{ pointerEvents: "none" }}>
           {/* eslint-disable-next-line @next/next/no-img-element -- one fixed picture from public/career */}
           <img src={pics.outside} alt="" className="absolute inset-0 w-full h-full" style={{ objectFit: "cover", objectPosition: pics.outsideFocus }} />
-          <div className="absolute inset-0" style={{ background: "linear-gradient(rgba(5, 8, 16, 0.55), rgba(5, 8, 16, 0.82))" }} />
+          <div className="absolute inset-0" style={{ background: "var(--pic-veil)" }} />
           {show && BEAMS.map(([x, a, o], i) => <div key={i} className="ev-beam" style={{ "--x": x, "--a": `${a}deg`, "--bo": o, "--beam": show.beam, "--b": `${i * 0.25}s` } as React.CSSProperties} />)}
         </div>
       )}
@@ -296,15 +296,15 @@ export function LineupIntro({ sides, onDone, onBack, venue }: { sides: LineupSid
           onClick={onBack}
           aria-label="Tilbake"
           className="absolute z-10 inline-flex items-center justify-center rounded-full outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]"
-          style={{ left: "max(1rem, env(safe-area-inset-left))", top: "max(1rem, calc(env(safe-area-inset-top) + 0.5rem))", width: "var(--control)", height: "var(--control)", background: place ? "rgba(8, 12, 16, 0.62)" : "var(--color-surface)", color: place ? "#f4efe6" : "var(--color-cream)", border: place ? "1px solid rgba(244, 239, 230, 0.4)" : "1px solid var(--color-border)" }}
+          style={{ left: "max(1rem, env(safe-area-inset-left))", top: "max(1rem, calc(env(safe-area-inset-top) + 0.5rem))", width: "var(--control)", height: "var(--control)", background: place ? "var(--pic-glass)" : "var(--color-surface)", color: place ? "var(--pic-ink)" : "var(--color-cream)", border: place ? "1px solid var(--pic-line)" : "1px solid var(--color-border)" }}
         >
           <ArrowLeftIcon className="w-5 h-5" />
         </button>
       )}
       {place && (
         <div className="absolute left-0 right-0 text-center px-4" style={{ top: "max(4.5rem, calc(env(safe-area-inset-top) + 3rem))" }}>
-          <p className="font-display" style={{ fontSize: "var(--text-micro)", letterSpacing: "0.28em", color: soft, textShadow: "0 1px 10px rgba(0,0,0,0.6)" }}>ENKELTKAMP</p>
-          <h1 className="font-display" style={{ fontSize: "clamp(1.9rem, 9vw, 3rem)", lineHeight: 1.05, color: ink, textShadow: "0 2px 18px rgba(0,0,0,0.7)" }}>{place.name}</h1>
+          <p className="font-display" style={{ fontSize: "var(--text-micro)", letterSpacing: "0.28em", color: soft, textShadow: "var(--pic-shadow-s)" }}>ENKELTKAMP</p>
+          <h1 className="font-display" style={{ fontSize: "clamp(1.9rem, 9vw, 3rem)", lineHeight: 1.05, color: ink, textShadow: "var(--pic-shadow-l)" }}>{place.name}</h1>
         </div>
       )}
       {two && (
@@ -326,7 +326,7 @@ export function LineupIntro({ sides, onDone, onBack, venue }: { sides: LineupSid
             </span>
           </div>
           {rows.length > 0 && (
-            <div className="w-full grid gap-3 rounded-2xl px-3 py-3" style={{ ...(place ? { background: "rgba(8, 12, 16, 0.72)", WebkitBackdropFilter: "blur(6px)", backdropFilter: "blur(6px)" } : {}), animation: shown ? "lineup-count 300ms 600ms ease-out both" : "none", opacity: shown ? undefined : 0 }}>
+            <div className="w-full grid gap-3 rounded-2xl px-3 py-3" style={{ ...(place ? { background: "var(--pic-panel)", WebkitBackdropFilter: "blur(6px)", backdropFilter: "blur(6px)" } : {}), animation: shown ? "lineup-count 300ms 600ms ease-out both" : "none", opacity: shown ? undefined : 0 }}>
               {rows.map((r, i) => {
                 const aBetter = r.low ? r.a < r.b : r.a > r.b;
                 const tie = r.a === r.b;

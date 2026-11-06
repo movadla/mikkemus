@@ -37,7 +37,7 @@ import type { Kit } from "@/lib/teamKit";
 import { ArrowLeftIcon, CalibrateIcon, DartIcon, DoubleIcon, MissIcon, SingleIcon, TripleIcon, MoreIcon, PeopleIcon, ShakeIcon, SpeakerIcon, SpeakerMuteIcon } from "./icons";
 import { ScoliaDot } from "./ScoliaStatusBadge";
 import { picturesFor } from "./eventPictures";
-import { GAME_BACKGROUND_VENUES, venueOf, type VenueId } from "@/lib/venues";
+import { venueOf, type VenueId } from "@/lib/venues";
 import { Sheet } from "./ui/Sheet";
 
 const FOCUS_RING =
@@ -175,7 +175,7 @@ type Props = {
   odds: OddsRow[] | null;
   /** Each team's shirt, by team name — empty in a match with no teams. */
   kits: Record<string, Kit>;
-  /** The place the match is played in: when it is one of GAME_BACKGROUND_VENUES its inside picture is the background of the screen. */
+  /** The place the match is played in, given only when the player has chosen «Stedet som bakgrunn»: its inside picture is the background of the screen. */
   venue?: VenueId;
 };
 
@@ -776,7 +776,7 @@ export function GameScreen({
   kits,
   venue,
 }: Props) {
-  const venuePicture = venue && GAME_BACKGROUND_VENUES.includes(venue) ? picturesFor({ id: venueOf(venue).tier, key: venueOf(venue).key }) : undefined;
+  const venuePicture = venue ? picturesFor({ id: venueOf(venue).tier, key: venueOf(venue).key }) : undefined;
   // Picks the wide variant of the mark glyph — see lib/useCompactLandscape.ts.
   const compactLandscape = useCompactLandscape();
   // Landscape only — the settings panel behind the (i) button. It overlays rather than taking
@@ -998,7 +998,7 @@ export function GameScreen({
         <>
           {/* eslint-disable-next-line @next/next/no-img-element -- one fixed picture from public/career */}
           <img src={venuePicture.inside} alt="" aria-hidden draggable={false} className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: -2, objectFit: "cover", objectPosition: venuePicture.insideFocus }} />
-          <div aria-hidden className="absolute inset-0 pointer-events-none" style={{ zIndex: -1, background: "linear-gradient(rgba(6, 10, 12, 0.32), rgba(6, 10, 12, 0.62))" }} />
+          <div aria-hidden className="absolute inset-0 pointer-events-none" style={{ zIndex: -1, background: "var(--pic-game-veil)" }} />
         </>
       )}
       {/* Heat from an unbroken turn — sits above the board but takes no pointer events, so

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { FACTORY_DEFAULTS, clearSetupDefaults, loadSetupDefaults, saveSetupDefaults } from "@/lib/setupDefaults";
 import { VenuePicker } from "./VenuePicker";
 import { venueOf, type VenueId } from "@/lib/venues";
 import { ensurePlayer, ensureTeam } from "@/lib/storage";
@@ -20,6 +21,7 @@ import { StickyAction } from "./StickyAction";
 import { TeamPicker } from "./TeamPicker";
 import { Segmented } from "./ui/Segmented";
 import { SwitchRow } from "./ui/Switch";
+import { Button } from "./ui/Button";
 import { useAutostart, type PlanLink } from "@/lib/nightPlan";
 
 /** The two ways to play (or any other pair or trio of options), as one segmented control. */
@@ -84,6 +86,7 @@ export type SetupDraft = {
   bonusBull3: boolean;
   tvungen: boolean;
   venue: VenueId;
+  venueBg?: boolean;
 };
 
 export function SetupScreen({
@@ -110,7 +113,9 @@ export function SetupScreen({
     /** Where the match is played (Ly unless changed under Avanserte innstillinger): its cup is on the winner screen. */
     venue?: VenueId,
     /** Advanced: three crosses on the bull in one turn gives the thrower an extra point in Kveldsscore. */
-    bonusBull3?: boolean
+    bonusBull3?: boolean,
+    /** Advanced: the inside picture of the place behind the game screen. */
+    venueBackground?: boolean
   ) => void;
   onHome?: () => void;
   /** The setup as it was when the match was started: shown again when the player comes back from the match. */
@@ -128,21 +133,26 @@ export function SetupScreen({
   /** The board's status, for the dot in the screen top. */
   scolia?: { label: string; color: string } | null;
 }) {
+  // What the player has saved under Avanserte innstillinger on this device, when the setup of a single match is opened fresh (not coming back from a match).
+  const [saved, setSaved] = useState(() => (draft || !variantSelectable ? null : loadSetupDefaults()));
+  const [justSaved, setJustSaved] = useState(false);
   const [mode, setMode] = useState<"individual" | "team">(draft?.mode ?? "individual");
-  const [variant, setVariant] = useState<GameVariant>(draft?.variant ?? "standard");
+  const [variant, setVariant] = useState<GameVariant>(draft?.variant ?? saved?.variant ?? "standard");
   const [people, setPeople] = useState<Person[]>(draft?.people ?? []);
   const [teams, setTeams] = useState<PickedTeam[]>(draft?.teams ?? []);
   // Ticked under the start button: the match is played without a trace in the statistics.
-  const [statsOff, setStatsOff] = useState(draft?.statsOff ?? false);
+  const [statsOff, setStatsOff] = useState(draft?.statsOff ?? saved?.statsOff ?? false);
   // Avanserte innstillinger: off by default. In it: crosses per row (three, as everyone plays it), the stand rule for teams, how much happens
   // on screen, and keying in every dart.
-  const [advanced, setAdvanced] = useState(draft?.advanced ?? false);
-  const [exactEntry, setExactEntry] = useState(draft?.exactEntry ?? false);
-  const [bonusBull3, setBonusBull3] = useState(draft?.bonusBull3 ?? false);
+  const [advanced, setAdvanced] = useState(draft?.advanced ?? !!saved);
+  const [exactEntry, setExactEntry] = useState(draft?.exactEntry ?? saved?.exactEntry ?? false);
+  const [bonusBull3, setBonusBull3] = useState(draft?.bonusBull3 ?? saved?.bonusBull3 ?? false);
   // «Tvungen Tvunget»: the hard way to play it. It does not count in the statistics, but the match still counts in Kveldsscore.
-  const [tvungen, setTvungen] = useState(draft?.tvungen ?? false);
-  const [venue, setVenue] = useState<VenueId>(draft?.venue ?? "lu");
-  const keepDraft = () => onDraft?.({ mode, variant, people, teams, statsOff, advanced, exactEntry, bonusBull3, tvungen, venue });
+  const [tvungen, setTvungen] = useState(draft?.tvungen ?? saved?.tvungen ?? false);
+  const [venue, setVenue] = useState<VenueId>(draft?.venue ?? saved?.venue ?? "lu");
+  // The inside picture of the place behind the game screen: off unless chosen.
+  const [venueBg, setVenueBg] = useState(draft?.venueBg ?? saved?.venueBg ?? false);
+  const keepDraft = () => onDraft?.({ mode, variant, people, teams, statsOff, advanced, exactEntry, bonusBull3, tvungen, venue, venueBg });
 
   // The longer games have no bots — see botsSupported. Bots already added when the length is
   // changed are not removed behind the user's back; the start button waits until they are.
@@ -160,7 +170,7 @@ export function SetupScreen({
     keepDraft();
     const { players, botLevels, guestPlayers } = splitPeople(people);
     // The stand rule belongs to team play; a lone player has no one to hand over to.
-    onStart(players, botLevels, undefined, guestPlayers, withStandRule(variant, false), statsOff || tvungen, exactEntry, venue, bonusBull3);
+    onStart(players, botLevels, undefined, guestPlayers, withStandRule(variant, false), statsOff || tvungen, exactEntry, venue, bonusBull3, venueBg);
   }
 
   function startTeamGame() {
@@ -180,11 +190,12 @@ export function SetupScreen({
       statsOff || tvungen,
       exactEntry,
       venue,
-      bonusBull3
+      bonusBull3,
+      venueBg
     );
   }
 
-  const snapshot: SetupDraft = { mode, variant, people, teams, statsOff, advanced, exactEntry, bonusBull3, tvungen, venue };
+  const snapshot: SetupDraft = { mode, variant, people, teams, statsOff, advanced, exactEntry, bonusBull3, tvungen, venue, venueBg };
   const planSummary = setupSummary([mode === "team" ? `${teams.length} lag` : `${people.length} ${people.length === 1 ? "spiller" : "spillere"}`, crosses]);
   const startNow = mode === "team" ? startTeamGame : startIndividualGame;
   const press = () => (plan?.planning ? plan.onPlan(snapshot, planSummary) : startNow());
@@ -210,6 +221,7 @@ export function SetupScreen({
             setVariant("standard");
             setStatsOff(false);
             setVenue("lu");
+            setVenueBg(false);
           }
         }}
       />
@@ -239,6 +251,9 @@ export function SetupScreen({
             <VenuePicker value={venue} onChange={setVenue} />
           </div>
         )}
+        {advanced && variantSelectable && (
+          <SwitchRow label="Stedet som bakgrunn" hint="Bildet fra innsiden av stedet bak spillskjermen" checked={venueBg} onChange={setVenueBg} />
+        )}
         {advanced && (
           <SwitchRow label="Legg inn hver pil for hånd" hint="Velg hva hver pil traff" checked={exactEntry} onChange={setExactEntry} />
         )}
@@ -247,6 +262,37 @@ export function SetupScreen({
         {advanced && (
           // Played without a trace in the statistics: last of the choices.
           <div className="w-full">{noStatsToggle}</div>
+        )}
+        {advanced && variantSelectable && (
+          // What is chosen here is kept on this device, so that it does not have to be chosen again the next time.
+          <div className="w-full pt-3 flex flex-col gap-2">
+            <Button
+              variant="secondary"
+              block
+              onClick={() => {
+                const d = { ...FACTORY_DEFAULTS, variant, exactEntry, bonusBull3, statsOff, tvungen, venue, venueBg };
+                if (saveSetupDefaults(d)) {
+                  setSaved(d);
+                  setJustSaved(true);
+                  setTimeout(() => setJustSaved(false), 2500);
+                }
+              }}
+            >
+              {justSaved ? "Lagret" : "Lagre som standard"}
+            </Button>
+            {saved && (
+              <Button
+                variant="ghost"
+                block
+                onClick={() => {
+                  clearSetupDefaults();
+                  setSaved(null);
+                }}
+              >
+                Fjern lagrede innstillinger
+              </Button>
+            )}
+          </div>
         )}
         </div>
       )}

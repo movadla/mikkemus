@@ -39,6 +39,8 @@ export type ActiveMatchSnapshot = {
   venue?: VenueId;
   /** Three crosses on the bull in a turn gives an extra point in Kveldsscore (chosen under Avanserte innstillinger). */
   bonusBull3?: boolean;
+  /** The inside picture of the place behind the game screen («Stedet som bakgrunn» under Avanserte innstillinger). Absent: off. */
+  venueBg?: boolean;
   /**
    * The match's accumulating statistics. All optional, and all absent from snapshots saved
    * before they were persisted at all — restore falls back to empty rather than migrating.

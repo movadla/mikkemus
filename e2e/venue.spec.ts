@@ -77,4 +77,37 @@ test.describe("sted for turneringen", () => {
     // The place is kept with the match, so the cup of the place is on the winner screen after a reload too.
     await expect.poll(async () => page.evaluate(() => JSON.parse(localStorage.getItem("mikke-mus-active-match") ?? "{}").venue)).toBe("tv");
   });
+
+  test("stedet som bakgrunn er av som standard, kan slås på, og kan lagres så det står slik neste gang", async ({ page }) => {
+    await openApp(page, "dark");
+    const open = async () => {
+      await page.getByRole("button", { name: "Nytt spill" }).click();
+      await page.getByRole("button", { name: "Mikke Mus" }).click();
+    };
+    await open();
+    for (const name of ["Lars", "Vadla"]) {
+      await page.getByRole("button", { name: "Ny spiller" }).click();
+      await page.getByPlaceholder("Spillernavn").fill(name);
+      await page.getByRole("button", { name: "Legg til" }).click();
+    }
+    await page.getByRole("switch", { name: /Avanserte innstillinger/ }).click();
+    const bg = page.getByRole("switch", { name: /Stedet som bakgrunn/ });
+    await expect(bg).not.toBeChecked();
+    await page.getByRole("radiogroup", { name: "Sted" }).getByRole("radio", { name: /Ally Pally/ }).click();
+    await bg.click();
+    await expect(bg).toBeChecked();
+    await page.getByRole("button", { name: "Lagre som standard" }).click();
+    await expect(page.getByRole("button", { name: "Lagret" })).toBeVisible();
+    // Next time the setup comes up with what was saved: the advanced settings open, Ally Pally and the background on.
+    await page.reload();
+    await open();
+    await expect(page.getByRole("switch", { name: /Stedet som bakgrunn/ })).toBeChecked();
+    await expect(page.getByRole("radiogroup", { name: "Sted" }).getByRole("radio", { name: /Ally Pally/ })).toBeChecked();
+    // Taking the saved settings away puts the setup back as everyone plays it.
+    await page.getByRole("button", { name: "Fjern lagrede innstillinger" }).click();
+    await page.reload();
+    await open();
+    await page.getByRole("switch", { name: /Avanserte innstillinger/ }).click();
+    await expect(page.getByRole("switch", { name: /Stedet som bakgrunn/ })).not.toBeChecked();
+  });
 });

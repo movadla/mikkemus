@@ -1938,3 +1938,20 @@ html[data-fx="normal"] .hs-hit { animation: hs-shake 520ms ease-in-out both; }
 .venue-bg {
   --color-bg: #0c110e;
 }
+
+/* Over the picture of a place (the line-up of a match, the game screen with the place as background): light writing, dark glass and veils. */
+:root {
+  --pic-ink: #f4efe6;
+  --pic-soft: rgba(244, 239, 230, 0.72);
+  --pic-faint: rgba(244, 239, 230, 0.8);
+  --pic-line: rgba(244, 239, 230, 0.4);
+  --pic-glass: rgba(8, 12, 16, 0.62);
+  --pic-panel: rgba(8, 12, 16, 0.72);
+  --pic-veil: linear-gradient(rgba(5, 8, 16, 0.55), rgba(5, 8, 16, 0.82));
+  --pic-game-veil: linear-gradient(rgba(6, 10, 12, 0.32), rgba(6, 10, 12, 0.62));
+  --pic-shadow-s: 0 1px 10px rgba(0, 0, 0, 0.6);
+  --pic-shadow-l: 0 2px 18px rgba(0, 0, 0, 0.7);
+  --pic-beam-lu: #f4b860;
+  --pic-beam-vm: #8fb4ff;
+  --pic-beam-tv: #c68bff;
+}
