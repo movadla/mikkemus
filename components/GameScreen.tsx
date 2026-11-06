@@ -958,8 +958,9 @@ export function GameScreen({
         onConfirm();
       } else if (activePlayer) {
         // Space: the row the thrower is on; D and T: the rows D and T further down.
-        const row = key === "d" ? "D" : key === "t" ? "T" : entryTarget;
-        const cells = document.querySelectorAll<HTMLElement>(`[data-step="${row}"][data-player="${CSS.escape(activePlayer)}"]`);
+        // The row is the one the board shows as the thrower's own (its cell is lit), so the third cross on a number goes where the first two did.
+        const own = `[data-player="${CSS.escape(activePlayer)}"]`;
+        const cells = document.querySelectorAll<HTMLElement>(key === " " ? `.cell-tile--active${own}` : `[data-step="${key === "d" ? "D" : "T"}"]${own}`);
         Array.from(cells).find((c) => c.offsetParent !== null)?.click();
       }
     }

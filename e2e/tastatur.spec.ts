@@ -33,6 +33,11 @@ test.describe("tastatur på brettet", () => {
     await expect(page.getByRole("button", { name: "Bekreft", exact: true })).toBeVisible();
     await page.keyboard.press("Backspace");
 
+    // Three Spaces in a row are three crosses on the number, the third one too.
+    for (let i = 0; i < 3; i++) await page.keyboard.press("Space");
+    await expect(page.getByText("3 piler på rad")).toBeVisible();
+    for (let i = 0; i < 3; i++) await page.keyboard.press("Backspace");
+
     await page.keyboard.press("Space");
     await page.keyboard.press("Enter");
     await expect(thrower.getByText("Vadla")).toBeVisible();
