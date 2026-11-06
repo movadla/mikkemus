@@ -933,7 +933,7 @@ export function GameScreen({
     return currentStepFor(now) ?? STEPS[0];
   })();
   // On a computer the board can be played from the keyboard: Space puts a cross on the row the thrower is on
-  // (the same tap as on the cell), D and T a double and a triple there, Enter is Bekreft, Backspace is Angre. Dialogs and text fields keep their keys.
+  // (the same tap as on the cell), D and T the rows D and T (three Spaces are three crosses), Enter is Bekreft, Backspace is Angre. Dialogs and text fields keep their keys.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
@@ -943,21 +943,15 @@ export function GameScreen({
       if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
       if (document.querySelector("[role=dialog]")) return;
       if (showChoiceBox || showStandBox) return;
-      if (key === "d" || key === "t") {
-        // A double or triple on the row the thrower is on: the dart is keyed in as that bed, so the triple/double question comes as it does for a measured dart.
-        const bed = /^[0-9]+$/.test(entryTarget) ? `${key.toUpperCase()}${entryTarget}` : entryTarget === "D" && key === "d" ? "D20" : entryTarget === "T" && key === "t" ? "T20" : entryTarget === "BULL" && key === "d" ? "Bull" : null;
-        if (!bed || turnShots.filter(Boolean).length >= 3) return;
-        e.preventDefault();
-        onEnterDart(bed);
-        return;
-      }
       e.preventDefault();
       if (e.key === "Backspace") {
         if (canUndo) handleUndo();
       } else if (e.key === "Enter") {
         onConfirm();
       } else if (activePlayer) {
-        const cells = document.querySelectorAll<HTMLElement>(`[data-step="${entryTarget}"][data-player="${CSS.escape(activePlayer)}"]`);
+        // Space: the row the thrower is on; D and T: the rows D and T further down.
+        const row = key === "d" ? "D" : key === "t" ? "T" : entryTarget;
+        const cells = document.querySelectorAll<HTMLElement>(`[data-step="${row}"][data-player="${CSS.escape(activePlayer)}"]`);
         Array.from(cells).find((c) => c.offsetParent !== null)?.click();
       }
     }

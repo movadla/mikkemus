@@ -25,7 +25,7 @@ test.describe("tastatur på brettet", () => {
     await page.keyboard.press("Backspace");
     await expect(page.getByRole("button", { name: "Bekreft (bom)" })).toBeVisible();
 
-    // D and T key in a double and a triple on the row, as a measured dart.
+    // D and T mark the rows D and T further down.
     await page.keyboard.press("t");
     await expect(page.getByRole("button", { name: "Bekreft", exact: true })).toBeVisible();
     await page.keyboard.press("Backspace");
