@@ -69,6 +69,33 @@ export function ScoreKeypad({
     onUndo();
   }
 
+  // On a computer the numbers go in from the keyboard: the digits, Backspace to take the last one back and Enter for Bekreft.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const el = e.target instanceof HTMLElement ? e.target : null;
+      if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
+      if (document.querySelector("[role=dialog]")) return;
+      if (/^[0-9]$/.test(e.key)) {
+        e.preventDefault();
+        if (!e.repeat) press(Number(e.key));
+      } else if (e.key === "Backspace") {
+        e.preventDefault();
+        if (e.repeat) return;
+        if (!fill) back();
+        else if (typed !== "") setTyped(typed.slice(0, -1));
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        if (e.repeat || typed === "" || invalid?.(typed)) return;
+        const n = Number(typed);
+        setTyped("");
+        onSubmit(n);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
+
   const key = `tactile flex items-center justify-center font-display ${FOCUS_RING}`;
   const keyStyle = { minHeight: fill ? "3.2rem" : "var(--control-lg)", borderRadius: "var(--radius-m)", background: "var(--color-surface)", border: "1px solid var(--color-border)", color: "var(--color-cream)", fontSize: fill ? "clamp(1.9rem, 9vw, 2.6rem)" : "var(--text-num)", boxShadow: "var(--elevation-1)" } as const;
   const writtenColour = tone?.(typed) === "bust" ? "var(--color-red)" : tone?.(typed) === "finish" ? "var(--color-green)" : typed === "" ? "var(--color-muted)" : "var(--color-cream)";

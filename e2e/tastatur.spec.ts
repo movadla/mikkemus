@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { PIN, openApp, startPast } from "./helpers";
+import { PIN, openApp, startMatch, startPast } from "./helpers";
 
 /** On a computer the board is played from the keyboard: Space marks the row the thrower is on, Enter is Bekreft, Backspace is Angre. */
 test.describe("tastatur på brettet", () => {
@@ -134,5 +134,32 @@ test.describe("bot etter angre", () => {
     await expect(ask).toBeVisible();
     await page.getByRole("button", { name: "Ja, kast" }).click();
     await expect(page.getByRole("dialog")).toBeHidden();
+  });
+});
+
+/** The numbers of Highstriker (and 301/501) are written from the keyboard on a computer. */
+test.describe("tall fra tastaturet", () => {
+  test.skip(!PIN, "E2E_PIN is not set");
+
+  test("Highstriker: sifre, Backspace og Enter", async ({ page }) => {
+    await openApp(page, "dark");
+    await page.getByRole("button", { name: "Nytt spill" }).click();
+    await page.getByRole("button", { name: "Highstriker" }).click();
+    for (const name of ["Lars", "Vadla"]) {
+      await page.getByRole("button", { name: "Ny spiller" }).click();
+      await page.getByPlaceholder("Spillernavn").fill(name);
+      await page.getByRole("button", { name: "Legg til" }).click();
+    }
+    await startMatch(page);
+    await page.keyboard.press("1");
+    await expect(page.getByLabel("Skrevet: 1")).toBeVisible();
+    await page.keyboard.press("8");
+    await expect(page.getByLabel("Skrevet: 18")).toBeVisible();
+    await page.keyboard.press("Backspace");
+    await expect(page.getByLabel("Skrevet: 1")).toBeVisible();
+    await page.keyboard.press("5");
+    await expect(page.getByLabel("Skrevet: 15")).toBeVisible();
+    await page.keyboard.press("Enter");
+    await expect(page.getByLabel("Ingen tall skrevet")).toBeVisible();
   });
 });
