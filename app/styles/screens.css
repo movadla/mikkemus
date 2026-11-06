@@ -1933,3 +1933,11 @@ html[data-fx="normal"] .hs-hit { animation: hs-shake 520ms ease-in-out both; }
 .ns-compare-duel { background: var(--color-cell); }
 .ns-better { color: var(--color-teal); }
 .kv-line--played { opacity: 0.6; }
+
+/* The game screen over the inside picture of a place (GAME_BACKGROUND_VENUES in lib/venues.ts): the panels of the screen become glass, so the picture shows around and between them. */
+.venue-bg {
+  --color-panel: rgba(14, 20, 22, 0.58);
+  --color-surface: rgba(14, 20, 22, 0.58);
+  --color-surface-2: rgba(20, 28, 30, 0.62);
+  --color-cell: rgba(241, 236, 226, 0.1);
+}

@@ -52,7 +52,7 @@ import { currentRun, longestRun, throwerStats } from "@/lib/turnStats";
 import { emitFx } from "@/lib/fxBus";
 import { FxStage } from "./FxStage";
 import { LineupIntro } from "./LineupIntro";
-import { bestAndWorst, headToHead } from "@/lib/lineupFacts";
+import { headToHead } from "@/lib/lineupFacts";
 import type { OddsRow } from "./OddsBar";
 import { logOddsMatch, type OddsSnapshot } from "@/lib/oddsLog";
 import { useShowOdds } from "@/lib/oddsSetting";
@@ -3015,7 +3015,6 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
             const rec = getPlayerRecord(p);
             // Two sides: what each has won of the matches they have played against each other (nothing when they have never met).
             const met = players.length === 2 ? headToHead(getPlayerRecord(players[0]), getPlayerRecord(players[1]), players[0], players[1]) : null;
-            const bw = bestAndWorst(rec);
             return {
               name: p,
               kit: kits[p] ?? null,
@@ -3029,8 +3028,6 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
               hitPct: rec && rec.matchesPlayed > 0 ? averagePct(rec.overall) : null,
               wins: met?.[idx].wins,
               played: met?.[idx].played,
-              best: bw?.best,
-              worst: bw?.worst,
               record: rec && rec.matchesPlayed > 0 ? `${rec.matchesWon} ${rec.matchesWon === 1 ? "seier" : "seire"} på ${rec.matchesPlayed} ${rec.matchesPlayed === 1 ? "kamp" : "kamper"}` : undefined,
             };
           })}
@@ -3041,6 +3038,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       {scoliaEnabled && screen !== "game" && <ScoliaStatusBadge state={scolia.state} />}
       <CameraImages images={cameraImages} />
       <GameScreen
+        venue={onMatchComplete ? undefined : matchVenue}
         thrower={thrower}
         throwerTeam={throwerTeam}
         throwerNext={throwerNext}

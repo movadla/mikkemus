@@ -38,6 +38,12 @@ export const VENUES: Venue[] = [
 /** The places a tournament or a game between friends can be played in, to choose from: the pub, Ally Pally and the TV studio (the owner's choice). The others stand on for the cups that are fixed to a place. */
 export const PICKABLE: VenueId[] = ["lu", "vm", "tv"];
 
+/**
+ * The places whose inside picture is the background of the game screen of a match played there (a trial, the owner's choice 2026-11-06: only Ally Pally).
+ * To take it away again, make this list empty: nothing else needs to be changed.
+ */
+export const GAME_BACKGROUND_VENUES: VenueId[] = ["vm"];
+
 export const venueOf = (id: VenueId): Venue => VENUES.find((v) => v.id === id) ?? VENUES[0];
 
 /** The place a cup against bots fits: the European championship is a Grand Slam in looks and trophy. */

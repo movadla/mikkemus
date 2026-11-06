@@ -36,6 +36,8 @@ import { TeamKit } from "./TeamKit";
 import type { Kit } from "@/lib/teamKit";
 import { ArrowLeftIcon, CalibrateIcon, DartIcon, DoubleIcon, MissIcon, SingleIcon, TripleIcon, MoreIcon, PeopleIcon, ShakeIcon, SpeakerIcon, SpeakerMuteIcon } from "./icons";
 import { ScoliaDot } from "./ScoliaStatusBadge";
+import { picturesFor } from "./eventPictures";
+import { GAME_BACKGROUND_VENUES, venueOf, type VenueId } from "@/lib/venues";
 import { Sheet } from "./ui/Sheet";
 
 const FOCUS_RING =
@@ -173,6 +175,8 @@ type Props = {
   odds: OddsRow[] | null;
   /** Each team's shirt, by team name — empty in a match with no teams. */
   kits: Record<string, Kit>;
+  /** The place the match is played in: when it is one of GAME_BACKGROUND_VENUES its inside picture is the background of the screen. */
+  venue?: VenueId;
 };
 
 /**
@@ -770,7 +774,9 @@ export function GameScreen({
   fxFire,
   odds,
   kits,
+  venue,
 }: Props) {
+  const venuePicture = venue && GAME_BACKGROUND_VENUES.includes(venue) ? picturesFor({ id: venueOf(venue).tier, key: venueOf(venue).key }) : undefined;
   // Picks the wide variant of the mark glyph — see lib/useCompactLandscape.ts.
   const compactLandscape = useCompactLandscape();
   // Landscape only — the settings panel behind the (i) button. It overlays rather than taking
@@ -979,13 +985,22 @@ export function GameScreen({
     <div
       // board-live: a connected board registers the darts itself, so landscape shrinks
       // Angre/Bekreft further (see .board-live in globals.css).
-      className={`game-root animate-screen-enter motion-hit relative w-full flex flex-col p-4 ${scolia?.label.includes("Online") ? "board-live" : ""}`}
-      style={{ height: "100dvh", background: "var(--color-bg)", animation: shakeAnimation }}
+      className={`game-root animate-screen-enter motion-hit relative w-full flex flex-col p-4 ${venuePicture ? "venue-bg" : ""} ${scolia?.label.includes("Online") ? "board-live" : ""}`}
+      {...(venuePicture ? { "data-theme-scope": "dark" } : {})}
+      style={{ height: "100dvh", background: "var(--color-bg)", animation: shakeAnimation, ...(venuePicture ? { isolation: "isolate" } : {}) }}
       // Covers resuming an in-progress match after a page reload, where startGame's own
       // primeAudio() call never ran this session — the first tap anywhere on this screen
       // unlocks audio instead, well before any win-fanfare/hit-streak sound needs it.
       onPointerDownCapture={primeAudio}
     >
+      {/* The inside of the place behind the board, under a dark veil (negative layer: everything else is drawn over it). */}
+      {venuePicture && (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element -- one fixed picture from public/career */}
+          <img src={venuePicture.inside} alt="" aria-hidden draggable={false} className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: -2, objectFit: "cover", objectPosition: venuePicture.insideFocus }} />
+          <div aria-hidden className="absolute inset-0 pointer-events-none" style={{ zIndex: -1, background: "linear-gradient(rgba(6, 10, 12, 0.46), rgba(6, 10, 12, 0.78))" }} />
+        </>
+      )}
       {/* Heat from an unbroken turn — sits above the board but takes no pointer events, so
           it can never swallow a tap meant for a cell. */}
       <div
