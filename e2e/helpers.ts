@@ -35,6 +35,8 @@ export async function openApp(page: Page, theme: Theme, { welcomed = true, datab
     ([t, w]) => {
       // The grain is a separate matter, and a quiet front page keeps the pictures the same.
       localStorage.setItem("mikke-mus-texture", "0");
+      // The question of who starts has its own test; the others go straight to the board.
+      localStorage.setItem("mikke-mus-ask-start", "0");
       localStorage.setItem("mikke-mus-fx-level", "normal");
       localStorage.setItem("mikke-mus-theme", t);
       if (w === "1") localStorage.setItem("mikke-mus-welcomed", "1");

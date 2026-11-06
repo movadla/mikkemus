@@ -52,6 +52,7 @@ import { currentRun, longestRun, throwerStats } from "@/lib/turnStats";
 import { emitFx } from "@/lib/fxBus";
 import { FxStage } from "./FxStage";
 import { LineupIntro } from "./LineupIntro";
+import { StartOrderSheet } from "./StartOrderSheet";
 import { headToHead } from "@/lib/lineupFacts";
 import type { OddsRow } from "./OddsBar";
 import { logOddsMatch, type OddsSnapshot } from "@/lib/oddsLog";
@@ -209,6 +210,8 @@ type MikkeMusAppProps = {
   initialTeamRosters?: Record<string, TeamMember[]>;
   /** Which game the tournament plays — see lib/rules.ts. Standard when absent. */
   initialVariant?: GameVariant;
+  /** The place a tournament outside the career is played in: its picture, name, song and film are on the line-up before each match. */
+  tournamentVenue?: VenueId;
   /** When set, the winner screen's home button reports the result here instead of resetting to
    *  SetupScreen — the caller (tournament mode) decides what happens next. */
   onMatchComplete?: (result: { winner: string; placements: string[]; stats: Record<string, TurnAggregate>; /** Crosses each player was still missing when it ended: what the placements were made from, and what a tie is told by. */ remaining?: Record<string, number> }) => void;
@@ -237,7 +240,7 @@ function markResultWritten(matchId: string): void {
   }
 }
 
-export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRosters, initialVariant, onMatchComplete, onExitToHome, plan }: MikkeMusAppProps = {}) {
+export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRosters, initialVariant, tournamentVenue, onMatchComplete, onExitToHome, plan }: MikkeMusAppProps = {}) {
   const [screen, setScreen] = useState<Screen>("setup");
   // How much happens on screen — see lib/fxLevel.ts. Read as a React value here for what the
   // render decides; the handlers read getFxLevel() fresh instead, so a change takes effect on
@@ -248,6 +251,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   const [showRules, setShowRules] = useState(false);
   // The line-up with the count down, once, as a match starts (Full party).
   const [showLineup, setShowLineup] = useState(false);
+  // Who starts, asked when a match begins (after the line-up, before the board). A device can turn the question off with "mikke-mus-ask-start" set to "0".
+  const [askOrder, setAskOrder] = useState(false);
   // Which game this match is (see lib/rules.ts). The module-wide rules are set alongside it in
   // startGame and on restore; this copy is what gets saved, published and shown.
   const [variant, setVariant] = useState<GameVariant>("standard");
@@ -1505,6 +1510,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     forcedKeepRef.current = new Set();
     setScreen("game");
     setShowLineup(fxFlags(getFxLevel()).lineup && startPlayers.length >= 2);
+    setAskOrder(startPlayers.length >= 2 && !(typeof localStorage !== "undefined" && localStorage.getItem("mikke-mus-ask-start") === "0"));
     if (!hasSeenRulesIntro()) setShowRules(true);
     if (!startBotLevels[startPlayers[0]]) playPlayerSound(startPlayers[0] ?? null);
 
@@ -3009,6 +3015,20 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   return (
     <>
       {showRules && <RulesIntro onDone={() => setShowRules(false)} />}
+      {askOrder && !showLineup && !showRules && (
+        <StartOrderSheet
+          sides={players.map((p) => ({ name: p, members: teamRosters[p]?.map((m) => m.name), photo: teamRosters[p] ? null : getPlayerRecord(p)?.photo ?? null, isBot: !!botLevels[p] }))}
+          onDone={(order) => {
+            setAskOrder(false);
+            if (order) {
+              // The side that starts is first in the order the board runs in.
+              setPlayers(order);
+              setCurrentIdx(0);
+              if (!botLevels[order[0]]) playPlayerSound(order[0]);
+            }
+          }}
+        />
+      )}
       {showLineup && !showRules && (
         <LineupIntro
           onDone={() => setShowLineup(false)}
@@ -3016,7 +3036,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
             setShowLineup(false);
             abortGame();
           }}
-          venue={onMatchComplete ? undefined : matchVenue}
+          venue={onMatchComplete ? tournamentVenue : matchVenue}
+          kicker={onMatchComplete ? "TURNERING" : undefined}
           sides={players.map((p, idx) => {
             const rec = getPlayerRecord(p);
             // Two sides: what each has won of the matches they have played against each other (nothing when they have never met).

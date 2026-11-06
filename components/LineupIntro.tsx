@@ -116,7 +116,7 @@ const share = (r: Row, v: number) => (r.low ? 1 / v / (1 / r.a + 1 / r.b) : r.a 
  * «Fortsett» is pressed, so the figures can be read for as long as it takes, and then the board is there: there is no count down.
  * Three or more sides are listed instead of split in two. Every level but Enkel — see lib/fxLevel.ts.
  */
-export function LineupIntro({ sides, onDone, onBack, venue }: { sides: LineupSide[]; onDone: () => void; /** Back out of the match before it starts (to the setup). */ onBack?: () => void; /** The place the match is played in: its picture behind the cards, its name on top, its song and spotlights, and its film when «Start kampen» is pressed. */ venue?: VenueId }) {
+export function LineupIntro({ sides, onDone, onBack, venue, kicker = "ENKELTKAMP" }: { sides: LineupSide[]; onDone: () => void; /** Back out of the match before it starts (to the setup). */ onBack?: () => void; /** The place the match is played in: its picture behind the cards, its name on top, its song and spotlights, and its film when «Start kampen» is pressed. */ venue?: VenueId; /** The small word over the name of the place. */ kicker?: string }) {
   const [grow, setGrow] = useState(false);
   const place = venue ? venueOf(venue) : null;
   const show = venue ? VENUE_SHOW[venue] : undefined;
@@ -303,7 +303,7 @@ export function LineupIntro({ sides, onDone, onBack, venue }: { sides: LineupSid
       )}
       {place && (
         <div className="absolute left-0 right-0 text-center px-4" style={{ top: "max(4.5rem, calc(env(safe-area-inset-top) + 3rem))" }}>
-          <p className="font-display" style={{ fontSize: "var(--text-micro)", letterSpacing: "0.28em", color: soft, textShadow: "var(--pic-shadow-s)" }}>ENKELTKAMP</p>
+          <p className="font-display" style={{ fontSize: "var(--text-micro)", letterSpacing: "0.28em", color: soft, textShadow: "var(--pic-shadow-s)" }}>{kicker}</p>
           <h1 className="font-display" style={{ fontSize: "clamp(1.9rem, 9vw, 3rem)", lineHeight: 1.05, color: ink, textShadow: "var(--pic-shadow-l)" }}>{place.name}</h1>
         </div>
       )}

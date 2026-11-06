@@ -80,4 +80,31 @@ test.describe("kortene før kamp", () => {
     await page.waitForTimeout(1500);
     await expect(page.getByRole("dialog", { name: "Oppstilling" })).toHaveCount(0);
   });
+
+  test("hvem starter spørres før brettet, og med flere spørres det om hvem som er neste", async ({ page }) => {
+    await openApp(page, "dark");
+    // The other tests go straight to the board; this one answers the question.
+    await page.evaluate(() => localStorage.removeItem("mikke-mus-ask-start"));
+    await page.getByRole("button", { name: "Nytt spill" }).click();
+    await page.getByRole("button", { name: "Mikke Mus" }).click();
+    for (const name of ["Lars", "Vadla", "Moen"]) {
+      await page.getByRole("button", { name: "Ny spiller" }).click();
+      await page.getByPlaceholder("Spillernavn").fill(name);
+      await page.getByRole("button", { name: "Legg til" }).click();
+    }
+    await page.getByRole("button", { name: /Start/ }).first().click();
+    const skip = page.getByRole("button", { name: "Hopp over" });
+    if (await skip.isVisible({ timeout: 3000 }).catch(() => false)) await skip.click();
+    await page.getByRole("dialog", { name: "Oppstilling" }).getByRole("button", { name: /^(Fortsett|Start kampen)$/ }).click();
+    // First the one who starts, then who is next; the last one left needs no question.
+    const first = page.getByRole("dialog", { name: "Hvem starter?" });
+    await expect(first).toBeVisible();
+    await first.getByRole("button", { name: /Moen/ }).click();
+    const next = page.getByRole("dialog", { name: "Hvem er neste?" });
+    await expect(next).toBeVisible();
+    await expect(next.getByRole("button", { name: /Moen/ })).toHaveCount(0);
+    await next.getByRole("button", { name: /Vadla/ }).click();
+    await expect(next).toHaveCount(0);
+    await expect(page.getByRole("status").filter({ hasText: "Kaster" }).getByText("Moen")).toBeVisible();
+  });
 });

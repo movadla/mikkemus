@@ -525,6 +525,7 @@ function TournamentInner({ onExitToHome, career, onVenue }: { onExitToHome: () =
         initialBotLevels={botLevels}
         initialTeamRosters={teamRosters}
         initialVariant={currentMatch.variant ?? tournament.variant ?? "standard"}
+        tournamentVenue={career ? undefined : venueOfTournament(tournament)}
         onMatchComplete={handleMatchComplete}
         onExitToHome={handleMatchAbort}
       />
