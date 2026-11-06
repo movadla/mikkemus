@@ -126,7 +126,7 @@ export function TournamentSetupScreen({
       } else {
         commitTeams(teams);
         const own: Participant[] = teams.map((t) => ({ name: t.name, isBot: false, members: t.members.map(toMember) }));
-        onNext("team", buildCupParticipants("team", own, cupSize, config, roster.filter((r) => r.kind !== "team").map((r) => r.name)), variant, config, given, venue);
+        onNext("team", buildCupParticipants("team", own, cupSize, config), variant, config, given, venue);
       }
       return;
     }

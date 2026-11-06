@@ -171,26 +171,23 @@ describe("the teams of bots", () => {
   const cup = makeCup("vm", "4", true, 7);
   const own: Participant[] = [{ name: "Vadla og Hans", isBot: false, members: [{ name: "Vadla", isBot: false }, { name: "Hans", isBot: false }] }];
 
-  it("are made of players the house has, and called after them", () => {
-    const known = ["Vadla", "Hans", "Moen", "Lars", "Monge", "Vegard", "John", "Duncan"];
-    const all = buildCupParticipants("team", own, 4, cup, known);
+  it("are made of the named bots, and called after them", () => {
+    const all = buildCupParticipants("team", own, 4, cup);
     const bots = all.slice(1);
     expect(bots).toHaveLength(3);
     const used = bots.flatMap((b) => b.members!.map((m) => m.name));
-    // Six names are needed and the house has six that are free: all of them are from the house, none is one of the player's own.
-    for (const n of used) expect(known).toContain(n);
-    expect(used).not.toContain("Vadla");
-    expect(used).not.toContain("Hans");
+    // Six names are needed: all of them are bots of the pilot's, none is one of the player's own.
+    const named = PILOT_BOTS.map((p) => p.name);
+    for (const n of used) expect(named).toContain(n);
     expect(new Set(used).size).toBe(6);
     for (const b of bots) expect(b.name).toBe(b.members!.map((m) => m.name.split(" ")[0]).join(" og "));
   });
 
-  it("run out of the house's players and go on with real names, each once", () => {
-    const all = buildCupParticipants("team", own, 8, cup, ["Moen", "Lars"]);
+  it("run out of the named bots and go on with real names, each once", () => {
+    const all = buildCupParticipants("team", own, 12, cup);
     const used = all.slice(1).flatMap((b) => b.members!.map((m) => m.name));
-    expect(used).toHaveLength(14);
-    expect(new Set(used).size).toBe(14);
-    expect(used).toContain("Moen");
-    expect(used).toContain("Lars");
+    expect(used).toHaveLength(22);
+    expect(new Set(used).size).toBe(22);
+    expect(PILOT_BOTS.every((p) => used.includes(p.name))).toBe(true);
   });
 });

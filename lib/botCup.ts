@@ -209,10 +209,10 @@ export const MAX_CUP_SIZE = 128;
 /**
  * Everyone in the cup: the house's own entrants first (people alone, or teams), then the bots to make `size`. Bots get names
  * of their own — people for the individual cup, teams of two named people for the team cup — and a skill each. A team of bots is made of
- * players that exist (`known`: the names the house has, those not already in the cup, and then real names from the pool when they run out)
- * and is called after them: "Hans og Vadla".
+ * the named bots (Chris Bell, Dave, Kjetil and the rest of the pilot's, then real names from the pool when they run out) and is called
+ * after them: "Chris og Dave". The house's own players are never in them: they are who you play against, not with.
  */
-export function buildCupParticipants(mode: TournamentMode, own: Participant[], size: number, cup: CupConfig, known: string[] = []): Participant[] {
+export function buildCupParticipants(mode: TournamentMode, own: Participant[], size: number, cup: CupConfig): Participant[] {
   const botCount = Math.max(0, Math.min(MAX_CUP_SIZE, size) - own.length);
   const taken = own.flatMap((p) => [p.name, ...(p.members ?? []).map((m) => m.name)]);
   const asBot = (name: string): { name: string; isBot: true; botLevel: BotLevel; skill: number } => {
@@ -225,12 +225,9 @@ export function buildCupParticipants(mode: TournamentMode, own: Participant[], s
     return [...own, ...bots];
   }
   const need = botCount * 2;
-  const lowerTaken = taken.map((t) => t.trim().toLowerCase());
-  const fromHouse = known
-    .filter((n, i, all) => !lowerTaken.includes(n.trim().toLowerCase()) && all.findIndex((m) => m.toLowerCase() === n.toLowerCase()) === i)
-    .sort((a, b) => unit(`${cup.seed}|house|${a}`) - unit(`${cup.seed}|house|${b}`))
-    .slice(0, need);
-  const memberNames = [...fromHouse, ...pickNames(FIRST_NAMES_POOL, need - fromHouse.length, [...taken, ...fromHouse], `${cup.seed}|members`)];
+  // The bots of the house first (Chris Bell, Dave, Kjetil and the rest of the pilot's), in an order of the cup's own, then real names from the pool.
+  const named = pickNames(PILOT_BOTS.map((p) => p.name), Math.min(need, PILOT_BOTS.length), taken, `${cup.seed}|named`);
+  const memberNames = [...named, ...pickNames(FIRST_NAMES_POOL, need - named.length, [...taken, ...named], `${cup.seed}|members`)];
   const first = (n: string) => n.trim().split(/\s+/)[0];
   const used = own.map((p) => p.name.toLowerCase());
   const bots: Participant[] = Array.from({ length: botCount }, (_, i) => {
