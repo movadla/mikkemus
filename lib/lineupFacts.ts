@@ -1,8 +1,4 @@
-import { STEPS, STEP_LABELS, type Step } from "./game";
 import type { PlayerRecord } from "./playerRows";
-
-/** The fewest darts a row needs on record before it says anything about how someone throws at it. */
-const MIN_DARTS = 8;
 
 /**
  * The matches the two sides have played against each other, from what each has on record, as wins for each. Nothing when they have never met: there is no
@@ -21,19 +17,4 @@ export function headToHead(a: PlayerRecord | undefined, b: PlayerRecord | undefi
     return [{ wins: fromB.length - won, played: fromB.length }, { wins: won, played: fromB.length }];
   }
   return null;
-}
-
-/** The row someone hits most often and the one they hit least often, as the labels of the board (20, 19 ... D, T, BULL), from their own record. Nothing until two rows have enough darts. */
-export function bestAndWorst(rec: PlayerRecord | undefined): { best: string; worst: string } | null {
-  if (!rec) return null;
-  const rated = STEPS.map((step: Step) => {
-    const s = rec.steps?.[step];
-    const n = s ? s.hits + s.misses : 0;
-    return { step, n, pct: s && n > 0 ? s.hits / n : 0 };
-  }).filter((r) => r.n >= MIN_DARTS);
-  if (rated.length < 2) return null;
-  const best = rated.reduce((x, y) => (y.pct > x.pct ? y : x));
-  const worst = rated.reduce((x, y) => (y.pct < x.pct ? y : x));
-  if (best.step === worst.step) return null;
-  return { best: STEP_LABELS[best.step], worst: STEP_LABELS[worst.step] };
 }

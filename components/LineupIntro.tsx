@@ -25,9 +25,6 @@ export type LineupSide = {
   record?: string;
   /** The faces of the people in a team, for the picture of it (a photo, or a letter for someone with none). */
   memberFaces?: { name: string; photo?: string | null; isBot?: boolean }[];
-  /** The row on the board this side hits most often, and the one it hits least often, from its own record. */
-  best?: string;
-  worst?: string;
   /** The odds on this side to win, before the first dart. */
   odds?: number;
   /** The chance this side wins, 0 to 1. Shown with the odds. */
@@ -92,7 +89,7 @@ const GROW_AFTER_MS = 900;
 /** The longest the cards wait for the pictures: after this they come in with what has loaded, so the screen is never held back. */
 const PICTURES_WAIT_MS = 700;
 
-type Row = { label: string; a: number; b: number; low: boolean; fmt: (n: number) => string; /** What is written for each side when it is not just the number («2 av 8»). */ shown?: [string, string]; /** A row of two words and no bars (the row each hits best and worst). */ words?: [string, string] };
+type Row = { label: string; a: number; b: number; low: boolean; fmt: (n: number) => string; /** What is written for each side when it is not just the number («2 av 8»). */ shown?: [string, string]; };
 
 /** The rows both sides have a figure for, so that the two are always compared on the same things. */
 function compareRows(sides: LineupSide[]): Row[] {
@@ -106,8 +103,6 @@ function compareRows(sides: LineupSide[]): Row[] {
   if (x.wins !== undefined && y.wins !== undefined && x.played && y.played) {
     rows.push({ label: "INNBYRDES", a: (x.wins / x.played) * 100, b: (y.wins / y.played) * 100, low: false, fmt: (n) => `${Math.round(n)} %`, shown: [`${x.wins} av ${x.played}`, `${y.wins} av ${y.played}`] });
   }
-  if (x.best && y.best) rows.push({ label: "BEST PÅ", a: 0, b: 0, low: false, fmt: () => "", words: [x.best, y.best] });
-  if (x.worst && y.worst) rows.push({ label: "SVAKEST PÅ", a: 0, b: 0, low: false, fmt: () => "", words: [x.worst, y.worst] });
   if (x.odds !== undefined && y.odds !== undefined) rows.push({ label: "ODDS", a: x.odds, b: y.odds, low: true, fmt: formatOdds });
   return rows;
 }
@@ -342,15 +337,6 @@ export function LineupIntro({ sides, onDone, onBack, venue }: { sides: LineupSid
                     />
                   </div>
                 );
-                if (r.words) {
-                  return (
-                    <div key={r.label} className="grid items-center gap-2" style={{ gridTemplateColumns: "1fr auto 1fr" }}>
-                      <span className="font-display tabular" style={{ fontSize: "var(--text-body)", color: ink, textAlign: "right" }}>{r.words[0]}</span>
-                      <span style={{ textAlign: "center", fontSize: "var(--text-micro)", letterSpacing: "0.12em", color: soft }}>{r.label}</span>
-                      <span className="font-display tabular" style={{ fontSize: "var(--text-body)", color: ink }}>{r.words[1]}</span>
-                    </div>
-                  );
-                }
                 return (
                   <div key={r.label} className="grid items-center gap-2" style={{ gridTemplateColumns: "3.6rem 1fr 4.6rem 1fr 3.6rem" }}>
                     <span className="font-display tabular" style={{ fontSize: "var(--text-body)", color: ink }}>{r.shown ? r.shown[0] : r.fmt(r.a)}</span>
