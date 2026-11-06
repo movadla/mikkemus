@@ -67,3 +67,72 @@ test.describe("stedet bak brettet i turnering", () => {
     await expect(page.locator(".game-root.venue-bg")).toBeVisible();
   });
 });
+
+/** «Tre tellende piler?» answers to J and N. */
+test.describe("tre tellende piler på tastatur", () => {
+  test.skip(!PIN, "E2E_PIN is not set");
+
+  for (const [key, who] of [["j", "Lars"], ["n", "Ola"]] as const) {
+    test(`${key} svarer på spørsmålet`, async ({ page }) => {
+      await page.addInitScript(() => {
+        localStorage.setItem("mikke-mus-team-cards", JSON.stringify(["Lars og Per", "Ola og Kari"].map((name, i) => ({ name, members: name.split(" og "), lastUsed: 1000 - i }))));
+      });
+      await openApp(page, "dark");
+      await page.getByRole("button", { name: "Nytt spill" }).click();
+      await page.getByRole("button", { name: "Mikke Mus" }).click();
+      await page.getByRole("radio", { name: "Lag" }).click();
+      const group = page.getByRole("group", { name: "Lag" });
+      await group.getByRole("button", { name: /Lars og Per/ }).click();
+      await group.getByRole("button", { name: /Ola og Kari/ }).click();
+      await page.getByRole("button", { name: /Start/ }).first().click();
+      await startPast(page);
+      await page.getByRole("button", { name: "Meny" }).click();
+      await page.getByRole("button", { name: "Skru på stå ved 3 tellende piler" }).click();
+      await page.keyboard.press("Escape");
+      for (let i = 0; i < 3; i++) await page.keyboard.press("Space");
+      await page.keyboard.press("Enter");
+      await expect(page.getByRole("group", { name: "Tre tellende piler?" })).toBeVisible();
+      await page.keyboard.press(key);
+      await expect(page.getByRole("group", { name: "Tre tellende piler?" })).toBeHidden();
+      await expect(page.getByRole("status").filter({ hasText: "Kaster" }).getByText(who, { exact: true })).toBeVisible();
+    });
+  }
+});
+
+/** After Angre a bot does not throw by itself: the player says it may. */
+test.describe("bot etter angre", () => {
+  test.skip(!PIN, "E2E_PIN is not set");
+
+  test("Angre går ikke rett til botens kast, men spør først", async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem("mikke-mus-bot-speed", "instant"));
+    await openApp(page, "dark");
+    await page.getByRole("button", { name: "Nytt spill" }).click();
+    await page.getByRole("button", { name: "Mikke Mus" }).click();
+    await page.getByRole("button", { name: "Ny spiller" }).click();
+    await page.getByPlaceholder("Spillernavn").fill("Lars");
+    await page.getByRole("button", { name: "Legg til" }).click();
+    await page.getByRole("button", { name: "Bot", exact: true }).click();
+    await page.locator("div.grid-cols-3 button").first().click();
+    await page.getByRole("button", { name: /Start/ }).first().click();
+    await startPast(page);
+    const thrower = page.getByRole("status").filter({ hasText: "Kaster" });
+    await expect(thrower.getByText("Lars", { exact: true })).toBeVisible();
+    await page.keyboard.press("Space");
+    await page.keyboard.press("Enter");
+    // The bot throws its round by itself, and it is Lars's turn again.
+    await expect(thrower.getByText("Kaster …")).toBeVisible();
+    await expect(thrower.getByText("Lars", { exact: true })).toBeVisible({ timeout: 20_000 });
+    // Angre takes the turns back one by one; the bot is never let loose by it: when it is the bot's turn again, the question comes first.
+    for (let n = 0; n < 12; n++) await page.keyboard.press("Backspace");
+    // Lars's own turn is open again to be corrected; confirming it hands over to the bot.
+    await page.keyboard.press("Enter");
+    await page.keyboard.press("Space");
+    await page.keyboard.press("Enter");
+    const ask = page.getByRole("dialog").getByText("kaste nå?");
+    await expect(ask).toBeVisible();
+    await page.waitForTimeout(1500);
+    await expect(ask).toBeVisible();
+    await page.getByRole("button", { name: "Ja, kast" }).click();
+    await expect(page.getByRole("dialog")).toBeHidden();
+  });
+});

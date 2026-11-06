@@ -941,16 +941,22 @@ export function GameScreen({
     return currentStepFor(now) ?? STEPS[0];
   })();
   // On a computer the board can be played from the keyboard: Space puts a cross on the row the thrower is on
-  // (the same tap as on the cell), D and T the rows D and T (three Spaces are three crosses), Enter is Bekreft, Backspace is Angre. Dialogs and text fields keep their keys.
+  // (the same tap as on the cell), D and T the rows D and T (three Spaces are three crosses), Enter is Bekreft, Backspace is Angre, J and N answer «Tre tellende piler?». Dialogs and text fields keep their keys.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
       const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
-      if (key !== " " && key !== "d" && key !== "t" && key !== "Enter" && key !== "Backspace") return;
+      if (key !== " " && key !== "d" && key !== "t" && key !== "j" && key !== "n" && key !== "Enter" && key !== "Backspace") return;
       const el = e.target instanceof HTMLElement ? e.target : null;
       if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
       if (document.querySelector("[role=dialog]")) return;
-      if (showChoiceBox || showStandBox) return;
+      // «Tre tellende piler?»: J is Ja (the thrower stands), N is Nei.
+      if (showStandBox && (key === "j" || key === "n")) {
+        e.preventDefault();
+        onAnswerStand(key === "j");
+        return;
+      }
+      if (showChoiceBox || showStandBox || key === "j" || key === "n") return;
       e.preventDefault();
       if (e.key === "Backspace") {
         if (canUndo) handleUndo();

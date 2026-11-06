@@ -53,6 +53,7 @@ import { emitFx } from "@/lib/fxBus";
 import { FxStage } from "./FxStage";
 import { LineupIntro } from "./LineupIntro";
 import { StartOrderSheet } from "./StartOrderSheet";
+import { ConfirmDialog } from "./ConfirmDialog";
 import { headToHead } from "@/lib/lineupFacts";
 import type { OddsRow } from "./OddsBar";
 import { logOddsMatch, type OddsSnapshot } from "@/lib/oddsLog";
@@ -253,6 +254,8 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   const [showLineup, setShowLineup] = useState(false);
   // Who starts, asked when a match begins (after the line-up, before the board). A device can turn the question off with "mikke-mus-ask-start" set to "0".
   const [askOrder, setAskOrder] = useState(false);
+  /** After Angre a bot does not take its turn by itself: its turn waits until the player has said it may (the question «Skal boten kaste nå?»). */
+  const [botHold, setBotHold] = useState(false);
   // Which game this match is (see lib/rules.ts). The module-wide rules are set alongside it in
   // startGame and on restore; this copy is what gets saved, published and shown.
   const [variant, setVariant] = useState<GameVariant>("standard");
@@ -502,7 +505,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
    * advance from either side, and the game was stuck. A rewound turn is a manual edit, bot or
    * not, so the controls have to stay live.
    */
-  const botIsThrowing = activeBotLevel !== null && rewound === null;
+  const botIsThrowing = activeBotLevel !== null && rewound === null && !botHold;
 
   /** Who is physically throwing: the team's current member, or the lone player.  */
   function whoThrows(): string {
@@ -1434,6 +1437,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
     setExactEntry(startExactEntry);
     setMatchVenue(startVenue);
     setMatchVenueBg(startVenueBg);
+    setBotHold(false);
     setBonusBull3(startBonusBull3);
     // A new match starts with a freshly calibrated board. It used to be done by hand with «Kalibrer» before every match: the
     // board can still be part-way through the last visit (a match is won on the first or second dart), and would then count the
@@ -1554,7 +1558,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
   // instant the real turn moves on (see their own comments for why refs are
   // needed here rather than the closed-over `player`/`screen` values going stale).
   useEffect(() => {
-    if (screen !== "game" || rewound || !activePlayer || !activeBotLevel) return;
+    if (screen !== "game" || rewound || !activePlayer || !activeBotLevel || botHold) return;
     // A bot used to start throwing the instant a human confirmed, with their darts still in
     // the board. Wait for the takeout. Only ever set when Scolia is actually live, so manual
     // play — where that signal never comes — is not gated on something that will never arrive.
@@ -1616,7 +1620,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [screen, activePlayer, turnToken, botLevels, rewound, activeBotLevel, awaitingTakeout]);
+  }, [screen, activePlayer, turnToken, botLevels, rewound, activeBotLevel, awaitingTakeout, botHold]);
 
   /**
    * Registers `crosses` marks on `step` (crosses > 1 for a Scolia-detected inner bull).
@@ -2171,6 +2175,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
 
   function undo() {
     uiSound("undo");
+    setBotHold(true);
     haptics.undo();
     setStandQuestion(false);
     // This turn: the last ACTION goes — a whole dart with everything it brought, or a tap. See
@@ -3027,6 +3032,15 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
               if (!botLevels[order[0]]) playPlayerSound(order[0]);
             }
           }}
+        />
+      )}
+      {botHold && activeBotLevel !== null && rewound === null && screen === "game" && winner === null && !showLineup && !askOrder && (
+        <ConfirmDialog
+          message={`Skal ${whoThrows()} kaste nå?`}
+          buttons={[
+            { label: "Angre mer", onClick: undo, background: "var(--color-surface)" },
+            { label: "Ja, kast", onClick: () => setBotHold(false), background: "var(--color-green)" },
+          ]}
         />
       )}
       {showLineup && !showRules && (
