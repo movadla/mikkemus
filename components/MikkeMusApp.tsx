@@ -52,6 +52,7 @@ import { currentRun, longestRun, throwerStats } from "@/lib/turnStats";
 import { emitFx } from "@/lib/fxBus";
 import { FxStage } from "./FxStage";
 import { LineupIntro } from "./LineupIntro";
+import { bestAndWorst, headToHead } from "@/lib/lineupFacts";
 import type { OddsRow } from "./OddsBar";
 import { logOddsMatch, type OddsSnapshot } from "@/lib/oddsLog";
 import { useShowOdds } from "@/lib/oddsSetting";
@@ -3005,9 +3006,16 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       {showLineup && !showRules && (
         <LineupIntro
           onDone={() => setShowLineup(false)}
+          onBack={() => {
+            setShowLineup(false);
+            abortGame();
+          }}
           venue={onMatchComplete ? undefined : matchVenue}
-          sides={players.map((p) => {
+          sides={players.map((p, idx) => {
             const rec = getPlayerRecord(p);
+            // Two sides: what each has won of the matches they have played against each other (nothing when they have never met).
+            const met = players.length === 2 ? headToHead(getPlayerRecord(players[0]), getPlayerRecord(players[1]), players[0], players[1]) : null;
+            const bw = bestAndWorst(rec);
             return {
               name: p,
               kit: kits[p] ?? null,
@@ -3019,8 +3027,10 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
               memberFaces: teamRosters[p]?.map((m) => ({ name: m.name, photo: getPlayerRecord(m.name)?.photo ?? null, isBot: !!botLevels[m.name] || !!m.isBot })),
               med: rec ? meanEuclideanDistance(rec) : null,
               hitPct: rec && rec.matchesPlayed > 0 ? averagePct(rec.overall) : null,
-              wins: rec?.matchesWon ?? 0,
-              played: rec?.matchesPlayed ?? 0,
+              wins: met?.[idx].wins,
+              played: met?.[idx].played,
+              best: bw?.best,
+              worst: bw?.worst,
               record: rec && rec.matchesPlayed > 0 ? `${rec.matchesWon} ${rec.matchesWon === 1 ? "seier" : "seire"} på ${rec.matchesPlayed} ${rec.matchesPlayed === 1 ? "kamp" : "kamper"}` : undefined,
             };
           })}

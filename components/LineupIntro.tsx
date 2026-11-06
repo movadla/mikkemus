@@ -7,6 +7,7 @@ import { KitStage } from "./TeamKit";
 import { Avatar } from "./ui/Avatar";
 import { formatOdds } from "@/lib/odds/price";
 import { portraitSrc } from "@/lib/opponents";
+import { ArrowLeftIcon } from "./icons";
 import { startIntroMusic, type IntroTrack } from "@/lib/uiSound";
 import { venueOf, type VenueId } from "@/lib/venues";
 import { picturesFor } from "./eventPictures";
@@ -24,6 +25,9 @@ export type LineupSide = {
   record?: string;
   /** The faces of the people in a team, for the picture of it (a photo, or a letter for someone with none). */
   memberFaces?: { name: string; photo?: string | null; isBot?: boolean }[];
+  /** The row on the board this side hits most often, and the one it hits least often, from its own record. */
+  best?: string;
+  worst?: string;
   /** The odds on this side to win, before the first dart. */
   odds?: number;
   /** The chance this side wins, 0 to 1. Shown with the odds. */
@@ -46,11 +50,38 @@ const VENUE_SHOW: Partial<Record<VenueId, { film: string; track: IntroTrack; bea
 };
 const BEAMS: [string, number, number][] = [["18%", 14, 0.5], ["50%", 10, 0.4], ["82%", 14, 0.5], ["34%", 20, 0.3], ["66%", 20, 0.3]];
 
-/** The film of the place, once, muted (the song of the place plays over it); a tap, the end or a film that cannot be played goes on. */
+/** The last second of every film is left out (the owner found them a little long). */
+const FILM_TRIM_S = 1;
+
+/** The film of the place, once, muted (the song of the place plays over it), without its last second; «Hopp over», a tap, the end or a film that cannot be played goes on. */
 function VenueFilm({ src, onDone }: { src: string; onDone: () => void }) {
   return (
     <div className="fixed inset-0 z-[59] bg-black" onClick={onDone}>
-      <video src={src} className="absolute inset-0 w-full h-full object-cover" muted autoPlay playsInline preload="auto" onEnded={onDone} onError={onDone} />
+      <video
+        src={src}
+        className="absolute inset-0 w-full h-full object-cover"
+        muted
+        autoPlay
+        playsInline
+        preload="auto"
+        onTimeUpdate={(e) => {
+          const v = e.currentTarget;
+          if (v.duration > FILM_TRIM_S * 2 && v.currentTime >= v.duration - FILM_TRIM_S) onDone();
+        }}
+        onEnded={onDone}
+        onError={onDone}
+      />
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onDone();
+        }}
+        className="absolute rounded-full font-semibold outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]"
+        style={{ right: "max(1rem, env(safe-area-inset-right))", bottom: "max(1.25rem, calc(env(safe-area-inset-bottom) + 0.75rem))", minHeight: "var(--control)", padding: "0 1.25rem", background: "rgba(8, 12, 16, 0.62)", color: "#f4efe6", border: "1px solid rgba(244, 239, 230, 0.4)", WebkitBackdropFilter: "blur(6px)", backdropFilter: "blur(6px)" }}
+      >
+        Hopp over
+      </button>
     </div>
   );
 }
@@ -61,7 +92,7 @@ const GROW_AFTER_MS = 900;
 /** The longest the cards wait for the pictures: after this they come in with what has loaded, so the screen is never held back. */
 const PICTURES_WAIT_MS = 700;
 
-type Row = { label: string; a: number; b: number; low: boolean; fmt: (n: number) => string; /** What is written for each side when it is not just the number («2 av 8»). */ shown?: [string, string] };
+type Row = { label: string; a: number; b: number; low: boolean; fmt: (n: number) => string; /** What is written for each side when it is not just the number («2 av 8»). */ shown?: [string, string]; /** A row of two words and no bars (the row each hits best and worst). */ words?: [string, string] };
 
 /** The rows both sides have a figure for, so that the two are always compared on the same things. */
 function compareRows(sides: LineupSide[]): Row[] {
@@ -71,10 +102,12 @@ function compareRows(sides: LineupSide[]): Row[] {
   // The hit share first: it is what the two throw, and what both have a figure for as soon as each has played. Then the distance.
   if (x.hitPct != null && y.hitPct != null) rows.push({ label: "TREFF", a: x.hitPct, b: y.hitPct, low: false, fmt: (n) => `${Math.round(n)} %` });
   if (x.med && y.med) rows.push({ label: "MED", a: x.med, b: y.med, low: true, fmt: (n) => `${Math.round(n)} mm` });
-  // Wins only with the matches they are out of, and compared as a share of them: a count of wins alone says nothing.
+  // The wins of each against the other, out of the matches they have played against each other: nothing when they have never met.
   if (x.wins !== undefined && y.wins !== undefined && x.played && y.played) {
-    rows.push({ label: "SEIRE", a: (x.wins / x.played) * 100, b: (y.wins / y.played) * 100, low: false, fmt: (n) => `${Math.round(n)} %`, shown: [`${x.wins} av ${x.played}`, `${y.wins} av ${y.played}`] });
+    rows.push({ label: "INNBYRDES", a: (x.wins / x.played) * 100, b: (y.wins / y.played) * 100, low: false, fmt: (n) => `${Math.round(n)} %`, shown: [`${x.wins} av ${x.played}`, `${y.wins} av ${y.played}`] });
   }
+  if (x.best && y.best) rows.push({ label: "BEST PÅ", a: 0, b: 0, low: false, fmt: () => "", words: [x.best, y.best] });
+  if (x.worst && y.worst) rows.push({ label: "SVAKEST PÅ", a: 0, b: 0, low: false, fmt: () => "", words: [x.worst, y.worst] });
   if (x.odds !== undefined && y.odds !== undefined) rows.push({ label: "ODDS", a: x.odds, b: y.odds, low: true, fmt: formatOdds });
   return rows;
 }
@@ -88,7 +121,7 @@ const share = (r: Row, v: number) => (r.low ? 1 / v / (1 / r.a + 1 / r.b) : r.a 
  * «Fortsett» is pressed, so the figures can be read for as long as it takes, and then the board is there: there is no count down.
  * Three or more sides are listed instead of split in two. Every level but Enkel — see lib/fxLevel.ts.
  */
-export function LineupIntro({ sides, onDone, venue }: { sides: LineupSide[]; onDone: () => void; /** The place the match is played in: its picture behind the cards, its name on top, its song and spotlights, and its film when «Start kampen» is pressed. */ venue?: VenueId }) {
+export function LineupIntro({ sides, onDone, onBack, venue }: { sides: LineupSide[]; onDone: () => void; /** Back out of the match before it starts (to the setup). */ onBack?: () => void; /** The place the match is played in: its picture behind the cards, its name on top, its song and spotlights, and its film when «Start kampen» is pressed. */ venue?: VenueId }) {
   const [grow, setGrow] = useState(false);
   const place = venue ? venueOf(venue) : null;
   const show = venue ? VENUE_SHOW[venue] : undefined;
@@ -186,7 +219,8 @@ export function LineupIntro({ sides, onDone, venue }: { sides: LineupSide[]; onD
           )}
         </div>
         {s.kit && <div className="mt-2"><KitStage kit={s.kit} size={big ? 84 : 60} /></div>}
-        <p className="font-display mt-1 w-full truncate px-2" style={{ fontSize: big ? "calc(var(--text-num) * 1.4)" : "var(--text-num)", lineHeight: 1.05, color: "var(--color-cream)" }}>
+        {/* The whole name: it wraps and shrinks with its length instead of being cut with dots. */}
+        <p className="font-display mt-1 w-full px-2" style={{ fontSize: `calc(${big ? "var(--text-num) * 1.4" : "var(--text-num)"} * ${s.name.length > 18 ? 0.62 : s.name.length > 12 ? 0.78 : 1})`, lineHeight: 1.08, color: "var(--color-cream)", overflowWrap: "anywhere" }}>
           {s.name}
         </p>
         {s.members && s.members.length > 0 && s.members.join(" og ") !== s.name && (
@@ -261,6 +295,17 @@ export function LineupIntro({ sides, onDone, venue }: { sides: LineupSide[]; onD
           {show && BEAMS.map(([x, a, o], i) => <div key={i} className="ev-beam" style={{ "--x": x, "--a": `${a}deg`, "--bo": o, "--beam": show.beam, "--b": `${i * 0.25}s` } as React.CSSProperties} />)}
         </div>
       )}
+      {onBack && (
+        <button
+          type="button"
+          onClick={onBack}
+          aria-label="Tilbake"
+          className="absolute z-10 inline-flex items-center justify-center rounded-full outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]"
+          style={{ left: "max(1rem, env(safe-area-inset-left))", top: "max(1rem, calc(env(safe-area-inset-top) + 0.5rem))", width: "var(--control)", height: "var(--control)", background: place ? "rgba(8, 12, 16, 0.62)" : "var(--color-surface)", color: place ? "#f4efe6" : "var(--color-cream)", border: place ? "1px solid rgba(244, 239, 230, 0.4)" : "1px solid var(--color-border)" }}
+        >
+          <ArrowLeftIcon className="w-5 h-5" />
+        </button>
+      )}
       {place && (
         <div className="absolute left-0 right-0 text-center px-4" style={{ top: "max(4.5rem, calc(env(safe-area-inset-top) + 3rem))" }}>
           <p className="font-display" style={{ fontSize: "var(--text-micro)", letterSpacing: "0.28em", color: soft, textShadow: "0 1px 10px rgba(0,0,0,0.6)" }}>ENKELTKAMP</p>
@@ -297,8 +342,17 @@ export function LineupIntro({ sides, onDone, venue }: { sides: LineupSide[]; onD
                     />
                   </div>
                 );
+                if (r.words) {
+                  return (
+                    <div key={r.label} className="grid items-center gap-2" style={{ gridTemplateColumns: "1fr auto 1fr" }}>
+                      <span className="font-display tabular" style={{ fontSize: "var(--text-body)", color: ink, textAlign: "right" }}>{r.words[0]}</span>
+                      <span style={{ textAlign: "center", fontSize: "var(--text-micro)", letterSpacing: "0.12em", color: soft }}>{r.label}</span>
+                      <span className="font-display tabular" style={{ fontSize: "var(--text-body)", color: ink }}>{r.words[1]}</span>
+                    </div>
+                  );
+                }
                 return (
-                  <div key={r.label} className="grid items-center gap-2" style={{ gridTemplateColumns: "3.9rem 1fr 3rem 1fr 3.9rem" }}>
+                  <div key={r.label} className="grid items-center gap-2" style={{ gridTemplateColumns: "3.6rem 1fr 4.6rem 1fr 3.6rem" }}>
                     <span className="font-display tabular" style={{ fontSize: "var(--text-body)", color: ink }}>{r.shown ? r.shown[0] : r.fmt(r.a)}</span>
                     {bar(r.a, true, aBetter)}
                     <span style={{ textAlign: "center", fontSize: "var(--text-micro)", letterSpacing: "0.12em", color: soft }}>{r.label}</span>

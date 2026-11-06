@@ -23,12 +23,17 @@ test.describe("kortene før kamp", () => {
     const film = cards.locator("video");
     await expect(film).toBeVisible();
     await expect(film).toHaveAttribute("src", "/career/pub-intro.mp4");
-    await film.click();
+    // A button skips it (a tap on the film does too).
+    await expect(cards.getByRole("button", { name: "Hopp over" })).toBeVisible();
+    await cards.getByRole("button", { name: "Hopp over" }).click();
     await expect(film).toHaveCount(0);
     // Then the cards: the place is the name on top, with its picture behind them, and Start kampen goes to the board.
     await expect(cards.getByRole("heading", { name: "Ly" })).toBeVisible();
-    await cards.getByRole("button", { name: "Start kampen" }).click();
+    // Back goes to the setup, with the players still there.
+    await expect(cards.getByRole("button", { name: "Tilbake" })).toBeVisible();
+    await cards.getByRole("button", { name: "Tilbake" }).click();
     await expect(cards).toBeHidden({ timeout: 2000 });
+    await expect(page.getByRole("button", { name: /Start/ }).first()).toBeVisible();
   });
 
   test("vanlig modus viser kortene, og Fortsett går rett til brettet", async ({ page }) => {

@@ -63,3 +63,27 @@ describe("the sounds and touches of the interface", () => {
     expect(played).toEqual([]);
   });
 });
+
+describe("the fade of the intro music", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it("turns the song down in even steps over the time asked for, then stops it", async () => {
+    vi.useFakeTimers();
+    const audio = { src: "", volume: 0, currentTime: 0, loop: false, paused: false, play: vi.fn(() => Promise.resolve()), pause: vi.fn(function (this: { paused: boolean }) { this.paused = true; }) };
+    vi.stubGlobal("window", {});
+    vi.stubGlobal("Audio", function () { return audio; });
+    const { startIntroMusic } = await import("./uiSound");
+    const stop = startIntroMusic("intro", 3000);
+    expect(audio.volume).toBeCloseTo(0.6, 5);
+    stop();
+    vi.advanceTimersByTime(1500);
+    expect(audio.volume).toBeCloseTo(0.3, 1);
+    expect(audio.pause).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1600);
+    expect(audio.volume).toBe(0);
+    expect(audio.pause).toHaveBeenCalled();
+  });
+});
