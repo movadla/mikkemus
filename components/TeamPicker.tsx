@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { ensureTeam, teamKitsOf, useRosterLoaded, useTeamRecords } from "@/lib/storage";
-import { TEAMS_SHOWN, getTeamCardsSnapshot, rankByUse, subscribeTeamCards, withTeamRecords, type TeamCard } from "@/lib/teamCards";
+import { TEAMS_SHOWN, getTeamCardsSnapshot, rankForPicker, subscribeTeamCards, withTeamRecords, type TeamCard } from "@/lib/teamCards";
 import { firstKit, type Kit } from "@/lib/teamKit";
 import { TEAM_NAME_MAX, defaultTeamName, pairKey, savedTeamName, teamNameProblems } from "@/lib/teamNames";
 import { makeTeam, sharesMember, teamPeople, toNamedTeam, type PickedTeam, type Person } from "@/lib/people";
@@ -17,7 +17,7 @@ const NO_CARDS: TeamCard[] = [];
 type Tile = { name: string; members: string[]; bots?: TeamCard["bots"]; kit: Kit; picked: PickedTeam | null };
 
 /**
- * Which teams play: the four teams used most (and «Mer» for the rest), as tiles in two columns — the shirt, the
+ * Which teams play: the six teams used most in the last eighteen hours, or the six used most altogether when nothing was played then (and «Mer» for the rest), as tiles in two columns — the shirt, the
  * name, the people — where a tap puts the team in the match and shows its place in the order. A
  * team whose people are already on a picked team cannot be picked. «Nytt lag» opens the one place
  * a team is put together: pick the people, give it a name or let it be called after them.
@@ -29,14 +29,16 @@ export function TeamPicker({ teams, onChange, botsAllowed }: { teams: PickedTeam
   const local = useSyncExternalStore(subscribeTeamCards, getTeamCardsSnapshot, () => NO_CARDS);
   const records = useTeamRecords();
   const loaded = useRosterLoaded();
-  const known = useMemo(() => rankByUse(withTeamRecords(local, records), records), [local, records]);
+  // The time the picker was opened: «the last eighteen hours» is counted from it.
+  const [now] = useState(() => Date.now());
+  const known = useMemo(() => rankForPicker(withTeamRecords(local, records), records, now), [local, records, now]);
   // The teams this device remembers are teams of Spillere too, where their name and shirts can be changed. Only once the roster has arrived:
   // writing a team before then could write over one the database already has.
   useEffect(() => {
     if (!loaded) return;
     for (const c of known) if (!c.bots) ensureTeam(c.name, c.members);
   }, [loaded, known]);
-  // Only the four used most to begin with; «Mer» opens the rest. A team that is picked stays in view whichever it is.
+  // Only the six used most to begin with; «Mer» opens the rest. A team that is picked stays in view whichever it is.
   const [showAll, setShowAll] = useState(false);
 
   const [composing, setComposing] = useState(false);

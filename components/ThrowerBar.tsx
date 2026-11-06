@@ -111,12 +111,10 @@ export function ThrowerBar({
   kit,
   stood,
   run = 0,
-  darts,
   fire = false,
   animate,
   compact = false,
   flush = false,
-  onPickMate,
   onOpen,
   nextUp,
 }: {
@@ -143,12 +141,10 @@ export function ThrowerBar({
   /** A tap on the thrower's picture or name: the caller opens the thrower's numbers. */
   onOpen?: () => void;
 }) {
-  // The rest of the team, in the order they throw their later turns. They are not «neste»: the next to throw is on the other side (team.next).
+  // Only the next to throw is shown, on the other side (team.next); the rest of the team and the darts thrown are in the column below.
   const upNext = team?.next ?? nextUp;
-  const mates = team ? team.members.map((_, i) => team.members[(team.activeIdx + 1 + i) % team.members.length]).slice(0, team.members.length - 1) : [];
   // The card above the board is kept low so the whole board is on the screen (the bull too) without scrolling.
   const photoSize = compact ? 44 : 56;
-  const teamPhotoSize = compact ? 18 : 26;
   const kitBadge = compact ? 26 : 30;
   const Wrap: React.ElementType = onOpen ? "button" : "div";
 
@@ -195,17 +191,6 @@ export function ThrowerBar({
         >
           {thrower.name}
         </p>
-        {team && (
-          <p className="truncate flex items-center gap-1.5 mt-1" style={{ color: "var(--color-cream)", opacity: 0.85, fontSize: compact ? "var(--text-micro)" : "var(--text-small)", fontWeight: 600 }}>
-            {team.photo && (
-              <span className="rounded-full overflow-hidden shrink-0" style={{ width: teamPhotoSize, height: teamPhotoSize, border: "1px solid var(--color-border)" }} aria-hidden>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={team.photo} alt="" className="w-full h-full object-cover" />
-              </span>
-            )}
-            <span className="truncate">{team.name}</span>
-          </p>
-        )}
         {run >= 2 && (
           <p className="tabular truncate whitespace-nowrap" style={{ color: "var(--color-gold-strong)", fontSize: compact ? "var(--text-micro)" : "var(--text-small)", fontWeight: 700 }}>
             {compact ? `${run} på rad` : `${run} piler på rad`}
@@ -216,52 +201,6 @@ export function ThrowerBar({
         )}
       </div>
       </Wrap>
-      {darts !== undefined && !compact && (
-        <p className="shrink-0 self-start tabular whitespace-nowrap" aria-label={`${darts} piler brukt`} style={{ color: "var(--color-muted)", fontSize: "var(--text-small)", fontWeight: 600 }}>
-          Piler <b style={{ color: "var(--color-cream)" }}>{darts}</b>
-        </p>
-      )}
-      {mates.length > 0 && (
-        <div className="flex items-end gap-2 shrink-0" aria-label={`Resten av laget: ${mates.map((m) => m.name).join(", ")}`}>
-          {mates.map((m, i) => {
-            const inner = (
-              <>
-                {!compact && (
-                  <span style={{ color: i === 0 ? "var(--color-muted)" : "transparent", fontSize: "var(--text-micro)", letterSpacing: "0.1em", textTransform: "uppercase", lineHeight: 1.2 }}>
-                    laget
-                  </span>
-                )}
-                <Avatar who={m} size={compact ? 26 : 38} active={false} />
-                {!compact && (
-                  <span className="truncate w-full text-center" style={{ color: "var(--color-muted)", fontSize: "var(--text-micro)" }}>
-                    {m.name}
-                  </span>
-                )}
-              </>
-            );
-            // A teammate's picture is a button: tap it to have them throw instead.
-            return onPickMate ? (
-              <button
-                key={m.name}
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onPickMate(m.name);
-                }}
-                aria-label={`La ${m.name} kaste`}
-                className="tactile flex flex-col items-center justify-center rounded-lg"
-                style={{ maxWidth: compact ? 44 : 60, minWidth: 44, minHeight: 44 }}
-              >
-                {inner}
-              </button>
-            ) : (
-              <span key={m.name} className="flex flex-col items-center" style={{ maxWidth: compact ? 40 : 56 }}>
-                {inner}
-              </span>
-            );
-          })}
-        </div>
-      )}
       {upNext && (
         <div className="flex flex-col items-center shrink-0" aria-label={`Neste som kaster: ${upNext.name}, ${upNext.side}`} style={{ maxWidth: compact ? 44 : 64 }}>
           {!compact && (

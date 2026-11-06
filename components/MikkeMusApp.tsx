@@ -3016,6 +3016,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
               odds: showOdds ? odds?.find((o) => o.name === p)?.odds : undefined,
               chance: showOdds ? odds?.find((o) => o.name === p)?.p : undefined,
               members: teamRosters[p]?.map((m) => m.name),
+              memberFaces: teamRosters[p]?.map((m) => ({ name: m.name, photo: getPlayerRecord(m.name)?.photo ?? null, isBot: !!botLevels[m.name] || !!m.isBot })),
               med: rec ? meanEuclideanDistance(rec) : null,
               hitPct: rec && rec.matchesPlayed > 0 ? averagePct(rec.overall) : null,
               wins: rec?.matchesWon ?? 0,

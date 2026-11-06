@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { TEAMS_SHOWN, mergeTeamCards, rankByUse, withTeamRecords, type TeamCard } from "./teamCards";
+import { RECENT_MS, TEAMS_SHOWN, mergeTeamCards, rankByUse, rankForPicker, withTeamRecords, type TeamCard } from "./teamCards";
 
 describe("withTeamRecords", () => {
   it("adds the teams with a record after the cards this device has used", () => {
@@ -23,7 +23,7 @@ describe("withTeamRecords", () => {
 describe("mergeTeamCards", () => {
   it("adds a team as a card and keeps the most recent first", () => {
     const cards = mergeTeamCards([], [{ name: "Rakettene", members: ["Per", "Ola"], custom: true }], 100);
-    expect(cards).toEqual([{ name: "Rakettene", members: ["Per", "Ola"], lastUsed: 100 }]);
+    expect(cards).toEqual([{ name: "Rakettene", members: ["Per", "Ola"], lastUsed: 100, uses: [100] }]);
     const more = mergeTeamCards(cards, [{ name: "Kari & Nils", members: ["Kari", "Nils"] }], 200);
     expect(more.map((c) => c.name)).toEqual(["Kari & Nils", "Rakettene"]);
   });
@@ -76,7 +76,40 @@ describe("rankByUse", () => {
     expect(input[0].name).toBe("A & B");
   });
 
-  it("shows four", () => {
-    expect(TEAMS_SHOWN).toBe(4);
+  it("shows six", () => {
+    expect(TEAMS_SHOWN).toBe(6);
+  });
+});
+
+describe("rankForPicker", () => {
+  const NOW = 1_000_000_000_000;
+  const h = (n: number) => NOW - n * 60 * 60 * 1000;
+  const card = (name: string, members: string[], lastUsed = 0, uses?: number[]): TeamCard => ({ name, members, lastUsed, ...(uses ? { uses } : {}) });
+  const old = card("Old", ["A", "B"], h(60));
+  const oneYesterday = card("Yesterday", ["C", "D"], h(5));
+  const twiceToday = card("Twice", ["E", "F"], h(1), [h(7), h(1)]);
+
+  it("puts the teams used in the last eighteen hours first, the most used first", () => {
+    const ranked = rankForPicker([old, oneYesterday, twiceToday], [{ members: ["A", "B"], matchesPlayed: 90 }], NOW);
+    expect(ranked.map((t) => t.name)).toEqual(["Twice", "Yesterday", "Old"]);
+  });
+
+  it("fills up with the teams used most altogether after them", () => {
+    const other = card("Other", ["G", "H"], h(80));
+    const ranked = rankForPicker([other, old, oneYesterday], [{ members: ["G", "H"], matchesPlayed: 3 }, { members: ["A", "B"], matchesPlayed: 9 }], NOW);
+    expect(ranked.map((t) => t.name)).toEqual(["Yesterday", "Old", "Other"]);
+  });
+
+  it("is the most used altogether when nothing was played in the last eighteen hours", () => {
+    const a = card("A & B", ["A", "B"], h(30));
+    const c = card("C & D", ["C", "D"], h(40));
+    const ranked = rankForPicker([a, c], [{ members: ["A", "B"], matchesPlayed: 2 }, { members: ["C", "D"], matchesPlayed: 10 }], NOW);
+    expect(ranked.map((t) => t.name)).toEqual(["C & D", "A & B"]);
+    expect(RECENT_MS).toBe(18 * 3600 * 1000);
+  });
+
+  it("counts a use more each time a team is put in a match", () => {
+    const merged = mergeTeamCards([card("A & B", ["A", "B"], h(2))], [{ name: "A & B", members: ["A", "B"] }], NOW);
+    expect(merged[0].uses).toEqual([h(2), NOW]);
   });
 });

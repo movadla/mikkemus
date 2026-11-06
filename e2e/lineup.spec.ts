@@ -5,7 +5,7 @@ import { PIN, openApp } from "./helpers";
 test.describe("kortene før kamp", () => {
   test.skip(!PIN, "E2E_PIN is not set");
 
-  test("filmen til stedet spilles når Start kampen trykkes, og et trykk går videre til brettet", async ({ page }) => {
+  test("filmen til stedet spilles først, så kortene, og Start kampen går til brettet", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "no-preference" });
     await openApp(page, "dark");
     await page.getByRole("button", { name: "Nytt spill" }).click();
@@ -19,13 +19,15 @@ test.describe("kortene før kamp", () => {
     const skip = page.getByRole("button", { name: "Hopp over" });
     if (await skip.isVisible({ timeout: 3000 }).catch(() => false)) await skip.click();
     const cards = page.getByRole("dialog", { name: "Oppstilling" });
-    // The place is the name on top (Ly is the pub), with its picture behind the two cards.
-    await expect(cards.getByRole("heading", { name: "Ly" })).toBeVisible();
-    await cards.getByRole("button", { name: "Start kampen" }).click();
+    // The film of the place comes first (the pub for Ly), and a tap goes on to the cards.
     const film = cards.locator("video");
     await expect(film).toBeVisible();
     await expect(film).toHaveAttribute("src", "/career/pub-intro.mp4");
     await film.click();
+    await expect(film).toHaveCount(0);
+    // Then the cards: the place is the name on top, with its picture behind them, and Start kampen goes to the board.
+    await expect(cards.getByRole("heading", { name: "Ly" })).toBeVisible();
+    await cards.getByRole("button", { name: "Start kampen" }).click();
     await expect(cards).toBeHidden({ timeout: 2000 });
   });
 

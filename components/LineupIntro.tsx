@@ -22,6 +22,8 @@ export type LineupSide = {
   isBot?: boolean;
   /** «7 seire på 12 kamper», or nothing for someone who has not played yet. */
   record?: string;
+  /** The faces of the people in a team, for the picture of it (a photo, or a letter for someone with none). */
+  memberFaces?: { name: string; photo?: string | null; isBot?: boolean }[];
   /** The odds on this side to win, before the first dart. */
   odds?: number;
   /** The chance this side wins, 0 to 1. Shown with the odds. */
@@ -91,15 +93,20 @@ export function LineupIntro({ sides, onDone, venue }: { sides: LineupSide[]; onD
   const place = venue ? venueOf(venue) : null;
   const show = venue ? VENUE_SHOW[venue] : undefined;
   const pics = place ? picturesFor({ id: place.tier, key: place.key }) : undefined;
-  const [film, setFilm] = useState(false);
+  // The film of the place comes first, once; then the cards. Reduced motion goes straight to the cards.
+  const [film, setFilm] = useState(() => !!show && typeof window !== "undefined" && !window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   // The song of the place, from when the cards come up until they are left.
-  useEffect(() => (show ? startIntroMusic(show.track) : undefined), [show]);
-  // Reduced motion goes straight on: the film is not played to someone who has asked for less movement.
-  const start = () => (show && !film && !window.matchMedia("(prefers-reduced-motion: reduce)").matches ? setFilm(true) : onDone());
+  // When «Start kampen» is pressed the song goes on under the board and fades out over three seconds.
+  useEffect(() => (show ? startIntroMusic(show.track, 3000) : undefined), [show]);
   // A big screen (a TV, a laptop) gets larger cards, as the board does: read across a room.
   const [big] = useState(() => typeof window !== "undefined" && window.matchMedia("(min-width: 1000px) and (min-height: 600px)").matches);
   // The cards come in once the faces are loaded and decoded (or after a short wait), so they never turn in empty and then jump to the finished card.
   const [ready, setReady] = useState(false);
+  // The cards come in when the film is over.
+  const shown = ready && !film;
+  // Over the picture of a place the writing is light, whatever the theme.
+  const ink = place ? "#f4efe6" : "var(--color-cream)";
+  const soft = place ? "rgba(244, 239, 230, 0.72)" : "var(--color-muted)";
   const rows = compareRows(sides);
 
   useEffect(() => {
@@ -128,12 +135,12 @@ export function LineupIntro({ sides, onDone, venue }: { sides: LineupSide[]; onD
   }, []);
 
   useEffect(() => {
-    if (!ready) return;
+    if (!shown) return;
     const t = setTimeout(() => setGrow(true), rows.length > 0 ? GROW_AFTER_MS : 0);
     return () => clearTimeout(t);
     // The bars grow once, after the cards are in.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready]);
+  }, [shown]);
 
   const two = sides.length === 2;
   const sideAccent = (x: LineupSide) => (x.kit ? x.kit.primary : avatarAccent(x.name));
@@ -141,7 +148,59 @@ export function LineupIntro({ sides, onDone, venue }: { sides: LineupSide[]; onD
   const picture = (s: LineupSide, size: number) =>
     s.kit ? <KitStage kit={s.kit} size={size} /> : <Avatar name={s.name} photo={s.photo} px={size} bot={s.isBot} />;
 
+  // A team at a place: the people are the picture (a half each, a letter for someone with no photo), the shirt a small one under it, then the name.
+  const teamCard = (s: LineupSide, i: number) => {
+    const accent = s.kit ? s.kit.primary : avatarAccent(s.name);
+    return (
+      <div
+        key={s.name}
+        className="edge relative rounded-2xl overflow-hidden flex flex-col items-center text-center pb-3"
+        style={{
+          "--edge-fill-image": `linear-gradient(165deg, color-mix(in srgb, ${accent} 34%, var(--color-panel)) 0%, var(--color-panel) 72%)`,
+          "--edge-accent": accent,
+          boxShadow: "var(--elevation-3)",
+          animation: shown ? `foil-in 420ms ${i * 90}ms cubic-bezier(0.2,0.8,0.2,1) both` : "none",
+          opacity: shown ? undefined : 0,
+          isolation: "isolate",
+        } as React.CSSProperties}
+      >
+        <div className="flex w-full" style={{ height: big ? 230 : 168 }}>
+          {(s.memberFaces ?? []).slice(0, 2).map((m, j) => {
+            const src = m.photo ?? (m.isBot ? portraitSrc(m.name) : null);
+            return (
+              <span key={m.name} className="relative flex-1 min-w-0 overflow-hidden flex items-center justify-center" style={{ background: `color-mix(in srgb, ${avatarAccent(m.name)} 38%, var(--color-panel))`, borderLeft: j ? "2px solid var(--color-panel)" : undefined }}>
+                {src ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={src} alt="" draggable={false} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="font-display" style={{ fontSize: big ? 96 : 72, color: "var(--color-cream)", lineHeight: 1 }}>{m.name.charAt(0).toUpperCase()}</span>
+                )}
+              </span>
+            );
+          })}
+          {s.chance !== undefined && (
+            <span className="absolute font-display rounded-lg px-2 py-1" style={{ left: 8, top: 8, background: "rgba(8, 12, 16, 0.62)", color: "var(--color-gold-strong)", fontSize: "var(--text-num)", lineHeight: 1 }}>
+              {Math.round(s.chance * 100)}
+              <small style={{ display: "block", fontFamily: "var(--font-sans)", fontSize: "var(--text-micro)", letterSpacing: "0.14em", color: "rgba(244, 239, 230, 0.8)" }}>SJANSE</small>
+            </span>
+          )}
+        </div>
+        {s.kit && <div className="mt-2"><KitStage kit={s.kit} size={big ? 84 : 60} /></div>}
+        <p className="font-display mt-1 w-full truncate px-2" style={{ fontSize: big ? "calc(var(--text-num) * 1.4)" : "var(--text-num)", lineHeight: 1.05, color: "var(--color-cream)" }}>
+          {s.name}
+        </p>
+        {s.members && s.members.length > 0 && s.members.join(" og ") !== s.name && (
+          <span className="truncate w-full px-2" style={{ color: "var(--color-text-2)", fontSize: "var(--text-micro)" }}>
+            {s.members.join(" og ")}
+          </span>
+        )}
+        <span aria-hidden className="foil-sheen" />
+      </div>
+    );
+  };
+
   const card = (s: LineupSide, i: number) => {
+    if (place && s.memberFaces && s.memberFaces.length > 0) return teamCard(s, i);
     // The card is washed in the colour that is theirs (a team's own shirt colour), so two cards side by side are two people and not one design twice.
     const accent = s.kit ? s.kit.primary : avatarAccent(s.name);
     return (
@@ -153,8 +212,8 @@ export function LineupIntro({ sides, onDone, venue }: { sides: LineupSide[]; onD
           "--edge-fill-image": `linear-gradient(165deg, color-mix(in srgb, ${accent} 34%, var(--color-panel)) 0%, var(--color-panel) 72%)`,
           "--edge-accent": accent,
           boxShadow: "var(--elevation-3)",
-          animation: ready ? `foil-in 420ms ${i * 90}ms cubic-bezier(0.2,0.8,0.2,1) both` : "none",
-          opacity: ready ? undefined : 0,
+          animation: shown ? `foil-in 420ms ${i * 90}ms cubic-bezier(0.2,0.8,0.2,1) both` : "none",
+          opacity: shown ? undefined : 0,
           isolation: "isolate",
         } as React.CSSProperties}
       >
@@ -204,8 +263,8 @@ export function LineupIntro({ sides, onDone, venue }: { sides: LineupSide[]; onD
       )}
       {place && (
         <div className="absolute left-0 right-0 text-center px-4" style={{ top: "max(4.5rem, calc(env(safe-area-inset-top) + 3rem))" }}>
-          <p className="font-display" style={{ fontSize: "var(--text-micro)", letterSpacing: "0.28em", color: "var(--color-muted)" }}>ENKELTKAMP</p>
-          <h1 className="font-display" style={{ fontSize: "clamp(1.9rem, 9vw, 3rem)", lineHeight: 1.05, color: "var(--color-cream)", textShadow: "0 2px 18px rgba(0,0,0,0.6)" }}>{place.name}</h1>
+          <p className="font-display" style={{ fontSize: "var(--text-micro)", letterSpacing: "0.28em", color: soft, textShadow: "0 1px 10px rgba(0,0,0,0.6)" }}>ENKELTKAMP</p>
+          <h1 className="font-display" style={{ fontSize: "clamp(1.9rem, 9vw, 3rem)", lineHeight: 1.05, color: ink, textShadow: "0 2px 18px rgba(0,0,0,0.7)" }}>{place.name}</h1>
         </div>
       )}
       {two && (
@@ -221,13 +280,13 @@ export function LineupIntro({ sides, onDone, venue }: { sides: LineupSide[]; onD
             {sides.map(card)}
             <span
               className="absolute flex items-center justify-center font-display rounded-full"
-              style={{ left: "50%", top: "50%", width: 54, height: 54, marginLeft: -27, marginTop: -27, background: "var(--color-gold)", color: "#2b2000", fontSize: "var(--text-title)", animation: ready ? "lineup-vs 350ms 350ms cubic-bezier(0.2,0.9,0.3,1.3) both" : "none", opacity: ready ? undefined : 0, zIndex: 5, border: "3px solid var(--color-bg)" }}
+              style={{ left: "50%", top: "50%", width: 54, height: 54, marginLeft: -27, marginTop: -27, background: "var(--color-gold)", color: "#2b2000", fontSize: "var(--text-title)", animation: shown ? "lineup-vs 350ms 350ms cubic-bezier(0.2,0.9,0.3,1.3) both" : "none", opacity: shown ? undefined : 0, zIndex: 5, border: "3px solid var(--color-bg)" }}
             >
               VS
             </span>
           </div>
           {rows.length > 0 && (
-            <div className="w-full grid gap-3" style={{ animation: ready ? "lineup-count 300ms 600ms ease-out both" : "none", opacity: ready ? undefined : 0 }}>
+            <div className="w-full grid gap-3 rounded-2xl px-3 py-3" style={{ ...(place ? { background: "rgba(8, 12, 16, 0.72)", WebkitBackdropFilter: "blur(6px)", backdropFilter: "blur(6px)" } : {}), animation: shown ? "lineup-count 300ms 600ms ease-out both" : "none", opacity: shown ? undefined : 0 }}>
               {rows.map((r, i) => {
                 const aBetter = r.low ? r.a < r.b : r.a > r.b;
                 const tie = r.a === r.b;
@@ -240,11 +299,11 @@ export function LineupIntro({ sides, onDone, venue }: { sides: LineupSide[]; onD
                 );
                 return (
                   <div key={r.label} className="grid items-center gap-2" style={{ gridTemplateColumns: "3.9rem 1fr 3rem 1fr 3.9rem" }}>
-                    <span className="font-display tabular" style={{ fontSize: "var(--text-body)", color: "var(--color-cream)" }}>{r.shown ? r.shown[0] : r.fmt(r.a)}</span>
+                    <span className="font-display tabular" style={{ fontSize: "var(--text-body)", color: ink }}>{r.shown ? r.shown[0] : r.fmt(r.a)}</span>
                     {bar(r.a, true, aBetter)}
-                    <span style={{ textAlign: "center", fontSize: "var(--text-micro)", letterSpacing: "0.12em", color: "var(--color-muted)" }}>{r.label}</span>
+                    <span style={{ textAlign: "center", fontSize: "var(--text-micro)", letterSpacing: "0.12em", color: soft }}>{r.label}</span>
                     {bar(r.b, false, !aBetter)}
-                    <span className="font-display tabular" style={{ fontSize: "var(--text-body)", color: "var(--color-cream)", textAlign: "right" }}>{r.shown ? r.shown[1] : r.fmt(r.b)}</span>
+                    <span className="font-display tabular" style={{ fontSize: "var(--text-body)", color: ink, textAlign: "right" }}>{r.shown ? r.shown[1] : r.fmt(r.b)}</span>
                   </div>
                 );
               })}
@@ -266,13 +325,13 @@ export function LineupIntro({ sides, onDone, venue }: { sides: LineupSide[]; onD
       <button
         type="button"
         autoFocus
-        onClick={start}
+        onClick={onDone}
         className="glossy absolute rounded-full font-semibold outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]"
-        style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", left: "50%", bottom: "7%", transform: "translateX(-50%)", minHeight: "var(--control-lg)", padding: "0 2.5rem", fontSize: "var(--text-title)", animation: "lineup-count 300ms 500ms ease-out both" } as React.CSSProperties}
+        style={{ "--btn-fill": "var(--color-teal)", color: "var(--color-bg)", left: "max(1rem, env(safe-area-inset-left))", right: "max(1rem, env(safe-area-inset-right))", bottom: "max(1.25rem, calc(env(safe-area-inset-bottom) + 0.75rem))", minHeight: "var(--control-lg)", padding: "0 1.5rem", fontSize: "var(--text-title)", animation: "lineup-count 300ms 500ms ease-out both" } as React.CSSProperties}
       >
         {place ? "Start kampen" : "Fortsett"}
       </button>
-      {film && show && <VenueFilm src={show.film} onDone={onDone} />}
+      {film && show && <VenueFilm src={show.film} onDone={() => setFilm(false)} />}
     </div>
   );
 }

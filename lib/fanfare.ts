@@ -149,6 +149,7 @@ export function primeAudio() {
     getBuses(ctx);
     getBrassWave(ctx);
     getNoise(ctx);
+    loadTapBuffer(ctx);
   } catch {
     // Never let a synth glitch break the interaction that triggered priming.
   }
@@ -167,6 +168,7 @@ export function warmAudio() {
     getBuses(ctx);
     getBrassWave(ctx);
     getNoise(ctx);
+    loadTapBuffer(ctx);
   } catch {
     // Warming is only a head start.
   }
@@ -275,8 +277,56 @@ let tapRecording: HTMLAudioElement | null | false = null;
 /** How much of the start of the recording is left out (seconds). */
 const TAP_SKIP_S = 0.25;
 
+/**
+ * The recording decoded to a buffer: a sound started from a buffer begins within a few milliseconds, where an audio element that is copied and sought
+ * takes a tenth of a second or more to start (the owner found the tap sound late). Loaded on the first tap or when the audio is warmed; until it is
+ * there the element is used.
+ */
+let tapBuffer: AudioBuffer | null | false = null;
+let tapBufferLoading = false;
+function loadTapBuffer(ctx: AudioContext) {
+  if (tapBuffer !== null || tapBufferLoading) return;
+  tapBufferLoading = true;
+  fetch("/sounds/dart-hit.mp3")
+    .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error("no file"))))
+    .then((data) => ctx.decodeAudioData(data))
+    .then((buf) => {
+      tapBuffer = buf;
+    })
+    .catch(() => {
+      tapBuffer = false;
+    })
+    .finally(() => {
+      tapBufferLoading = false;
+    });
+}
+
+/** Plays the recording from the buffer. Returns false when the buffer is not ready (the element plays instead). */
+function playTapBuffer(dartInTurn: number): boolean {
+  const ctx = getContext();
+  if (!ctx) return false;
+  loadTapBuffer(ctx);
+  if (!tapBuffer) return false;
+  try {
+    if (ctx.state === "suspended") ctx.resume().catch(() => {});
+    const buses = getBuses(ctx);
+    const src = ctx.createBufferSource();
+    src.buffer = tapBuffer;
+    src.playbackRate.value = [1, 1.06, 1.12][Math.max(0, Math.min(2, Math.round(dartInTurn) - 1))];
+    const gain = ctx.createGain();
+    gain.gain.value = 0.8;
+    src.connect(gain);
+    gain.connect(buses ? buses.master : ctx.destination);
+    src.start(0, TAP_SKIP_S);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** Plays the recording of a dart for a tap, a little higher for each dart of the turn. Returns false when there is no recording to play. */
 function playTapRecording(dartInTurn: number): boolean {
+  if (tapBuffer !== false && playTapBuffer(dartInTurn)) return true;
   if (typeof Audio === "undefined" || tapRecording === false) return false;
   try {
     if (!tapRecording) {

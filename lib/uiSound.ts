@@ -163,8 +163,8 @@ let introTrack = "";
 export type IntroTrack = "intro" | "intro-vm" | "intro-gs";
 let introFade: ReturnType<typeof setInterval> | null = null;
 
-/** Starts the music of an opening (heard in every level of effects; only "Lyd i appen" turns it off). Returns what ends it: it fades out over a second. */
-export function startIntroMusic(track: IntroTrack = "intro"): () => void {
+/** Starts the music of an opening (heard in every level of effects; only "Lyd i appen" turns it off). Returns what ends it: it fades out over `fadeMs` (a second unless asked for more). */
+export function startIntroMusic(track: IntroTrack = "intro", fadeMs = 1000): () => void {
   if (!getUiSound() || typeof Audio === "undefined") return () => {};
   // Still playing from a moment ago (it was being turned down): it is turned up again, not started over.
   if (introFade) clearInterval(introFade);
@@ -192,10 +192,11 @@ export function startIntroMusic(track: IntroTrack = "intro"): () => void {
   return () => {
     if (!mine || mine !== introAudio) return;
     let i = 0;
+    const steps = Math.max(1, Math.round(fadeMs / 100));
     introFade = setInterval(() => {
       i += 1;
-      mine.volume = Math.max(0, INTRO_VOLUME * (1 - i / 10));
-      if (i >= 10) {
+      mine.volume = Math.max(0, INTRO_VOLUME * (1 - i / steps));
+      if (i >= steps) {
         if (introFade) clearInterval(introFade);
         introFade = null;
         mine.pause();
