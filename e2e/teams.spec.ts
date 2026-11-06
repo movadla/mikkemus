@@ -83,5 +83,11 @@ test.describe("lag på kamp", () => {
     // Lars throws, and the next to throw is Ola on the other team; the rest of the team is not shown on the bar.
     await expect(page.getByLabel(/^Resten av laget/)).toHaveCount(0);
     await expect(page.getByLabel(/^Neste som kaster: Ola, Ola og Kari/)).toBeVisible();
+
+    // A tap on the picture of the one who throws changes who on the team it is: Per after the question is answered.
+    await page.getByRole("button", { name: "Bytt hvem som kaster" }).click();
+    await expect(page.getByText("Skal Per kaste nå?")).toBeVisible();
+    await page.getByRole("button", { name: "Ja" }).click();
+    await expect(page.getByRole("status").filter({ hasText: "Kaster" }).getByText("Per")).toBeVisible();
   });
 });

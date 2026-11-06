@@ -116,6 +116,7 @@ export function ThrowerBar({
   compact = false,
   flush = false,
   onOpen,
+  onPickMate,
   nextUp,
 }: {
   /** Who throws after this turn when the thrower is not on a team (the team carries its own next). */
@@ -136,8 +137,8 @@ export function ThrowerBar({
   compact?: boolean;
   /** Sits at the top of the board as one card with it: no shadow, no corners of its own, a hairline between it and the names below. */
   flush?: boolean;
-  /** A tap on a teammate's picture: the caller asks whether they should throw now. */
-  onPickMate?: (name: string) => void;
+  /** A tap on the thrower's picture, in a team of more than one: the caller lets the team pick who throws now. */
+  onPickMate?: () => void;
   /** A tap on the thrower's picture or name: the caller opens the thrower's numbers. */
   onOpen?: () => void;
 }) {
@@ -147,6 +148,8 @@ export function ThrowerBar({
   const photoSize = compact ? 44 : 56;
   const kitBadge = compact ? 26 : 30;
   const Wrap: React.ElementType = onOpen ? "button" : "div";
+  const AvatarWrap: React.ElementType = onPickMate && team && team.members.length > 1 ? "button" : "span";
+  const swap = onPickMate && team && team.members.length > 1;
 
   return (
     <div
@@ -166,12 +169,8 @@ export function ThrowerBar({
         boxShadow: flush ? "inset 0 1px 0 var(--rim)" : undefined,
       }}
     >
-      <Wrap
-        {...(onOpen ? { type: "button", onClick: onOpen, "aria-label": `Se statistikken til ${thrower.name}` } : {})}
-        className="flex items-center min-w-0 flex-1 text-left"
-        style={{ gap: compact ? "0.6rem" : "0.8rem" }}
-      >
-      <span className="thrower-avatar relative shrink-0" style={{ width: photoSize, height: photoSize }}>
+      <div className="flex items-center min-w-0 flex-1" style={{ gap: compact ? "0.6rem" : "0.8rem" }}>
+      <AvatarWrap className="thrower-avatar relative shrink-0" style={{ width: photoSize, height: photoSize }} {...(swap ? { type: "button", onClick: onPickMate, "aria-label": "Bytt hvem som kaster" } : {})}>
         {fire && run >= 2 && <Flames run={run} size={photoSize} />}
         <Avatar who={thrower} size={photoSize} />
         {/* The shirt the thrower is playing in, worn on the picture — big enough to read across the room. */}
@@ -180,7 +179,11 @@ export function ThrowerBar({
             <TeamKit kit={kit} size={kitBadge} />
           </span>
         )}
-      </span>
+      </AvatarWrap>
+      <Wrap
+        {...(onOpen ? { type: "button", onClick: onOpen, "aria-label": `Se statistikken til ${thrower.name}` } : {})}
+        className="flex items-center min-w-0 flex-1 text-left"
+      >
       <div className="min-w-0 flex-1">
         <p style={{ color: "var(--color-teal)", fontSize: compact ? "var(--text-micro)" : "var(--text-micro)", letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: 700, lineHeight: 1.2 }}>
           {thrower.isBot ? "Kaster …" : "Kaster"}
@@ -201,6 +204,7 @@ export function ThrowerBar({
         )}
       </div>
       </Wrap>
+      </div>
       {upNext && (
         <div className="flex flex-col items-center shrink-0" aria-label={`Neste som kaster: ${upNext.name}, ${upNext.side}`} style={{ maxWidth: compact ? 44 : 64 }}>
           {!compact && (

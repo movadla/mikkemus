@@ -821,6 +821,7 @@ export function GameScreen({
   const [shakeOn, setShakeOn] = useState(() => isShakeEnabled());
   // A teammate whose picture was tapped: the question "skal X kaste nå?" is up for them.
   const [switchTo, setSwitchTo] = useState<string | null>(null);
+  const [matePick, setMatePick] = useState(false);
   // The thrower's numbers, from the bottom of the screen.
   const [sheetOpen, setSheetOpen] = useState(false);
   // The sheet is a player's statistics: not for the limited code.
@@ -867,6 +868,13 @@ export function GameScreen({
   // Heat belongs to the turn, not the dart: the parent clears hitPulse when a turn ends
   // (see clearTurnDisplay), so this stays lit across an unbroken turn and drops on its own.
   const heat = fxHeat ? hitPulse?.streak ?? 0 : 0;
+
+  /** A tap on the thrower's picture: with one teammate the question is asked at once, with more they are listed. */
+  function askMate() {
+    const mates = throwerTeam ? throwerTeam.members.filter((_, i) => i !== throwerTeam.activeIdx) : [];
+    if (mates.length === 1) setSwitchTo(mates[0].name);
+    else if (mates.length > 1) setMatePick(true);
+  }
 
   function handleUndo() {
     setRetractToken((t) => t + 1);
@@ -1195,6 +1203,27 @@ export function GameScreen({
 
       {sheetOpen && thrower && <PlayerSheet name={thrower.name} team={throwerTeam?.name ?? null} onClose={() => setSheetOpen(false)} />}
 
+      {matePick && throwerTeam && (
+        <Sheet title="Hvem kaster?" onClose={() => setMatePick(false)}>
+          <div className="grid gap-2" role="group" aria-label="Hvem kaster?">
+            {throwerTeam.members.filter((_, i) => i !== throwerTeam.activeIdx).map((m) => (
+              <button
+                key={m.name}
+                type="button"
+                onClick={() => {
+                  setMatePick(false);
+                  setSwitchTo(m.name);
+                }}
+                className={`glossy w-full py-3 rounded-xl font-semibold ${FOCUS_RING}`}
+                style={{ "--btn-fill": "var(--color-surface)", color: "var(--color-cream)" } as React.CSSProperties}
+              >
+                {m.name}
+              </button>
+            ))}
+          </div>
+        </Sheet>
+      )}
+
       {switchTo && (
         <ConfirmDialog
           message={`Skal ${switchTo} kaste nå?`}
@@ -1271,7 +1300,7 @@ export function GameScreen({
           <div className="scroll-hint-right absolute top-0 right-0 bottom-0 w-8 z-20 pointer-events-none" aria-hidden />
         )}
         {!compactLandscape && thrower && <div className="shrink-0">
-          <ThrowerBar key={turnToken} nextUp={throwerNext} thrower={thrower} team={throwerTeam} kit={throwerTeam ? kits[throwerTeam.name] : null} stood={throwerStood} run={throwerRun} darts={activePlayer ? (dartsThrown[activePlayer] ?? 0) + dartsThisTurn : undefined} fire={fxFire} animate={throwerAnimate} onPickMate={choiceInteractive && !rewound ? setSwitchTo : undefined} onOpen={!rewound && !limited ? () => setSheetOpen(true) : undefined} flush />
+          <ThrowerBar key={turnToken} nextUp={throwerNext} thrower={thrower} team={throwerTeam} kit={throwerTeam ? kits[throwerTeam.name] : null} stood={throwerStood} run={throwerRun} darts={activePlayer ? (dartsThrown[activePlayer] ?? 0) + dartsThisTurn : undefined} fire={fxFire} animate={throwerAnimate} onPickMate={choiceInteractive && !rewound ? askMate : undefined} onOpen={!rewound && !limited ? () => setSheetOpen(true) : undefined} flush />
           {/* The three darts of this turn sit right under the name, where the eye already is. */}
           {!rewound && (
             <div className="shot-strip">
@@ -1525,7 +1554,7 @@ export function GameScreen({
         <div className="live-side">
           {thrower && (
             <div className="mb-1 shrink-0">
-              <ThrowerBar key={turnToken} nextUp={throwerNext} thrower={thrower} team={throwerTeam} kit={throwerTeam ? kits[throwerTeam.name] : null} stood={throwerStood} run={throwerRun} fire={fxFire} animate={throwerAnimate} onPickMate={choiceInteractive && !rewound ? setSwitchTo : undefined} onOpen={!rewound && !limited ? () => setSheetOpen(true) : undefined} compact />
+              <ThrowerBar key={turnToken} nextUp={throwerNext} thrower={thrower} team={throwerTeam} kit={throwerTeam ? kits[throwerTeam.name] : null} stood={throwerStood} run={throwerRun} fire={fxFire} animate={throwerAnimate} onPickMate={choiceInteractive && !rewound ? askMate : undefined} onOpen={!rewound && !limited ? () => setSheetOpen(true) : undefined} compact />
             </div>
           )}
           {odds && (
