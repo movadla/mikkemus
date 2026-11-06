@@ -2352,6 +2352,18 @@ html[data-theme="light"] {
   }
 }
 
+/* A computer screen (wide and tall, not a phone on its side): the column beside the board — who throws and the picture of them, the figures, Angre and Bekreft —
+   is drawn larger and clearer; the board keeps its size, the column takes the room from the margins around it. */
+@media (orientation: landscape) and (min-width: 1000px) and (min-height: 721px) {
+  .game-root {
+    grid-template-columns: 2.6rem minmax(0, 1fr) minmax(24rem, 50rem) 4.6rem minmax(0, 1fr) 29rem;
+  }
+  .live-side,
+  .action-bar {
+    zoom: 1.45;
+  }
+}
+
 /* -- alive, not busy --
    A list comes in one row after another (the first ten; the rest are there at once), and an option that has just been chosen
    gives a little. Both are short, and both are switched off by "reduce motion". */

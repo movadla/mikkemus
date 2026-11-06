@@ -85,6 +85,10 @@ test.describe("Kveldsplan", () => {
     await openApp(page, "dark");
     const stripe = page.getByRole("link", { name: /^Kveldsscore/ });
     await page.getByRole("button", { name: "Gjem" }).click();
+    await page.getByRole("button", { name: "Behold" }).click();
+    await expect(stripe).toBeVisible();
+    await page.getByRole("button", { name: "Gjem" }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Gjem" }).click();
     await expect(stripe).toBeHidden();
     await page.reload();
     await expect(page.getByRole("button", { name: "Gjem" })).toBeHidden();

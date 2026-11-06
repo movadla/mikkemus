@@ -932,6 +932,37 @@ export function GameScreen({
     });
     return currentStepFor(now) ?? STEPS[0];
   })();
+  // On a computer the board can be played from the keyboard: Space puts a cross on the row the thrower is on
+  // (the same tap as on the cell), Enter is Bekreft, Backspace is Angre. Dialogs and text fields keep their keys.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key !== " " && e.key !== "Enter" && e.key !== "Backspace") return;
+      const el = e.target instanceof HTMLElement ? e.target : null;
+      if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
+      if (document.querySelector("[role=dialog]")) return;
+      if (showChoiceBox || showStandBox) return;
+      e.preventDefault();
+      if (e.key === "Backspace") {
+        if (canUndo) handleUndo();
+      } else if (e.key === "Enter") {
+        onConfirm();
+      } else if (activePlayer) {
+        const cells = document.querySelectorAll<HTMLElement>(`[data-step="${entryTarget}"][data-player="${CSS.escape(activePlayer)}"]`);
+        Array.from(cells).find((c) => c.offsetParent !== null)?.click();
+      }
+    }
+    // Space on a focused button would otherwise click it when the key comes up.
+    function onUp(e: KeyboardEvent) {
+      if (e.key === " " && !document.querySelector("[role=dialog]")) e.preventDefault();
+    }
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("keyup", onUp);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("keyup", onUp);
+    };
+  });
   const choiceBox = (compact: boolean) =>
     showStandBox ? (
       <StandBox thrower={thrower?.name ?? null} onAnswer={onAnswerStand} compact={compact} />

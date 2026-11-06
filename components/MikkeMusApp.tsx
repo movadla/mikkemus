@@ -3065,7 +3065,7 @@ export function MikkeMusApp({ initialPlayers, initialBotLevels, initialTeamRoste
       {scoliaEnabled && screen !== "game" && <ScoliaStatusBadge state={scolia.state} />}
       <CameraImages images={cameraImages} />
       <GameScreen
-        venue={onMatchComplete || !matchVenueBg ? undefined : matchVenue}
+        venue={onMatchComplete ? tournamentVenue : matchVenueBg ? matchVenue : undefined}
         thrower={thrower}
         throwerTeam={throwerTeam}
         throwerNext={throwerNext}

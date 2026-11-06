@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { ChevronRightIcon } from "./icons";
 import { countOf, matchesOf, tableOf } from "@/lib/nightScore";
 import { currentEvening, useNightScore } from "@/lib/nightScoreStorage";
 import { nextPlanned, planGameName, type PlannedMatch } from "@/lib/nightPlan";
 import { Button } from "./ui/Button";
+import { ConfirmDialog } from "./ConfirmDialog";
 
 const HIDDEN_KEY = "mikke-mus-kveld-gjemt";
 
@@ -47,6 +48,7 @@ export function NightStripe({ onNext }: { /** Plays the next planned match of th
   const top = count > 0 ? tableOf(matches)[0] : undefined;
   const key = evening?.id ?? "none";
   const hidden = useSyncExternalStore(subscribe, readHidden, () => null);
+  const [confirming, setConfirming] = useState(false);
   const next = onNext ? nextPlanned(evening, matches) : null;
   return (
     <>
@@ -69,13 +71,29 @@ export function NightStripe({ onNext }: { /** Plays the next planned match of th
       </Link>
         <button
           type="button"
-          onClick={() => hideStripe(key)}
+          onClick={() => setConfirming(true)}
           className="tactile absolute rounded-full px-3 py-1"
           style={{ top: "0.45rem", right: "2.75rem", fontSize: "var(--text-small)", color: "var(--color-muted)" }}
         >
           Gjem
         </button>
       </div>
+    )}
+    {confirming && (
+      <ConfirmDialog
+        message="Gjemme Kveldsscore? Den kommer tilbake med en ny kveld."
+        buttons={[
+          { label: "Behold", onClick: () => setConfirming(false), background: "var(--color-green)" },
+          {
+            label: "Gjem",
+            onClick: () => {
+              setConfirming(false);
+              hideStripe(key);
+            },
+            background: "var(--color-surface)",
+          },
+        ]}
+      />
     )}
     </>
   );
