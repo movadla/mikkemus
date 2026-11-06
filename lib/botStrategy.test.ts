@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { emptyProgress, isFinished, type Progress, type Step } from "./game";
-import { BOT_LEVELS, type BotLevel } from "./botLevels";
+import { BOT_LEVELS, BOT_LEVEL_ORDER, type BotLevel } from "./botLevels";
 import { DOUBLE_OUTER_RADIUS, sectorAt } from "./dartboard";
 import { botChooseThrow, gaussianSample, progressToBotState, sigmaForLevel, solverFor } from "./botStrategy";
 
@@ -8,7 +8,7 @@ function board(overrides: Partial<Record<Step, number>>): Progress {
   return { ...emptyProgress(), ...overrides };
 }
 
-const LEVELS = Object.keys(BOT_LEVELS) as BotLevel[];
+const LEVELS = BOT_LEVEL_ORDER;
 
 describe("progressToBotState", () => {
   it("points at the first unfinished number and its crosses", () => {

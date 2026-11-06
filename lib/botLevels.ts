@@ -1,4 +1,4 @@
-export type BotLevel = "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8";
+export type BotLevel = "1" | "2" | "3" | "3.5" | "4" | "5" | "6" | "7" | "8";
 
 export type BotLevelConfig = {
   key: BotLevel;
@@ -10,11 +10,11 @@ export type BotLevelConfig = {
   targetMed: number;
 };
 
-export const BOT_LEVEL_ORDER: BotLevel[] = ["1", "2", "3", "4", "5", "6", "7", "8"];
+export const BOT_LEVEL_ORDER: BotLevel[] = ["1", "2", "3", "3.5", "4", "5", "6", "7", "8"];
 
 /** The levels offered in the pickers: the three medal tiers, then Halfdan and Guro, two of the regulars of Ly whose strength there
  *  (lib/opponents.ts) is the one the level throws at. Level 6 still exists for matches that already have it. */
-export const BOT_LEVEL_PICKABLE: BotLevel[] = ["1", "2", "3", "4", "5"];
+export const BOT_LEVEL_PICKABLE: BotLevel[] = ["1", "2", "3", "3.5", "4", "5"];
 
 /** Which medal a level carries, if any: gold is the strongest, as with the players it is named after. */
 export function botLevelMedal(level: BotLevel): 0 | 1 | 2 | null {
@@ -45,6 +45,9 @@ export const BOT_LEVELS: Record<BotLevel, BotLevelConfig> = {
   "1": { key: "1", name: "Littler", targetMed: 20 },
   "2": { key: "2", name: "Cor Dekker", targetMed: 25 },
   "3": { key: "3", name: "Dave", targetMed: 30 },
+  // Between Dave and Halfdan: Kjetil of Ly (lib/opponents.ts, who has a mean of 34 mm there). The key is the half level he sits on, so the levels
+  // that are counted as numbers (Number(level), levelOfMed) put him where he belongs without the others being renumbered.
+  "3.5": { key: "3.5", name: "Kjetil", targetMed: 34 },
   // Vadla's measured MED is 37.4 mm (153 darts, 2026-10-20): level 4 sits marginally behind that. Hans has no measured darts yet; the
   // seeding (lib/odds/seeding.ts) puts him ~26 % behind Vadla in MED, which is ~47 mm, so level 5 sits marginally behind that. The two
   // carry the names of the regulars of Ly who throw at just these strengths in the career (lib/opponents.ts), so a name means one strength.
