@@ -933,15 +933,24 @@ export function GameScreen({
     return currentStepFor(now) ?? STEPS[0];
   })();
   // On a computer the board can be played from the keyboard: Space puts a cross on the row the thrower is on
-  // (the same tap as on the cell), Enter is Bekreft, Backspace is Angre. Dialogs and text fields keep their keys.
+  // (the same tap as on the cell), D and T a double and a triple there, Enter is Bekreft, Backspace is Angre. Dialogs and text fields keep their keys.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
-      if (e.key !== " " && e.key !== "Enter" && e.key !== "Backspace") return;
+      const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+      if (key !== " " && key !== "d" && key !== "t" && key !== "Enter" && key !== "Backspace") return;
       const el = e.target instanceof HTMLElement ? e.target : null;
       if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
       if (document.querySelector("[role=dialog]")) return;
       if (showChoiceBox || showStandBox) return;
+      if (key === "d" || key === "t") {
+        // A double or triple on the row the thrower is on: the dart is keyed in as that bed, so the triple/double question comes as it does for a measured dart.
+        const bed = /^[0-9]+$/.test(entryTarget) ? `${key.toUpperCase()}${entryTarget}` : entryTarget === "D" && key === "d" ? "D20" : entryTarget === "T" && key === "t" ? "T20" : entryTarget === "BULL" && key === "d" ? "Bull" : null;
+        if (!bed || turnShots.filter(Boolean).length >= 3) return;
+        e.preventDefault();
+        onEnterDart(bed);
+        return;
+      }
       e.preventDefault();
       if (e.key === "Backspace") {
         if (canUndo) handleUndo();
