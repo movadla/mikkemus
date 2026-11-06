@@ -58,7 +58,7 @@ function Tile({ icon, label, onClick, wide = false, big = false, sub }: { icon: 
       type="button"
       onClick={onClick}
       className={`tactile flex items-center justify-center ${wide || big ? "flex-row gap-3 w-full" : "flex-col gap-2"} ${FOCUS_RING}`}
-      style={{ minHeight: big ? "7rem" : wide ? "4.25rem" : "5.5rem", borderRadius: "var(--radius-m)", background: "var(--color-surface)", border: big ? "1px solid var(--color-teal)" : "1px solid var(--color-border)", color: "var(--color-cream)", fontSize: big ? "var(--text-title)" : "var(--text-body)", fontWeight: 600 }}
+      style={{ minHeight: big ? "8.5rem" : wide ? "4.25rem" : "5.5rem", borderRadius: "var(--radius-m)", background: "var(--color-surface)", border: big ? "1px solid var(--color-teal)" : "1px solid var(--color-border)", color: "var(--color-cream)", fontSize: big ? "var(--text-title)" : "var(--text-body)", fontWeight: 600 }}
     >
       <span style={{ color: "var(--color-teal)" }}>{icon}</span>
       <span className="flex flex-col items-start text-left">
@@ -90,7 +90,17 @@ function NewGame({ onBack, onPick, onTurnering }: { onBack: () => void; onPick: 
           </h1>
         </div>
         <div className="grid gap-2 mb-6">
-          <Tile big icon={<DartIcon className="w-8 h-8" />} label="Mikke Mus" sub="Enkeltkamp" onClick={() => onPick("single")} />
+          <Tile
+            big
+            // The mascot of the app, as on the front page.
+            icon={
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src="/mikke.webp" alt="" draggable={false} width={420} height={747} style={{ height: "6.5rem", width: "auto", objectFit: "contain" }} />
+            }
+            label="Mikke Mus"
+            sub="Enkeltkamp"
+            onClick={() => onPick("single")}
+          />
           <div className="grid grid-cols-2 gap-2" role="group" aria-label="Andre spill">
             <Tile icon={<BullseyeIcon className="w-6 h-6" />} label="Bull-duell" onClick={() => onPick("bullduel")} />
             <Tile icon={<KeypadIcon className="w-6 h-6" />} label="301 / 501" onClick={() => onPick("countdown")} />
