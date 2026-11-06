@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { useRoster, type PlayerRecord } from "@/lib/storage";
 import { avatarAccent } from "@/lib/avatarAccent";
@@ -11,10 +12,11 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { NavList } from "@/components/ui/NavList";
 import { Row } from "@/components/ui/Row";
 import { Section } from "@/components/ui/Section";
+import { PlayerPictureSheet } from "@/components/PlayerPictureSheet";
 
 /** `morph`: the face is named, so it grows into the one on the player's page when a row is opened. Only while no one is open: with a player
  *  open beside the list, two faces would carry the same name at once. */
-function PlayerRow({ p, selected, morph }: { p: PlayerRecord; selected: boolean; morph: boolean }) {
+function PlayerRow({ p, selected, morph, onPicture }: { p: PlayerRecord; selected: boolean; morph: boolean; onPicture: () => void }) {
   const Face = morph ? MorphAvatar : Avatar;
   const matches = `${p.matchesPlayed} ${p.matchesPlayed === 1 ? "kamp" : "kamper"}`;
   return (
@@ -22,7 +24,29 @@ function PlayerRow({ p, selected, morph }: { p: PlayerRecord; selected: boolean;
       href={`/spillere/${encodeURIComponent(p.name)}`}
       selected={selected}
       accent={avatarAccent(p.name)}
-      leading={p.kind === "team" ? <TeamAvatar name={p.name} photo={p.photo} members={p.members} /> : <Face name={p.name} photo={p.photo} size="m" />}
+      // A tap on the small picture opens it large (with the way to change it); the rest of the row opens the player.
+      leading={
+        <span
+          role="button"
+          tabIndex={0}
+          aria-label={`Se bilde av ${p.name}`}
+          className="inline-flex rounded-full outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-teal)]"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onPicture();
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              e.stopPropagation();
+              onPicture();
+            }
+          }}
+        >
+          {p.kind === "team" ? <TeamAvatar name={p.name} photo={p.photo} members={p.members} /> : <Face name={p.name} photo={p.photo} size="m" />}
+        </span>
+      }
       title={p.name}
       subtitle={p.kind === "team" && p.members?.length ? `${p.members.join(", ")} · ${matches}` : matches}
     />
@@ -45,13 +69,16 @@ function safeDecode(raw: string): string {
 export function PlayerList() {
   const roster = useRoster();
   const pathname = usePathname();
+  // The player whose picture is open large.
+  const [picOf, setPicOf] = useState<string | null>(null);
+  const picPlayer = picOf ? roster.find((p) => p.name === picOf) : undefined;
   const open = pathname.startsWith("/spillere/") ? safeDecode(pathname.slice("/spillere/".length)).toLowerCase() : null;
   const players = roster.filter((p) => p.kind !== "team");
   const teams = roster.filter((p) => p.kind === "team");
   const rows = (list: PlayerRecord[]) => (
     <NavList className="space-y-2 stagger" label="Spillere">
       {list.map((p) => (
-        <PlayerRow key={p.name} p={p} selected={open === p.name.toLowerCase()} morph={open === null} />
+        <PlayerRow key={p.name} p={p} selected={open === p.name.toLowerCase()} morph={open === null} onPicture={() => setPicOf(p.name)} />
       ))}
     </NavList>
   );
@@ -69,6 +96,7 @@ export function PlayerList() {
           </div>
         )}
       </div>
+      {picPlayer && <PlayerPictureSheet player={picPlayer} onClose={() => setPicOf(null)} />}
     </div>
   );
 }
