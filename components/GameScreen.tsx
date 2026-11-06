@@ -993,12 +993,12 @@ export function GameScreen({
       // unlocks audio instead, well before any win-fanfare/hit-streak sound needs it.
       onPointerDownCapture={primeAudio}
     >
-      {/* The inside of the place behind the board, under a dark veil (negative layer: everything else is drawn over it). */}
+      {/* The inside of the place behind the board, under a dark veil (negative layer: everything else is drawn over it; the boxes of the screen are filled, so no text sits on the picture itself). */}
       {venuePicture && (
         <>
           {/* eslint-disable-next-line @next/next/no-img-element -- one fixed picture from public/career */}
           <img src={venuePicture.inside} alt="" aria-hidden draggable={false} className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: -2, objectFit: "cover", objectPosition: venuePicture.insideFocus }} />
-          <div aria-hidden className="absolute inset-0 pointer-events-none" style={{ zIndex: -1, background: "linear-gradient(rgba(6, 10, 12, 0.46), rgba(6, 10, 12, 0.78))" }} />
+          <div aria-hidden className="absolute inset-0 pointer-events-none" style={{ zIndex: -1, background: "linear-gradient(rgba(6, 10, 12, 0.32), rgba(6, 10, 12, 0.62))" }} />
         </>
       )}
       {/* Heat from an unbroken turn — sits above the board but takes no pointer events, so
